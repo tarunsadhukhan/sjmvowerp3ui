@@ -1,5 +1,5 @@
 # Use Node v22 (Alpine)
-FROM node:22-alpine
+FROM node:22-alpine AS base
 
 # Create and set app directory
 WORKDIR /app
@@ -21,8 +21,16 @@ COPY . .
 # Build the application
 RUN pnpm build
 
-# Expose port 3000
+# Expose port 3000 for main branch
 EXPOSE 3000
 
-# Start the application
+# Expose port 3001 for dev branch
+EXPOSE 3001
+
+# Stage for main branch deployment
+FROM base AS main
 CMD ["pnpm", "start"]
+
+# Stage for dev branch deployment
+FROM base AS dev
+CMD ["pnpm", "dev"]

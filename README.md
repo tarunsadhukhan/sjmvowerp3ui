@@ -29,6 +29,36 @@ You can start editing the page by modifying `app/page.tsx`. The page auto-update
 
 This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
 
+## Automated Deployment with GitHub Actions
+
+This project uses GitHub Actions to automate the deployment process for the 'main' and 'dev' branches. The following steps outline the automated deployment process:
+
+1. When a new branch is merged to 'dev':
+   - GitHub Actions will run tests and provide logs.
+   - If all tests pass, the branch will be merged to 'dev'.
+   - If any test fails, the merge will be stopped.
+   - The deployment will be made to the dev container.
+
+2. When 'dev' is merged to 'main':
+   - GitHub Actions will run tests.
+   - If tests fail, the merge will be stopped.
+   - If all tests pass, the branch will be merged to 'main'.
+   - The deployment will be made to the main container.
+
+3. When a pull request is made from any feature branch to 'dev':
+   - GitHub Actions will run tests.
+   - If tests fail, the pull request will be stopped.
+   - If all tests pass, the pull request will be merged to 'dev'.
+   - The deployment will be made to the dev container.
+
+4. When a pull request is made from 'dev' to 'main':
+   - GitHub Actions will run tests.
+   - If tests fail, the pull request will be stopped.
+   - If all tests pass, the pull request will be merged to 'main'.
+   - The deployment will be made to the main container.
+
+The deployment process uses Docker containers and deploys to an AWS server. The IP address of the server should be provided in the GitHub Actions secrets.
+
 ## Learn More
 
 To learn more about Next.js, take a look at the following resources:

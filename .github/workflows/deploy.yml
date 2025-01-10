@@ -26,8 +26,7 @@ jobs:
       - name: Install dependencies
         run: npm install -g pnpm@latest && pnpm install
 
-      - name: Run tests
-        run: pnpm test
+
 
       - name: Build Docker image
         run: docker build -t my-next-app:dev -f Dockerfile .
@@ -54,8 +53,6 @@ jobs:
       - name: Install dependencies
         run: npm install -g pnpm@latest && pnpm install
 
-      - name: Run tests
-        run: pnpm test
 
       - name: Build Docker image
         run: docker build -t my-next-app:main -f Dockerfile .

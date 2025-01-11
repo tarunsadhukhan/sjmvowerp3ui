@@ -26,16 +26,29 @@ jobs:
       - name: Install dependencies
         run: npm install -g pnpm@latest && pnpm install
 
-
       - name: Build Docker image
         run: docker build -t my-next-app:dev -f Dockerfile .
 
+      - name: Log in to Amazon ECR
+        run: |
+          aws ecr get-login-password --region ${{ secrets.AWS_REGION }} | docker login --username AWS --password-stdin ${{ secrets.AWS_ACCOUNT_ID }}.dkr.ecr.${{ secrets.AWS_REGION }}.amazonaws.com
+
+      - name: Tag and push Docker image to ECR
+        run: |
+          docker tag my-next-app:dev ${{ secrets.AWS_ACCOUNT_ID }}.dkr.ecr.${{ secrets.AWS_REGION }}.amazonaws.com/my-next-app:dev
+          docker push ${{ secrets.AWS_ACCOUNT_ID }}.dkr.ecr.${{ secrets.AWS_REGION }}.amazonaws.com/my-next-app:dev
+
       - name: Deploy to AWS
         run: |
-          aws configure set aws_access_key_id ${{ secrets.AWS_ACCESS_KEY_ID }}
-          aws configure set aws_secret_access_key ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-          aws configure set default.region ${{ secrets.AWS_REGION }}
           aws ecs update-service --cluster Dev --service devdeploy --force-new-deployment
+
+      - name: Wait for ECS service to stabilize
+        run: |
+          aws ecs wait services-stable --cluster Dev --services devdeploy
+
+      - name: Test application availability
+        run: |
+          curl -f http://<dev-application-url>:3000 || exit 1
 
   test-and-deploy-main:
     if: github.ref == 'refs/heads/main' || (github.event_name == 'pull_request' && github.base_ref == 'main')
@@ -52,13 +65,26 @@ jobs:
       - name: Install dependencies
         run: npm install -g pnpm@latest && pnpm install
 
-
       - name: Build Docker image
         run: docker build -t my-next-app:main -f Dockerfile .
 
+      - name: Log in to Amazon ECR
+        run: |
+          aws ecr get-login-password --region ${{ secrets.AWS_REGION }} | docker login --username AWS --password-stdin ${{ secrets.AWS_ACCOUNT_ID }}.dkr.ecr.${{ secrets.AWS_REGION }}.amazonaws.com
+
+      - name: Tag and push Docker image to ECR
+        run: |
+          docker tag my-next-app:main ${{ secrets.AWS_ACCOUNT_ID }}.dkr.ecr.${{ secrets.AWS_REGION }}.amazonaws.com/my-next-app:main
+          docker push ${{ secrets.AWS_ACCOUNT_ID }}.dkr.ecr.${{ secrets.AWS_REGION }}.amazonaws.com/my-next-app:main
+
       - name: Deploy to AWS
         run: |
-          aws configure set aws_access_key_id ${{ secrets.AWS_ACCESS_KEY_ID }}
-          aws configure set aws_secret_access_key ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-          aws configure set default.region ${{ secrets.AWS_REGION }}
           aws ecs update-service --cluster Dev --service maindeploy --force-new-deployment
+
+      - name: Wait for ECS service to stabilize
+        run: |
+          aws ecs wait services-stable --cluster Dev --services maindeploy
+
+      - name: Test application availability
+        run: |
+          curl -f http://<main-application-url>:3000 || exit 1

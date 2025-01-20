@@ -22,10 +22,10 @@ COPY . .
 RUN pnpm build
 
 # Expose port 3000 for main branch
-EXPOSE 3000
+EXPOSE 3001
 
 # Expose port 3001 for dev branch
-EXPOSE 3001
+EXPOSE 3000
 
 # Stage for main branch deployment
 FROM base AS main

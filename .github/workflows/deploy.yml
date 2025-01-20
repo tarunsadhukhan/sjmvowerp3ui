@@ -87,4 +87,4 @@ jobs:
 
       - name: Test application availability
         run: |
-          curl -f http://<main-application-url>:3000 || exit 1
+          curl -f http://<main-application-url>:3001 || exit 1

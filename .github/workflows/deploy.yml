@@ -55,7 +55,7 @@ jobs:
 
       - name: Test application availability
         run: |
-          curl -f http://13.60.65.99:3000 || exit 1
+          curl -f http://16.171.161.62:3000 || exit 1
 
   test-and-deploy-main:
     if: github.ref == 'refs/heads/main' || (github.event_name == 'pull_request' && github.base_ref == 'main')
@@ -100,4 +100,4 @@ jobs:
 
       - name: Test application availability
         run: |
-          curl -f http://13.60.65.99:3001 || exit 1
+          curl -f http://16.171.161.62:3001 || exit 1

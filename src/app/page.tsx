@@ -21,7 +21,7 @@ export default function Home() {
             </code>
             .
           </li>
-          <li>Dev CHanges deployment check 31.1.25 22:15. testing </li>
+          <li>Deployment to VOWERP servers 7.2.25 </li>
         </ol>
 
         <div className="flex gap-4 items-center flex-col sm:flex-row">

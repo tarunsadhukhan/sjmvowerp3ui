@@ -1,3 +1,4 @@
+
 name: Deploy
 
 on:
@@ -47,15 +48,15 @@ jobs:
 
       - name: Deploy to AWS
         run: |
-          aws ecs update-service --cluster Dev --service devdeploy --force-new-deployment
+          aws ecs update-service --cluster default --service vowerp3ui-dev-service --force-new-deployment
 
       - name: Wait for ECS service to stabilize
         run: |
-          aws ecs wait services-stable --cluster Dev --services devdeploy
+          aws ecs wait services-stable --cluster default --services vowerp3ui-dev-service
 
       - name: Test application availability
         run: |
-          curl -f http://16.171.161.62:3000 || exit 1
+          curl -f http://13.233.237.141:3000 || exit 1
 
   test-and-deploy-main:
     if: github.ref == 'refs/heads/main' || (github.event_name == 'pull_request' && github.base_ref == 'main')
@@ -81,6 +82,7 @@ jobs:
           aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
           aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
           aws-region: ${{ secrets.AWS_REGION }}
+
       - name: Log in to Amazon ECR
         run: |
           aws ecr get-login-password --region ${{ secrets.AWS_REGION }} | docker login --username AWS --password-stdin ${{ secrets.AWS_ACCOUNT_ID }}.dkr.ecr.${{ secrets.AWS_REGION }}.amazonaws.com
@@ -92,12 +94,12 @@ jobs:
 
       - name: Deploy to AWS
         run: |
-          aws ecs update-service --cluster Dev --service maindeploy --force-new-deployment
+          aws ecs update-service --cluster default --service vowerp3ui-main-service --force-new-deployment
 
       - name: Wait for ECS service to stabilize
         run: |
-          aws ecs wait services-stable --cluster Dev --services maindeploy
+          aws ecs wait services-stable --cluster default --services vowerp3ui-main-service
 
       - name: Test application availability
         run: |
-          curl -f http://16.171.161.62:3001 || exit 1
+          curl -f http://13.233.237.141:3001 || exit 1

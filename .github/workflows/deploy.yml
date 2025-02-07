@@ -27,7 +27,7 @@ jobs:
         run: npm install -g pnpm@latest && pnpm install
 
       - name: Build Docker image
-        run: docker build -t my-next-app:dev -f Dockerfile .
+        run: docker build -t my-next-app-dev:latest -f Dockerfile .
 
       - name: Set up AWS credentials
         uses: aws-actions/configure-aws-credentials@v1
@@ -38,12 +38,12 @@ jobs:
 
       - name: Log in to Amazon ECR
         run: |
-          aws ecr get-login-password --region ${{ secrets.AWS_REGION }} | docker login --username AWS --password-stdin ${{ secrets.AWS_ACCOUNT_ID }}.dkr.ecr.${{ secrets.AWS_REGION }}.amazonaws.com
+          aws ecr get-login-password --region ${{ secrets.AWS_REGION }} | docker login --username AWS --password-stdin ${{ secrets.ECR_DEV_URI }}
 
       - name: Tag and push Docker image to ECR
         run: |
-          docker tag my-next-app:dev ${{ secrets.AWS_ACCOUNT_ID }}.dkr.ecr.${{ secrets.AWS_REGION }}.amazonaws.com/my-next-app:dev
-          docker push ${{ secrets.AWS_ACCOUNT_ID }}.dkr.ecr.${{ secrets.AWS_REGION }}.amazonaws.com/my-next-app:dev
+          docker tag my-next-app-dev:latest ${{ secrets.ECR_DEV_URI }}:latest
+          docker push ${{ secrets.ECR_DEV_URI }}:latest
 
       - name: Deploy to AWS
         run: |
@@ -73,7 +73,7 @@ jobs:
         run: npm install -g pnpm@latest && pnpm install
 
       - name: Build Docker image
-        run: docker build -t my-next-app:main -f Dockerfile .
+        run: docker build -t my-next-app-main:latest -f Dockerfile .
         
       - name: Set up AWS credentials
         uses: aws-actions/configure-aws-credentials@v1
@@ -84,12 +84,12 @@ jobs:
 
       - name: Log in to Amazon ECR
         run: |
-          aws ecr get-login-password --region ${{ secrets.AWS_REGION }} | docker login --username AWS --password-stdin ${{ secrets.AWS_ACCOUNT_ID }}.dkr.ecr.${{ secrets.AWS_REGION }}.amazonaws.com
+          aws ecr get-login-password --region ${{ secrets.AWS_REGION }} | docker login --username AWS --password-stdin ${{ secrets.ECR_MAIN_URI }}
 
       - name: Tag and push Docker image to ECR
         run: |
-          docker tag my-next-app:main ${{ secrets.AWS_ACCOUNT_ID }}.dkr.ecr.${{ secrets.AWS_REGION }}.amazonaws.com/my-next-app:main
-          docker push ${{ secrets.AWS_ACCOUNT_ID }}.dkr.ecr.${{ secrets.AWS_REGION }}.amazonaws.com/my-next-app:main
+          docker tag my-next-app-main:latest ${{ secrets.ECR_MAIN_URI }}:latest
+          docker push ${{ secrets.ECR_MAIN_URI }}:latest
 
       - name: Deploy to AWS
         run: |
@@ -101,4 +101,4 @@ jobs:
 
       - name: Test application availability
         run: |
-          curl -f http://13.233.237.141:3001 || exit 1
+                    curl -f http://13.233.237.141:3001 || exit 1

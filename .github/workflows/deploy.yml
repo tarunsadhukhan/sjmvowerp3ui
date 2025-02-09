@@ -26,9 +26,16 @@ jobs:
       - name: Install dependencies
         run: npm install -g pnpm@latest && pnpm install
 
+        #build docker image in the pipeline
       - name: Build Docker image
         run: docker build -t my-next-app-dev:latest -f Dockerfile .
 
+        #test docker container in the pipeline and confirm if tests have passed
+      # - name: Test Docker container
+      #   run: docker run -d -p 3000:3000 my-next-app-dev:latest
+      #   run: curl -f http://localhost:3000 || exit 1
+
+          # login to AWS ECR
       - name: Set up AWS credentials
         uses: aws-actions/configure-aws-credentials@v1
         with:
@@ -40,14 +47,53 @@ jobs:
         run: |
           aws ecr get-login-password --region ${{ secrets.AWS_REGION }} | docker login --username AWS --password-stdin ${{ secrets.ECR_DEV_URI }}
 
+      # - name: Automatic Tagging of Releases
+      #   id: increment-git-tag
+      #   run: |
+      #     bash ./build/git-update.sh -v patch
+        
+      #tag and push the github image to ECR 
       - name: Tag and push Docker image to ECR
         run: |
           docker tag my-next-app-dev:latest ${{ secrets.ECR_DEV_URI }}:latest
           docker push ${{ secrets.ECR_DEV_URI }}:latest
 
+      # register new task definition
+      - name: Register new task definition
+        run: |
+          aws ecs register-task-definition \
+            --family vowerp3ui-dev-task \
+            --container-definitions '[{
+              "name": "vowerp3ui-dev",
+              "image": "${{ secrets.ECR_DEV_URI }}:latest",
+              "cpu": 512,
+              "memory": 1536,
+              "memoryReservation": 1024,
+              "portMappings": [{
+                "name": "ui-dev",
+                "containerPort": 3000,
+                "hostPort": 3000,
+                "protocol": "tcp",
+                "appProtocol": "http"
+              }],
+              "essential": true,
+              "logConfiguration": {
+                "logDriver": "awslogs",
+                "options": {
+                  "awslogs-group": "/ecs/my-nextjs-task",
+                  "mode": "non-blocking",
+                  "awslogs-create-group": "true",
+                  "max-buffer-size": "25m",
+                  "awslogs-region": "ap-south-1",
+                  "awslogs-stream-prefix": "ecs"
+                }
+              }
+            }]'
+
+      #deploy the image to ECS after updating task definition
       - name: Deploy to AWS
         run: |
-          aws ecs update-service --cluster default --service vowerp3ui-dev-service --force-new-deployment
+          aws ecs update-service --cluster default --service vowerp3ui-dev-service --task-definition vowerp3ui-dev-task --force-new-deployment
 
       - name: Wait for ECS service to stabilize
         run: |
@@ -91,9 +137,30 @@ jobs:
           docker tag my-next-app-main:latest ${{ secrets.ECR_MAIN_URI }}:latest
           docker push ${{ secrets.ECR_MAIN_URI }}:latest
 
+      # register new task definition
+      - name: Register new task definition
+        run: |
+          aws ecs register-task-definition \
+            --family vowerp3ui-main-task \
+            --container-definitions '[{
+              "name": "vowerp3ui-main",
+              "image": "${{ secrets.ECR_MAIN_URI }}:latest",
+              "cpu": 512,
+              "memory": 1536,
+              "memoryReservation": 1024,
+              "portMappings": [{
+                "name": "ui-main",
+                "containerPort": 3001,
+                "hostPort": 3001,
+                "protocol": "tcp"
+              }],
+              "essential": false
+            }]'
+
+      # deploy the image to ECS after updating task definition
       - name: Deploy to AWS
         run: |
-          aws ecs update-service --cluster default --service vowerp3ui-main-service --force-new-deployment
+          aws ecs update-service --cluster default --service vowerp3ui-main-service --task-definition vowerp3ui-main-task --force-new-deployment
 
       - name: Wait for ECS service to stabilize
         run: |
@@ -101,4 +168,4 @@ jobs:
 
       - name: Test application availability
         run: |
-                    curl -f http://13.233.237.141:3001 || exit 1
+          curl -f http://13.233.237.141:3001 || exit 1

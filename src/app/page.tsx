@@ -21,7 +21,7 @@ export default function Home() {
             </code>
             .
           </li>
-          <li>Deployment to VOWERP servers 9.2.25 </li>
+          <li>Deployment to VOWERP servers 10.2.25 </li>
         </ol>
 
         <div className="flex gap-4 items-center flex-col sm:flex-row">

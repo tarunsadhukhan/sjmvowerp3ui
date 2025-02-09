@@ -18,9 +18,13 @@ run tests with - pnpm jest
 watch test with - pnpm jest --watch
 create documentation with - pnpm typedoc
 
+# run dev
+docker build command - docker build -t dev .
+run docker app command - docker run -p 3000:3000 dev
 
-docker build command - docker build -t my-next-app .
-run docker app command - docker run -p 3000:3000 my-next-app
+# run dev
+docker build command - docker build -t main .
+run docker app command - docker run -p 3001:3001 main
 
 
 Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.

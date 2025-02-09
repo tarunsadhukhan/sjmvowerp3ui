@@ -17,11 +17,11 @@ export default function Home() {
           <li className="mb-2">
             Dev{" "}
             <code className="bg-black/[.05] dark:bg-white/[.06] px-1 py-0.5 rounded font-semibold">
-              Deployment check please work 
+              Deploy from vscode new branch thing o12k3o12k3o1k23ok123o1k23o1k23o12k3ok
             </code>
             .
           </li>
-          <li>Deployment to VOWERP servers 9.2.25 </li>
+          <li>Deployment to VOWERP servers 7.2.25 </li>
         </ol>
 
         <div className="flex gap-4 items-center flex-col sm:flex-row">

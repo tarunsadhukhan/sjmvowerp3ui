@@ -3,9 +3,8 @@ name: Deploy
 on:
   push:
     branches:
-    - dev
-    - main
-
+      - dev
+      - main
   pull_request:
     branches:
       - dev
@@ -64,6 +63,8 @@ jobs:
         run: |
           aws ecs register-task-definition \
             --family vowerp3ui-dev-task \
+            --cpu "512" \
+            --memory "1536" \
             --container-definitions '[{
               "name": "vowerp3ui-dev",
               "image": "${{ secrets.ECR_DEV_URI }}:latest",
@@ -143,6 +144,8 @@ jobs:
         run: |
           aws ecs register-task-definition \
             --family vowerp3ui-main-task \
+            --cpu "512" \
+            --memory "1536" \
             --container-definitions '[{
               "name": "vowerp3ui-main",
               "image": "${{ secrets.ECR_MAIN_URI }}:latest",

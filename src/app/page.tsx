@@ -17,11 +17,11 @@ export default function Home() {
           <li className="mb-2">
             Dev{" "}
             <code className="bg-black/[.05] dark:bg-white/[.06] px-1 py-0.5 rounded font-semibold">
-              Deployment check please work try 4
+              Deployment check please work try 5 9iqw9ieq9iw
             </code>
             .
           </li>
-          <li>Deployment to VOWERP servers 10.2.25 </li>
+          <li>Deployment to VOWERP servers 10.2.25 why no chnage recorded </li>
         </ol>
 
         <div className="flex gap-4 items-center flex-col sm:flex-row">

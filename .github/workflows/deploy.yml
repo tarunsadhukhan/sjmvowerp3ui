@@ -79,7 +79,7 @@ jobs:
           NEW_IMAGE="782803702444.dkr.ecr.ap-south-1.amazonaws.com/my-next-app:latest
           TASK_DEF=$(aws ecs describe-task-definition --task-definition $TASK_FAMILY)
           echo "$TASK_DEF" | jq --arg newImage "$NEW_IMAGE" '.taskDefinition.containerDefinitions[0].image = $newImage' > new-task-def.json
-          NEW_REVISION=$(aws ecs register-task-definition --cli-input-json file://new-task-def.json | jq -r '.taskDefinition.revision')
+          NEW_REVISION=$(aws ecs register-task-definition --cli-input-json .aws/task-definition.json | jq -r '.taskDefinition.revision')
           echo "NEW_TASK_REVISION=$NEW_REVISION" >> $GITHUB_ENV
 
       - name: Stop Old Running Tasks

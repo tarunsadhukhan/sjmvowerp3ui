@@ -65,41 +65,18 @@ jobs:
           docker push $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG
           echo "image=$ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG" >> $GITHUB_OUTPUT
 
-      # - name: Fill in the new image ID in the Amazon ECS task definition
-      #   id: task-def
-      #   uses: aws-actions/amazon-ecs-render-task-definition@v1
-      #   with:
-      #     task-definition: ${{ env.ECS_TASK_DEFINITION }}
-      #     container-name: ${{ env.CONTAINER_NAME }}
-      #     image: ${{ steps.build-image.outputs.image }}
-
-      - name: Update ECS Task Definition
-        run: |
-          TASK_FAMILY="my-nextjs-task"
-          NEW_IMAGE="782803702444.dkr.ecr.ap-south-1.amazonaws.com/my-next-app:latest
-          TASK_DEF=$(aws ecs describe-task-definition --task-definition $TASK_FAMILY)
-          echo "$TASK_DEF" | jq --arg newImage "$NEW_IMAGE" '.taskDefinition.containerDefinitions[0].image = $newImage' > new-task-def.json
-          NEW_REVISION=$(aws ecs register-task-definition --cli-input-json .aws/task-definition.json | jq -r '.taskDefinition.revision')
-          echo "NEW_TASK_REVISION=$NEW_REVISION" >> $GITHUB_ENV
-
-      - name: Stop Old Running Tasks
-        run: |
-          CLUSTER_NAME=defualt
-          # Get the running task ID
-          OLD_TASKS=$(aws ecs list-tasks --cluster --family my-nextjs-task --desired-status RUNNING | jq -r '.taskArns[]')
-          echo "OLD_TASKS=$OLD_TASKS" >> $GITHUB_ENV
-          # Stop the old tasks
-          for TASK in $OLD_TASKS; do
-          aws ecs stop-task --cluster default--task $TASK
-          done
-
-      - name: Deploy Amazon ECS task definition
-        uses: aws-actions/amazon-ecs-deploy-task-definition@v1
+      - name: Fill in the new image ID in the Amazon ECS task definition
+        id: task-def
+        uses: aws-actions/amazon-ecs-render-task-definition@v1
         with:
-          task-definition: ${{ steps.task-def.outputs.task-definition }}
-          service: ${{ env.ECS_SERVICE }}
-          cluster: ${{ env.ECS_CLUSTER }}
-          wait-for-service-stability: true
+          task-definition: ${{ env.ECS_TASK_DEFINITION }}
+          container-name: ${{ env.CONTAINER_NAME }}
+          image: ${{ steps.build-image.outputs.image }}
+
+
+      - name: Deploy to AWS
+        run: |
+          aws ecs update-service --cluster default --service vowerp3ui-dev-service --task-definition my-nextjs-task --force-new-deployment
 
       - name: Test application availability
         run: |

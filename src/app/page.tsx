@@ -17,7 +17,7 @@ export default function Home() {
           <li className="mb-2">
             Dev{" "}
             <code className="bg-black/[.05] dark:bg-white/[.06] px-1 py-0.5 rounded font-semibold">
-              Deployment check please work try 18 ...sdjisjdrisjdsifjisdfjisdjfij
+              Deployment check please work try 20 ...sdjisjdrisjdsifjisdfjisdjfij
             </code>
             .
           </li>

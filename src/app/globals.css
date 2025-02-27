@@ -2,14 +2,31 @@
 @tailwind components;
 @tailwind utilities;
 
+/* colors to use 
+Green : around #8EC641, #a0cb3f, #a4cc3d
+Dark‐blue logo : around #1E3B66
+Light‐blue: around #4FAFE1
+Light-grey: #d5d5d5
+dark-grey: #acacac
+lighter-grey:#f8f8f8
+background-blue- #1d4a70
+background- light blue - #eefafe
+border blue - #377da9
+red - #d9564d
+orange - #f19d38
+alternate blue - #53b2c6
+brown - #4a100b
+background blue light - #cee1eb
+*/
+
 :root {
   --background: #ffffff;
-  --foreground: #171717;
+  --foreground: #1E3B66;
 }
 
 @media (prefers-color-scheme: dark) {
   :root {
-    --background: #0a0a0a;
+    --background: #1E3B66;
     --foreground: #ededed;
   }
 }
@@ -19,3 +36,6 @@ body {
   background: var(--background);
   font-family: Arial, Helvetica, sans-serif;
 }
+
+
+

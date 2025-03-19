@@ -1,44 +1,70 @@
-import Image from "next/image";
 
+//import { useEffect } from "react"
+//import { useRouter } from "next/navigation"
+import { LoginForm } from "@/components/auth/login-form"
+import Image from "next/image"
+//import { isAuthenticated } from "@/lib/auth"
+//import { cookies } from 'next/headers'
+import { redirect } from 'next/navigation'
+import backlogo from "@/components/asstes/images/background.png"
 
 export default function Home() {
-  return (
-    <div className="grid grid-rows-[20px_1fr_20px] items-center justify-items-center min-h-screen p-8 pb-20 gap-16 sm:p-20 font-[family-name:var(--font-geist-sans)]">
-      <main className="flex flex-col gap-8 row-start-2 items-center sm:items-start">
-        <Image
-          src="/vow-logo-detailed.png"
-          alt="VOW logo"
-          width={180}
-          height={38}
-          priority
-        />
-        <ol className="list-inside list-decimal text-sm text-center sm:text-left font-[family-name:var(--font-geist-mono)]">
-          <li className="mb-2">
-            Dev{" "}
-            <code className="bg-black/[.05] dark:bg-white/[.06] px-1 py-0.5 rounded font-semibold">
-              Deployment check please work try 21 ...sdjisjdrisjdsifjisdfjisdjfij
-            </code>
-            .
-          </li>
-          <li>Deployment to VOWERP servers 10.2.25 why no chnage recorded </li>
-        </ol>
+  if (typeof window !== 'undefined') {
+    const user = localStorage.getItem('user')
+    if (user) {
+      redirect('/dashboard')
+    }
+  }
+ /*  const router = useRouter()
 
-        <div className="flex gap-4 items-center flex-col sm:flex-row">
-          <a
-            className="rounded-full border border-solid border-transparent transition-colors flex items-center justify-center bg-foreground text-background gap-2 hover:bg-[#383838] dark:hover:bg-[#ccc] text-sm sm:text-base h-10 sm:h-12 px-4 sm:px-5"
-          >
-            Deploy now
-          </a>
-          <a
-            className="rounded-full border border-solid border-black/[.08] dark:border-white/[.145] transition-colors flex items-center justify-center hover:bg-[#f2f2f2] dark:hover:bg-[#1a1a1a] hover:border-transparent text-sm sm:text-base h-10 sm:h-12 px-4 sm:px-5 sm:min-w-44"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Read our docs
-          </a>
+  useEffect(() => {
+    if (isAuthenticated()) {
+      router.replace("/dashboard")
+    }
+  }, [router])
+ */
+
+
+  
+  return (
+    <main className="min-h-screen flex">
+      {/* Left side - Welcome Image */}
+      <div className="hidden lg:flex lg:w-1/2 bg-gradient-to-br from-emerald-800 to-teal-600 p-12 relative">
+  <div
+    className="absolute inset-0 bg-cover bg-center"
+    style={{ backgroundImage: `url(${backlogo.src})` }}
+  >
+    {/* Background Image */}
+  </div>
+
+  {/* Centering the text */}
+  <div className="relative flex flex-col items-center justify-center w-full h-full text-white z-10">
+    <h1 className="text-2xl font-bold text-center mb-12">Nice to meet you</h1>
+    <h2 className="text-6xl font-bold text-center mb-12">WELCOME</h2>
+    <p className="text-xm text-center">
+      We have customized this product according to your needs and can&apos;t wait to see you using this product. This will simplify the working of your business.
+    </p>
+  </div>
+</div>
+
+     {/* Right side - Login Form */}
+      <div className="w-full lg:w-1/2 flex items-center justify-center p-8">
+        <div className="w-full max-w-md space-y-8">
+          <div className="flex justify-center">
+            <Image
+              src="/dashboard/vow_logo.png"
+              alt="VOW Log"
+              width={150}
+              height={60}
+              priority
+            />
+          </div>
+          <div className="text-center space-y-1">
+      
+          </div>
+          <LoginForm />
         </div>
-      </main>
-    </div>
-  );
+      </div>
+    </main>
+  )
 }

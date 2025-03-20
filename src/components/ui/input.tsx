@@ -1,5 +1,5 @@
 import * as React from 'react';
-import { cn } from '@/lib/utils';
+import { cn } from '@/utils/protected';
 
 type InputProps = React.InputHTMLAttributes<HTMLInputElement>; // ✅ Use `type` instead of `interface`
 

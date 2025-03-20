@@ -1,8 +1,9 @@
 import Link from "next/link";
 import { ChevronDown } from "lucide-react";
 //import { cn } from "@/lib/utils";
-import { useCompanyConsole } from "@/hooks/use-company-console";
+import { useCompanyConsole } from "@/hooks/use-org-ctrldesk";
 import {  useState } from "react"
+
 interface MenuItem {
   title: string;
   path?: string;

@@ -1,11 +1,12 @@
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
-import { getUser, urlfixed } from "@/lib/auth";
+import { getUser, urlfixed } from "@/utils/auth";
+import CONSOLE_MENU_CTRDESK from "@/utils/api";
 
-const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:3000";
-const CONSOLE_MENU_API =process.env.NEXT_PUBLIC_CONSOLE_MENU_API
-console.log(CONSOLE_MENU_API,API_URL)
+// const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:3000";
+// const CONSOLE_MENU_API =process.env.NEXT_PUBLIC_CONSOLE_MENU_API
+// console.log(CONSOLE_MENU_API,API_URL)
 
 
 interface MenuItem {
@@ -41,7 +42,7 @@ export function useCompanyConsole() {
        // Store FY Year data in localStorage
   
       const response = await fetch(
-        `${API_URL}${CONSOLE_MENU_API}?user_id=${user.id}&subdomain=${subdomain}`,
+        `${CONSOLE_MENU_CTRDESK}?user_id=${user.id}&subdomain=${subdomain}`,
         {
           headers: {
             "Content-Type": "application/json",

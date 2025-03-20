@@ -3,7 +3,7 @@
 import { useEffect } from "react"
 import { useRouter } from "next/navigation"
 import { Card } from "@/components/ui/card"
-import { isAuthenticated } from "@/lib/auth"
+import { isAuthenticated } from "@/utils/auth"
 
 export default function DashboardPage() {
   const router = useRouter()
@@ -17,7 +17,7 @@ export default function DashboardPage() {
   return (
     <div className="p-6">
       <div className="flex justify-between items-center mb-6">
-        <h1 className="text-2xl font-bold text-gray-900">Dashboard Consoles</h1>
+        <h1 className="text-2xl font-bold text-gray-900">Dashboard</h1>
         <div className="text-sm text-gray-500">2024-2025</div>
       </div>
       

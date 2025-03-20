@@ -4,7 +4,7 @@ import { useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { LoginForm } from "@/components/auth/login-form";
 import Image from "next/image";
-import backlogo from "@/components/asstes/images/background.png";
+// import backlogo from "@/components/asstes/images/background.png";
 
 export default function Home() {
   const router = useRouter();
@@ -24,7 +24,7 @@ export default function Home() {
       <div className="hidden lg:flex lg:w-1/2 bg-gradient-to-br from-emerald-800 to-teal-600 p-12 relative">
         <div
           className="absolute inset-0 bg-cover bg-center"
-          style={{ backgroundImage: `url(${backlogo.src})` }}
+          style={{ backgroundImage: "url('/background.png')" }}
         ></div>
 
         {/* Centering the text */}
@@ -46,7 +46,7 @@ export default function Home() {
         <div className="w-full max-w-md space-y-8">
           <div className="flex justify-center">
             <Image
-              src="/dashboard/vow_logo.png"
+              src="/logo.png"
               alt="VOW Logo"
               width={150}
               height={60}

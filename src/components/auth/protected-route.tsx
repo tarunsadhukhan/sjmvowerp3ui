@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react'
 import { useRouter, usePathname } from 'next/navigation'
-import { getUser } from '@/lib/auth'
+import { getUser } from '@/utils/auth'
 
 export default function ProtectedRoute({
   children,

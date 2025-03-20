@@ -1,7 +1,7 @@
 import LogoSection from "./LogoSection";
 import { DynamicMenuConsole } from "./DynamicMenuConsole";
 import { FixedMenuConsole } from "./FixedMenuConsole";
-import { cn } from "@/lib/utils"
+import { cn } from "@/utils/protected"
 
 
 

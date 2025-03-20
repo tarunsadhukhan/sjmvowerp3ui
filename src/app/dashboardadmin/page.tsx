@@ -3,7 +3,7 @@
 import { useEffect } from "react"
 import { useRouter } from "next/navigation"
 import { Card } from "@/components/ui/card"
-import { isAuthenticated } from "@/lib/auth"
+import { isAuthenticated } from "@/utils/auth"
 
 export default function DashboardPage() {
   const router = useRouter()

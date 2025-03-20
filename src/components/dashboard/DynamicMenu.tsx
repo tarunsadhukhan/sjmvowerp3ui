@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { ChevronDown } from "lucide-react";
 //import { cn } from "@/lib/utils";
-import { useCompany } from "@/hooks/use-company";
+import { useCompany } from "@/hooks/use-org";
 import {  useState } from "react"
 interface MenuItem {
   title: string;

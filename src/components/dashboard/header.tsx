@@ -9,7 +9,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
 import { Button } from "@/components/ui/button"
-import { logout } from "@/lib/auth"
+import { logout } from "@/utils/auth"
 
 export default function Header() {
   const [notifications] = useState([

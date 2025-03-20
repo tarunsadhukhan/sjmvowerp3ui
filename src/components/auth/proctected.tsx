@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { getProtectedData } from "@/lib/utils";
+import { getProtectedData } from "@/utils/protected";
  
 
 export default function ProtectedPage() {

@@ -3,8 +3,8 @@ import { CompanySelection } from "./CompanySelection";
 import { DynamicMenu } from "./DynamicMenu";
 import { DynamicMenuConsole } from "./DynamicMenuConsole";
 import { FixedMenu } from "./FixedMenu";
-import { cn } from "@/lib/utils"
-import { urlcheck } from "@/lib/auth";
+import { cn } from "@/utils/protected"
+import { urlcheck } from "@/utils/auth";
 
 interface SidebarProps {
   isCollapsed: boolean;

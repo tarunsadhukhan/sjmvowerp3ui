@@ -1,7 +1,7 @@
 "use client";
 
 import Selects from "react-select";
-import { useCompany } from "@/hooks/use-company"; // ✅ Fetch company list from API
+import { useCompany } from "@/hooks/use-org"; // ✅ Fetch company list from API
 import { Skeleton } from "@/components/ui/skeleton"; // ✅ Show loading effect
 import { StylesConfig } from "react-select";
 

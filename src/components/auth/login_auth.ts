@@ -1,5 +1,6 @@
 import axios from "axios";
 import Swal from "sweetalert2";
+import apiRoutes from "@/utils/api";
 //import * as dotenv from "dotenv";
 //dotenv.config({ path: "env/api.env" });
 
@@ -27,7 +28,7 @@ export const login = async (
     const subdomain = "vowsls3.vowerp.co.in"; // ✅ Extract subdomain dynamically
     console.log('hdhdh',subdomain)
     const response = await axios.post(
-      `${API_URL}/api/authRoutes/login`,
+      apiRoutes.USERLOGINCONSOLE,
       {
         username,
         password,
@@ -99,7 +100,7 @@ export const loginConsole = async (
     const subdomain = "vowsls3.vowerp.co.in"; // ✅ Extract subdomain dynamically
     console.log('hdhdh',subdomain)
     const response = await axios.post(
-      `${API_URL}/api/authRoutes/loginconsole`,
+      apiRoutes.SUPERADMINLOGINCONSOLE,
       {
         username,
         password,
@@ -165,7 +166,7 @@ export const getProtectedData = async () => {
   if (!token) return null;
 
   try {
-    const response = await axios.get(`${API_URL}/api/authRoutes/protected`, {
+    const response = await axios.get(apiRoutes.PROTECTED, {
       headers: { Authorization: `Bearer ${token}` },
     });
 

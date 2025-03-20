@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { Users, LogOut, CalendarDays, Key } from "lucide-react";
-import { useCompany } from "@/hooks/use-company";
+import { useCompany } from "@/hooks/use-org";
 import {  useState } from "react"
 import { useRouter } from "next/navigation"
 

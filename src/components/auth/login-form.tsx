@@ -16,12 +16,12 @@ import {
   FormMessage,
 } from "@/components/ui/form"
 import { Input } from "@/components/ui/input"
-import { cn } from "../../lib/utils"
+import { cn } from "../../utils/protected"
 import { Loader2 } from "lucide-react"
-import { setUser } from "@/lib/auth"
-import { urlcheck } from "@/lib/auth";
+import { setUser } from "@/utils/auth"
+import { urlcheck } from "@/utils/auth";
 
-import { login,loginConsole } from "@/lib/utils/api"
+import { login,loginConsole } from "@/components/auth/login_auth"
  
 const formSchema = z.object({
   username: z.string().min(1,"user name must be 1 charecter"),
@@ -101,12 +101,12 @@ export function LoginForm() {
     
     console.log(currentHost)
     if (currentHost === "admin.vwxxx.co.in" || currentHost === "localhost:3001" ) {
-      router.push("/dashboardconsole")
+      router.push("/dashboardctrldesk")
       console.log('console')
     } else {
       console.log('console',values.loginType)
     if (values.loginType==="portal") {
-      router.push("/dashboard")
+      router.push("/dashboardportal")
     } else {
       router.push("/dashboardadmin")
     }  

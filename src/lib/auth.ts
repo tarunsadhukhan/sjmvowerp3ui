@@ -1,3 +1,4 @@
+'use client'
 export interface User {
     id: string
     email: string
@@ -59,15 +60,21 @@ export interface User {
   }
 
   export function urlcheck() {
-    let compshow=1
-      const currentHost = window.location.host; // Gets current domain
-      console.log("Detected Host:", currentHost,window.location.href);
-      if (currentHost === "admin.vowerp.co.in" || currentHost === "localhost:3001" ) {
-          compshow=1
-    } else {
-         compshow=2
-    }   
-    return { compshow, currentHost }
+    let compshow = 1;
+    let currentHost = "";
+  
+    if (typeof window !== 'undefined') {
+      currentHost = window.location.host; // Get current domain on client side
+      console.log("Detected Host:", currentHost, window.location.href);
+      
+      if (currentHost === "admin.vowerp.co.in" || currentHost === "localhost:3001") {
+        compshow = 1;
+      } else {
+        compshow = 2;
+      }
+    }
+  
+    return { compshow, currentHost };
   }
 
 

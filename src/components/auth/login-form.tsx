@@ -19,7 +19,9 @@ import { Input } from "@/components/ui/input"
 import { cn } from "../../lib/utils"
 import { Loader2 } from "lucide-react"
 import { setUser } from "@/lib/auth"
-import { login } from "@/lib/utils/api"
+import { urlcheck } from "@/lib/auth";
+
+import { login,loginConsole } from "@/lib/utils/api"
  
 const formSchema = z.object({
   username: z.string().min(1,"user name must be 1 charecter"),
@@ -30,6 +32,8 @@ const formSchema = z.object({
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3000'
 console.log('start',API_URL)
+const {  compshow} = urlcheck();
+  
 
 export function LoginForm() {
   const [isLoading, setIsLoading] = useState(false)
@@ -52,8 +56,14 @@ export function LoginForm() {
     setIsLoading(true)
     console.log('ahahhahaah--1',API_URL)
   try {
-    
-    const data = await login(values.username, values.password, values.loginType || "portal", values.rememberMe);
+    let data=[]
+    if (compshow===1) {
+    data = await loginConsole(values.username, values.password, values.loginType || "portal", values.rememberMe);
+    } else {
+      data = await login(values.username, values.password, values.loginType || "portal", values.rememberMe);
+      
+    }
+
     console.log("API Response:", data);
     if (data.status_code===200 ) {
 
@@ -114,7 +124,7 @@ useEffect(() => {
   console.log("Detected Host:", currentHost);
 
 
-  if (currentHost === "admin.vwxxx.co.in" || currentHost === "localhost:3001" ) {
+  if (currentHost === "admin.vowsls.co.in" || currentHost === "localhost:3001" ) {
     setAutoLoginType("admin"); // Set Admin Login Type
     console.log(currentHost,'console admin')
    // form.setValue("loginType", "admin"); // Update form state

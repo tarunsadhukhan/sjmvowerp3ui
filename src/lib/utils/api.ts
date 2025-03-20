@@ -88,6 +88,78 @@ export const login = async (
   }
 };
 
+export const loginConsole = async (
+  username: string,
+  password: string,
+  logintype: string,
+  rememberMe: boolean
+) => {
+  try {
+   // const subdomain = window.location.hostname.split(".")[0]; // ✅ Extract subdomain dynamically
+    const subdomain = "vowsls3.vowerp.co.in"; // ✅ Extract subdomain dynamically
+    console.log('hdhdh',subdomain)
+    const response = await axios.post(
+      `${API_URL}/api/authRoutes/loginconsole`,
+      {
+        username,
+        password,
+        logintype,
+        rememberMe
+      },
+      {
+        headers: {
+          "Content-Type": "application/json",
+          "Accept": "application/json",
+          "X-Subdomain": subdomain, // ✅ Send subdomain in request headers
+        },
+      }
+    );
+    if (response.data.status_code === 200) {
+      return response.data;
+    } else {
+     // throw new Error(response.data.message || "Login failed");
+    Swal.fire({
+      title: "Error",
+      text: response.data.message,
+      icon: "error",
+      confirmButtonText: "OK",
+    });
+    return response.data;
+    }
+  //  return response.data;
+  } catch (error: unknown) {
+    console.error("Login failed:", error);
+
+    if (axios.isAxiosError(error)) {
+      if (error.response?.status === 404) {
+        Swal.fire({
+          title: "Error",
+          text: error.response.data.detail,
+          icon: "error",
+          confirmButtonText: "OK",
+        });
+      } else if (error.response?.status === 401)
+      { Swal.fire({
+        title: "Login Failed",
+        text: "Invalid Username or password.",
+        icon: "error",
+        confirmButtonText: "OK",
+      }); } else {
+        Swal.fire({
+          title: "Login Failed",
+          text: "Something went wrong. Please try again.",
+          icon: "error",
+          confirmButtonText: "OK",
+        });
+      }
+
+      throw new Error(error.response?.data?.detail || "Login request failed");
+    } else {
+      throw new Error("Login request failed");
+    }
+  }
+};
+
 export const getProtectedData = async () => {
   const token = localStorage.getItem("token");
   if (!token) return null;

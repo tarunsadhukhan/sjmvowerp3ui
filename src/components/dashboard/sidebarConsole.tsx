@@ -2,7 +2,7 @@ import LogoSection from "./LogoSection";
 import { DynamicMenuConsole } from "./DynamicMenuConsole";
 import { FixedMenuConsole } from "./FixedMenuConsole";
 import { cn } from "@/lib/utils"
-import { urlcheck } from "@/lib/auth";
+
 
 
 interface SidebarProps {
@@ -11,8 +11,7 @@ interface SidebarProps {
 }
 
 export default function sidebarConsole({ isCollapsed, onToggle }: SidebarProps) {
-  const {compshow } = urlcheck();
-
+  
  
     return (
     <div className={cn(

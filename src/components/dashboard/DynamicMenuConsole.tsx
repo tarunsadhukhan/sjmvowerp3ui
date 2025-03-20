@@ -13,7 +13,7 @@ interface MenuItem {
 export function DynamicMenuConsole({ isCollapsed }: { isCollapsed: boolean }) {
   const { menuItems } = useCompanyConsole();
   const [openMenus, setOpenMenus] = useState<string[]>([]);
-  
+  const [pageTitle, setPageTitle] = useState("Dashboard");
   console.log(menuItems)
 
 
@@ -36,7 +36,8 @@ export function DynamicMenuConsole({ isCollapsed }: { isCollapsed: boolean }) {
             if (hasSubmenu) {
               e.preventDefault();
               toggleSubmenu(item.title);
-            }
+              console.log('itttsts',item.title)
+            } 
           }}
         >
           <span className="mr-3">{item.icon}</span>

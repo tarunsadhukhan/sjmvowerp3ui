@@ -1,8 +1,7 @@
-
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
-import { getUser, urlcheck,urlfixed } from "@/lib/auth";
+import { getUser, urlfixed } from "@/lib/auth";
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:3000";
 const CONSOLE_MENU_API =process.env.NEXT_PUBLIC_CONSOLE_MENU_API
@@ -20,7 +19,6 @@ interface MenuItem {
 export function useCompanyConsole() {
   const [menuItems, setMenuItems] = useState<MenuItem[]>([]);
   const [loading, setLoading] = useState(false);
-  const {  currentHost } = urlcheck();
   const {subdomain } = urlfixed()
   
   // Set up the initial company state
@@ -59,19 +57,19 @@ export function useCompanyConsole() {
       }
 
       const data = await response.json();
-      setMenuItems(data);
+      setMenuItems(data.data);
     } catch (error) {
       console.error("Error fetching menus:", error);
       setMenuItems([]);
     }
-  }, []);
+  }, [subdomain]);
 
 
   useEffect(()=> {
     setLoading(true);
     fetchMenusConsole()
     setLoading(false)
-  },[]
+  },[fetchMenusConsole]
     );
 
    

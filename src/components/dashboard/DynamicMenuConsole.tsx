@@ -14,7 +14,6 @@ interface MenuItem {
 export function DynamicMenuConsole({ isCollapsed }: { isCollapsed: boolean }) {
   const { menuItems } = useCompanyConsole();
   const [openMenus, setOpenMenus] = useState<string[]>([]);
-  const [pageTitle, setPageTitle] = useState("Dashboard");
   console.log(menuItems)
 
 

@@ -73,9 +73,9 @@ export function LoginForm() {
     };
 
     // Store user data in localStorage
-    localStorage.setItem("user", JSON.stringify(user));
-    console.log("User stored in localStorage:", user);
-    console.log(user.token)
+    document.cookie = `user=${encodeURIComponent(JSON.stringify(user))}; path=/; secure; samesite=strict`;
+    console.log("User stored in cookie:", user);
+    console.log(user.token);
     // Navigate to dashboard
     //router.push("/dashboard");
    

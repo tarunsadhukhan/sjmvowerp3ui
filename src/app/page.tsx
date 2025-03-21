@@ -11,7 +11,10 @@ export default function Home() {
 
   useEffect(() => {
     if (typeof window !== "undefined") {
-      const user = localStorage.getItem("user");
+      const user = document.cookie
+        .split("; ")
+        .find((row) => row.startsWith("user_id="))
+        ?.split("=")[1];
       if (user) {
         router.push("/dashboard"); // Redirect only on client-side
       }

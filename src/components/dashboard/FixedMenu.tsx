@@ -20,13 +20,16 @@ export function FixedMenu({ isCollapsed }: { isCollapsed: boolean }) {
 const handleLogout = (e: React.MouseEvent<HTMLAnchorElement>) => {
   e.preventDefault(); // Prevent default navigation behavior
   console.log("Logging out...");
+  
+  // Remove access_token from cookies
+
+  
+  // Commented out localStorage removal
   localStorage.removeItem("user");  // Remove user data
   localStorage.removeItem("jwtToken"); 
-  // Clear localStorage
-  localStorage.removeItem("user");
-  localStorage.removeItem("jwtToken");
   localStorage.clear();
-  console.log(localStorage.user,'for user')
+  // console.log(localStorage.user, 'for user');
+  
   // Redirect to login page manually
   router.push("/");
 };

@@ -3,6 +3,7 @@
 import { useState, useEffect, useCallback } from "react";
 import { getUser, getCompany, setCompany as saveCompany, type Company,urlcheck } from "@/utils/auth";
 
+
 const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:3000";
 
 interface MenuItem {
@@ -43,12 +44,28 @@ export function useCompany() {
     if (!user?.id) return;
     console.log('mehhhs-------')
     try {
+      // const responses = await fetch(
+      //   `${API_URL}/api/masterRoutes/fyyear?company_id=${companyId}&user_id=${user.id}`,
+      //   {
+      //     headers: {
+      //       "Content-Type": "application/json",
+      //       Authorization: `Bearer ${user.id}`,
+      //     },
+      //   }
+      // );
+
+      // Extract access_token from cookies
+      const accessToken = document.cookie
+        .split("; ")
+        .find((row) => row.startsWith("access_token="))
+        ?.split("=")[1];
+
       const responses = await fetch(
-        `${API_URL}/api/masterRoutes/fyyear?company_id=${companyId}&user_id=${user.id}`,
+        `${API_URL}/api/masterRoutes/fyyear?company_id=${companyId}&user_id=${user.id}&subdomain=${currentHost}`,
         {
           headers: {
-            "Content-Type": "application/json",
-            Authorization: `Bearer ${user.id}`,
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${accessToken}`,
           },
         }
       );

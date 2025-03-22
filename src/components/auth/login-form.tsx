@@ -86,7 +86,7 @@ export function LoginForm({ subdomain }: LoginFormsProps) {
 
       // Commenting out the original code
       // document.cookie = `user=${encodeURIComponent(JSON.stringify(user))}; path=/; secure; samesite=strict`;
-
+      localStorage.setItem("user_id", data.user_id || "");
       // New code to save the token as 'access_token' in the cookie
       document.cookie = `access_token=${data.access_token}; path=/; secure; samesite=strict`;
 

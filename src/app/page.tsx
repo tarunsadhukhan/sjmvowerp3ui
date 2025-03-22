@@ -12,8 +12,11 @@ export default function Home() {
   useEffect(() => {
     if (typeof window !== "undefined") {
       const hostname = window.location.hostname; // Get the hostname
+      console.log("Detected Hostname:", hostname); // Log the hostname
+
       const subdomainPart = hostname.split(".")[0]; // Extract the subdomain
       console.log("Detected Subdomain:", subdomainPart); // Log the subdomain
+
       setSubdomain(subdomainPart !== "localhost" ? subdomainPart : null); // Set subdomain if not localhost
 
       const userCookie = document.cookie
@@ -24,8 +27,10 @@ export default function Home() {
       if (userCookie) {
         const user = JSON.parse(decodeURIComponent(userCookie));
         if (subdomainPart === "admin") {
+          console.log("Redirecting to: /dashboardctrldesk"); // Log redirection URL
           router.push("/dashboardctrldesk");
         } else {
+          console.log("Redirecting to: /dashboardportal"); // Log redirection URL
           router.push("/dashboardportal");
         }
       }

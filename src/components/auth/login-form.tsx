@@ -10,7 +10,7 @@ import { Checkbox } from "@/components/ui/checkbox"
 import {
   Form,
   FormControl,
-  FormField,
+ FormField,
   FormItem,
   FormLabel,
   FormMessage,
@@ -84,7 +84,11 @@ export function LoginForm({ subdomain }: LoginFormsProps) {
       subdomain: subdomain, // Add subdomain to the user object
       };
 
-      document.cookie = `user=${encodeURIComponent(JSON.stringify(user))}; path=/; secure; samesite=strict`;
+      // Commenting out the original code
+      // document.cookie = `user=${encodeURIComponent(JSON.stringify(user))}; path=/; secure; samesite=strict`;
+
+      // New code to save the token as 'access_token' in the cookie
+      document.cookie = `access_token=${data.access_token}; path=/; secure; samesite=strict`;
 
       // Old redirection logic
       // router.push("/dashboard");

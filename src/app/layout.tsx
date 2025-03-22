@@ -32,7 +32,7 @@ export default function RootLayout({
       <body className={`${inter.className}`}>
       {/*   <AuthProvider>    */}
           {children}
-      {/*    </AuthProvider>  */}
+         {/* </AuthProvider>  */}
       </body>
     </html>
   );

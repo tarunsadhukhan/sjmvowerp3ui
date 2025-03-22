@@ -1,22 +1,33 @@
 "use client"; // Ensure this component runs only on the client
 
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { LoginForm } from "@/components/auth/login-form";
 import Image from "next/image";
-// import backlogo from "@/components/asstes/images/background.png";
 
 export default function Home() {
   const router = useRouter();
+  const [subdomain, setSubdomain] = useState<string | null>(null);
 
   useEffect(() => {
     if (typeof window !== "undefined") {
-      const user = document.cookie
+      const hostname = window.location.hostname; // Get the hostname
+      const subdomainPart = hostname.split(".")[0]; // Extract the subdomain
+      console.log("Detected Subdomain:", subdomainPart); // Log the subdomain
+      setSubdomain(subdomainPart !== "localhost" ? subdomainPart : null); // Set subdomain if not localhost
+
+      const userCookie = document.cookie
         .split("; ")
-        .find((row) => row.startsWith("user_id="))
+        .find((row) => row.startsWith("user="))
         ?.split("=")[1];
-      if (user) {
-        router.push("/dashboard"); // Redirect only on client-side
+
+      if (userCookie) {
+        const user = JSON.parse(decodeURIComponent(userCookie));
+        if (subdomainPart === "admin") {
+          router.push("/dashboardctrldesk");
+        } else {
+          router.push("/dashboardportal");
+        }
       }
     }
   }, [router]);
@@ -51,12 +62,12 @@ export default function Home() {
             <Image
               src="/logo.png"
               alt="VOW Logo"
-              width={150}
-              height={60}
+              width={200}
+              height={100}
               priority
             />
           </div>
-          <LoginForm />
+          <LoginForm subdomain={subdomain} />
         </div>
       </div>
     </main>

@@ -1,21 +1,10 @@
 import axios from "axios";
 import Swal from "sweetalert2";
 import apiRoutes from "@/utils/api";
-//import * as dotenv from "dotenv";
-//dotenv.config({ path: "env/api.env" });
 
-//import path from "path";
+const API_URL = process.env.NEXT_PUBLIC_API_URL;
 
-// Load environment variables from env/api.env
-//dotenv.config({ path: path.resolve(__dirname, "/env/api.env") });
-const API_URL = process.env.NEXT_PUBLIC_API_URL
-
-console.log('nnnnn',API_URL)
-
-//|| "http://localhost:8000";
-
-//process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
-  
+console.log('nnnnn', API_URL);
 
 export const login = async (
   username: string,
@@ -24,9 +13,12 @@ export const login = async (
   rememberMe: boolean
 ) => {
   try {
-   // const subdomain = window.location.hostname.split(".")[0]; // ✅ Extract subdomain dynamically
+    // const subdomain = window.location.hostname.split(".")[0]; // ✅ Extract subdomain dynamically
     const subdomain = "vowsls3.vowerp.co.in"; // ✅ Extract subdomain dynamically
-    console.log('hdhdh',subdomain)
+    console.log('hdhdh', subdomain);
+
+    // Commented out axios call for multi-tenancy
+    /*
     const response = await axios.post(
       apiRoutes.USERLOGINCONSOLE,
       {
@@ -43,19 +35,22 @@ export const login = async (
         },
       }
     );
+    */
+
+    // Simulate response for now
+    const response = { data: { status_code: 200, message: "Success" } };
+
     if (response.data.status_code === 200) {
       return response.data;
     } else {
-     // throw new Error(response.data.message || "Login failed");
-    Swal.fire({
-      title: "Error",
-      text: response.data.message,
-      icon: "error",
-      confirmButtonText: "OK",
-    });
-    return response.data;
+      Swal.fire({
+        title: "Error",
+        text: response.data.message,
+        icon: "error",
+        confirmButtonText: "OK",
+      });
+      return response.data;
     }
-  //  return response.data;
   } catch (error: unknown) {
     console.error("Login failed:", error);
 
@@ -67,13 +62,14 @@ export const login = async (
           icon: "error",
           confirmButtonText: "OK",
         });
-      } else if (error.response?.status === 401)
-      { Swal.fire({
-        title: "Login Failed",
-        text: "Invalid Username or password.",
-        icon: "error",
-        confirmButtonText: "OK",
-      }); } else {
+      } else if (error.response?.status === 401) {
+        Swal.fire({
+          title: "Login Failed",
+          text: "Invalid Username or password.",
+          icon: "error",
+          confirmButtonText: "OK",
+        });
+      } else {
         Swal.fire({
           title: "Login Failed",
           text: "Something went wrong. Please try again.",
@@ -96,9 +92,12 @@ export const loginConsole = async (
   rememberMe: boolean
 ) => {
   try {
-   // const subdomain = window.location.hostname.split(".")[0]; // ✅ Extract subdomain dynamically
+    // const subdomain = window.location.hostname.split(".")[0]; // ✅ Extract subdomain dynamically
     const subdomain = "vowsls3.vowerp.co.in"; // ✅ Extract subdomain dynamically
-    console.log('hdhdh',subdomain)
+    console.log('hdhdh', subdomain);
+
+    // Commented out axios call for multi-tenancy
+    /*
     const response = await axios.post(
       apiRoutes.SUPERADMINLOGINCONSOLE,
       {
@@ -115,19 +114,22 @@ export const loginConsole = async (
         },
       }
     );
+    */
+
+    // Simulate response for now
+    const response = { data: { status_code: 200, message: "Success" } };
+
     if (response.data.status_code === 200) {
       return response.data;
     } else {
-     // throw new Error(response.data.message || "Login failed");
-    Swal.fire({
-      title: "Error",
-      text: response.data.message,
-      icon: "error",
-      confirmButtonText: "OK",
-    });
-    return response.data;
+      Swal.fire({
+        title: "Error",
+        text: response.data.message,
+        icon: "error",
+        confirmButtonText: "OK",
+      });
+      return response.data;
     }
-  //  return response.data;
   } catch (error: unknown) {
     console.error("Login failed:", error);
 
@@ -139,13 +141,14 @@ export const loginConsole = async (
           icon: "error",
           confirmButtonText: "OK",
         });
-      } else if (error.response?.status === 401)
-      { Swal.fire({
-        title: "Login Failed",
-        text: "Invalid Username or password.",
-        icon: "error",
-        confirmButtonText: "OK",
-      }); } else {
+      } else if (error.response?.status === 401) {
+        Swal.fire({
+          title: "Login Failed",
+          text: "Invalid Username or password.",
+          icon: "error",
+          confirmButtonText: "OK",
+        });
+      } else {
         Swal.fire({
           title: "Login Failed",
           text: "Something went wrong. Please try again.",

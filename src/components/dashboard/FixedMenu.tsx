@@ -26,7 +26,6 @@ const handleLogout = (e: React.MouseEvent<HTMLAnchorElement>) => {
   
   // Commented out localStorage removal
   localStorage.removeItem("user");  // Remove user data
-  localStorage.removeItem("jwtToken"); 
   localStorage.clear();
   // console.log(localStorage.user, 'for user');
   

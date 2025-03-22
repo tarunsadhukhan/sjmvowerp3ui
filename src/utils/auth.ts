@@ -29,6 +29,8 @@ export interface User {
     }
   }
   
+
+  // should this get company or organisation ? if we want to get org, then we already have the subdomain so is it needed?
   export function setCompany(company: Company) {
     if (typeof window === 'undefined') return
     localStorage.setItem('selectedCompany', JSON.stringify(company))
@@ -56,6 +58,7 @@ export interface User {
     if (typeof window === 'undefined') return
     localStorage.removeItem('user')
     localStorage.removeItem('selectedCompany')
+    document.cookie = 'access_token=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;'
     window.location.href = '/'
   }
 
@@ -77,7 +80,7 @@ export interface User {
     return { compshow, currentHost };
   }
 
-
+// if for testing should we remove this now ?
   export function urlfixed() {
     const subdomain = "vowsls3.vowerp.co.in"; 
    

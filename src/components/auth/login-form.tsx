@@ -27,7 +27,7 @@ import { login,loginConsole } from "@/components/auth/login_auth"
 interface LoginFormsProps {
   subdomain: string | null;
 }
- 
+// console.log('subdomain loginform', subdomain); // Moved inside the LoginForm function
 // Moved inside the LoginForm function to avoid undefined error
 const formSchema = z.object({
   username: z.string().min(1,"user name must be 1 charecter"),
@@ -44,6 +44,7 @@ const {  compshow} = urlcheck();
 export function LoginForm({ subdomain }: LoginFormsProps) {
   // console.log('subdomain', subdomain);
   const [isLoading, setIsLoading] = useState(false)
+  console.log('subdomain loginform', subdomain); // Moved here to avoid undefined error
   const [autoLoginType, setAutoLoginType] = useState<string | null>(null); 
  // const [error, setError] = useState("")
   const router = useRouter()
@@ -62,13 +63,14 @@ export function LoginForm({ subdomain }: LoginFormsProps) {
   async function onSubmit(values: z.infer<typeof formSchema>) {
     setIsLoading(true)
     // console.log('ahahhahaah--1', urlcheck())
+    console.log('check subdomain passes as prop to login form component', subdomain)
   try {
     let data: { status_code: number; message: string; user_id?: string; access_token?: string } = { status_code: 0, message: "" };
-    if (compshow === 1) {
-      data = await loginConsole(values.username, values.password, values.loginType || "portal", values.rememberMe);
-    } else {
-      data = await login(values.username, values.password, values.loginType || "portal", values.rememberMe);
-    }
+    // if (compshow === 1) {
+    //   data = await loginConsole(values.username, values.password, values.loginType || "portal", values.rememberMe);
+    // } else {
+    //   data = await login(values.username, values.password, values.loginType || "portal", values.rememberMe);
+    // }
 
     if (subdomain === "admin" || values.loginType === "admin") {
       data = await loginConsole(values.username, values.password, values.loginType || "portal", values.rememberMe) as { status_code: number; message: string; user_id?: string; access_token?: string };

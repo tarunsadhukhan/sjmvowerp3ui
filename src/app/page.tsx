@@ -13,29 +13,27 @@ export default function Home() {
     if (typeof window !== "undefined") {
       const hostname = window.location.hostname; // Get the hostname
       console.log("Detected Hostname:", hostname); // Log the hostname
-
       const subdomainPart = hostname.split(".")[0]; // Extract the subdomain
-      console.log("Detected Subdomain:", subdomainPart); // Log the subdomain
+      setSubdomain(subdomainPart); // Set subdomain directly
+      console.log("Detected Subdomain in loginpage:", subdomainPart); // Log the subdomain
 
-      setSubdomain(subdomainPart !== "localhost" ? subdomainPart : null); // Set subdomain if not localhost
+    //   const userCookie = document.cookie
+    //     .split("; ")
+    //     .find((row) => row.startsWith("user="))
+    //     ?.split("=")[1];
 
-      const userCookie = document.cookie
-        .split("; ")
-        .find((row) => row.startsWith("user="))
-        ?.split("=")[1];
-
-      if (userCookie) {
-        const user = JSON.parse(decodeURIComponent(userCookie));
-        if (subdomainPart === "admin") {
-          console.log("Redirecting to: /dashboardctrldesk"); // Log redirection URL
-          router.push("/dashboardctrldesk");
-        } else {
-          console.log("Redirecting to: /dashboardportal"); // Log redirection URL
-          router.push("/dashboardportal");
-        }
-      }
+    //   if (userCookie) {
+    //     const user = JSON.parse(decodeURIComponent(userCookie));
+    //     if (subdomain === "admin") {
+    //       console.log("Redirecting to: /dashboardctrldesk"); // Log redirection URL
+    //       router.push("/dashboardctrldesk");
+    //     } else {
+    //       console.log("Redirecting to: /dashboardportal"); // Log redirection URL
+    //       router.push("/dashboardportal");
+    //     }
+    //   }
     }
-  }, [router]);
+  }, []);
 
   return (
     <main className="min-h-screen flex">

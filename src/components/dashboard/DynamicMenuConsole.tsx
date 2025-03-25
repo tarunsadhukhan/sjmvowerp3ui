@@ -16,6 +16,8 @@ export function DynamicMenuConsole({ isCollapsed }: { isCollapsed: boolean }) {
   const [openMenus, setOpenMenus] = useState<string[]>([]);
   console.log(menuItems)
 
+  const userid = localStorage.getItem("user_id");
+  console.log('userid from dynamic menu console',userid)
 
   const toggleSubmenu = (title: string) => {
     setOpenMenus(prev =>

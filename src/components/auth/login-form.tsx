@@ -18,8 +18,8 @@ import {
 import { Input } from "@/components/ui/input"
 import { cn } from "../../utils/protected"
 import { Loader2 } from "lucide-react"
-import { setUser } from "@/utils/auth"
-import { urlcheck } from "@/utils/auth";
+// import { setUser } from "@/utils/auth"
+// import { urlcheck } from "@/utils/auth";
 
 import { login,loginConsole } from "@/components/auth/login_auth"
 
@@ -27,7 +27,6 @@ import { login,loginConsole } from "@/components/auth/login_auth"
 interface LoginFormsProps {
   subdomain: string | null;
 }
-// console.log('subdomain loginform', subdomain); // Moved inside the LoginForm function
 // Moved inside the LoginForm function to avoid undefined error
 const formSchema = z.object({
   username: z.string().min(1,"user name must be 1 charecter"),
@@ -36,9 +35,8 @@ const formSchema = z.object({
   loginType: z.string().optional(),
 })
 
-// const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3000'
-// console.log('start',API_URL)
-const {  compshow} = urlcheck();
+
+// const {  compshow} = urlcheck();
  
 
 export function LoginForm({ subdomain }: LoginFormsProps) {
@@ -84,6 +82,7 @@ export function LoginForm({ subdomain }: LoginFormsProps) {
         // Save user_id and access_token in local storage
         localStorage.setItem("user_id", data.user_id || "");
         localStorage.setItem("access_token", data.access_token || "");
+        localStorage.setItem("subdomain", subdomain || ""); // Save subdomain in local storage
   
         document.cookie = `access_token=${data.access_token}; path=/; secure; samesite=strict`;
   

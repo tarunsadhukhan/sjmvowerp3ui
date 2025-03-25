@@ -61,55 +61,44 @@ export function LoginForm({ subdomain }: LoginFormsProps) {
   })
 
   async function onSubmit(values: z.infer<typeof formSchema>) {
-    setIsLoading(true)
-    // console.log('ahahhahaah--1', urlcheck())
-    console.log('check subdomain passes as prop to login form component', subdomain)
-  try {
-    let data: { status_code: number; message: string; user_id?: string; access_token?: string } = { status_code: 0, message: "" };
-    // if (compshow === 1) {
-    //   data = await loginConsole(values.username, values.password, values.loginType || "portal", values.rememberMe);
-    // } else {
-    //   data = await login(values.username, values.password, values.loginType || "portal", values.rememberMe);
-    // }
-
-    if (subdomain === "admin" || values.loginType === "admin") {
-      data = await loginConsole(values.username, values.password, values.loginType || "portal", values.rememberMe) as { status_code: number; message: string; user_id?: string; access_token?: string };
-    } else {
-      data = await login(values.username, values.password, values.loginType || "portal", values.rememberMe);
-    }
-
-    console.log("API Response:", data);
-    if (data.status_code === 200) {
-      const user = {
-      id: data.user_id,
-      token: data.access_token,
-      subdomain: subdomain, // Add subdomain to the user object
-      };
-
-      // Commenting out the original code
-      // document.cookie = `user=${encodeURIComponent(JSON.stringify(user))}; path=/; secure; samesite=strict`;
-      localStorage.setItem("user_id", data.user_id || "");
-      // New code to save the token as 'access_token' in the cookie
-      document.cookie = `access_token=${data.access_token}; path=/; secure; samesite=strict`;
-
-      // Old redirection logic
-      // router.push("/dashboard");
-
-      // New redirection logic with subdomain as part of the URL path
-      if (subdomain === "admin") {
-      router.push(`/dashboardctrldesk`);
-      } else if (values.loginType === "portal") {
-      router.push(`/${subdomain}/dashboardportal`);
+    setIsLoading(true);
+    console.log('Check subdomain passed as prop to login form component:', subdomain);
+    try {
+      let data: { status_code: number; message: string; user_id?: string; access_token?: string } = { status_code: 0, message: "" };
+  
+      if (subdomain === "admin" || values.loginType === "admin") {
+        data = await loginConsole(values.username, values.password, values.loginType || "portal", values.rememberMe) as { status_code: number; message: string; user_id?: string; access_token?: string };
       } else {
-      router.push(`/${subdomain}/dashboardadmin`);
+        data = await login(values.username, values.password, values.loginType || "portal", values.rememberMe);
       }
+  
+      console.log("API Response Data:", data); // Log the response data for testing
+  
+      if (data.status_code === 200) {
+        const user = {
+          id: data.user_id,
+          token: data.access_token,
+          subdomain: subdomain, // Add subdomain to the user object
+        };
+  
+        localStorage.setItem("user_id", data.user_id || "");
+        document.cookie = `access_token=${data.access_token}; path=/; secure; samesite=strict`;
+  
+        if (subdomain === "admin") {
+          router.push(`/dashboardctrldesk`);
+        } else if (values.loginType === "portal") {
+          router.push(`/${subdomain}/dashboardportal`);
+        } else {
+          router.push(`/${subdomain}/dashboardadmin`);
+        }
+      }
+    } catch (error) {
+      console.error("Login error:", error);
+    } finally {
+      setIsLoading(false);
     }
-  } catch (error) {
-    console.error("Login error:", error)
-  } finally {
-    setIsLoading(false)
   }
-}
+  
 
 // useEffect(() => {
 //   const currentHost = window.location.host; // Gets current domain

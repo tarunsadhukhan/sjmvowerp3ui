@@ -20,6 +20,7 @@ import { cn } from "../../utils/protected"
 import { Loader2 } from "lucide-react"
 // import { setUser } from "@/utils/auth"
 // import { urlcheck } from "@/utils/auth";
+import axios from "axios"
 
 import { login,loginConsole } from "@/components/auth/login_auth"
 
@@ -35,16 +36,10 @@ const formSchema = z.object({
   loginType: z.string().optional(),
 })
 
-
-// const {  compshow} = urlcheck();
- 
-
 export function LoginForm({ subdomain }: LoginFormsProps) {
-  // console.log('subdomain', subdomain);
   const [isLoading, setIsLoading] = useState(false)
   console.log('subdomain loginform', subdomain); // Moved here to avoid undefined error
   const [autoLoginType, setAutoLoginType] = useState<string | null>(null); 
- // const [error, setError] = useState("")
   const router = useRouter()
 
   const form = useForm<z.infer<typeof formSchema>>({
@@ -54,7 +49,6 @@ export function LoginForm({ subdomain }: LoginFormsProps) {
       password: "",
       rememberMe: false,
       loginType: "portal",
-
     },
   })
 
@@ -62,74 +56,52 @@ export function LoginForm({ subdomain }: LoginFormsProps) {
     setIsLoading(true);
     console.log('Check subdomain passed as prop to login form component:', subdomain);
     try {
-      let data: { status_code: number; message: string; user_id?: string; access_token?: string } = { status_code: 0, message: "" };
-  
+      let data: { status?: number; message?: string } = {};
+    
       if (subdomain === "admin" || values.loginType === "admin") {
-        data = await loginConsole(values.username, values.password, values.loginType || "portal", values.rememberMe) as { status_code: number; message: string; user_id?: string; access_token?: string };
+        data = await loginConsole(values.username, values.password, values.loginType || "portal", values.rememberMe);
       } else {
         data = await login(values.username, values.password, values.loginType || "portal", values.rememberMe);
       }
-  
-      console.log("API Response Data:", data); // Log the response data for testing
-  
-      if (data.status_code === 200) {
-        const user = {
-          id: data.user_id,
-          token: data.access_token,
-          subdomain: subdomain, // Add subdomain to the user object
-        };
-  
-        // Save user_id and access_token in local storage
-        localStorage.setItem("user_id", data.user_id || "");
-        localStorage.setItem("access_token", data.access_token || "");
-        localStorage.setItem("subdomain", subdomain || ""); // Save subdomain in local storage
-  
-        document.cookie = `access_token=${data.access_token}; path=/; secure; samesite=strict`;
-  
-        if (subdomain === "admin") {
-          router.push(`/dashboardctrldesk`);
-        } else if (values.loginType === "portal") {
-          router.push(`/${subdomain}/dashboardportal`);
-        } else {
-          router.push(`/${subdomain}/dashboardadmin`);
+    
+      console.log("API Response Data:", data);
+      if (data.status === 200 || data.status === 401) {
+        // Verify that the cookie is set and token is valid
+        try {
+          const verify = await axios.get('http://localhost:8000/api/authRoutes/verify-session', {
+            withCredentials: true,
+          });
+    
+          if (verify.data.ok) {
+            console.log("Verified session, redirecting...");
+            if (subdomain === "admin") {
+              router.push(`/dashboardctrldesk`);
+            } else if (values.loginType === "portal") {
+              router.push(`/${subdomain}/dashboardportal`);
+            } else {
+              router.push(`/${subdomain}/dashboardadmin`);
+            }
+          }
+        } catch (verifyError) {
+          console.error("Session verification failed:", verifyError);
         }
+      } else {
+        console.error("Unexpected response or missing status_code");
       }
     } catch (error) {
       console.error("Login error:", error);
-    } finally {
-      setIsLoading(false);
     }
   }
-  
-
-// useEffect(() => {
-//   const currentHost = window.location.host; // Gets current domain
-//   console.log("Detected Host:", currentHost);
-
-//   if (currentHost === "admin.vowsls.co.in" || currentHost === "localhost:3001" ) {
-//     setAutoLoginType("admin"); // Set Admin Login Type
-//     console.log(currentHost,'console admin')
-//    // form.setValue("loginType", "admin"); // Update form state
-//   } else {
-//     setAutoLoginType(null); // Default Portal Login
-//     form.setValue("loginType", "portal");
-//   }
-// }, [form]);
-
-useEffect(() => {
-  if (subdomain === "admin") {
-    setAutoLoginType("admin"); // Set AutoLoginType explicitly to admin
-  } else {
-    setAutoLoginType(null); // Default Portal Login
-  }
-}, [subdomain]);
-  
-
-
+  useEffect(() => {
+    if (subdomain === "admin") {
+      setAutoLoginType("admin"); // Set AutoLoginType explicitly to admin
+    } else {
+      setAutoLoginType(null); // Default Portal Login
+    }
+  }, [subdomain]);
 
   return (
     <div className="login-container" >
-
       <div className="text-center">
         <h2 className="login-h2">Login</h2>
         <p className="mt-2 text-sm text-gray-300">

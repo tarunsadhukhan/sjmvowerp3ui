@@ -81,7 +81,10 @@ export function LoginForm({ subdomain }: LoginFormsProps) {
           subdomain: subdomain, // Add subdomain to the user object
         };
   
+        // Save user_id and access_token in local storage
         localStorage.setItem("user_id", data.user_id || "");
+        localStorage.setItem("access_token", data.access_token || "");
+  
         document.cookie = `access_token=${data.access_token}; path=/; secure; samesite=strict`;
   
         if (subdomain === "admin") {

@@ -93,7 +93,7 @@ export const loginConsole = async (
 ) => {
   try {
     const subdomain = "vowsls3.vowerp.co.in"; // ✅ Extract subdomain dynamically
-    console.log('Subdomain:', subdomain);
+    console.log('Subdomain statically passed on api call in login_auth:', subdomain);
 
     const requestData = {
       username,

@@ -23,7 +23,7 @@ import { Loader2 } from "lucide-react"
 import axios from "axios"
 
 import { login,loginConsole } from "@/components/auth/login_auth"
-
+import apiRoutes from "@/utils/api"
 
 interface LoginFormsProps {
   subdomain: string | null;
@@ -63,17 +63,29 @@ export function LoginForm({ subdomain }: LoginFormsProps) {
       } else {
         data = await login(values.username, values.password, values.loginType || "portal", values.rememberMe);
       }
-    
+      console.log("API Response Data:", document.cookie);
       console.log("API Response Data:", data);
       if (data.status === 200 || data.status === 401) {
         // Verify that the cookie is set and token is valid
-        try {
-          const verify = await axios.get('http://localhost:8000/api/authRoutes/verify-session', {
+        document.cookie = `access_token=${data.access_token}; path=/; max-age=3600;`; // 1 hour
+
+        if (subdomain === "admin") {
+          router.push(`/dashboardctrldesk`);
+        } else if (values.loginType === "portal") {
+          router.push(`/${subdomain}/dashboardportal`);
+        } else {
+          router.push(`/${subdomain}/dashboardadmin`);
+        }
+  
+      
+   /*commented due to cookies not getting set in browser*/   
+  /*       try {
+          const verify = await axios.get(apiRoutes.VERIFYSESSION, {
             withCredentials: true,
           });
-    
+          console.log("Cookies:", document.cookie);
           if (verify.data.ok) {
-            console.log("Verified session, redirecting...");
+            console.log("Verified session, redirecting...",subdomain);
             if (subdomain === "admin") {
               router.push(`/dashboardctrldesk`);
             } else if (values.loginType === "portal") {
@@ -85,12 +97,13 @@ export function LoginForm({ subdomain }: LoginFormsProps) {
         } catch (verifyError) {
           console.error("Session verification failed:", verifyError);
         }
+          */
       } else {
         console.error("Unexpected response or missing status_code");
       }
     } catch (error) {
       console.error("Login error:", error);
-    }
+    } 
   }
   useEffect(() => {
     if (subdomain === "admin") {

@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
-import { getUser, urlfixed } from "@/utils/auth";
+//import { getUser, urlfixed } from "@/utils/auth";
 import apiRoutes from "@/utils/api";
 
 // const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:3000";
@@ -19,8 +19,10 @@ export function useCompanyConsole() {
   // const { subdomain } = urlfixed();
 
 
-   const subdomain = localStorage.getItem("subdomain");
+  const subdomain = localStorage.getItem("subdomain");
+  console.log('subdomain from use company cookie console',document.cookie)
   console.log('subdomain from use company console',subdomain)
+
   const fetchMenusConsole = useCallback(async () => {
     const storedUser = JSON.parse(localStorage.getItem("user_id") || '{}');
     const access_token = localStorage.getItem("access_token") || '';

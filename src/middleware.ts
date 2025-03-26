@@ -8,8 +8,8 @@ export async function middleware(request: NextRequest) {
   const url = request.nextUrl;
   const hostname = request.headers.get('host') || '';
   const accessToken = request.cookies.get('access_token'); // Ensure this is correctly retrieved
-
-  console.log('Hostname:', hostname); // Debugging hostname
+  console.log(request.cookies)
+  console.log('Hostyyyyname:', hostname); // Debugging hostname
   console.log('Access Token:', accessToken); // Debugging access token
 
   // Extract subdomain from hostname (support for localhost and production)

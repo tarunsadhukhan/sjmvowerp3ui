@@ -22,10 +22,13 @@ export function useCompanyConsole() {
   const subdomain = localStorage.getItem("subdomain");
   console.log('subdomain from use company cookie console',document.cookie)
   console.log('subdomain from use company console',subdomain)
-
+  const access_token = document.cookie
+    .split("; ")
+    .find((row) => row.startsWith("access_token="))
+    ?.split("=")[1];
   const fetchMenusConsole = useCallback(async () => {
     const storedUser = JSON.parse(localStorage.getItem("user_id") || '{}');
-    const access_token = localStorage.getItem("access_token") || '';
+    // const access_token = localStorage.getItem("access_token") || '';
     console.log('localstorage content -',localStorage.getItem("access_token"), access_token,storedUser);
     if (!access_token) {
       console.error('Token not found in localStorage');
@@ -53,6 +56,15 @@ export function useCompanyConsole() {
       // });
 
       const queryParams = new URLSearchParams(requestBody as Record<string, string>).toString();
+      const access_token = document.cookie
+        .split("; ")
+        .find((row) => row.startsWith("access_token="))
+        ?.split("=")[1];
+
+      if (!access_token) {
+        console.error("Token not found in cookies");
+        return;
+      }
       const response = await fetch(`${apiRoutes.MENU_CTRLDESK}?${queryParams}`, {
         method: "GET",
         headers: {

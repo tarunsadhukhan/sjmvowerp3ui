@@ -56,7 +56,7 @@ export function LoginForm({ subdomain }: LoginFormsProps) {
     setIsLoading(true);
     console.log('Check subdomain passed as prop to login form component:', subdomain);
     try {
-      let data: { status?: number; message?: string } = {};
+      let data: { status?: number; message?: string, access_token?: string, user_id?: string } = {};
     
       if (subdomain === "admin" || values.loginType === "admin") {
         data = await loginConsole(values.username, values.password, values.loginType || "portal", values.rememberMe);
@@ -68,6 +68,9 @@ export function LoginForm({ subdomain }: LoginFormsProps) {
       if (data.status === 200 || data.status === 401) {
         // Verify that the cookie is set and token is valid
         document.cookie = `access_token=${data.access_token}; path=/; max-age=3600;`; // 1 hour
+        console.log("user_id frrom backend", data.user_id);
+        localStorage.setItem("user_id", data.user_id ?? "");
+        localStorage.setItem("subdomain", subdomain ?? "");
 
         if (subdomain === "admin") {
           router.push(`/dashboardctrldesk`);

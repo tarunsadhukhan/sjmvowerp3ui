@@ -67,7 +67,7 @@ export function LoginForm({ subdomain }: LoginFormsProps) {
       console.log("API Response Data:", data);
       if (data.status === 200 || data.status === 401) {
         // Verify that the cookie is set and token is valid
-        document.cookie = `access_token=${data.access_token}; path=/; max-age=3600;`; // 1 hour
+        document.cookie = `access_token=${data.access_token}; domain=admin.localhost; path=/; max-age=3600; HttpOnly; SameSite=Lax`;
         console.log("user_id frrom backend", data.user_id);
         localStorage.setItem("user_id", data.user_id ?? "");
         localStorage.setItem("subdomain", subdomain ?? "");

@@ -31,12 +31,12 @@ export async function middleware(request: NextRequest) {
   // If hitting root, rewrite and set subdomain in cookie
   if (url.pathname === '/') {
     const response = NextResponse.rewrite(new URL(url.pathname, request.url));
-    response.cookies.set('subdomain', subdomain, {
-      httpOnly: true,
-      secure: true,
-      sameSite: 'strict',
-      path: '/',
-    });
+    // response.cookies.set('subdomain', subdomain, {
+    //   httpOnly: true,
+    //   secure: true,
+    //   sameSite: 'strict',
+    //   path: '/',
+    // });
     return response;
   }
 
@@ -45,25 +45,25 @@ export async function middleware(request: NextRequest) {
     if (!accessToken) {
       console.log('Access token missing. Redirecting to login.');
       const response = NextResponse.redirect(new URL('/', request.url));
-      response.cookies.set('subdomain', subdomain, {
-        httpOnly: true,
-        secure: true,
-        sameSite: 'strict',
-        path: '/',
-      });
+      // response.cookies.set('subdomain', subdomain, {
+      //   httpOnly: true,
+      //   secure: true,
+      //   sameSite: 'strict',
+      //   path: '/',
+      // });
       return response;
     }
   }
 
   // Always set the subdomain cookie for other valid routes
-  const response = NextResponse.next();
-  response.cookies.set('subdomain', subdomain, {
-    httpOnly: true,
-    secure: true,
-    sameSite: 'strict',
-    path: '/',
-  });
-  return response;
+  // const response = NextResponse.next();
+  // response.cookies.set('subdomain', subdomain, {
+  //   httpOnly: true,
+  //   secure: true,
+  //   sameSite: 'strict',
+  //   path: '/',
+  // });
+  // return response;
 }
 
 export const config = {

@@ -13,12 +13,12 @@ export const login = async (
   rememberMe: boolean
 ) => {
   try {
-    // const subdomain = window.location.hostname.split(".")[0]; // ✅ Extract subdomain dynamically
-    const subdomain = "vowsls3.vowerp.co.in"; // ✅ Extract subdomain dynamically
+     const subdomain = window.location.hostname.split(".")[0]; // ✅ Extract subdomain dynamically
+    //const subdomain = "vowsls3.vowerp.co.in"; // ✅ Extract subdomain dynamically
+    
     console.log('hdhdh', subdomain);
 
     // Commented out axios call for multi-tenancy
-    /*
     const response = await axios.post(
       apiRoutes.USERLOGINCONSOLE,
       {
@@ -35,10 +35,10 @@ export const login = async (
         },
       }
     );
-    */
+  
 
     // Simulate response for now
-    const response = { data: { status_code: 200, message: "Success" } };
+    //const response = { data: { status_code: 200, message: "Success" } };
 
     if (response.data.status_code === 200) {
       return response.data;
@@ -102,7 +102,7 @@ export const loginConsole = async (
       rememberMe,
     };
 
-    console.log("API Request Data:", requestData);
+    console.log("API Request Data:", requestData,apiRoutes.SUPERADMINLOGINCONSOLE);
 
     const response = await axios.post(
       apiRoutes.SUPERADMINLOGINCONSOLE,
@@ -114,7 +114,7 @@ export const loginConsole = async (
           "X-Subdomain": subdomain,
         },
         withCredentials: true, // Ensure cookies are sent and received
-      }
+        validateStatus: () => true,    }
     );
 
     console.log("API Response:", response); // Log the full response
@@ -130,7 +130,11 @@ export const loginConsole = async (
         ...response.data
       };
     } else {
-      throw new Error("Unexpected response status");
+      console.log("Login un sssuccessful");
+      return {
+        status: response.status,
+        ...response.data
+      };
     }
   } catch (error: unknown) {
     console.error("Login failed:", error);

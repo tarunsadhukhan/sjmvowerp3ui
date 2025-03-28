@@ -1,12 +1,12 @@
 "use client"; // Ensure this component runs only on the client
 
 import { useEffect, useState } from "react";
-import { useRouter } from "next/navigation";
+//import { useRouter } from "next/navigation";
 import { LoginForm } from "@/components/auth/login-form";
 import Image from "next/image";
 
 export default function Home() {
-  const router = useRouter();
+//  const router = useRouter();
   const [subdomain, setSubdomain] = useState<string | null>(null);
 
   useEffect(() => {

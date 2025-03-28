@@ -20,10 +20,10 @@ import { cn } from "../../utils/protected"
 import { Loader2 } from "lucide-react"
 // import { setUser } from "@/utils/auth"
 // import { urlcheck } from "@/utils/auth";
-import axios from "axios"
-
+//import axios from "axios"
+import Swal from "sweetalert2";
 import { login,loginConsole } from "@/components/auth/login_auth"
-import apiRoutes from "@/utils/api"
+//import apiRoutes from "@/utils/api"
 
 interface LoginFormsProps {
   subdomain: string | null;
@@ -65,13 +65,14 @@ export function LoginForm({ subdomain }: LoginFormsProps) {
       }
       console.log("API Response Data:", document.cookie);
       console.log("API Response Data:", data);
-      if (data.status === 200 || data.status === 401) {
-        // Verify that the cookie is set and token is valid
+      
+
+      if (data.status === 200) {
+        // ✅ Success: Set cookie, localStorage, and route
         document.cookie = `access_token=${data.access_token}; domain=admin.localhost; path=/; max-age=3600; HttpOnly; SameSite=Lax`;
-        console.log("user_id frrom backend", data.user_id);
         localStorage.setItem("user_id", data.user_id ?? "");
         localStorage.setItem("subdomain", subdomain ?? "");
-
+      
         if (subdomain === "admin") {
           router.push(`/dashboardctrldesk`);
         } else if (values.loginType === "portal") {
@@ -79,33 +80,27 @@ export function LoginForm({ subdomain }: LoginFormsProps) {
         } else {
           router.push(`/${subdomain}/dashboardadmin`);
         }
-  
       
-   /*commented due to cookies not getting set in browser*/   
-  /*       try {
-          const verify = await axios.get(apiRoutes.VERIFYSESSION, {
-            withCredentials: true,
-          });
-          console.log("Cookies:", document.cookie);
-          if (verify.data.ok) {
-            console.log("Verified session, redirecting...",subdomain);
-            if (subdomain === "admin") {
-              router.push(`/dashboardctrldesk`);
-            } else if (values.loginType === "portal") {
-              router.push(`/${subdomain}/dashboardportal`);
-            } else {
-              router.push(`/${subdomain}/dashboardadmin`);
-            }
-          }
-        } catch (verifyError) {
-          console.error("Session verification failed:", verifyError);
-        }
-          */
       } else {
-        console.error("Unexpected response or missing status_code");
+        // ❌ Error: Show SweetAlert with backend error message
+        Swal.fire({
+          title: "Login Failed",
+          text: data.message || "Invalid username or passwords",
+          icon: "error",
+          confirmButtonText: "OK",
+        });
+        setIsLoading(false);
       }
     } catch (error) {
-      console.error("Login error:", error);
+      const errMsg = (error as { response?: { data?: { message?: string } } })?.response?.data?.message || "Something went wrong during login.";
+
+      Swal.fire({
+        title: "Login Faileds",
+        text: errMsg,
+        icon: "error",
+        confirmButtonText: "OK",
+      });
+      setIsLoading(false);
     } 
   }
   useEffect(() => {

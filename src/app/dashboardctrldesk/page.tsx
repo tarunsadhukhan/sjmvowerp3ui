@@ -1,12 +1,12 @@
 "use client"
 
 // import { useEffect } from "react"
-import { useRouter } from "next/navigation"
+//import { useRouter } from "next/navigation"
 import { Card } from "@/components/ui/card"
 // import { isAuthenticated } from "@/utils/auth"
 
 export default function DashboardPage() {
-  const router = useRouter()
+ // const router = useRouter()
 
   // useEffect(() => {
   //   if (!isAuthenticated()) {

@@ -44,28 +44,17 @@ export function useCompany() {
     if (!user?.id) return;
     console.log('mehhhs-------')
     try {
-      // const responses = await fetch(
-      //   `${API_URL}/api/masterRoutes/fyyear?company_id=${companyId}&user_id=${user.id}`,
-      //   {
-      //     headers: {
-      //       "Content-Type": "application/json",
-      //       Authorization: `Bearer ${user.id}`,
-      //     },
-      //   }
-      // );
-
-      // Extract access_token from cookies
-      const accessToken = document.cookie
+      const accessToken = typeof window !== 'undefined' ? document.cookie
         .split("; ")
         .find((row) => row.startsWith("access_token="))
-        ?.split("=")[1];
+        ?.split("=")[1] : null;
 
       const responses = await fetch(
         `${API_URL}/api/masterRoutes/fyyear?company_id=${companyId}&user_id=${user.id}&subdomain=${currentHost}`,
         {
           headers: {
-        "Content-Type": "application/json",
-        Authorization: `Bearer ${accessToken}`,
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${accessToken}`,
           },
         }
       );
@@ -76,12 +65,14 @@ export function useCompany() {
 
       console.log("API Response:", datas, datas.year);
 
-      // Store FY Year data in localStorage
-      localStorage.setItem("fyyear", datas[0].year);
-      localStorage.setItem("fystartdate", datas[0].from_date);
-      localStorage.setItem("fyenddate", datas[0].to_date);
-      localStorage.setItem("fydisplabel", datas[0].display_label);
-      console.log("FY Year Set:", datas[0].year);
+      if (typeof window !== 'undefined') {
+        // Store FY Year data in localStorage
+        localStorage.setItem("fyyear", datas[0].year);
+        localStorage.setItem("fystartdate", datas[0].from_date);
+        localStorage.setItem("fyenddate", datas[0].to_date);
+        localStorage.setItem("fydisplabel", datas[0].display_label);
+        console.log("FY Year Set:", datas[0].year);
+      }
 
       const response = await fetch(
         `${API_URL}/api/menuRoutes/menu_items?company_id=${companyId}&user_id=${user.id}&currentHost=${currentHost}`,

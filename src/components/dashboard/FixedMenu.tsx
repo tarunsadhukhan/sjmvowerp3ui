@@ -1,3 +1,4 @@
+'use client';
 import Link from "next/link";
 import { Users, LogOut, CalendarDays, Key } from "lucide-react";
 import { useCompany } from "@/hooks/use-org";
@@ -9,8 +10,8 @@ export function FixedMenu({ isCollapsed }: { isCollapsed: boolean }) {
   const [open, setOpen] = useState(false);
   const router = useRouter()
   let compshow=1
-  const currentHost = window.location.host; // Gets current domain
-  console.log("Detected Host:", currentHost,window.location.href);
+  const currentHost = typeof window !== "undefined" ? window.location.host : "";
+  console.log("Detected Host:", currentHost, typeof window !== "undefined" ? window.location.href : "");
   if (currentHost === "admin.vwxxx.co.in" || currentHost === "localhost:3001" ) {
       compshow=1
 } else {

@@ -4,7 +4,7 @@ import { useState } from "react"
 //import { usePathname } from "next/navigation"
 import Sidebar from "@/components/dashboard/sidebar"
 //import Header from "@/components/dashboard/header"
-import ProtectedRoute from '@/components/auth/protected-route'
+// import ProtectedRoute from '@/components/auth/protected-route'
 
 export default function DashboardLayout({
   children,
@@ -15,7 +15,7 @@ export default function DashboardLayout({
   //const pathname = usePathname()
 
   return (
-    <ProtectedRoute>
+    // <ProtectedRoute>
     <div className="flex h-screen bg-gray-100">
        <Sidebar 
         isCollapsed={isSidebarCollapsed} 
@@ -28,6 +28,6 @@ export default function DashboardLayout({
         </main>
       </div>
     </div>
-    </ProtectedRoute>
+    // </ProtectedRoute>
   )
 }

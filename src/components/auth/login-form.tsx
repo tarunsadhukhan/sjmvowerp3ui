@@ -16,7 +16,7 @@ import {
   FormMessage,
 } from "@/components/ui/form"
 import { Input } from "@/components/ui/input"
-import { cn } from "../../utils/protected"
+// import { cn } from "../../utils/protected"
 import { Loader2 } from "lucide-react"
 // import { setUser } from "@/utils/auth"
 // import { urlcheck } from "@/utils/auth";
@@ -63,33 +63,35 @@ export function LoginForm({ subdomain }: LoginFormsProps) {
       } else {
         data = await login(values.username, values.password, values.loginType || "portal", values.rememberMe);
       }
-      console.log("API Response Data:", document.cookie);
-      console.log("API Response Data:", data);
-      
 
-      if (data.status === 200) {
-        // ✅ Success: Set cookie, localStorage, and route
-        document.cookie = `access_token=${data.access_token}; domain=admin.localhost; path=/; max-age=3600; HttpOnly; SameSite=Lax`;
-        localStorage.setItem("user_id", data.user_id ?? "");
-        localStorage.setItem("subdomain", subdomain ?? "");
-      
-        if (subdomain === "admin") {
-          router.push(`/dashboardctrldesk`);
-        } else if (values.loginType === "portal") {
-          router.push(`/${subdomain}/dashboardportal`);
+      if (typeof window !== 'undefined') {
+        console.log("API Response Data:", document.cookie);
+        console.log("API Response Data:", data);
+  
+        if (data.status === 200) {
+          // ✅ Success: Set cookie, localStorage, and route
+          document.cookie = `access_token=${data.access_token}; domain=admin.localhost; path=/; max-age=3600; HttpOnly; SameSite=Lax`;
+          localStorage.setItem("user_id", data.user_id ?? "");
+          localStorage.setItem("subdomain", subdomain ?? "");
+        
+          if (subdomain === "admin") {
+            router.push(`/dashboardctrldesk`);
+          } else if (values.loginType === "portal") {
+            router.push(`/${subdomain}/dashboardportal`);
+          } else {
+            router.push(`/${subdomain}/dashboardadmin`);
+          }
+        
         } else {
-          router.push(`/${subdomain}/dashboardadmin`);
+          // ❌ Error: Show SweetAlert with backend error message
+          Swal.fire({
+            title: "Login Failed",
+            text: data.message || "Invalid username or passwords",
+            icon: "error",
+            confirmButtonText: "OK",
+          });
+          setIsLoading(false);
         }
-      
-      } else {
-        // ❌ Error: Show SweetAlert with backend error message
-        Swal.fire({
-          title: "Login Failed",
-          text: data.message || "Invalid username or passwords",
-          icon: "error",
-          confirmButtonText: "OK",
-        });
-        setIsLoading(false);
       }
     } catch (error) {
       const errMsg = (error as { response?: { data?: { message?: string } } })?.response?.data?.message || "Something went wrong during login.";
@@ -226,10 +228,7 @@ export function LoginForm({ subdomain }: LoginFormsProps) {
 
           <Button
             type="submit"
-            className={cn(
-              "w-full bg-[#9BC837] hover:bg-[#8BB72E] text-white",
-              isLoading && "opacity-50 cursor-not-allowed"
-            )}
+            className={`w-full bg-[#9BC837] hover:bg-[#8BB72E] text-white ${isLoading ? "opacity-50 cursor-not-allowed" : ""}`}
             disabled={isLoading}
           >
             {isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}

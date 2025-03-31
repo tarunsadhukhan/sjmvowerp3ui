@@ -1,3 +1,5 @@
+'use client';
+
 import axios from "axios";
 import Swal from "sweetalert2";
 import apiRoutes from "@/utils/api";
@@ -92,7 +94,7 @@ export const loginConsole = async (
   rememberMe: boolean
 ) => {
   try {
-    const subdomain = (window.location.hostname).split(".")[0];
+    const subdomain = typeof window !== 'undefined' ? window.location.hostname.split(".")[0] : "";
     console.log('Subdomain:', subdomain);
 
     const requestData = {
@@ -102,7 +104,7 @@ export const loginConsole = async (
       rememberMe,
     };
 
-    console.log("API Request Data:", requestData,apiRoutes.SUPERADMINLOGINCONSOLE);
+    console.log("API Request Data:", requestData, apiRoutes.SUPERADMINLOGINCONSOLE);
 
     const response = await axios.post(
       apiRoutes.SUPERADMINLOGINCONSOLE,
@@ -120,7 +122,7 @@ export const loginConsole = async (
     console.log("API Response:", response); // Log the full response
 
     // Check if the cookie is set
-    const cookies = document.cookie;
+    const cookies = typeof window !== 'undefined' ? document.cookie : "";
     console.log("Cookies after login:", cookies);
 
     if (response.status === 200) {
@@ -130,7 +132,7 @@ export const loginConsole = async (
         ...response.data
       };
     } else {
-      console.log("Login un sssuccessful");
+      console.log("Login unsuccessful");
       return {
         status: response.status,
         ...response.data
@@ -148,6 +150,8 @@ export const loginConsole = async (
 };
 
 export const getProtectedData = async () => {
+  if (typeof window === 'undefined') return null; // Ensure this runs only in the browser
+
   const token = localStorage.getItem("token");
   if (!token) return null;
 

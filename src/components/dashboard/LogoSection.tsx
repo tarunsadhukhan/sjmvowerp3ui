@@ -1,9 +1,10 @@
+'use client';
 import Image from "next/image";
 // import logo from "@/components/assets/images/logo.png";
 import { 
     ChevronLeft,
   } from "lucide-react"
-  import { cn } from "@/utils/protected"
+  // import { cn } from "@/utils/protected"
  // import { CompanySelection } from "./CompanySelection";
 interface LogoSectionProps {
   isCollapsed: boolean;
@@ -32,10 +33,7 @@ const LogoSection = ({ isCollapsed, onToggle }: LogoSectionProps) => {
           >
             <ChevronLeft
               size={20}
-              className={cn(
-                "transition-transform",
-                isCollapsed && "transform rotate-180"
-              )}
+              className={`transition-transform ${isCollapsed ? "transform rotate-180" : ""}`}
             />
           </button>
         </div>

@@ -1,22 +1,39 @@
 "use client"; // Ensure this component runs only on the client
 
-import { useEffect } from "react";
-import { useRouter } from "next/navigation";
+import { useEffect, useState } from "react";
+//import { useRouter } from "next/navigation";
 import { LoginForm } from "@/components/auth/login-form";
 import Image from "next/image";
-// import backlogo from "@/components/asstes/images/background.png";
 
 export default function Home() {
-  const router = useRouter();
+//  const router = useRouter();
+  const [subdomain, setSubdomain] = useState<string | null>(null);
 
   useEffect(() => {
     if (typeof window !== "undefined") {
-      const user = localStorage.getItem("user");
-      if (user) {
-        router.push("/dashboard"); // Redirect only on client-side
-      }
+      const hostname = window.location.hostname; // Get the hostname
+      console.log("Detected Hostname:", hostname); // Log the hostname
+      const subdomainPart = hostname.split(".")[0]; // Extract the subdomain
+      setSubdomain(subdomainPart); // Set subdomain directly
+      console.log("Detected Subdomain in loginpage:", subdomainPart); // Log the subdomain
+
+    //   const userCookie = document.cookie
+    //     .split("; ")
+    //     .find((row) => row.startsWith("user="))
+    //     ?.split("=")[1];
+
+    //   if (userCookie) {
+    //     const user = JSON.parse(decodeURIComponent(userCookie));
+    //     if (subdomain === "admin") {
+    //       console.log("Redirecting to: /dashboardctrldesk"); // Log redirection URL
+    //       router.push("/dashboardctrldesk");
+    //     } else {
+    //       console.log("Redirecting to: /dashboardportal"); // Log redirection URL
+    //       router.push("/dashboardportal");
+    //     }
+    //   }
     }
-  }, [router]);
+  }, []);
 
   return (
     <main className="min-h-screen flex">
@@ -48,12 +65,12 @@ export default function Home() {
             <Image
               src="/logo.png"
               alt="VOW Logo"
-              width={150}
-              height={60}
+              width={200}
+              height={100}
               priority
             />
           </div>
-          <LoginForm />
+          <LoginForm subdomain={subdomain} />
         </div>
       </div>
     </main>

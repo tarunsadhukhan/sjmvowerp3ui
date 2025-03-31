@@ -3,6 +3,7 @@
 import { useState, useEffect, useCallback } from "react";
 import { getUser, getCompany, setCompany as saveCompany, type Company,urlcheck } from "@/utils/auth";
 
+
 const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:3000";
 
 interface MenuItem {
@@ -43,12 +44,17 @@ export function useCompany() {
     if (!user?.id) return;
     console.log('mehhhs-------')
     try {
+      const accessToken = typeof window !== 'undefined' ? document.cookie
+        .split("; ")
+        .find((row) => row.startsWith("access_token="))
+        ?.split("=")[1] : null;
+
       const responses = await fetch(
-        `${API_URL}/api/masterRoutes/fyyear?company_id=${companyId}&user_id=${user.id}`,
+        `${API_URL}/api/masterRoutes/fyyear?company_id=${companyId}&user_id=${user.id}&subdomain=${currentHost}`,
         {
           headers: {
             "Content-Type": "application/json",
-            Authorization: `Bearer ${user.id}`,
+            Authorization: `Bearer ${accessToken}`,
           },
         }
       );
@@ -59,12 +65,14 @@ export function useCompany() {
 
       console.log("API Response:", datas, datas.year);
 
-      // Store FY Year data in localStorage
-      localStorage.setItem("fyyear", datas[0].year);
-      localStorage.setItem("fystartdate", datas[0].from_date);
-      localStorage.setItem("fyenddate", datas[0].to_date);
-      localStorage.setItem("fydisplabel", datas[0].display_label);
-      console.log("FY Year Set:", datas[0].year);
+      if (typeof window !== 'undefined') {
+        // Store FY Year data in localStorage
+        localStorage.setItem("fyyear", datas[0].year);
+        localStorage.setItem("fystartdate", datas[0].from_date);
+        localStorage.setItem("fyenddate", datas[0].to_date);
+        localStorage.setItem("fydisplabel", datas[0].display_label);
+        console.log("FY Year Set:", datas[0].year);
+      }
 
       const response = await fetch(
         `${API_URL}/api/menuRoutes/menu_items?company_id=${companyId}&user_id=${user.id}&currentHost=${currentHost}`,

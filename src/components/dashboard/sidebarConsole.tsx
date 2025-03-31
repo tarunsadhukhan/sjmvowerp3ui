@@ -1,7 +1,8 @@
+'use client';
 import LogoSection from "./LogoSection";
 import { DynamicMenuConsole } from "./DynamicMenuConsole";
 import { FixedMenuConsole } from "./FixedMenuConsole";
-import { cn } from "@/utils/protected"
+// import { cn } from "@/utils/protected"
 
 
 
@@ -14,12 +15,9 @@ export default function sidebarConsole({ isCollapsed, onToggle }: SidebarProps) 
   
  
     return (
-    <div className={cn(
-        "bg-[#006699] text-white transition-all duration-300 h-screen flex flex-col",
-        isCollapsed ? "w-20" : "w-56"
-      )}>
+    <div className={`bg-[#006699] text-white transition-all duration-300 h-screen flex flex-col ${isCollapsed ? "w-20" : "w-56"}`}>
 
-    <div className={cn("bg-[#006699] text-white transition-all duration-300 h-screen flex flex-col", { 'collapsed-class': isCollapsed })}>
+    <div className={`bg-[#006699] text-white transition-all duration-300 h-screen flex flex-col ${isCollapsed ? 'collapsed-class' : ''}`}>
       <LogoSection isCollapsed={isCollapsed} onToggle={onToggle} logoSrc="path/to/logo.png" title="Your Title" />
         <DynamicMenuConsole isCollapsed={isCollapsed} />  
       <FixedMenuConsole isCollapsed={isCollapsed} /> 

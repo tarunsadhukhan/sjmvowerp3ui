@@ -1,3 +1,5 @@
+'use client';
+
 import Link from "next/link";
 import { ChevronDown } from "lucide-react";
 //import { cn } from "@/lib/utils";
@@ -14,9 +16,10 @@ interface MenuItem {
 export function DynamicMenuConsole({ isCollapsed }: { isCollapsed: boolean }) {
   const { menuItems } = useCompanyConsole();
   const [openMenus, setOpenMenus] = useState<string[]>([]);
-  const [pageTitle, setPageTitle] = useState("Dashboard");
   console.log(menuItems)
 
+  // const userid = localStorage.getItem("user_id");
+  // console.log('userid from dynamic menu console',userid)
 
   const toggleSubmenu = (title: string) => {
     setOpenMenus(prev =>

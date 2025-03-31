@@ -10,19 +10,25 @@ import { Checkbox } from "@/components/ui/checkbox"
 import {
   Form,
   FormControl,
-  FormField,
+ FormField,
   FormItem,
   FormLabel,
   FormMessage,
 } from "@/components/ui/form"
 import { Input } from "@/components/ui/input"
-import { cn } from "../../utils/protected"
+// import { cn } from "../../utils/protected"
 import { Loader2 } from "lucide-react"
-import { setUser } from "@/utils/auth"
-import { urlcheck } from "@/utils/auth";
-
+// import { setUser } from "@/utils/auth"
+// import { urlcheck } from "@/utils/auth";
+//import axios from "axios"
+import Swal from "sweetalert2";
 import { login,loginConsole } from "@/components/auth/login_auth"
- 
+//import apiRoutes from "@/utils/api"
+
+interface LoginFormsProps {
+  subdomain: string | null;
+}
+// Moved inside the LoginForm function to avoid undefined error
 const formSchema = z.object({
   username: z.string().min(1,"user name must be 1 charecter"),
   password: z.string().min(6, "Password must be at least 6 characters"),
@@ -30,15 +36,10 @@ const formSchema = z.object({
   loginType: z.string().optional(),
 })
 
-const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3000'
-console.log('start',API_URL)
-const {  compshow} = urlcheck();
-  
-
-export function LoginForm() {
+export function LoginForm({ subdomain }: LoginFormsProps) {
   const [isLoading, setIsLoading] = useState(false)
+  console.log('subdomain loginform', subdomain); // Moved here to avoid undefined error
   const [autoLoginType, setAutoLoginType] = useState<string | null>(null); 
- // const [error, setError] = useState("")
   const router = useRouter()
 
   const form = useForm<z.infer<typeof formSchema>>({
@@ -48,98 +49,72 @@ export function LoginForm() {
       password: "",
       rememberMe: false,
       loginType: "portal",
-
     },
   })
 
   async function onSubmit(values: z.infer<typeof formSchema>) {
-    setIsLoading(true)
-    console.log('ahahhahaah--1',API_URL)
-  try {
-    let data=[]
-    if (compshow===1) {
-    data = await loginConsole(values.username, values.password, values.loginType || "portal", values.rememberMe);
-    } else {
-      data = await login(values.username, values.password, values.loginType || "portal", values.rememberMe);
-      
-    }
-
-    console.log("API Response:", data);
-    if (data.status_code===200 ) {
-
-    const user = {
-      id: data.user_id, // Assuming user_id is in the response
-      token: data.access_token,
-    };
-
-    // Store user data in localStorage
-    localStorage.setItem("user", JSON.stringify(user));
-    console.log("User stored in localStorage:", user);
-    console.log(user.token)
-    // Navigate to dashboard
-    //router.push("/dashboard");
-   
-
-    setUser(data.user_id)
-    // Store user data in localStorage
-    console.log('for user', user)
-    localStorage.setItem("user", JSON.stringify(user))
-
-    console.log('User object to be stored:', user); // Log the user object
-    localStorage.setItem("user", JSON.stringify(user)); // Set the user object in localStorage
-
-    // Log all localStorage items to see what's inside
-    console.log('Before getting userStr, localStorage contents:', localStorage);
-
-    // Now retrieve the userStr
-    const userStr = localStorage.getItem("user");
-    console.log('Retrieved userStr:', userStr); // Log the retrieved userStr
-
-    // Handle successful login
-    // window.location.href = "/dashboard"
-    const currentHost = window.location.host; // Gets cur
+    setIsLoading(true);
+    console.log('Check subdomain passed as prop to login form component:', subdomain);
+    try {
+      let data: { status?: number; message?: string, access_token?: string, user_id?: string } = {};
     
-    console.log(currentHost)
-    if (currentHost === "admin.vwxxx.co.in" || currentHost === "localhost:3001" ) {
-      router.push("/dashboardctrldesk")
-      console.log('console')
-    } else {
-      console.log('console',values.loginType)
-    if (values.loginType==="portal") {
-      router.push("/dashboardportal")
-    } else {
-      router.push("/dashboardadmin")
-    }  
-  }
-  }
-  } catch (error) {
-    console.error("Login error:", error)
-  } finally {
-    setIsLoading(false)
-  }
-}
+      if (subdomain === "admin" || values.loginType === "admin") {
+        data = await loginConsole(values.username, values.password, values.loginType || "portal", values.rememberMe);
+      } else {
+        data = await login(values.username, values.password, values.loginType || "portal", values.rememberMe);
+      }
 
-useEffect(() => {
-  const currentHost = window.location.host; // Gets current domain
-  console.log("Detected Host:", currentHost);
-
-
-  if (currentHost === "admin.vowsls.co.in" || currentHost === "localhost:3001" ) {
-    setAutoLoginType("admin"); // Set Admin Login Type
-    console.log(currentHost,'console admin')
-   // form.setValue("loginType", "admin"); // Update form state
-  } else {
-    setAutoLoginType(null); // Default Portal Login
-    form.setValue("loginType", "portal");
-  }
-}, [form]);
+      if (typeof window !== 'undefined') {
+        console.log("API Response Data:", document.cookie);
+        console.log("API Response Data:", data);
   
+        if (data.status === 200) {
+          // ✅ Success: Set cookie, localStorage, and route
+          document.cookie = `access_token=${data.access_token}; domain=admin.localhost; path=/; max-age=3600; HttpOnly; SameSite=Lax`;
+          localStorage.setItem("user_id", data.user_id ?? "");
+          localStorage.setItem("subdomain", subdomain ?? "");
+        
+          if (subdomain === "admin") {
+            router.push(`/dashboardctrldesk`);
+          } else if (values.loginType === "portal") {
+            router.push(`/${subdomain}/dashboardportal`);
+          } else {
+            router.push(`/${subdomain}/dashboardadmin`);
+          }
+        
+        } else {
+          // ❌ Error: Show SweetAlert with backend error message
+          Swal.fire({
+            title: "Login Failed",
+            text: data.message || "Invalid username or passwords",
+            icon: "error",
+            confirmButtonText: "OK",
+          });
+          setIsLoading(false);
+        }
+      }
+    } catch (error) {
+      const errMsg = (error as { response?: { data?: { message?: string } } })?.response?.data?.message || "Something went wrong during login.";
 
-
+      Swal.fire({
+        title: "Login Faileds",
+        text: errMsg,
+        icon: "error",
+        confirmButtonText: "OK",
+      });
+      setIsLoading(false);
+    } 
+  }
+  useEffect(() => {
+    if (subdomain === "admin") {
+      setAutoLoginType("admin"); // Set AutoLoginType explicitly to admin
+    } else {
+      setAutoLoginType(null); // Default Portal Login
+    }
+  }, [subdomain]);
 
   return (
     <div className="login-container" >
-
       <div className="text-center">
         <h2 className="login-h2">Login</h2>
         <p className="mt-2 text-sm text-gray-300">
@@ -253,10 +228,7 @@ useEffect(() => {
 
           <Button
             type="submit"
-            className={cn(
-              "w-full bg-[#9BC837] hover:bg-[#8BB72E] text-white",
-              isLoading && "opacity-50 cursor-not-allowed"
-            )}
+            className={`w-full bg-[#9BC837] hover:bg-[#8BB72E] text-white ${isLoading ? "opacity-50 cursor-not-allowed" : ""}`}
             disabled={isLoading}
           >
             {isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}

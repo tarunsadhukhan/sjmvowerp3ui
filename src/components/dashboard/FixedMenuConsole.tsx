@@ -1,6 +1,6 @@
+'use client';
 import Link from "next/link";
 import { Users, LogOut,  Key } from "lucide-react";
- 
 import {  useState } from "react"
 import { useRouter } from "next/navigation"
  

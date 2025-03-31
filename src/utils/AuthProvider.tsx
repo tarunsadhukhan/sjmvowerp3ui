@@ -20,13 +20,14 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     if (userStr) {
       const userData = JSON.parse(userStr);
       setUser(userData);
+} else {
+      console.log("No access token found. Redirecting to login...");
+      router.push("/");
     }
     console.log('logouts 1')
      
     // ✅ List of pages that should NOT log out on refresh
-    const allowedPages = ["/dashboard1"];
- //   const allowedPages: string[] = [];
- console.log('logouts 2')
+const allowedPages = ["/dashboard1"];
     // ✅ Logout on refresh, except for allowed pages
     const handleUnload = () => {
       console.log("Browser refreshed. Removing JWT...");
@@ -36,12 +37,11 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
         console.log('nnnnnn')
         router.push("/"); // Redirect to login
         console.log('dsdndshdhd')
-      }
-    };
+   console.log('logouts 3')     }
+  console.log('logouts 3')  };
     console.log('logouts 3')
     window.addEventListener("beforeunload", handleUnload);
-    console.log('logouts 4')
-    return () => {
+        return () => {
       window.removeEventListener("beforeunload", handleUnload);
     };
   }, [pathname, router]);

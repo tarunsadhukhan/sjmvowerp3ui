@@ -1,3 +1,4 @@
+'use client';
 import Link from "next/link";
 import { Users, LogOut, CalendarDays, Key } from "lucide-react";
 import { useCompany } from "@/hooks/use-org";
@@ -9,8 +10,8 @@ export function FixedMenu({ isCollapsed }: { isCollapsed: boolean }) {
   const [open, setOpen] = useState(false);
   const router = useRouter()
   let compshow=1
-  const currentHost = window.location.host; // Gets current domain
-  console.log("Detected Host:", currentHost,window.location.href);
+  const currentHost = typeof window !== "undefined" ? window.location.host : "";
+  console.log("Detected Host:", currentHost, typeof window !== "undefined" ? window.location.href : "");
   if (currentHost === "admin.vwxxx.co.in" || currentHost === "localhost:3001" ) {
       compshow=1
 } else {
@@ -20,13 +21,15 @@ export function FixedMenu({ isCollapsed }: { isCollapsed: boolean }) {
 const handleLogout = (e: React.MouseEvent<HTMLAnchorElement>) => {
   e.preventDefault(); // Prevent default navigation behavior
   console.log("Logging out...");
+  
+  // Remove access_token from cookies
+
+  
+  // Commented out localStorage removal
   localStorage.removeItem("user");  // Remove user data
-  localStorage.removeItem("jwtToken"); 
-  // Clear localStorage
-  localStorage.removeItem("user");
-  localStorage.removeItem("jwtToken");
   localStorage.clear();
-  console.log(localStorage.user,'for user')
+  // console.log(localStorage.user, 'for user');
+  
   // Redirect to login page manually
   router.push("/");
 };

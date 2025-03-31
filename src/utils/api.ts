@@ -1,5 +1,6 @@
 
 const API_URL=process.env.NEXT_PUBLIC_API_BASE_URL || '/apix';
+console.log('API_URL', API_URL);
 
 const apiRoutes ={
     MENU_CTRLDESK : `${API_URL}/companyRoutes/console_menu_items`,

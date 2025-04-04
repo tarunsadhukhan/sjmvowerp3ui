@@ -11,7 +11,7 @@ interface MenuItem {
   submenu?: MenuItem[];
 }
 
-export function useCompanyConsole() {
+export function useCompanyConsoleMenu() {
   const [menuItems, setMenuItems] = useState<MenuItem[]>([]);
   const [loading, setLoading] = useState(false);
 
@@ -38,9 +38,9 @@ export function useCompanyConsole() {
         subdomain: subdomain || "", // Ensure subdomain is not null
       }).toString();
 
-      console.log("Calling API:", `${apiRoutes.MENU_CTRLDESK}?${queryParams}`);
+      console.log("Calling API:", `${apiRoutes.MENU_CONSOLE}?${queryParams}`);
 
-      const response = await axios.get(`${apiRoutes.MENU_CTRLDESK}?${queryParams}`, {
+      const response = await axios.get(`${apiRoutes.MENU_CONSOLE}?${queryParams}`, {
         withCredentials: true, // Ensures cookies are sent by the browser
       });
 

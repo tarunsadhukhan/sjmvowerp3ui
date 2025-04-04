@@ -17,8 +17,7 @@ export default function DashboardPage() {
   return (
     <div className="p-6">
       <div className="flex justify-between items-center mb-6">
-        <h1 className="text-2xl font-bold text-gray-900">Dashboard Admin</h1>
-        <div className="text-sm text-gray-500">2024-2025</div>
+        <h1 className="text-2xl font-bold text-gray-900">userManagement</h1>
       </div>
       
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">

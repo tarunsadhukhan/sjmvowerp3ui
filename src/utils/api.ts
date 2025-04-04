@@ -8,6 +8,7 @@ const apiRoutes ={
     USERLOGINCONSOLE : `${API_URL}/authRoutes/login`,
     PROTECTED : `${API_URL}/authRoutes/protected`,
     VERIFYSESSION : `${API_URL}/authRoutes/verify-session`,
+    MENU_CONSOLE: `${API_URL}/companyRoutes/co_console_menu_items`,
     
 };
 

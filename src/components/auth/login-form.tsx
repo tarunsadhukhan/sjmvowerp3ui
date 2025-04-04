@@ -77,9 +77,9 @@ export function LoginForm({ subdomain }: LoginFormsProps) {
           if (subdomain === "admin") {
             router.push(`/dashboardctrldesk`);
           } else if (values.loginType === "portal") {
-            router.push(`/${subdomain}/dashboardportal`);
+            router.push(`/dashboardportal`);
           } else {
-            router.push(`/${subdomain}/dashboardadmin`);
+            router.push(`/dashboardadmin`);
           }
         
         } else {

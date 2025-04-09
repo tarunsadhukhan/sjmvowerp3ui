@@ -42,7 +42,6 @@ export const apiClient = async ({
 
 import { useState, useEffect } from "react";
 //import getUserDetail from "@/app/utils/getAccessTokenFromCookie";
-import axios from "axios";
  
 const fetchDataFromAccessToken = (url: string, method: "GET" | "POST" = "GET", body?: any) => {
     const [data, setData] = useState<any>(null);
@@ -57,17 +56,17 @@ const fetchDataFromAccessToken = (url: string, method: "GET" | "POST" = "GET", b
     useEffect(() => {
         const fetchDataFromAccessToken = async () => {
             try {
-  //              const token = getUserDetail();
-                const response = await axios({
-                    url,
-                    method,
-                    headers: {
-                        Authorization: `Bearer ${token}`,
-                        "Content-Type": "application/json",
-                    },
-                    withCredentials: true,
-                    data: body,
-                });
+  const token = ""; // Replace with logic to retrieve the token, e.g., from cookies or local storage
+  const response = await axios({
+      url,
+      method,
+      headers: {
+          Authorization: `Bearer ${token}`,
+          "Content-Type": "application/json",
+      },
+      withCredentials: true,
+      data: body,
+  });
  
                 setData(response.data);
             } catch (err) {

@@ -6,7 +6,18 @@ import { Input } from '@/components/ui/input'
 import {Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"; // Adjust imports
 import { PencilIcon, ChevronUpIcon, ChevronDownIcon } from "@heroicons/react/24/outline"; // Example icon imports
 
-const DynamicTable = ({ headers, data }) => {
+interface Header {
+  key: string;
+  label: string;
+  sortable?: boolean;
+}
+
+interface DynamicTableProps {
+  headers: Header[];
+  data: Record<string, any>[];
+}
+
+const DynamicTable: React.FC<DynamicTableProps> = ({ headers, data }) => {
   // State for pagination
   const [currentPage, setCurrentPage] = useState(1);
   const [itemsPerPage, setItemsPerPage] = useState(10);
@@ -15,7 +26,7 @@ const DynamicTable = ({ headers, data }) => {
   const [searchTerm, setSearchTerm] = useState("");
 
   // State for sorting
-  const [sortConfig, setSortConfig] = useState({ key: null, direction: "asc" });
+  const [sortConfig, setSortConfig] = useState<{ key: string | null; direction: string }>({ key: null, direction: "asc" });
 
   // Filter and sort data
   const filteredData = data.filter((row) =>
@@ -44,7 +55,7 @@ const DynamicTable = ({ headers, data }) => {
   );
 
   // Handle sorting
-  const handleSort = (key) => {
+  const handleSort = (key: string) => {
     setSortConfig((prev) => ({
       key,
       direction: prev.key === key && prev.direction === "asc" ? "desc" : "asc",
@@ -117,7 +128,7 @@ const DynamicTable = ({ headers, data }) => {
               variant={itemsPerPage === (value === "All" ? data.length : value) ? "default" : "outline"}
               size="sm"
               onClick={() => {
-                setItemsPerPage(value === "All" ? data.length : value);
+                setItemsPerPage(typeof value === "string" ? data.length : value);
                 setCurrentPage(1); // Reset to first page when changing items per page
               }}
               className={itemsPerPage === (value === "All" ? data.length : value) ? "bg-[#E6F3F9] text-black border-[#0C3C60]" : ""}

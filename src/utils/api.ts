@@ -11,6 +11,8 @@ const apiRoutes ={
     MENU_CONSOLE: `${API_URL}/companyRoutes/co_console_menu_items`,
     ROLES_CONSOLE: `${API_URL}/companyRoutes/roles`,
     
+
+    
     
 };
 

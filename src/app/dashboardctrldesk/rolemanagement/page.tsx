@@ -16,6 +16,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { PencilIcon, UserCircle, Share, HelpCircle, Loader2 } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
+import apiRoutes from "@/utils/api";
 
 interface Role {
   id: number;
@@ -61,7 +62,7 @@ export default function RoleManagement() {
         ...(search && { search })
       });
       
-      const response = await fetch(`${API_URL}/api/companyRoutes/roles?${queryParams}`);
+      const response = await fetch(`${apiRoutes.ROLES_CONSOLE}?${queryParams}`);
       if (!response.ok) throw new Error('Failed to fetch roles');
       
       const data: ApiResponse = await response.json();
@@ -274,7 +275,7 @@ export default function RoleManagement() {
             ) : displayedRoles.length < totalRoles && !searchQuery ? (
               "Scroll for more"
             ) : (
-              "No more roles to load"
+              "No more data to load"
             )}
           </div>
         </div>

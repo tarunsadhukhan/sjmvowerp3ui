@@ -5,12 +5,12 @@ import { Column } from "@/components/ui/datatablewithedit";
 import { Button } from "@/components/ui/button";
 import { PencilIcon } from "lucide-react";
 import apiRoutes from "@/utils/api";
+import axios from "axios";
 // Sample Role type
 type Role = {
-  id: number;
-  name: string;
-  type: string;
-  has_hrms_access: boolean;
+  role_id: number;
+  role_name: string;
+  active: string;
 };
 
 type ApiResponse = {
@@ -24,32 +24,40 @@ const fetchRoles = async (page: number, search?: string) => {
   const queryParams = new URLSearchParams({
     page: page.toString(),
     limit: limit.toString(),
+    user_id: localStorage.getItem('user_id') || '', // Ensure user_id is not null
   });
   
   if (search) {
     queryParams.append('search', search);
   }
   
-  const response = await fetch(`${apiRoutes.ROLES_CONSOLE}?${queryParams}`);
   
-  if (!response.ok) {
+  const subdomain = localStorage.getItem('subdomain');
+  const response = await axios.get(`${apiRoutes.ROLES_COMP_CONSOLE}?${queryParams}`, {
+    withCredentials: true,
+    headers: {
+      'X-Subdomain': subdomain || '',
+    },
+  });
+  
+  if (response.status < 200 || response.status >= 300) {
     throw new Error('Failed to fetch roles');
   }
   
-  const data: ApiResponse = await response.json();
+  const data: ApiResponse = response.data;
   return data;
 };
 
 // Table columns
 const columns: Column<Role>[] = [
   {
-    key: "name",
+    key: "role_name",
     label: "Role Name",
     className: "bg-[#3ea6da] text-white font-medium",
   },
   {
-    key: "type",
-    label: "Role Type",
+    key: "active",
+    label: "Active",
     className: "bg-[#3ea6da] text-white",
   },
   {
@@ -57,7 +65,7 @@ const columns: Column<Role>[] = [
     label: "Actions",
     className: "bg-[#3ea6da] text-white",
     render: (_val, row) => (
-      <Button variant="ghost" size="icon" onClick={() => alert(`Edit ${row.name}`)}>
+      <Button variant="ghost" size="icon" onClick={() => alert(`Edit ${row.role_name}`)}>
         <PencilIcon className="h-4 w-4" />
       </Button>
     ),

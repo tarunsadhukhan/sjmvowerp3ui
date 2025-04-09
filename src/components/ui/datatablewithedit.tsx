@@ -60,6 +60,7 @@ export function DataTable<T>({
                       setSortOrder("asc");
                     }
                   }
+                  // console.log(`Sorting by ${col.key} in ${sortOrder} order ${col.sortable} ${sortKey}`);
                 }}
               >
                 <div className="flex items-center gap-1">

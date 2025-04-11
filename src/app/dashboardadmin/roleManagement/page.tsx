@@ -5,7 +5,8 @@ import { Column } from "@/components/ui/datatablewithedit";
 import { Button } from "@/components/ui/button";
 import { PencilIcon } from "lucide-react";
 import apiRoutes from "@/utils/api";
-import axios from "axios";
+import { apiClient } from "@/utils/apiClient";
+
 // Sample Role type
 type Role = {
   role_id: number;
@@ -31,21 +32,22 @@ const fetchRoles = async (page: number, search?: string) => {
     queryParams.append('search', search);
   }
   
-  
   const subdomain = localStorage.getItem('subdomain');
-  const response = await axios.get(`${apiRoutes.ROLES_COMP_CONSOLE}?${queryParams}`, {
-    withCredentials: true,
+  
+  const response = await apiClient<ApiResponse>({
+    url: `${apiRoutes.ROLES_COMP_CONSOLE}?${queryParams}`,
+    method: 'GET',
     headers: {
       'X-Subdomain': subdomain || '',
     },
+    withCredentials: true,
   });
   
-  if (response.status < 200 || response.status >= 300) {
-    throw new Error('Failed to fetch roles');
+  if (response.isError) {
+    throw new Error(response.error || 'Failed to fetch roles');
   }
   
-  const data: ApiResponse = response.data;
-  return data;
+  return response.data;
 };
 
 // Table columns

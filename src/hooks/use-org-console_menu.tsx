@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useCallback } from "react";
 import apiRoutes from "@/utils/api";
-import axios from "axios";
+import { apiClient } from "@/utils/apiClient";
 
 interface MenuItem {
   title: string;
@@ -14,41 +14,23 @@ interface MenuItem {
 export function useCompanyConsoleMenu() {
   const [menuItems, setMenuItems] = useState<MenuItem[]>([]);
   const [loading, setLoading] = useState(false);
-
-  const subdomain = typeof window !== "undefined" ? localStorage.getItem("subdomain") : null;
-  const cookieData = typeof window !== "undefined" ? document.cookie : null;
-  console.log("subdomain from use company cookie console", cookieData);
-  console.log("subdomain from use company console", subdomain);
-
+  const subdomain = typeof window !== "undefined" ? window.location.hostname.split(".")[0] : null;
+  
   const fetchMenusConsole = useCallback(async () => {
-    // const cookies = typeof window !== "undefined" ? document.cookie.split("; ") : [];
-    const userId = typeof window !== "undefined" ? localStorage.getItem("user_id") : null;
-
-    if (!userId) {
-      console.log("user id from local storage not found, aborting fetch");
-      setMenuItems([]);
-      return;
-    }
-
-    console.log("User ID from cookies:", userId);
-
     try {
-      const queryParams = new URLSearchParams({
-        user_id: userId,
-        subdomain: subdomain || "", // Ensure subdomain is not null
-      }).toString();
-
-      console.log("Calling API:", `${apiRoutes.MENU_CONSOLE}?${queryParams}`);
-
-      const response = await axios.get(`${apiRoutes.MENU_CONSOLE}?${queryParams}`, {
-        withCredentials: true, // Ensures cookies are sent by the browser
+      const queryParams = new URLSearchParams({}).toString();
+      const response = await apiClient({
+        url: `${apiRoutes.MENU_CONSOLE}?${queryParams}`,
+        method: "GET",
+        withCredentials: true,
       });
-
-      if (response.status !== 200) {
-        throw new Error(response.data.detail || "Failed to fetch menus");
+      if (response.isError) {
+        console.error(response.error);
+        setMenuItems([]);
+        return;
       }
-
-      setMenuItems(response.data.data || []); // Set menu items, default to empty array if data.data is undefined
+      
+      setMenuItems(response.data.data || []);
     } catch (error) {
       console.error("Error fetching menus:", error);
       setMenuItems([]);
@@ -57,7 +39,7 @@ export function useCompanyConsoleMenu() {
 
   useEffect(() => {
     setLoading(true);
-    fetchMenusConsole().finally(() => setLoading(false)); // Ensure loading state is reset even on error
+    fetchMenusConsole().finally(() => setLoading(false));
   }, [fetchMenusConsole]);
 
   return {

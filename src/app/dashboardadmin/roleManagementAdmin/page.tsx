@@ -65,7 +65,7 @@ const columns: Column<Role>[] = [
         size="icon"
         onClick={() => {
           const roleId = row.con_role_id;
-          window.location.href = `/dashboardadmin/createRole?roleId=${roleId}`;
+          window.location.href = `/dashboardadmin/roleManagementAdmin/createRoleAdmin?roleId=${roleId}`;
         }}
       >
         <PencilIcon className="h-4 w-4" />
@@ -80,12 +80,14 @@ export default function SampleRoleTablePage() {
       <div className="mx-auto max-w-7xl">
         <div className="mb-8 flex items-center justify-between">
           <h1 className="text-2xl font-bold text-[#0C3C60]">Sample Role Table</h1>
-          <Button
+            <Button
             className="bg-[#95C11F] hover:bg-[#85ad1b] text-white"
-            onClick={() => alert("Create Role")}
-          >
+            onClick={() => {
+              window.location.href = "/dashboardadmin/roleManagementAdmin/createRoleAdmin";
+            }}
+            >
             + Create Role
-          </Button>
+            </Button>
         </div>
 
         <SearchablePaginatedTable columns={columns} fetchFn={fetchRoles} />

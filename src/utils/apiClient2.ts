@@ -2,7 +2,7 @@ import { useState, useEffect } from "react";
 import axios from "axios";
 
 // Regular function for direct API calls
-export const fetchWithCookie = async (url: string, method: "GET" | "POST" = "GET", body?: any) => {
+export const fetchWithCookie = async (url: string, method: string = "GET", body?: any) => {
     try {
         const response = await axios({
             url,

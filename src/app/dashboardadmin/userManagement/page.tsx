@@ -1,39 +1,97 @@
-"use client"
+"use client";
 
-// import { useEffect } from "react"
-import { useRouter } from "next/navigation"
-import { Card } from "@/components/ui/card"
-// import { isAuthenticated } from "@/utils/auth"
+import { SearchablePaginatedTable } from "@/components/ui/searchablePaginatedTable";
+import { Column } from "@/components/ui/datatablewithedit";
+import { Button } from "@/components/ui/button";
+import { PencilIcon } from "lucide-react";
+import apiRoutes from "@/utils/api";
+import { fetchWithCookie } from "@/utils/apiClient2";
 
-export default function DashboardPage() {
-  const router = useRouter()
+// Sample Role type
+type Role = {
+  con_role_id: number;
+  con_role_name: string;
+  con_org_id: number;
+  status: number;
+  created_by: number;
+  created_date_time: string;
+  con_company_id: number | null;
+  is_enable: number;
+};
 
-  // useEffect(() => {
-  //   if (!isAuthenticated()) {
-  //     router.replace("/")
-  //   }
-  // }, [router])
+// Real API fetch function with pagination and search
+const fetchUsers = async (page: number, search?: string) => {
+  const limit = 20;
+  const queryParams = new URLSearchParams({
+    page: page.toString(),
+    limit: limit.toString(),
+    user_id: localStorage.getItem('user_id') || '', // Ensure user_id is not null
+  });
+  if (search) {
+    queryParams.append('search', search);
+  }
 
+  const { data, error } = await fetchWithCookie(
+    `${apiRoutes.GET_USER_TENANT_ADMIN}?${queryParams}`,
+    "GET"
+  );
+
+  if (error || !data) {
+    throw new Error(error || 'Failed to fetch roles');
+  }
+  return data;
+};
+
+// Table columns
+const columns: Column<Role>[] = [
+  {
+    key: "con_role_name",
+    label: "Role Name",
+    className: "bg-[#3ea6da] text-white font-medium",
+  },
+  {
+    key: "is_enable",
+    label: "Active",
+    className: "bg-[#3ea6da] text-white",
+    render: (val) => (val === 1 ? "Yes" : "No"),
+  },
+  {
+    key: "actions",
+    label: "Actions",
+    className: "bg-[#3ea6da] text-white",
+    render: (_val, row) => (
+      <Button
+        variant="ghost"
+        size="icon"
+        onClick={() => {
+          const roleId = row.con_role_id;
+          window.location.href = `/dashboardadmin/roleManagementAdmin/createRoleAdmin?roleId=${roleId}`;
+        }}
+      >
+        <PencilIcon className="h-4 w-4" />
+      </Button>
+    ),
+  },
+];
+
+export default function UserTenantAdmin() {
   return (
-    <div className="p-6">
-      <div className="flex justify-between items-center mb-6">
-        <h1 className="text-2xl font-bold text-gray-900">userManagement</h1>
-      </div>
-      
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-        <Card className="p-6">
-          <h3 className="font-semibold mb-2">Total Sales</h3>
-          <p className="text-2xl font-bold">₹45,231</p>
-        </Card>
-        <Card className="p-6">
-          <h3 className="font-semibold mb-2">Total Orders</h3>
-          <p className="text-2xl font-bold">124</p>
-        </Card>
-        <Card className="p-6">
-          <h3 className="font-semibold mb-2">Active Projects</h3>
-          <p className="text-2xl font-bold">8</p>
-        </Card>
+    <div className="min-h-screen bg-gray-50 p-8">
+      <div className="mx-auto max-w-7xl">
+        <div className="mb-8 flex items-center justify-between">
+          <h1 className="text-2xl font-bold text-[#0C3C60]">User Management Admin</h1>
+            <Button
+            className="bg-[#95C11F] hover:bg-[#85ad1b] text-white"
+            onClick={() => {
+              window.location.href = "/dashboardadmin/roleManagementAdmin/createRoleAdmin";
+            }}
+            >
+            + Create User
+            </Button>
+        </div>
+
+        <SearchablePaginatedTable columns={columns} fetchFn={fetchUsers} />
       </div>
     </div>
-  )
+  );
 }

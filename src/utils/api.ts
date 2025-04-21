@@ -15,6 +15,12 @@ const apiRoutes ={
     CREATEROLE: `${API_URL}/companyRoutes/create-role`,
     TENANT_ALL_MENUS: `${API_URL}/companyAdmin/admin_tenant_menu_full`,
     ADMIN_TENANT_MENU_BY_ROLEID: `${API_URL}/companyAdmin/admin_tenant_menu_by_roleid/`,
+    CREATE_ROLE_TENANT_ADMIN: `${API_URL}/companyAdmin/create_role_tenant_admin`,
+    EDIT_ROLE_TENANT_MENU: `${API_URL}/companyAdmin/edit_role_tenant_admin/`,
+    GET_USER_TENANT_ADMIN: `${API_URL}/companyAdmin/get_user_tenant_admin`,
+    CREATE_USER_TENANT_ADMIN: `${API_URL}/companyAdmin/create_user_tenant_admin`,
+    EDIT_USER_TENANT_MENU: `${API_URL}/companyAdmin/edit_user_tenant_admin/`,
+    ROLES_DROPDOWN: `${API_URL}/companyAdmin/get_roles_tenant_admin_assign`,
 };
 
 export default apiRoutes;

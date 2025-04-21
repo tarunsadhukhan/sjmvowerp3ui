@@ -33,6 +33,7 @@ export default function CreateRoleAdmin() {
     const [roleName, setRoleName] = useState<string>("");
     const [loading, setLoading] = useState(true);
     const [fetchError, setFetchError] = useState<string | null>(null);
+    const [selectedMenuIds, setSelectedMenuIds] = useState<number[]>([]);
     const searchParams = useSearchParams();
     const router = useRouter();
     const roleId = searchParams.get('roleId');
@@ -66,9 +67,57 @@ export default function CreateRoleAdmin() {
         }
     });
 
-    const onSubmit = (data: any) => {
-        console.log("Form submitted with:", data);
-        console.log("Current menu data state:", menuData);
+    const onSubmit = async () => {
+        console.log("selected Menus", { name: roleName });
+        console.log("role ID:", roleId);
+        console.log("role Name", roleName);
+        console.log("Selected menu IDs for submission:", selectedMenuIds);
+        
+        try {
+            setLoading(true);
+            let apiUrl, payload;
+            
+            if (roleId) {
+                // Update existing role
+                apiUrl = apiRoutes.EDIT_ROLE_TENANT_MENU;
+            } else {
+                // Create new role
+                apiUrl = apiRoutes.CREATE_ROLE_TENANT_ADMIN;
+                console.log("Creating new role with API:", apiUrl);
+            }
+            
+            // Using PUT method for both create and update
+            if (roleId) {
+                // Updating an existing role – send the roleId (backend already knows the name)
+                payload = {
+                    roleId: Number(roleId),
+                    selectedMenuIds
+                };
+            } else {
+                // Creating a new role – send the roleName
+                payload = {
+                    roleName: roleName.trim(),
+                    selectedMenuIds
+                };
+            }
+
+            console.log("Payload:", payload);
+            
+            const { data, error } = await fetchWithCookie(apiUrl, 'PUT', payload);
+            
+            if (error) {
+                console.error("API error:", error);
+                throw new Error(error);
+            }
+            
+            console.log("API response:", data);
+            router.push("/dashboardadmin/roleManagementAdmin");
+        } catch (err) {
+            console.error("Error submitting role:", err);
+            // Add error handling here, e.g. toast notification
+        } finally {
+            setLoading(false);
+        }
     };
 
     return (
@@ -115,7 +164,15 @@ export default function CreateRoleAdmin() {
             </div>
             {loading && <p>Loading menu...</p>}
             {fetchError && <p className="text-red-500">Error loading menu: {fetchError}</p>}
-            {!loading && !fetchError && <MenuTable menuData={menuData} />}
+            {!loading && !fetchError && (
+                <MenuTable
+                    menuData={menuData}
+                    onSelectionChange={(selectedIds) => {
+                        console.log("Selected menu IDs:", selectedIds);
+                        setSelectedMenuIds(selectedIds);
+                    }}
+                />
+            )}
         </main>
     );
 }

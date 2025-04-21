@@ -40,6 +40,22 @@ const fetchUsers = async (page: number, search?: string) => {
   return data;
 };
 
+// Helper function to create URL with all user data as parameters
+const createEditUrl = (user: User) => {
+  // Encode values to handle special characters in user names or emails
+  const params = new URLSearchParams({
+    userId: user.con_user_id.toString(),
+    userName: encodeURIComponent(user.con_user_name),
+    userEmail: encodeURIComponent(user.con_user_login_email_id),
+    roleId: user.con_role_id.toString(),
+    roleName: encodeURIComponent(user.con_role_name),
+    active: user.active.toString()
+  });
+  
+  console.log("Creating edit URL with params:", Object.fromEntries(params.entries()));
+  return `/dashboardadmin/userManagementAdmin/createUserAdmin?${params.toString()}`;
+};
+
 // Table columns
 const columns: Column<User>[] = [
   {
@@ -72,8 +88,7 @@ const columns: Column<User>[] = [
         variant="ghost"
         size="icon"
         onClick={() => {
-          const userId = row.con_user_id;
-          window.location.href = `/dashboardadmin/userManagementAdmin/createUserAdmin?userId=${userId}`;
+          window.location.href = createEditUrl(row);
         }}
       >
         <PencilIcon className="h-4 w-4" />

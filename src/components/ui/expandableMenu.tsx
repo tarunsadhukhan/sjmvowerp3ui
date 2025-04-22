@@ -112,8 +112,8 @@ const MenuTable: React.FC<Props> = ({ menuData, onSelectionChange }) => {
   const childMenus = validMenuData.filter((item) => item.con_menu_parent_id !== null);
 
   return (
-    <table className="min-w-full border border-gray-300 text-sm">
-      <thead className="bg-gray-100">
+    <table className="min-w-full border-blue text-sm">
+      <thead className="border-blue">
         <tr>
           <th className="px-4 py-2 text-left">Menu Name</th>
           <th className="px-4 py-2 text-left">Accessible</th>

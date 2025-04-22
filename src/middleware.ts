@@ -1,69 +1,84 @@
-// middleware.ts (Next.js Middleware for Tenant Resolution - Split Projects with Cookie-based Subdomain Persistence)
+// middleware.ts (Edge Middleware for Tenant + Auth Validation)
 import { NextResponse } from 'next/server';
 import type { NextRequest } from 'next/server';
+import apiRoutes from './utils/api'; // Ensure this has full absolute URLs, not relative
 
 const PROTECTED_PATHS = ['/dashboardctrldesk', '/dashboardadmin', '/dashboardportal'];
+const PUBLIC_PATHS = ['/', '/login', '/_next', '/favicon.ico'];
 
 export async function middleware(request: NextRequest) {
   const url = request.nextUrl;
   const hostname = request.headers.get('host') || '';
-  const accessToken = request.cookies.get('access_token'); // Ensure this is correctly retrieved
-  console.log(request.cookies)
-  console.log('Hostyyyyname:', hostname); // Debugging hostname
-  console.log('Access Token:', accessToken); // Debugging access token
+  const accessToken = request.cookies.get('access_token');
+  const pathname = url.pathname;
 
-  // Extract subdomain from hostname (support for localhost and production)
+  console.log('🔍 Middleware - Host:', hostname);
+  console.log('🔍 Middleware - Access Token:', accessToken?.value);
+
+  // Extract subdomain from hostname
   const subdomain = hostname.includes('.localhost:3000')
     ? hostname.split('.localhost:3000')[0]
     : hostname.split('.')[0];
 
-  console.log('Subdomain:', subdomain); // Debugging subdomain
-
-  // Validate subdomain via static list (simulate API validation)
+  // Simulate subdomain validation
   const staticSubdomains = ['admin', 'sls', 'abc'];
-  const validateRes = { ok: staticSubdomains.includes(subdomain) };
+  const isSubdomainValid = staticSubdomains.includes(subdomain);
 
-  if (!validateRes.ok) {
-    console.log('Invalid subdomain. Redirecting to main site.');
+  if (!isSubdomainValid) {
+    console.log('❌ Invalid subdomain, redirecting...');
     return NextResponse.redirect(new URL('https://vowerp.com', request.url));
   }
 
-  // If hitting root, rewrite and set subdomain in cookie
-  if (url.pathname === '/') {
-    const response = NextResponse.rewrite(new URL(url.pathname, request.url));
-    // response.cookies.set('subdomain', subdomain, {
-    //   httpOnly: true,
-    //   secure: true,
-    //   sameSite: 'strict',
-    //   path: '/',
-    // });
-    return response;
+  // Skip middleware for public paths
+  if (PUBLIC_PATHS.some(path => pathname.startsWith(path))) {
+    console.log('🟢 Public path, skipping auth:', pathname);
+    return NextResponse.next();
   }
 
-  // Authorization check for protected routes
-  if (PROTECTED_PATHS.includes(url.pathname)) {
-    if (!accessToken) {
-      console.log('Access token missing. Redirecting to login.');
-      const response = NextResponse.redirect(new URL('/', request.url));
-      // response.cookies.set('subdomain', subdomain, {
-      //   httpOnly: true,
-      //   secure: true,
-      //   sameSite: 'strict',
-      //   path: '/',
-      // });
-      return response;
+  // Handle protected paths
+  if (PROTECTED_PATHS.some(path => pathname.startsWith(path))) {
+    if (!accessToken?.value) {
+      console.log('⛔ No access token, redirecting to login');
+      return NextResponse.redirect(new URL('/login', request.url));
+    }
+
+    try {
+      // Edge-compatible fetch, manually forwarding cookie
+      const verifyRes = await fetch(apiRoutes.VERIFYSESSION, {
+        method: 'GET',
+        headers: {
+          'Cookie': `access_token=${accessToken.value}`,
+        },
+      });
+
+      if (!verifyRes.ok) {
+        console.log('⚠️ Token verification failed (status)', verifyRes.status);
+        return NextResponse.redirect(new URL('/login', request.url));
+      }
+
+      const data = await verifyRes.json();
+      if (!data.ok) {
+        console.log('⚠️ Token invalid per backend');
+        return NextResponse.redirect(new URL('/login', request.url));
+      }
+
+      console.log('✅ Session verified');
+    } catch (err) {
+      console.error('❌ Error during token check:', err);
+      return NextResponse.redirect(new URL('/login', request.url));
     }
   }
 
-  // Always set the subdomain cookie for other valid routes
-  // const response = NextResponse.next();
-  // response.cookies.set('subdomain', subdomain, {
-  //   httpOnly: true,
-  //   secure: true,
-  //   sameSite: 'strict',
-  //   path: '/',
-  // });
-  // return response;
+  // Optional: persist subdomain as cookie
+  const response = NextResponse.next();
+  response.cookies.set('subdomain', subdomain, {
+    httpOnly: true,
+    secure: true,
+    sameSite: 'strict',
+    path: '/',
+  });
+
+  return response;
 }
 
 export const config = {

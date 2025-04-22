@@ -14,6 +14,7 @@ const apiRoutes ={
     GETMENUMAPPINGCOMPANY: `${API_URL}/companyAdmin/menu-mapping-data`,
     CREATEROLE: `${API_URL}/companyRoutes/create-role`,
     TENANT_ALL_MENUS: `${API_URL}/companyAdmin/admin_tenant_menu_full`,
+    GET_TENANT_ADMIN_MENU_ROLE: `${API_URL}/companyAdmin/tenant_console_menu_items_roleid`,
     ADMIN_TENANT_MENU_BY_ROLEID: `${API_URL}/companyAdmin/admin_tenant_menu_by_roleid/`,
     CREATE_ROLE_TENANT_ADMIN: `${API_URL}/companyAdmin/create_role_tenant_admin`,
     EDIT_ROLE_TENANT_MENU: `${API_URL}/companyAdmin/edit_role_tenant_admin/`,

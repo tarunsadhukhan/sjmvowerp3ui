@@ -72,6 +72,17 @@
   }
 }
 
+
+
+
+.border-blue {
+  border: 1.5px solid #69ACC3;
+  position: relative;
+  border-radius: 10px;
+}
+
+
+
 @layer base {
   * {
 /*     @apply border-border;

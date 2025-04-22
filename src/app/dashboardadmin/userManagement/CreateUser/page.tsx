@@ -2,7 +2,7 @@
 
 import React, { useEffect, useState } from 'react';
 import { useSearchParams, useRouter } from 'next/navigation';
-import UserAdmin from "./userAdmin";
+import UserAdmin from "./userPortal";
 import apiRoutes from "@/utils/api";
 import { fetchWithCookie } from "@/utils/apiClient2";
 

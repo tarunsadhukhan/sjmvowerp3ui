@@ -1,211 +1,187 @@
-"use client";
+'use client';
 
-import React, { useState, useEffect } from 'react';
-import { apiClient } from '@/utils/apiClient';
-import apiRoutes from '@/utils/api';
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableContainer,
-  TableHead,
-  TableRow,
-  Paper,
-  Typography,
-  Box,
-  CircularProgress,
-  Chip
-} from '@mui/material';
+import apiRoutes from "@/utils/api";
+import { fetchWithCookie } from '@/utils/apiClient2';
+import React, { useEffect, useState } from 'react';
+import MenuTable from '@/components/ui/expandableMenu';
+import { useSearchParams, useRouter } from 'next/navigation';
+import { Form, FormField, FormItem, FormLabel, FormControl, FormMessage } from '@/components/ui/form'; // Adjust the path based on your project structure
+import { useForm } from 'react-hook-form';
+import { Input } from '@/components/ui/input'; // Ensure this path matches your project structure
+import { Card } from '@/components/ui/card'; // Adjust the path based on your project structure
+import { Button } from '@/components/ui/button'; // Ensure this path matches your project structure
 
-interface RoleMappingData {
-  roles: {
-    role_id: number;
-    role_name: string;
-  }[];
-  menus: {
+type MenuItem = {
     menu_id: number;
     menu_name: string;
-    parent_id: number | null;
-    path: string;
-    icon: string;
-    order: number;
-    children?: any[];
-  }[];
-  flat_menus: {
-    menu_id: number;
-    menu_name: string;
-    path: string;
-    menu_path: string;
-  }[];
-  mappings: {
-    mapping_id: number;
-    role_id: number;
-    menu_id: number;
-    access_type_id: number;
-  }[];
-  access_types: {
-    access_type_id: number;
-    access_type: string;
-  }[];
-  table_structure: {
-    columns: {
-      field: string;
-      headerName: string;
-      width: number;
-    }[];
-    rows: {
-      id: number;
-      role_id: number;
-      role_name: string;
-      menu_id: number;
-      menu_name: string;
-      access_type_id: number;
-      access_type: string;
-    }[];
-  };
-}
+    menu_parent_id: number | null;
+    role_id: number | null; // Added field
+};
 
-export default function CreateRolePage() {
-  const [roleMappingData, setRoleMappingData] = useState<RoleMappingData | null>(null);
-  const [isLoading, setIsLoading] = useState<boolean>(true);
-  const [error, setError] = useState<string | null>(null);
+// Define the field mapping for portal menu structure
+const PORTAL_FIELD_MAPPING = {
+  idField: "menu_id",
+  nameField: "menu_name",
+  parentIdField: "menu_parent_id",
+  roleIdField: "role_id" // Update this if the role ID field name is different
+};
 
-  useEffect(() => {
-    const fetchRoleMappingData = async () => {
-      try {
-        const response = await apiClient<RoleMappingData>({
-          url: apiRoutes.GETMENUMAPPINGCOMPANY,
-          method: 'GET',
-          withCredentials: true,
-        });
+const fetchMenu = async (roleId: string | null): Promise<{ data: MenuItem[]; roleName?: string }> => {
+    const apiUrl = roleId ? `${apiRoutes.GET_PORTAL_MENU_BY_ROLEID}${roleId}` : apiRoutes.PORTAL_MENU_FULL;
 
-        if (response.isError) {
-          throw new Error(response.error);
+    const { data, error } = await fetchWithCookie(apiUrl);
+
+    if (error || !data) throw new Error(error || "Failed to fetch menu");
+
+    return data as { data: MenuItem[]; roleName?: string };
+};
+
+export default function CreateRolePortal() {
+    const [menuData, setMenuData] = useState<MenuItem[]>([]);
+    const [roleName, setRoleName] = useState<string>("");
+    const [loading, setLoading] = useState(true);
+    const [fetchError, setFetchError] = useState<string | null>(null);
+    const [selectedMenuIds, setSelectedMenuIds] = useState<number[]>([]);
+    const searchParams = useSearchParams();
+    const router = useRouter();
+    const roleId = searchParams.get('roleId');
+
+    useEffect(() => {
+        const fetchMenuData = async () => {
+            setLoading(true);
+            setFetchError(null);
+            try {
+                const response = await fetchMenu(roleId);
+                setMenuData(Array.isArray(response.data) ? response.data : []);
+                setRoleName(response.roleName ?? (roleId ? "" : ""));
+            } catch (err) {
+                setFetchError(err instanceof Error ? err.message : "An unknown error occurred");
+                setMenuData([]);
+                setRoleName("");
+            } finally {
+                setLoading(false);
+            }
+        };
+
+        fetchMenuData();
+    }, [roleId]);
+
+    const form = useForm({
+        defaultValues: {
+            name: '',
+        },
+        values: {
+            name: roleName
         }
+    });
 
-        setRoleMappingData(response.data);
-      } catch (err) {
-        setError((err as Error).message || 'Failed to fetch role mapping data');
-        console.error('Error fetching role mapping data:', err);
-      } finally {
-        setIsLoading(false);
-      }
+    const onSubmit = async () => {
+        console.log("selected Menus", { name: roleName });
+        console.log("role ID:", roleId);
+        console.log("role Name", roleName);
+        console.log("Selected menu IDs for submission:", selectedMenuIds);
+        
+        try {
+            setLoading(true);
+            let apiUrl, payload;
+            
+            if (roleId) {
+                // Update existing role
+                apiUrl = apiRoutes.EDIT_ROLE_TENANT_MENU;
+            } else {
+                // Create new role
+                apiUrl = apiRoutes.CREATE_ROLE_TENANT_ADMIN;
+                console.log("Creating new role with API:", apiUrl);
+            }
+            
+            // Using PUT method for both create and update
+            if (roleId) {
+                // Updating an existing role – send the roleId (backend already knows the name)
+                payload = {
+                    roleId: Number(roleId),
+                    selectedMenuIds
+                };
+            } else {
+                // Creating a new role – send the roleName
+                payload = {
+                    roleName: roleName.trim(),
+                    selectedMenuIds
+                };
+            }
+
+            console.log("Payload:", payload);
+            
+            const { data, error } = await fetchWithCookie(apiUrl, 'PUT', payload);
+            
+            if (error) {
+                console.error("API error:", error);
+                throw new Error(error);
+            }
+            
+            console.log("API response:", data);
+            router.push("/dashboardadmin/roleManagementAdmin");
+        } catch (err) {
+            console.error("Error submitting role:", err);
+            // Add error handling here, e.g. toast notification
+        } finally {
+            setLoading(false);
+        }
     };
 
-    fetchRoleMappingData();
-  }, []);
-
-  const getAccessTypeChipColor = (accessType: string) => {
-    switch (accessType) {
-      case 'Read':
-        return 'info';
-      case 'Write':
-        return 'warning';
-      case 'Full':
-        return 'success';
-      default:
-        return 'default';
-    }
-  };
-
-  if (isLoading) {
     return (
-      <Box display="flex" justifyContent="center" alignItems="center" minHeight="60vh">
-        <CircularProgress />
-      </Box>
+        <main className="p-6">
+            <h1 className="text-xl font-bold mb-4">
+                {roleId ? 'Edit Role' : 'Create Role'}
+            </h1>
+            <div className="mb-4">
+                <Card className="p-6">
+                    <Form {...form}>
+                        <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
+                            <FormField
+                                control={form.control}
+                                name="name"
+                                render={({ field }) => (
+                                    <FormItem>
+                                        <FormLabel>Role Name</FormLabel>
+                                        <FormControl>
+                                            <Input placeholder="Enter role name" {...field} value={roleName} onChange={(e) => setRoleName(e.target.value)} readOnly={!!roleId} />
+                                        </FormControl>
+                                        <FormMessage />
+                                    </FormItem>
+                                )}
+                            />
+                            <div className="flex justify-end space-x-4">
+                                <Button
+                                    type="button"
+                                    variant="outline"
+                                    onClick={() => router.push("/dashboardadmin/roleManagementAdmin")}
+                                >
+                                    Cancel
+                                </Button>
+                                <Button
+                                    type="submit"
+                                    className="bg-[#9BC837] hover:bg-[#8BB72E] text-white"
+                                    disabled={loading}
+                                >
+                                    {loading ? (roleId ? "Updating..." : "Creating...") : (roleId ? "Update Role" : "Create Role")}
+                                </Button>
+                            </div>
+                        </form>
+                    </Form>
+                </Card>
+            </div>
+            {loading && <p>Loading menu...</p>}
+            {fetchError && <p className="text-red-500">Error loading menu: {fetchError}</p>}
+            {!loading && !fetchError && (
+                <MenuTable
+                    menuData={menuData}
+                    onSelectionChange={(selectedIds) => {
+                        console.log("Selected menu IDs:", selectedIds);
+                        setSelectedMenuIds(selectedIds);
+                    }}
+                    fieldMapping={PORTAL_FIELD_MAPPING} // Pass the field mapping for this specific menu format
+                />
+            )}
+        </main>
     );
-  }
-
-  if (error) {
-    return (
-      <Box display="flex" justifyContent="center" alignItems="center" minHeight="60vh">
-        <Typography color="error" variant="h6">
-          Error: {error}
-        </Typography>
-      </Box>
-    );
-  }
-
-  return (
-    <Box sx={{ p: 3 }}>
-      <Typography variant="h4" gutterBottom>
-        Role Management
-      </Typography>
-
-      <Box sx={{ mb: 4 }}>
-        <Typography variant="h6" gutterBottom>
-          Available Roles
-        </Typography>
-        <TableContainer component={Paper}>
-          <Table size="small">
-            <TableHead>
-              <TableRow>
-                <TableCell>Role ID</TableCell>
-                <TableCell>Role Name</TableCell>
-              </TableRow>
-            </TableHead>
-            <TableBody>
-              {roleMappingData?.roles.map((role) => (
-                <TableRow key={role.role_id}>
-                  <TableCell>{role.role_id}</TableCell>
-                  <TableCell>{role.role_name}</TableCell>
-                </TableRow>
-              ))}
-            </TableBody>
-          </Table>
-        </TableContainer>
-      </Box>
-
-      <Box sx={{ mb: 4 }}>
-        <Typography variant="h6" gutterBottom>
-          Role-Menu Mappings
-        </Typography>
-        <TableContainer component={Paper}>
-          <Table>
-            <TableHead>
-              <TableRow>
-                {roleMappingData?.table_structure.columns.map((column) => (
-                  <TableCell key={column.field} style={{ width: column.width }}>
-                    {column.headerName}
-                  </TableCell>
-                ))}
-              </TableRow>
-            </TableHead>
-            <TableBody>
-              {roleMappingData?.table_structure.rows.map((row) => (
-                <TableRow key={row.id}>
-                  <TableCell>{row.role_name}</TableCell>
-                  <TableCell>{row.menu_name}</TableCell>
-                  <TableCell>
-                    <Chip 
-                      label={row.access_type} 
-                      color={getAccessTypeChipColor(row.access_type) as any}
-                      size="small"
-                    />
-                  </TableCell>
-                  <TableCell>
-                    <Box sx={{ display: 'flex', gap: 1 }}>
-                      <Chip 
-                        label="Edit" 
-                        size="small" 
-                        variant="outlined" 
-                        onClick={() => console.log('Edit', row.id)} 
-                      />
-                      <Chip 
-                        label="Delete" 
-                        size="small" 
-                        color="error" 
-                        variant="outlined" 
-                        onClick={() => console.log('Delete', row.id)} 
-                      />
-                    </Box>
-                  </TableCell>
-                </TableRow>
-              ))}
-            </TableBody>
-          </Table>
-        </TableContainer>
-      </Box>
-    </Box>
-  );
 }

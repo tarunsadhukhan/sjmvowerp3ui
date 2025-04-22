@@ -102,8 +102,8 @@ const UserAdmin = ({
     useEffect(() => {
         const fetchAvailableRoles = async () => {
             try {
-                // Use the ROLES_DROPDOWN endpoint to get available roles
-                const response = await fetchWithCookie(apiRoutes.ROLES_DROPDOWN, "GET");
+                // Use the correct roles dropdown endpoint
+                const response = await fetchWithCookie(apiRoutes.ROLES_DROPDOWN_TENANT_ADMIN, "GET");
                 if (response.error) {
                     throw new Error(response.error);
                 }
@@ -111,7 +111,7 @@ const UserAdmin = ({
                 // Save the fetched roles
                 const fetchedRoles = response.data || [];
                 console.log("Fetched roles:", fetchedRoles);
-                setRoles(fetchedRoles);
+                setRoles(Array.isArray(fetchedRoles) ? fetchedRoles : []);
             } catch (err) {
                 console.error("Error fetching roles:", err);
                 setError("Failed to fetch roles. Please try again.");

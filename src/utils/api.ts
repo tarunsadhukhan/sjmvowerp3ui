@@ -24,7 +24,8 @@ const apiRoutes ={
     ROLES_DROPDOWN_TENANT_ADMIN: `${API_URL}/companyAdmin/get_roles_tenant_admin_assign`,
     ROLES_PORTAL: `${API_URL}/admin/PortalData/get_roles_portal`,
     USERS_PORTAL: `${API_URL}/admin/PortalData/get_users_portal`,
-
+    PORTAL_MENU_FULL: `${API_URL}/admin/PortalData/portal_menu_full`,
+    GET_PORTAL_MENU_BY_ROLEID: `${API_URL}/admin/PortalData/portal_menu_by_roleid/`,
     
 };
 

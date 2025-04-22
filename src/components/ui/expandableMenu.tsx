@@ -1,29 +1,60 @@
 "use client";
 import React, { useState, useEffect } from "react";
 
-type MenuItem = {
-  con_menu_id: number;
-  con_menu_name: string;
-  con_menu_parent_id: number | null;
-  con_role_id: number | null;
+// Generic menu item interface that can handle any field names
+interface MenuItemGeneric {
+  [key: string]: any;
+}
+
+// Field mapping interface to define property mappings
+interface FieldMapping {
+  idField: string;
+  nameField: string;
+  parentIdField: string;
+  roleIdField?: string;
+}
+
+// Default mapping that matches the original implementation
+const DEFAULT_MAPPING: FieldMapping = {
+  idField: "con_menu_id",
+  nameField: "con_menu_name",
+  parentIdField: "con_menu_parent_id",
+  roleIdField: "con_role_id"
 };
 
 type Props = {
-  menuData: MenuItem[];
+  menuData: MenuItemGeneric[];
   onSelectionChange: (selectedIds: number[]) => void;
+  fieldMapping?: FieldMapping;
 };
 
-const MenuTable: React.FC<Props> = ({ menuData, onSelectionChange }) => {
+const MenuTable: React.FC<Props> = ({ 
+  menuData, 
+  onSelectionChange, 
+  fieldMapping = DEFAULT_MAPPING // Use default mapping if not provided
+}) => {
   const [expandedParents, setExpandedParents] = useState<number[]>([]);
   const [selectedMenuIds, setSelectedMenuIds] = useState<number[]>([]);
 
+  // Extract field names from mapping
+  const { idField, nameField, parentIdField, roleIdField } = fieldMapping;
+
   useEffect(() => {
-    const initialSelectedIds = menuData
-      .filter(item => item.con_role_id !== null)
-      .map(item => item.con_menu_id);
-    setSelectedMenuIds(initialSelectedIds);
-    onSelectionChange(initialSelectedIds);
-  }, [menuData]);
+    // Initialize selected menu IDs based on role ID field if it exists
+    const initialSelectedIds = roleIdField 
+      ? menuData.filter(item => item[roleIdField] !== null).map(item => item[idField])
+      : [];
+    
+    // Only update state if the selected IDs have actually changed
+    const currentIds = JSON.stringify(selectedMenuIds.sort());
+    const newIds = JSON.stringify(initialSelectedIds.sort());
+    
+    if (currentIds !== newIds) {
+      setSelectedMenuIds(initialSelectedIds);
+      // Only call the callback if we're actually changing the selection
+      onSelectionChange(initialSelectedIds);
+    }
+  }, [menuData, roleIdField, idField]); // Remove onSelectionChange from dependencies
 
   const toggleExpand = (parentId: number) => {
     setExpandedParents((prev) =>
@@ -34,8 +65,8 @@ const MenuTable: React.FC<Props> = ({ menuData, onSelectionChange }) => {
   // Get all child menu IDs for a given parent
   const getChildMenuIds = (parentId: number): number[] => {
     return validMenuData
-      .filter((item) => item.con_menu_parent_id === parentId)
-      .map((item) => item.con_menu_id);
+      .filter((item) => item[parentIdField] === parentId)
+      .map((item) => item[idField]);
   };
 
   // Check if all children of a parent are selected
@@ -108,8 +139,10 @@ const MenuTable: React.FC<Props> = ({ menuData, onSelectionChange }) => {
   };
 
   const validMenuData = Array.isArray(menuData) ? menuData : [];
-  const parentMenus = validMenuData.filter((item) => item.con_menu_parent_id === null);
-  const childMenus = validMenuData.filter((item) => item.con_menu_parent_id !== null);
+  
+  // Filter parent and child menus based on the dynamic field names
+  const parentMenus = validMenuData.filter((item) => item[parentIdField] === null);
+  const childMenus = validMenuData.filter((item) => item[parentIdField] !== null);
 
   return (
     <table className="min-w-full border-blue text-sm">
@@ -121,39 +154,39 @@ const MenuTable: React.FC<Props> = ({ menuData, onSelectionChange }) => {
       </thead>
       <tbody>
         {parentMenus.map((parent) => (
-          <React.Fragment key={parent.con_menu_id}>
+          <React.Fragment key={parent[idField]}>
             <tr className="bg-white border-t">
               <td className="px-4 py-2 font-medium">
-                <button onClick={() => toggleExpand(parent.con_menu_id)}>
-                  {expandedParents.includes(parent.con_menu_id) ? "▼" : "►"} {parent.con_menu_name}
+                <button onClick={() => toggleExpand(parent[idField])}>
+                  {expandedParents.includes(parent[idField]) ? "▼" : "►"} {parent[nameField]}
                 </button>
               </td>
               <td className="px-4 py-2">
                 <input
                   type="checkbox"
-                  checked={areAllChildrenSelected(parent.con_menu_id)}
-                  onChange={(e) => handleParentCheckboxChange(parent.con_menu_id, e.target.checked)}
+                  checked={areAllChildrenSelected(parent[idField])}
+                  onChange={(e) => handleParentCheckboxChange(parent[idField], e.target.checked)}
                   // Make the checkbox appear in an indeterminate state when some but not all children are selected
                   ref={el => {
                     if (el) {
-                      el.indeterminate = !areAllChildrenSelected(parent.con_menu_id) && isAnyChildSelected(parent.con_menu_id);
+                      el.indeterminate = !areAllChildrenSelected(parent[idField]) && isAnyChildSelected(parent[idField]);
                     }
                   }}
                 />
               </td>
             </tr>
 
-            {expandedParents.includes(parent.con_menu_id) &&
+            {expandedParents.includes(parent[idField]) &&
               childMenus
-                .filter((child) => child.con_menu_parent_id === parent.con_menu_id)
+                .filter((child) => child[parentIdField] === parent[idField])
                 .map((child) => (
-                  <tr key={child.con_menu_id} className="bg-gray-50 border-t">
-                    <td className="px-8 py-2 text-gray-700">— {child.con_menu_name}</td>
+                  <tr key={child[idField]} className="bg-gray-50 border-t">
+                    <td className="px-8 py-2 text-gray-700">— {child[nameField]}</td>
                     <td className="px-4 py-2 text-sm">
                       <input
                         type="checkbox"
-                        checked={selectedMenuIds.includes(child.con_menu_id)}
-                        onChange={(e) => handleChildCheckboxChange(child.con_menu_id, e.target.checked, parent.con_menu_id)}
+                        checked={selectedMenuIds.includes(child[idField])}
+                        onChange={(e) => handleChildCheckboxChange(child[idField], e.target.checked, parent[idField])}
                       />
                     </td>
                   </tr>

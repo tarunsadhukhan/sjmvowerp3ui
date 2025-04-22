@@ -18,6 +18,14 @@ type MenuItem = {
     con_role_id: number | null; // Added field
 };
 
+// Define the field mapping for admin tenant menu structure
+const ADMIN_FIELD_MAPPING = {
+  idField: "con_menu_id",
+  nameField: "con_menu_name",
+  parentIdField: "con_menu_parent_id",
+  roleIdField: "con_role_id"
+};
+
 const fetchMenu = async (roleId: string | null): Promise<{ data: MenuItem[]; roleName?: string }> => {
     const apiUrl = roleId ? `${apiRoutes.ADMIN_TENANT_MENU_BY_ROLEID}${roleId}` : apiRoutes.TENANT_ALL_MENUS;
 
@@ -171,6 +179,7 @@ export default function CreateRoleAdmin() {
                         console.log("Selected menu IDs:", selectedIds);
                         setSelectedMenuIds(selectedIds);
                     }}
+                    fieldMapping={ADMIN_FIELD_MAPPING} // Explicitly pass the field mapping for admin menu format
                 />
             )}
         </main>

@@ -103,7 +103,7 @@ const UserAdmin = ({
         const fetchAvailableRoles = async () => {
             try {
                 // Use the ROLES_DROPDOWN endpoint to get available roles
-                const response = await fetchWithCookie(apiRoutes.ROLES_DROPDOWN, "GET");
+                const response = await fetchWithCookie(apiRoutes.ROLES_DROPDOWN_TENANT_ADMIN, "GET");
                 if (response.error) {
                     throw new Error(response.error);
                 }

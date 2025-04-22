@@ -9,14 +9,9 @@ import { fetchWithCookie } from "@/utils/apiClient2";
 
 // Sample Role type
 type Role = {
-  con_role_id: number;
-  con_role_name: string;
-  con_org_id: number;
-  status: number;
-  created_by: number;
-  created_date_time: string;
-  con_company_id: number | null;
-  is_enable: number;
+  role_id: number;
+  role_name: string;
+  active: boolean;
 };
 
 // Real API fetch function with pagination and search
@@ -32,7 +27,7 @@ const fetchRoles = async (page: number, search?: string) => {
   }
 
   const { data, error } = await fetchWithCookie(
-    `${apiRoutes.ROLES_COMP_CONSOLE}?${queryParams}`,
+    apiRoutes.ROLES_PORTAL,
     "GET"
   );
 
@@ -45,12 +40,12 @@ const fetchRoles = async (page: number, search?: string) => {
 // Table columns
 const columns: Column<Role>[] = [
   {
-    key: "con_role_name",
+    key: "role_name",
     label: "Role Name",
     className: "bg-[#3ea6da] text-white font-medium",
   },
   {
-    key: "is_enable",
+    key: "active",
     label: "Active",
     className: "bg-[#3ea6da] text-white",
     render: (val) => (val === 1 ? "Yes" : "No"),
@@ -64,7 +59,7 @@ const columns: Column<Role>[] = [
         variant="ghost"
         size="icon"
         onClick={() => {
-          const roleId = row.con_role_id;
+          const roleId = row.role_id;
           window.location.href = `/dashboardadmin/createRole?roleId=${roleId}`;
         }}
       >

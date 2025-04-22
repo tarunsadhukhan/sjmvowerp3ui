@@ -21,7 +21,11 @@ const apiRoutes ={
     GET_USER_TENANT_ADMIN: `${API_URL}/companyAdmin/get_user_tenant_admin`,
     CREATE_USER_TENANT_ADMIN: `${API_URL}/companyAdmin/create_user_tenant_admin`,
     EDIT_USER_TENANT_MENU: `${API_URL}/companyAdmin/edit_user_tenant_admin/`,
-    ROLES_DROPDOWN: `${API_URL}/companyAdmin/get_roles_tenant_admin_assign`,
+    ROLES_DROPDOWN_TENANT_ADMIN: `${API_URL}/companyAdmin/get_roles_tenant_admin_assign`,
+    ROLES_PORTAL: `${API_URL}/admin/PortalData/get_roles_portal`,
+    USERS_PORTAL: `${API_URL}/admin/PortalData/get_users_portal`,
+
+    
 };
 
 export default apiRoutes;

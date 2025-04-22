@@ -9,14 +9,10 @@ import { fetchWithCookie } from "@/utils/apiClient2";
 
 // Sample Role type
 type Role = {
-  con_role_id: number;
-  con_role_name: string;
-  con_org_id: number;
-  status: number;
-  created_by: number;
-  created_date_time: string;
-  con_company_id: number | null;
-  is_enable: number;
+  user_id: number;
+  email_id: string;
+  name: string;
+  active: boolean;
 };
 
 // Real API fetch function with pagination and search
@@ -32,7 +28,7 @@ const fetchUsers = async (page: number, search?: string) => {
   }
 
   const { data, error } = await fetchWithCookie(
-    `${apiRoutes.GET_USER_TENANT_ADMIN}?${queryParams}`,
+    apiRoutes.USERS_PORTAL,
     "GET"
   );
 
@@ -45,12 +41,17 @@ const fetchUsers = async (page: number, search?: string) => {
 // Table columns
 const columns: Column<Role>[] = [
   {
-    key: "con_role_name",
-    label: "Role Name",
+    key: "name",
+    label: "Name",
     className: "bg-[#3ea6da] text-white font-medium",
   },
   {
-    key: "is_enable",
+    key: "email_id",
+    label: "username",
+    className: "bg-[#3ea6da] text-white font-medium",
+  },
+  {
+    key: "active",
     label: "Active",
     className: "bg-[#3ea6da] text-white",
     render: (val) => (val === 1 ? "Yes" : "No"),
@@ -64,7 +65,7 @@ const columns: Column<Role>[] = [
         variant="ghost"
         size="icon"
         onClick={() => {
-          const roleId = row.con_role_id;
+          const roleId = row.user_id;
           window.location.href = `/dashboardadmin/roleManagementAdmin/createRoleAdmin?roleId=${roleId}`;
         }}
       >

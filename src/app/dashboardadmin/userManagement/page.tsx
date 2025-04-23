@@ -7,8 +7,8 @@ import { PencilIcon } from "lucide-react";
 import apiRoutes from "@/utils/api";
 import { fetchWithCookie } from "@/utils/apiClient2";
 
-// Sample Role type
-type Role = {
+// Sample User type
+type User = {
   user_id: number;
   email_id: string;
   name: string;
@@ -33,13 +33,13 @@ const fetchUsers = async (page: number, search?: string) => {
   );
 
   if (error || !data) {
-    throw new Error(error || 'Failed to fetch roles');
+    throw new Error(error || 'Failed to fetch users');
   }
   return data;
 };
 
 // Table columns
-const columns: Column<Role>[] = [
+const columns: Column<User>[] = [
   {
     key: "name",
     label: "Name",
@@ -65,8 +65,8 @@ const columns: Column<Role>[] = [
         variant="ghost"
         size="icon"
         onClick={() => {
-          const roleId = row.user_id;
-          window.location.href = `/dashboardadmin/roleManagementAdmin/createRoleAdmin?roleId=${roleId}`;
+          const UserId = row.user_id;
+          window.location.href = `/dashboardadmin/userManagement/createUSer?userId=${UserId}`;
         }}
       >
         <PencilIcon className="h-4 w-4" />
@@ -80,11 +80,11 @@ export default function UserTenantAdmin() {
     <div className="min-h-screen bg-gray-50 p-8">
       <div className="mx-auto max-w-7xl">
         <div className="mb-8 flex items-center justify-between">
-          <h1 className="text-2xl font-bold text-[#0C3C60]">User Management Admin</h1>
+          <h1 className="text-2xl font-bold text-[#0C3C60]">User Management Portal</h1>
             <Button
             className="bg-[#95C11F] hover:bg-[#85ad1b] text-white"
             onClick={() => {
-              window.location.href = "/dashboardadmin/roleManagementAdmin/createRoleAdmin";
+              window.location.href = "/dashboardadmin/userManagement/createUser";
             }}
             >
             + Create User

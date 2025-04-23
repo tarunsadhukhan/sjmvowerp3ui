@@ -26,6 +26,8 @@ const apiRoutes ={
     USERS_PORTAL: `${API_URL}/admin/PortalData/get_users_portal`,
     PORTAL_MENU_FULL: `${API_URL}/admin/PortalData/portal_menu_full`,
     GET_PORTAL_MENU_BY_ROLEID: `${API_URL}/admin/PortalData/portal_menu_by_roleid/`,
+    CREATE_PORTAL_ROLE: `${API_URL}/admin/PortalData/create_role_portal`,
+    EDIT_PORTAL_ROLE: `${API_URL}/admin/PortalData/edit_role_portal/`,
     
 };
 

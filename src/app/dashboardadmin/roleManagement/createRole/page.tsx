@@ -3,19 +3,20 @@
 import apiRoutes from "@/utils/api";
 import { fetchWithCookie } from '@/utils/apiClient2';
 import React, { useEffect, useState } from 'react';
-import MenuTable from '@/components/ui/expandableMenu';
 import { useSearchParams, useRouter } from 'next/navigation';
 import { Form, FormField, FormItem, FormLabel, FormControl, FormMessage } from '@/components/ui/form'; // Adjust the path based on your project structure
 import { useForm } from 'react-hook-form';
 import { Input } from '@/components/ui/input'; // Ensure this path matches your project structure
 import { Card } from '@/components/ui/card'; // Adjust the path based on your project structure
 import { Button } from '@/components/ui/button'; // Ensure this path matches your project structure
+import MenuTableDropdown from "@/components/ui/expandableMenuDropdown";
 
 type MenuItem = {
     menu_id: number;
     menu_name: string;
     menu_parent_id: number | null;
-    role_id: number | null; // Added field
+    role_id: number | null;
+    access_type_id?: number | string | null; // Add optional access level field
 };
 
 // Define the field mapping for portal menu structure
@@ -23,8 +24,18 @@ const PORTAL_FIELD_MAPPING = {
   idField: "menu_id",
   nameField: "menu_name",
   parentIdField: "menu_parent_id",
-  roleIdField: "role_id" // Update this if the role ID field name is different
+  roleIdField: "role_id",
+  accessLevelField: "access_type_id" // Access level field mapping
 };
+
+// Options for the access level dropdown, matching the expected format
+const PORTAL_DROPDOWN_OPTIONS = [
+  { value: "0", label: "Not Accessible" }, // Use string "0" for null/not accessible
+  { value: "1", label: "Read" },
+  { value: "2", label: "Print" },
+  { value: "3", label: "Write" },
+  { value: "4", label: "Edit" }
+];
 
 const fetchMenu = async (roleId: string | null): Promise<{ data: MenuItem[]; roleName?: string }> => {
     const apiUrl = roleId ? `${apiRoutes.GET_PORTAL_MENU_BY_ROLEID}${roleId}` : apiRoutes.PORTAL_MENU_FULL;
@@ -42,6 +53,7 @@ export default function CreateRolePortal() {
     const [loading, setLoading] = useState(true);
     const [fetchError, setFetchError] = useState<string | null>(null);
     const [selectedMenuIds, setSelectedMenuIds] = useState<number[]>([]);
+    const [menuAccessLevels, setMenuAccessLevels] = useState<Record<number, string>>({}); // State for access levels
     const searchParams = useSearchParams();
     const router = useRouter();
     const roleId = searchParams.get('roleId');
@@ -80,49 +92,55 @@ export default function CreateRolePortal() {
         console.log("role ID:", roleId);
         console.log("role Name", roleName);
         console.log("Selected menu IDs for submission:", selectedMenuIds);
+        console.log("Access Levels for submission:", menuAccessLevels);
+        
+        // Create the payload with access levels
+        const menuWithAccess = selectedMenuIds.map(menuId => ({
+            menuId,
+            accessTypeId: menuAccessLevels[menuId] || "1" // Default to "Read" if missing
+        }));
+        
+        const payload = roleId 
+            ? { 
+                roleId: Number(roleId),
+                menuAccessList: menuWithAccess 
+              }
+            : {
+                roleName: roleName.trim(),
+                menuAccessList: menuWithAccess
+              };
+
+        console.log("Payload being sent:", payload);
         
         try {
             setLoading(true);
-            let apiUrl, payload;
+            
+            let apiUrl, method;
             
             if (roleId) {
-                // Update existing role
-                apiUrl = apiRoutes.EDIT_ROLE_TENANT_MENU;
+                // Edit mode - use EDIT_PORTAL_ROLE API
+                apiUrl = apiRoutes.EDIT_PORTAL_ROLE;
+                method = "PUT";
             } else {
-                // Create new role
-                apiUrl = apiRoutes.CREATE_ROLE_TENANT_ADMIN;
-                console.log("Creating new role with API:", apiUrl);
+                // Create mode - use CREATE_PORTAL_ROLE API
+                apiUrl = apiRoutes.CREATE_PORTAL_ROLE;
+                method = "POST";
             }
             
-            // Using PUT method for both create and update
-            if (roleId) {
-                // Updating an existing role – send the roleId (backend already knows the name)
-                payload = {
-                    roleId: Number(roleId),
-                    selectedMenuIds
-                };
-            } else {
-                // Creating a new role – send the roleName
-                payload = {
-                    roleName: roleName.trim(),
-                    selectedMenuIds
-                };
-            }
-
-            console.log("Payload:", payload);
+            const response = await fetchWithCookie(
+                apiUrl,
+                method,
+                payload
+            );
             
-            const { data, error } = await fetchWithCookie(apiUrl, 'PUT', payload);
-            
-            if (error) {
-                console.error("API error:", error);
-                throw new Error(error);
+            if (response.error) {
+                throw new Error(response.error);
             }
             
-            console.log("API response:", data);
-            router.push("/dashboardadmin/roleManagementAdmin");
-        } catch (err) {
-            console.error("Error submitting role:", err);
-            // Add error handling here, e.g. toast notification
+            console.log(`Role ${roleId ? 'updated' : 'created'} successfully:`, response.data);
+            router.push("/dashboardadmin/roleManagement");
+        } catch (error) {
+            console.error(`Failed to ${roleId ? 'update' : 'create'} role:`, error);
         } finally {
             setLoading(false);
         }
@@ -154,7 +172,7 @@ export default function CreateRolePortal() {
                                 <Button
                                     type="button"
                                     variant="outline"
-                                    onClick={() => router.push("/dashboardadmin/roleManagementAdmin")}
+                                    onClick={() => router.push("/dashboardadmin/roleManagement")}
                                 >
                                     Cancel
                                 </Button>
@@ -173,13 +191,19 @@ export default function CreateRolePortal() {
             {loading && <p>Loading menu...</p>}
             {fetchError && <p className="text-red-500">Error loading menu: {fetchError}</p>}
             {!loading && !fetchError && (
-                <MenuTable
+                <MenuTableDropdown
                     menuData={menuData}
-                    onSelectionChange={(selectedIds) => {
+                    onSelectionChange={(selectedIds, accessLevels) => {
                         console.log("Selected menu IDs:", selectedIds);
+                        console.log("Access Levels:", accessLevels);
                         setSelectedMenuIds(selectedIds);
+                        // Store access levels in state
+                        if (accessLevels) {
+                            setMenuAccessLevels(accessLevels);
+                        }
                     }}
-                    fieldMapping={PORTAL_FIELD_MAPPING} // Pass the field mapping for this specific menu format
+                    fieldMapping={PORTAL_FIELD_MAPPING}
+                    dropdownOptions={PORTAL_DROPDOWN_OPTIONS}
                 />
             )}
         </main>

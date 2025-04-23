@@ -27,7 +27,7 @@ const fetchRoles = async (page: number, search?: string) => {
   }
 
   const { data, error } = await fetchWithCookie(
-    apiRoutes.ROLES_PORTAL,
+    `${apiRoutes.ROLES_PORTAL}?${queryParams}`,
     "GET"
   );
 
@@ -69,12 +69,12 @@ const columns: Column<Role>[] = [
   },
 ];
 
-export default function SampleRoleTablePage() {
+export default function PortalRoleTablePage() {
   return (
     <div className="min-h-screen bg-gray-50 p-8">
       <div className="mx-auto max-w-7xl">
         <div className="mb-8 flex items-center justify-between">
-          <h1 className="text-2xl font-bold text-[#0C3C60]">Sample Role Table</h1>
+          <h1 className="text-2xl font-bold text-[#0C3C60]">Portal Role Management</h1>
             <Button
             className="bg-[#95C11F] hover:bg-[#85ad1b] text-white"
             onClick={() => {

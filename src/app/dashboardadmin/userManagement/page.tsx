@@ -66,7 +66,7 @@ const columns: Column<User>[] = [
         size="icon"
         onClick={() => {
           const UserId = row.user_id;
-          window.location.href = `/dashboardadmin/userManagement/createUSer?userId=${UserId}`;
+          window.location.href = `/dashboardadmin/userManagement/createUser?userId=${UserId}`;
         }}
       >
         <PencilIcon className="h-4 w-4" />

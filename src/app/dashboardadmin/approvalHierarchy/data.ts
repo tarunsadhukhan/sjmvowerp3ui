@@ -3,7 +3,7 @@
 export const approvalLevelsDataByMenu: Record<string, {
   maxLevel: number;
   userOptions: { id: string; name: string }[];
-  data: { users: string[]; maxSingle: string; maxDay: string; maxMonth: string }[];
+  data: { level: number; users: string[]; maxSingle: string; maxDay: string; maxMonth: string }[];
 }> = {
   menu1: {
     maxLevel: 2,
@@ -14,8 +14,8 @@ export const approvalLevelsDataByMenu: Record<string, {
       { id: "user4", name: "User 4" },
     ],
     data: [
-      { users: ["user1"], maxSingle: "1000", maxDay: "5000", maxMonth: "20000" },
-      { users: ["user2", "user3"], maxSingle: "2000", maxDay: "7000", maxMonth: "25000" },
+      { level: 1, users: ["user1"], maxSingle: "1000", maxDay: "5000", maxMonth: "20000" },
+      { level: 2, users: ["user2", "user3"], maxSingle: "2000", maxDay: "7000", maxMonth: "25000" },
     ]
   },
   menu2: {
@@ -27,7 +27,7 @@ export const approvalLevelsDataByMenu: Record<string, {
       { id: "user4", name: "User 4" },
     ],
     data: [
-      { users: ["user4"], maxSingle: "0", maxDay: "0", maxMonth: "0" },
+      { level: 1, users: ["user4"], maxSingle: "500", maxDay: "2000", maxMonth: "10000" },
     ]
   },
     menu3: {
@@ -39,10 +39,33 @@ export const approvalLevelsDataByMenu: Record<string, {
         { id: "user4", name: "User 4" },
         ],
         data: [
-        { users: ["user1"], maxSingle: "1500", maxDay: "6000", maxMonth: "30000" },
-        { users: ["user2"], maxSingle: "2500", maxDay: "8000", maxMonth: "35000" },
-        { users: ["user3"], maxSingle: "3000", maxDay: "9000", maxMonth: "40000" },
+        { level: 1, users: ["user1"], maxSingle: "1000", maxDay: "5000", maxMonth: "20000" },
+        { level: 2, users: ["user2"], maxSingle: "2000", maxDay: "7000", maxMonth: "25000" },
+        { level: 3, users: ["user3"], maxSingle: "3000", maxDay: "9000", maxMonth: "30000" },
         ]
+    },
+    menu4: {
+        maxLevel: 2,
+        userOptions: [
+        { id: "user1", name: "User 1" },
+        { id: "user2", name: "User 2" },
+        { id: "user3", name: "User 3" },
+        { id: "user4", name: "User 4" },
+        ],
+        data: [
+        { level: 1, users: ["user1"], maxSingle: "1000", maxDay: "5000", maxMonth: "20000" },
+        { level: 2, users: ["user2"], maxSingle: "2000", maxDay: "7000", maxMonth: "25000" },
+        ]
+    },
+    menu5: {
+        maxLevel: 0,
+        userOptions: [
+        { id: "user1", name: "User 1" },
+        { id: "user2", name: "User 2" },
+        { id: "user3", name: "User 3" },
+        { id: "user4", name: "User 4" },
+        ],
+        data: [ ]
     }
-
 };
+

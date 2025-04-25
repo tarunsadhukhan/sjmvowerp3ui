@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useState } from "react";
 import { Button } from "@/components/ui/button";
 
 interface UserOption {
@@ -19,75 +19,80 @@ interface ApprovalLevelRow {
 interface ApprovalLevelsTableProps {
   maxLevel: number;
   userOptions: UserOption[];
-  data: Omit<ApprovalLevelRow, "level">[]; // data for levels 1..maxLevel
+  data: ApprovalLevelRow[];
   onChange?: (rows: ApprovalLevelRow[]) => void;
 }
 
 export default function ApprovalLevelsTable({ maxLevel, userOptions, data, onChange }: ApprovalLevelsTableProps) {
-  const [rows, setRows] = useState<ApprovalLevelRow[]>(() =>
-    Array.from({ length: maxLevel + 1 }, (_, i) => {
-      const d = data[i] || { users: [], maxSingle: "", maxDay: "", maxMonth: "" };
-      return { level: i + 1, ...d };
-    })
-  );
-
-  // Update rows when maxLevel or data changes
-  useEffect(() => {
-    setRows(
-      Array.from({ length: maxLevel + 1 }, (_, i) => {
-        const d = data[i] || { users: [], maxSingle: "", maxDay: "", maxMonth: "" };
-        return { level: i + 1, ...d };
-      })
-    );
-  }, [maxLevel, data]);
-
   const [userDropdownOpen, setUserDropdownOpen] = useState<number | null>(null);
 
-  // Helper to add a new row if the last row has users
-  const ensureExtraRow = (updatedRows: ApprovalLevelRow[]) => {
-    const lastRow = updatedRows[updatedRows.length - 1];
-    if (lastRow && lastRow.users.length > 0) {
-      // Only add if not already present (empty row)
-      return [
-        ...updatedRows,
-        { level: lastRow.level + 1, users: [], maxSingle: "", maxDay: "", maxMonth: "" }
-      ];
+  // Helper to ensure rows: always at least one, fill up to maxLevel, and always an extra row for new input
+  const normalizeRows = (rows: ApprovalLevelRow[], maxLevel: number) => {
+    let normalized = [...rows];
+    // Remove any undefined/empty objects
+    normalized = normalized.filter(row => row && typeof row.level === "number");
+    // If no rows, start with one
+    if (normalized.length === 0) {
+      normalized = [{ level: 1, users: [], maxSingle: "", maxDay: "", maxMonth: "" }];
     }
-    // Remove extra empty rows if user unselected
-    let trimmed = [...updatedRows];
-    while (
-      trimmed.length > 1 &&
-      trimmed[trimmed.length - 1].users.length === 0 &&
-      trimmed[trimmed.length - 2].users.length === 0
-    ) {
-      trimmed.pop();
+    // Fill up to maxLevel if needed
+    for (let i = normalized.length + 1; i <= maxLevel; i++) {
+      normalized.push({ level: i, users: [], maxSingle: "", maxDay: "", maxMonth: "" });
     }
-    return trimmed;
+    // Always ensure an extra row for new input
+    const lastRow = normalized[normalized.length - 1];
+    const isLastRowBlank =
+      lastRow &&
+      lastRow.users.length === 0 &&
+      lastRow.maxSingle === "" &&
+      lastRow.maxDay === "" &&
+      lastRow.maxMonth === "";
+    if (lastRow && (lastRow.users.length > 0 || isLastRowBlank)) {
+      normalized.push({ level: lastRow.level + 1, users: [], maxSingle: "", maxDay: "", maxMonth: "" });
+    }
+    return normalized;
   };
 
+  // Use normalized rows for rendering and updates
+  const rows = normalizeRows(data, maxLevel);
+
   const handleUserToggle = (rowIdx: number, userId: string) => {
-    setRows(prev => {
-      const updated = [...prev];
-      const users = updated[rowIdx].users.includes(userId)
-        ? updated[rowIdx].users.filter(u => u !== userId)
-        : updated[rowIdx].users.length < 3
-          ? [...updated[rowIdx].users, userId]
-          : updated[rowIdx].users;
-      updated[rowIdx] = { ...updated[rowIdx], users };
-      const withExtra = ensureExtraRow(updated);
-      onChange?.(withExtra);
-      return withExtra;
+    const updated = rows.map((row, idx) => {
+      if (idx !== rowIdx) return row;
+      const users = row.users.includes(userId)
+        ? row.users.filter(u => u !== userId)
+        : row.users.length < 3
+          ? [...row.users, userId]
+          : row.users;
+      return { ...row, users };
     });
+    onChange?.(updated);
   };
 
   const handleInputChange = (rowIdx: number, field: keyof Omit<ApprovalLevelRow, "level" | "users">, value: string) => {
-    setRows(prev => {
-      const updated = [...prev];
-      updated[rowIdx] = { ...updated[rowIdx], [field]: value };
-      const withExtra = ensureExtraRow(updated);
-      onChange?.(withExtra);
-      return withExtra;
-    });
+    const updated = rows.map((row, idx) =>
+      idx === rowIdx ? { ...row, [field]: value } : row
+    );
+    onChange?.(updated);
+  };
+
+  // Add a new row if the last row's dropdown is closed and it has users
+  const handleDone = (rowIdx: number) => {
+    setUserDropdownOpen(null);
+    if (
+      rowIdx === rows.length - 1 &&
+      rows[rowIdx].users.length > 0
+    ) {
+      const nextLevel = rows[rowIdx].level + 1;
+      // Prevent duplicate empty row
+      if (!rows[rows.length] || rows[rows.length - 1].level !== nextLevel) {
+        const newRows = [
+          ...rows,
+          { level: nextLevel, users: [], maxSingle: "", maxDay: "", maxMonth: "" }
+        ];
+        onChange?.(newRows);
+      }
+    }
   };
 
   return (
@@ -134,7 +139,7 @@ export default function ApprovalLevelsTable({ maxLevel, userOptions, data, onCha
                         </label>
                       ))}
                       <div className="text-xs text-gray-400 px-2 py-1">Max 3 users</div>
-                      <Button size="sm" className="w-full mt-1" onClick={() => setUserDropdownOpen(null)}>Done</Button>
+                      <Button size="sm" className="w-full mt-1" onClick={() => handleDone(rowIdx)}>Done</Button>
                     </div>
                   )}
                 </div>

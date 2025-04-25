@@ -49,7 +49,13 @@ export default function CreateApproval() {
 
   // Handler for submit button
   const handleSubmit = () => {
-    console.log("Submitted approvalLevelsData:", approvalLevelsData);
+    const filteredApprovalLevels = approvalLevelsData?.data.filter(row => row.users.length > 0) ?? [];
+    const submitData = {
+      branchId: selections.branch,
+      menuId: selections.menu,
+      data: filteredApprovalLevels
+    };
+    console.log("Submitted IDs:", submitData);
   };
 
   return (

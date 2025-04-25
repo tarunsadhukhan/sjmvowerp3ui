@@ -1,38 +1,85 @@
 "use client"
 
-// import { useEffect } from "react"
+import { useState, useEffect, useCallback } from "react"
 import { useRouter } from "next/navigation"
-import { Card } from "@/components/ui/card"
-// import { isAuthenticated } from "@/utils/auth"
+import ApprovalDropdowns, { DropdownField } from "@/components/ui/ApprovalDropdowns"
+import ApprovalLevelsTable, { ApprovalLevelRow } from "./ApprovalLevelsTable";
+import { approvalLevelsDataByMenu } from "./data";
+import { dropdownFields } from "@/app/dashboardadmin/approvalHierarchy/dropdowndata";
 
-export default function DashboardPage() {
+export default function CreateApproval() {
   const router = useRouter()
+  const [selections, setSelections] = useState<Record<string, string>>({})
 
-  // useEffect(() => {
-  //   if (!isAuthenticated()) {
-  //     router.replace("/")
-  //   }
-  // }, [router])
+  const handleSelectionChange = (newSelections: Record<string, string>) => {
+    console.log("Selections updated:", newSelections);
+    setSelections(newSelections);
+  };
+
+  // Only show ApprovalLevelsTable if a menu is selected
+  const selectedMenu = selections.menu;
+  const [approvalLevelsData, setApprovalLevelsData] = useState(
+    selectedMenu && approvalLevelsDataByMenu[selectedMenu]
+      ? approvalLevelsDataByMenu[selectedMenu]
+      : undefined
+  );
+
+  // Fetch approval levels data when menu changes
+  useEffect(() => {
+    if (selectedMenu && approvalLevelsDataByMenu[selectedMenu]) {
+      setApprovalLevelsData(approvalLevelsDataByMenu[selectedMenu]);
+    } else {
+      setApprovalLevelsData(undefined);
+    }
+  }, [selectedMenu]);
+
+  // Log when approvalLevelsData changes
+  useEffect(() => {
+    console.log("approvalLevelsData updated:", approvalLevelsData);
+  }, [approvalLevelsData]);
+
+  // Handler to update approvalLevelsData.data from ApprovalLevelsTable
+  const handleTableChange = useCallback((newRows: ApprovalLevelRow[]) => {
+    setApprovalLevelsData(prev =>
+      prev
+        ? { ...prev, data: newRows, maxLevel: prev.maxLevel, userOptions: prev.userOptions }
+        : undefined
+    );
+  }, []);
+
+  // Handler for submit button
+  const handleSubmit = () => {
+    console.log("Submitted approvalLevelsData:", approvalLevelsData);
+  };
 
   return (
-    <div className="p-6">
-      <div className="flex justify-between items-center mb-6">
-        <h1 className="text-2xl font-bold text-gray-900">Approval Hierarchy</h1>
+    <div className="page-container">
+      <div className="page-header">
+        <h1 className="page-title">Create Approval Hierarchy</h1>
       </div>
-      
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-        <Card className="p-6">
-          <h3 className="font-semibold mb-2">Co</h3>
-          <p className="text-2xl font-bold">₹45,231</p>
-        </Card>
-        <Card className="p-6">
-          <h3 className="font-semibold mb-2">Total Orders</h3>
-          <p className="text-2xl font-bold">124</p>
-        </Card>
-        <Card className="p-6">
-          <h3 className="font-semibold mb-2">Active Projects</h3>
-          <p className="text-2xl font-bold">8</p>
-        </Card>
+      <div className="content-box p-6">
+        <ApprovalDropdowns 
+          fields={dropdownFields}
+          onSelectionChange={handleSelectionChange} 
+    />
+        {/* Approval Levels Table below dropdowns */}
+        {selectedMenu && approvalLevelsData && (
+          <>
+            <ApprovalLevelsTable
+              key={selectedMenu}
+              maxLevel={approvalLevelsData.maxLevel}
+              userOptions={approvalLevelsData.userOptions}
+              data={approvalLevelsData.data}
+              onChange={handleTableChange}
+            />
+            <button
+              className="mt-4 px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700"
+              onClick={handleSubmit}
+          >
+              Submit
+            </button>
+          </>
+        )}
       </div>
     </div>
   )

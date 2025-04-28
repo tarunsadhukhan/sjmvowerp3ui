@@ -15,12 +15,10 @@ export const login = async (
   rememberMe: boolean
 ) => {
   try {
-     const subdomain = window.location.hostname.split(".")[0]; // ✅ Extract subdomain dynamically
-    //const subdomain = "vowsls3.vowerp.co.in"; // ✅ Extract subdomain dynamically
-    
-    console.log('hdhdh', subdomain);
+    const subdomain = typeof window !== 'undefined' ? window.location.hostname.split(".")[0] : ""; 
+    console.log('Subdomain in login method:', subdomain);
 
-    // Commented out axios call for multi-tenancy
+    // Make the request to the login endpoint
     const response = await axios.post(
       apiRoutes.USERLOGINCONSOLE,
       {
@@ -33,56 +31,38 @@ export const login = async (
         headers: {
           "Content-Type": "application/json",
           "Accept": "application/json",
-          "X-Subdomain": subdomain, // ✅ Send subdomain in request headers
+          "X-Subdomain": subdomain,
         },
+        withCredentials: true, // Ensure cookies are sent and received
+        validateStatus: () => true, // Allow any status code to be handled in JS
       }
     );
-  
 
-    // Simulate response for now
-    //const response = { data: { status_code: 200, message: "Success" } };
+    console.log("Login API Response:", response);
 
-    if (response.data.status_code === 200) {
-      return response.data;
-    } else {
-      Swal.fire({
-        title: "Error",
-        text: response.data.message,
-        icon: "error",
-        confirmButtonText: "OK",
-      });
-      return response.data;
-    }
+    // Return the complete response data including status code
+    return {
+      status: response.status,
+      ...response.data
+    };
   } catch (error: unknown) {
     console.error("Login failed:", error);
 
     if (axios.isAxiosError(error)) {
-      if (error.response?.status === 404) {
-        Swal.fire({
-          title: "Error",
-          text: error.response.data.detail,
-          icon: "error",
-          confirmButtonText: "OK",
-        });
-      } else if (error.response?.status === 401) {
-        Swal.fire({
-          title: "Login Failed",
-          text: "Invalid Username or password.",
-          icon: "error",
-          confirmButtonText: "OK",
-        });
-      } else {
-        Swal.fire({
-          title: "Login Failed",
-          text: "Something went wrong. Please try again.",
-          icon: "error",
-          confirmButtonText: "OK",
-        });
-      }
-
-      throw new Error(error.response?.data?.detail || "Login request failed");
+      console.error("Axios Error Details:", error.toJSON());
+      
+      // Return error information in a consistent format
+      return {
+        status: error.response?.status || 500,
+        message: error.response?.data?.message || "Login request failed",
+        error: true
+      };
     } else {
-      throw new Error("Login request failed");
+      return {
+        status: 500,
+        message: "Login request failed",
+        error: true
+      };
     }
   }
 };

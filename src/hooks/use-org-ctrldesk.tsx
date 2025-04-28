@@ -65,3 +65,4 @@ export function useCompanyConsole() {
     loading,
   };
 }
+

@@ -1,0 +1,69 @@
+'use client';
+
+import Link from "next/link";
+import { ChevronDown } from "lucide-react";
+//import { cn } from "@/lib/utils";
+import { useCompanyConsoleMenu } from "@/hooks/use-org-console_menu";
+import {  useState } from "react"
+
+interface MenuItem {
+  title: string;
+  path?: string;
+  icon: React.ReactNode;
+  submenu?: MenuItem[];
+}
+
+export function DynamicMenuCompanyConsole({ isCollapsed }: { isCollapsed: boolean }) {
+  const { menuItems } = useCompanyConsoleMenu();
+  const [openMenus, setOpenMenus] = useState<string[]>([]);
+  console.log(menuItems)
+
+  // const userid = localStorage.getItem("user_id");
+  // console.log('userid from dynamic menu console',userid)
+
+  const toggleSubmenu = (title: string) => {
+    setOpenMenus(prev =>
+      prev.includes(title) ? prev.filter(item => item !== title) : [...prev, title]
+    );
+  };
+
+  const renderMenuItem = (item: MenuItem) => {
+    const hasSubmenu = item.submenu && item.submenu.length > 0;
+    const isOpen = openMenus.includes(item.title);
+
+    return (
+      <div key={item.title}>
+        <Link
+          href={item.path || "#"}
+          className="flex items-center px-4 py-2 text-sm text-white hover:bg-[#005580] transition-colors"
+          onClick={(e) => {
+            if (hasSubmenu) {
+              e.preventDefault();
+              toggleSubmenu(item.title);
+              console.log('itttsts',item.title)
+            } 
+          }}
+        >
+          <span className="mr-3">{item.icon}</span>
+          {!isCollapsed && (
+            <>
+              <span className="flex-1">{item.title}</span>
+              {hasSubmenu && <ChevronDown size={16} className={isOpen ? "rotate-180" : ""} />}
+            </>
+          )}
+        </Link>
+        {hasSubmenu && isOpen && !isCollapsed && (
+          <div className="ml-4 border-l border-[#005580]">
+            {item.submenu?.map(subItem => renderMenuItem(subItem))}
+          </div>
+        )}
+      </div>
+    );
+  };
+
+  return (
+    <nav className="flex-1 overflow-y-auto mt-4">
+      {menuItems.map((item: MenuItem) => renderMenuItem(item))}
+    </nav>
+  );
+}

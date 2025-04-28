@@ -48,11 +48,11 @@ export interface User {
     }
   }
   
-  export function isAuthenticated(): boolean {
-    if (typeof window === 'undefined') return false
-    const user = getUser()
-    return user !== null
-  }
+  // export function isAuthenticated(): boolean {
+  //   if (typeof window === 'undefined') return false
+  //   const user = getUser()
+  //   return user !== null
+  // }
   
   export function logout() {
     if (typeof window === 'undefined') return

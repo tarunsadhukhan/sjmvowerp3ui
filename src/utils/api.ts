@@ -32,6 +32,9 @@ const apiRoutes ={
     CREATE_PORTAL_USER: `${API_URL}/admin/PortalData/create_user_portal`,
     EDIT_PORTAL_USER: `${API_URL}/admin/PortalData/edit_user_portal/`,
     PORTAL_USER_EDIT_BY_USERID: `${API_URL}/admin/PortalData/get_user_edit_setup_data/`,
+    PORTAL_CO_BRANCH_SUBMENU: `${API_URL}/admin/PortalData/co_branch_submenu`,
+    PORTAL_APPROVAL_LEVELS_DATA: `${API_URL}/admin/PortalData/approval_level_data_setup`,
+    PORTAL_APPROVAL_LEVELS_DATA_SUBMIT: `${API_URL}/admin/PortalData/approval_level_data_setup_submit`,
     
 };
 

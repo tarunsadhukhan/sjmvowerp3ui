@@ -132,9 +132,7 @@
 
 
 @layer base {
-  * {
-/*     @apply border-border;
- */  }
+/* (Removed empty * selector block) */
   body {
     @apply bg-background text-foreground;
   }

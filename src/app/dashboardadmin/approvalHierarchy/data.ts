@@ -69,3 +69,46 @@ export const approvalLevelsDataByMenu: Record<string, {
     }
 };
 
+
+// {
+//   "menu2": {
+//       "maxLevel": 1,
+//       "userOptions": [
+//           {
+//               "id": "2",
+//               "name": "user2@empirejute.com"
+//           },
+//           {
+//               "id": "3",
+//               "name": "user3@empirejute.com"
+//           },
+//           {
+//               "id": "6",
+//               "name": "test5@empirejute.com"
+//           },
+//           {
+//               "id": "9",
+//               "name": "test8@empirejute.com"
+//           },
+//           {
+//               "id": "7",
+//               "name": "test6@empirejute.com"
+//           },
+//           {
+//               "id": "1",
+//               "name": "user1@empirejute.com"
+//           }
+//       ],
+//       "data": [
+//           {
+//               "level": 1,
+//               "users": [
+//                   "1"
+//               ],
+//               "maxSingle": "500.0",
+//               "maxDay": "1000.0",
+//               "maxMonth": "1500.0"
+//           }
+//       ]
+//   }
+// }

@@ -1,12 +1,18 @@
 'use client';
 
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, Suspense } from 'react';
 import { useSearchParams, useRouter } from 'next/navigation';
 import UserAdmin from "./userAdmin";
 import apiRoutes from "@/utils/api";
 import { fetchWithCookie } from "@/utils/apiClient2";
 
-export default function CreateUserAdminPage() {
+// Loading component for Suspense fallback
+function LoadingFallback() {
+    return <div className="p-6">Loading user data...</div>;
+}
+
+// Component with useSearchParams hook
+function CreateUserAdminContent() {
     const searchParams = useSearchParams();
     const router = useRouter();
     const userId = searchParams.get('userId');
@@ -117,5 +123,14 @@ export default function CreateUserAdminPage() {
                 active={userData.active}
             />
         </main>
+    );
+}
+
+// Main export that wraps the content with Suspense
+export default function CreateUserAdminPage() {
+    return (
+        <Suspense fallback={<LoadingFallback />}>
+            <CreateUserAdminContent />
+        </Suspense>
     );
 }

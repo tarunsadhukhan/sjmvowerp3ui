@@ -2,7 +2,7 @@
 
 import apiRoutes from "@/utils/api";
 import { fetchWithCookie } from '@/utils/apiClient2';
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, Suspense } from 'react';
 import { useSearchParams, useRouter } from 'next/navigation';
 import { Form, FormField, FormItem, FormLabel, FormControl, FormMessage } from '@/components/ui/form';
 import { useForm } from 'react-hook-form';
@@ -209,7 +209,8 @@ const prepareAssignmentOptions = (roles: { role_id: string; role_name: string }[
     ];
 };
 
-export default function CreateUser() {
+// Wrapper component that uses searchParams
+function CreateUserContent() {
     const [userName, setUserName] = useState<string>('');
     const [password, setPassword] = useState<string>('');
     const [isActive, setIsActive] = useState<boolean>(true);
@@ -610,5 +611,19 @@ export default function CreateUser() {
                 </div>
             )}
         </main>
+    );
+}
+
+// Loading fallback component
+function LoadingFallback() {
+    return <div className="p-6">Loading user data...</div>;
+}
+
+// Main component that wraps the content with Suspense
+export default function CreateUser() {
+    return (
+        <Suspense fallback={<LoadingFallback />}>
+            <CreateUserContent />
+        </Suspense>
     );
 }

@@ -116,7 +116,7 @@ export default function Sidebar({ isCollapsed, onToggle }: SidebarProps) {
     selectedCompany.branches
       .filter(branch => selectedBranches.includes(branch.branch_id))
       .forEach(branch => {
-        branch.menus.forEach(menu => {
+        branch.menus.forEach((menu: MenuItem) => {
           // Check if menu is already added to avoid duplicates
           if (!allMenus.some(m => m.menu_id === menu.menu_id)) {
             allMenus.push(menu);

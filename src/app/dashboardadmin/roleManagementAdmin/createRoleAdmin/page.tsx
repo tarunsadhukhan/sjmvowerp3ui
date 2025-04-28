@@ -1,189 +1,148 @@
 'use client';
 
-import apiRoutes from "@/utils/api";
-import { fetchWithCookie } from '@/utils/apiClient2';
-import React, { useEffect, useState } from 'react';
-import MenuTable from '@/components/ui/expandableMenu';
+import React, { useState, useEffect, Suspense } from 'react';
+import { useForm } from "react-hook-form";
+import { Form } from "@/components/ui/form";
+import { Button } from "@/components/ui/button";
+import { Card } from "@/components/ui/card";
 import { useSearchParams, useRouter } from 'next/navigation';
-import { Form, FormField, FormItem, FormLabel, FormControl, FormMessage } from '@/components/ui/form'; // Adjust the path based on your project structure
-import { useForm } from 'react-hook-form';
-import { Input } from '@/components/ui/input'; // Ensure this path matches your project structure
-import { Card } from '@/components/ui/card'; // Adjust the path based on your project structure
-import { Button } from '@/components/ui/button'; // Ensure this path matches your project structure
- // Adjust the path based on your project structure
+import { fetchWithCookie } from '@/utils/apiClient2';
+import apiRoutes from '@/utils/api';
+import FormFieldWrapper from '@/components/ui/FormFieldWrapper';
 
-type MenuItem = {
-    con_menu_id: number;
-    con_menu_name: string;
-    con_menu_parent_id: number | null;
-    con_role_id: number | null; // Added field
-};
+// Loading component for Suspense fallback
+function LoadingFallback() {
+    return <div className="p-6">Loading role data...</div>;
+}
 
-// Define the field mapping for admin tenant menu structure
-const ADMIN_FIELD_MAPPING = {
-  idField: "con_menu_id",
-  nameField: "con_menu_name",
-  parentIdField: "con_menu_parent_id",
-  roleIdField: "con_role_id"
-};
-
-const fetchMenu = async (roleId: string | null): Promise<{ data: MenuItem[]; roleName?: string }> => {
-    const apiUrl = roleId ? `${apiRoutes.ADMIN_TENANT_MENU_BY_ROLEID}${roleId}` : apiRoutes.TENANT_ALL_MENUS;
-
-    const { data, error } = await fetchWithCookie(apiUrl);
-
-    if (error || !data) throw new Error(error || "Failed to fetch menu");
-
-    return data as { data: MenuItem[]; roleName?: string };
-};
-
-export default function CreateRoleAdmin() {
-    const [menuData, setMenuData] = useState<MenuItem[]>([]);
-    const [roleName, setRoleName] = useState<string>("");
-    const [loading, setLoading] = useState(true);
-    const [fetchError, setFetchError] = useState<string | null>(null);
-    const [selectedMenuIds, setSelectedMenuIds] = useState<number[]>([]);
+// Component with useSearchParams hook
+function CreateRoleAdminContent() {
     const searchParams = useSearchParams();
-    const router = useRouter();
     const roleId = searchParams.get('roleId');
-
-    useEffect(() => {
-        const fetchMenuData = async () => {
-            setLoading(true);
-            setFetchError(null);
-            try {
-                const response = await fetchMenu(roleId);
-                setMenuData(Array.isArray(response.data) ? response.data : []);
-                setRoleName(response.roleName ?? (roleId ? "" : ""));
-            } catch (err) {
-                setFetchError(err instanceof Error ? err.message : "An unknown error occurred");
-                setMenuData([]);
-                setRoleName("");
-            } finally {
-                setLoading(false);
-            }
-        };
-
-        fetchMenuData();
-    }, [roleId]);
-
+    const router = useRouter();
+    
+    const [loading, setLoading] = useState<boolean>(false);
+    const [error, setError] = useState<string | null>(null);
+    const [roleName, setRoleName] = useState<string>('');
+    
+    // Initialize form with the role name
     const form = useForm({
         defaultValues: {
-            name: '',
+            roleName: "",
         },
-        values: {
-            name: roleName
-        }
     });
+    
+    // Watch for changes in the roleName field
+    const watchedRoleName = form.watch("roleName");
+    
+    // Update the roleName state when the form value changes
+    useEffect(() => {
+        setRoleName(watchedRoleName);
+    }, [watchedRoleName]);
 
-    const onSubmit = async () => {
-        console.log("selected Menus", { name: roleName });
-        console.log("role ID:", roleId);
-        console.log("role Name", roleName);
-        console.log("Selected menu IDs for submission:", selectedMenuIds);
+    // Fetch role data if editing
+    useEffect(() => {
+        if (roleId) {
+            const fetchRoleData = async () => {
+                setLoading(true);
+                try {
+                    const response = await fetchWithCookie(`${apiRoutes.ADMIN_TENANT_MENU_BY_ROLEID}${roleId}`, 'GET');
+                    if (response.error) {
+                        throw new Error(response.error);
+                    }
+                    
+                    const roleData = response.data;
+                    setRoleName(roleData.role_name || '');
+                    form.setValue('roleName', roleData.role_name || '');
+                } catch (err) {
+                    setError(err instanceof Error ? err.message : 'Failed to fetch role data');
+                } finally {
+                    setLoading(false);
+                }
+            };
+
+            fetchRoleData();
+        }
+    }, [roleId, form]);
+
+    const onSubmit = async (data: any) => {
+        setLoading(true);
+        setError(null);
         
         try {
-            setLoading(true);
-            let apiUrl, payload;
+            // Prepare payload based on create or update
+            const payload = {
+                role_name: data.roleName
+            };
             
+            let response;
             if (roleId) {
                 // Update existing role
-                apiUrl = apiRoutes.EDIT_ROLE_TENANT_MENU;
+                response = await fetchWithCookie(`${apiRoutes.EDIT_ROLE_TENANT_MENU}${roleId}`, 'PUT', payload);
             } else {
                 // Create new role
-                apiUrl = apiRoutes.CREATE_ROLE_TENANT_ADMIN;
-                console.log("Creating new role with API:", apiUrl);
+                response = await fetchWithCookie(apiRoutes.CREATE_ROLE_TENANT_ADMIN, 'POST', payload);
             }
             
-            // Using PUT method for both create and update
-            if (roleId) {
-                // Updating an existing role – send the roleId (backend already knows the name)
-                payload = {
-                    roleId: Number(roleId),
-                    selectedMenuIds
-                };
-            } else {
-                // Creating a new role – send the roleName
-                payload = {
-                    roleName: roleName.trim(),
-                    selectedMenuIds
-                };
-            }
-
-            console.log("Payload:", payload);
-            
-            const { data, error } = await fetchWithCookie(apiUrl, 'PUT', payload);
-            
-            if (error) {
-                console.error("API error:", error);
-                throw new Error(error);
+            if (response.error) {
+                throw new Error(response.error);
             }
             
-            console.log("API response:", data);
-            router.push("/dashboardadmin/roleManagementAdmin");
+            // Redirect back to role management page on success
+            router.push('/dashboardadmin/roleManagementAdmin');
         } catch (err) {
-            console.error("Error submitting role:", err);
-            // Add error handling here, e.g. toast notification
+            setError(err instanceof Error ? err.message : 'An error occurred');
         } finally {
             setLoading(false);
         }
     };
 
     return (
-        <main className="p-6">
+        <div className="p-6">
             <h1 className="text-xl font-bold mb-4">
                 {roleId ? 'Edit Role' : 'Create Role'}
             </h1>
-            <div className="mb-4">
-                <Card className="p-6">
-                    <Form {...form}>
-                        <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
-                            <FormField
-                                control={form.control}
-                                name="name"
-                                render={({ field }) => (
-                                    <FormItem>
-                                        <FormLabel>Role Name</FormLabel>
-                                        <FormControl>
-                                            <Input placeholder="Enter role name" {...field} value={roleName} onChange={(e) => setRoleName(e.target.value)} readOnly={!!roleId} />
-                                        </FormControl>
-                                        <FormMessage />
-                                    </FormItem>
-                                )}
-                            />
-                            <div className="flex justify-end space-x-4">
-                                <Button
-                                    type="button"
-                                    variant="outline"
-                                    onClick={() => router.push("/dashboardadmin/roleManagementAdmin")}
-                                >
-                                    Cancel
-                                </Button>
-                                <Button
-                                    type="submit"
-                                    className="bg-[#9BC837] hover:bg-[#8BB72E] text-white"
-                                    disabled={loading}
-                                >
-                                    {loading ? (roleId ? "Updating..." : "Creating...") : (roleId ? "Update Role" : "Create Role")}
-                                </Button>
-                            </div>
-                        </form>
-                    </Form>
-                </Card>
-            </div>
-            {loading && <p>Loading menu...</p>}
-            {fetchError && <p className="text-red-500">Error loading menu: {fetchError}</p>}
-            {!loading && !fetchError && (
-                <MenuTable
-                    menuData={menuData}
-                    onSelectionChange={(selectedIds) => {
-                        console.log("Selected menu IDs:", selectedIds);
-                        setSelectedMenuIds(selectedIds);
-                    }}
-                    fieldMapping={ADMIN_FIELD_MAPPING} // Explicitly pass the field mapping for admin menu format
-                />
-                
-            )}
-        </main>
+            {error && <p className="text-red-500 mb-4">{error}</p>}
+            <Card className="p-6 max-w-md">
+                <Form {...form}>
+                    <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
+                        <FormFieldWrapper
+                            control={form.control}
+                            name="roleName"
+                            label="Role Name"
+                            placeholder="Enter Role Name"
+                            type="text"
+                            required={true}
+                        />
+                        
+                        <div className="flex justify-end space-x-4">
+                            <Button 
+                                type="button" 
+                                variant="outline" 
+                                onClick={() => router.push('/dashboardadmin/roleManagementAdmin')}
+                            >
+                                Cancel
+                            </Button>
+                            <Button 
+                                type="submit" 
+                                className="bg-[#9BC837] hover:bg-[#8BB72E] text-white"
+                                disabled={loading}
+                            >
+                                {loading ? 'Processing...' : roleId ? 'Update Role' : 'Create Role'}
+                            </Button>
+                        </div>
+                    </form>
+                </Form>
+            </Card>
+        </div>
+    );
+}
+
+// Main export that wraps the content with Suspense
+export default function CreateRoleAdminPage() {
+    return (
+        <Suspense fallback={<LoadingFallback />}>
+            <CreateRoleAdminContent />
+        </Suspense>
     );
 }

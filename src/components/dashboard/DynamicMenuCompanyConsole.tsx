@@ -63,7 +63,7 @@ export function DynamicMenuCompanyConsole({ isCollapsed }: { isCollapsed: boolea
 
   return (
     <nav className="flex-1 overflow-y-auto mt-4">
-      {menuItems.map(item => renderMenuItem(item))}
+      {menuItems.map((item: MenuItem) => renderMenuItem(item))}
     </nav>
   );
 }

@@ -1,15 +1,16 @@
 'use client';
 
+import React, { useState, useEffect, Suspense } from 'react';
+import { useForm } from "react-hook-form";
+import { Form } from "@/components/ui/form";
+import { Button } from "@/components/ui/button";
+import { Card } from "@/components/ui/card";
+import { useSearchParams, useRouter } from 'next/navigation';
 import apiRoutes from "@/utils/api";
 import { fetchWithCookie } from '@/utils/apiClient2';
-import React, { useEffect, useState } from 'react';
-import { useSearchParams, useRouter } from 'next/navigation';
-import { Form, FormField, FormItem, FormLabel, FormControl, FormMessage } from '@/components/ui/form'; // Adjust the path based on your project structure
-import { useForm } from 'react-hook-form';
-import { Input } from '@/components/ui/input'; // Ensure this path matches your project structure
-import { Card } from '@/components/ui/card'; // Adjust the path based on your project structure
-import { Button } from '@/components/ui/button'; // Ensure this path matches your project structure
 import MenuTableDropdown from "@/components/ui/expandableMenuDropdown";
+import { FormField, FormItem, FormLabel, FormControl, FormMessage } from "@/components/ui/form";
+import { Input } from "@/components/ui/input";
 
 type MenuItem = {
     menu_id: number;
@@ -47,16 +48,22 @@ const fetchMenu = async (roleId: string | null): Promise<{ data: MenuItem[]; rol
     return data as { data: MenuItem[]; roleName?: string };
 };
 
-export default function CreateRolePortal() {
+// Loading component for Suspense fallback
+function LoadingFallback() {
+    return <div className="p-6">Loading role data...</div>;
+}
+
+// Component with useSearchParams hook
+function CreateRoleContent() {
+    const searchParams = useSearchParams();
+    const roleId = searchParams.get('roleId');
+    const router = useRouter();
     const [menuData, setMenuData] = useState<MenuItem[]>([]);
     const [roleName, setRoleName] = useState<string>("");
     const [loading, setLoading] = useState(true);
     const [fetchError, setFetchError] = useState<string | null>(null);
     const [selectedMenuIds, setSelectedMenuIds] = useState<number[]>([]);
     const [menuAccessLevels, setMenuAccessLevels] = useState<Record<number, string>>({}); // State for access levels
-    const searchParams = useSearchParams();
-    const router = useRouter();
-    const roleId = searchParams.get('roleId');
 
     useEffect(() => {
         const fetchMenuData = async () => {
@@ -207,5 +214,14 @@ export default function CreateRolePortal() {
                 />
             )}
         </main>
+    );
+}
+
+// Main export that wraps the content with Suspense
+export default function CreateRolePage() {
+    return (
+        <Suspense fallback={<LoadingFallback />}>
+            <CreateRoleContent />
+        </Suspense>
     );
 }

@@ -10,7 +10,7 @@ import { Checkbox } from "@/components/ui/checkbox"
 import {
   Form,
   FormControl,
- FormField,
+  FormField,
   FormItem,
   FormLabel,
   FormMessage,
@@ -56,55 +56,79 @@ export function LoginForm({ subdomain }: LoginFormsProps) {
     setIsLoading(true);
     console.log('Check subdomain passed as prop to login form component:', subdomain);
     try {
-      let data: { status?: number; message?: string, access_token?: string, user_id?: string } = {};
-    
-      if (subdomain === "admin" || values.loginType === "admin") {
-        data = await loginConsole(values.username, values.password, values.loginType || "portal", values.rememberMe);
-      } else {
-        data = await login(values.username, values.password, values.loginType || "portal", values.rememberMe);
-      }
+      // Choose the login function based on subdomain or selected loginType
+      const loginFunction = (subdomain === "admin" || values.loginType === "admin") ? loginConsole : login;
+      
+      // Call the appropriate login function
+      const data = await loginFunction(
+        values.username, 
+        values.password, 
+        values.loginType || "portal", 
+        values.rememberMe
+      );
 
-      if (typeof window !== 'undefined') {
-        console.log("API Response Data:", document.cookie);
-        console.log("API Response Data:", data);
-  
-        if (data.status === 200) {
-          // ✅ Success: Set cookie, localStorage, and route
-          document.cookie = `access_token=${data.access_token}; domain=admin.localhost; path=/; max-age=3600; HttpOnly; SameSite=Lax`;
-          localStorage.setItem("user_id", data.user_id ?? "");
-          localStorage.setItem("subdomain", subdomain ?? "");
-        
-          if (subdomain === "admin") {
-            router.push(`/dashboardctrldesk`);
-          } else if (values.loginType === "portal") {
-            router.push(`/dashboardportal`);
-          } else {
-            router.push(`/dashboardadmin`);
-          }
-        
-        } else {
-          // ❌ Error: Show SweetAlert with backend error message
-          Swal.fire({
-            title: "Login Failed",
-            text: data.message || "Invalid username or passwords",
-            icon: "error",
-            confirmButtonText: "OK",
-          });
-          setIsLoading(false);
+      console.log("API Response Data:", data);
+      
+      // Check if login was successful (status should be 200)
+      if (data.status === 200) {
+        // Store user data in localStorage
+        if (data.user_id) {
+          localStorage.setItem("user_id", data.user_id.toString());
         }
+        
+        if (subdomain) {
+          localStorage.setItem("subdomain", subdomain);
+        }
+        
+        // Log the current access_token cookie for debugging
+        console.log("Cookies after successful login:", document.cookie);
+        
+        // Determine where to redirect based on login type and subdomain
+        let redirectPath = '/dashboardadmin'; // Default redirect path
+        
+        if (subdomain === "admin") {
+          redirectPath = '/dashboardctrldesk';
+        } else if (values.loginType === "portal") {
+          redirectPath = '/dashboardportal';
+        }
+        
+        console.log(`Login successful! Redirecting to: ${redirectPath}`);
+        
+        // Construct the full URL with the current hostname to preserve subdomain
+        const currentHost = window.location.host; // Gets hostname with port if present
+        const protocol = window.location.protocol;
+        const fullRedirectUrl = `${protocol}//${currentHost}${redirectPath}`;
+        
+        console.log(`Full redirect URL: ${fullRedirectUrl}`);
+        
+        // Use window.location.replace for a cleaner redirect that replaces current history entry
+        window.location.replace(fullRedirectUrl);
+      } else {
+        // Handle login failure
+        Swal.fire({
+          title: "Login Failed",
+          text: data.message || "Invalid username or password",
+          icon: "error",
+          confirmButtonText: "OK",
+        });
+        setIsLoading(false);
       }
     } catch (error) {
+      console.error("Login error:", error);
+      
+      // Extract error message from various error formats
       const errMsg = (error as { response?: { data?: { message?: string } } })?.response?.data?.message || "Something went wrong during login.";
 
       Swal.fire({
-        title: "Login Faileds",
+        title: "Login Failed",
         text: errMsg,
         icon: "error",
         confirmButtonText: "OK",
       });
       setIsLoading(false);
-    } 
+    }
   }
+
   useEffect(() => {
     if (subdomain === "admin") {
       setAutoLoginType("admin"); // Set AutoLoginType explicitly to admin

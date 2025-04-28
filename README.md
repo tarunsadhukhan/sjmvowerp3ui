@@ -19,7 +19,13 @@ watch test with - pnpm jest --watch
 create documentation with - pnpm typedoc
 
 # run dev
-docker build command - docker build -t dev .
+docker build command - docker build -t vowerp-frontend .
+
+docker build \
+  --build-arg NEXT_PUBLIC_BACKENDHOST=http://vowerp-backend:8000 \
+  --build-arg NEXT_PUBLIC_API_BASE_URL=/api \
+  --build-arg USE_NEXT_PROXY=true \
+  -t vowerp-frontend .
 run docker app command - docker run -p 3000:3000 dev
 
 # run dev
@@ -86,5 +92,43 @@ to check if docker network is created from before - docker network ls
 docker run -d \
   --name vowerp-frontend \
   --network vowerpnet \
+  --env-file .env \
+  -p 3000:3000 \
+  vowerp-frontend
+
+
+
+docker stop vowerp-frontend
+docker rm vowerp-frontend
+
+# Remove old images
+docker rmi vowerp-frontend
+
+# Rebuild with clean cache
+docker build --no-cache -t vowerp-frontend .
+
+# Run with explicit environment variables
+docker run -d \
+  --name vowerp-frontend \
+  --network vowerpnet \
+  -p 3000:3000 \
+  vowerp-frontend
+
+
+
+docker build \
+  --no-cache \
+  --build-arg NEXT_PUBLIC_BACKENDHOST=http://vowerp-backend:8000 \
+  --build-arg NEXT_PUBLIC_API_BASE_URL=/api \
+  --build-arg USE_NEXT_PROXY=true \
+  -t vowerp-frontend .
+
+
+  docker run -d \
+  --name vowerp-frontend \
+  --network vowerpnet \
+  -e NEXT_PUBLIC_API_BASE_URL=/api \
+  -e NEXT_PUBLIC_BACKENDHOST=http://vowerp-backend:8000 \
+  -e USE_NEXT_PROXY=true \
   -p 3000:3000 \
   vowerp-frontend

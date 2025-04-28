@@ -46,7 +46,8 @@ export function usePaginatedSearch<T>(
     const observer = new IntersectionObserver(
       (entries) => {
         const first = entries[0];
-        if (first.isIntersecting && !isLoading && data.length < total && !searchQuery) {
+        if (first.isIntersecting && !isLoading && data.length < total) {
+          // Removed the "!searchQuery" condition to allow pagination during search
           const nextPage = page + 1;
           setPage(nextPage);
           loadPage(nextPage, searchQuery, sortKey, sortOrder);

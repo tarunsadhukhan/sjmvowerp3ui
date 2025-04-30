@@ -3,10 +3,24 @@
 import { SearchablePaginatedTable } from "@/components/ui/searchablePaginatedTable";
 import { Column } from "@/components/ui/datatablewithedit";
 import { Button } from "@/components/ui/button";
-import { PencilIcon } from "lucide-react";
-import apiRoutes from "@/utils/api";
-import axios from "axios";
-import { useRouter, usePathname  } from "next/navigation";
+
+import { Input } from "@/components/ui/input";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Label } from "@/components/ui/label";
+import { Checkbox } from "@/components/ui/checkbox";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { PencilIcon, UserCircle, Share, HelpCircle, Loader2 } from "lucide-react";
+import { useEffect, useRef, useState } from "react";
+import { apiRoutes } from "@/utils/api";
+
 
 // Sample Role type
 type Role = {
@@ -18,15 +32,26 @@ type Role = {
 type ApiResponse = {
   data: Role[];
   total: number;
-};
 
-// Real API fetch function with pagination and search
-const fetchRoles = async (page: number, search?: string) => {
-  const limit = 20;
-  const queryParams = new URLSearchParams({
-    page: page.toString(),
-    limit: limit.toString(),
-    user_id: localStorage.getItem('user_id') || '', // Ensure user_id is not null
+}
+
+//const API_URL = 'http://localhost:3001/api';
+
+const API_URL = 'http://localhost:8000';
+
+export default function RoleManagement() {
+  const [displayedRoles, setDisplayedRoles] = useState<Role[]>([]);
+  const [totalRoles, setTotalRoles] = useState(0);
+  const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
+  const [searchQuery, setSearchQuery] = useState("");
+  const [editingRole, setEditingRole] = useState<Role | null>(null);
+  const [newRole, setNewRole] = useState<Partial<Role>>({
+    type: "",
+    name: "",
+    has_hrms_access: false,
+
   });
   
   if (search) {

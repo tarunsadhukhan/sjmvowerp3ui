@@ -119,6 +119,7 @@ docker run -d \
 docker build \
   --no-cache \
   --build-arg NEXT_PUBLIC_BACKENDHOST=http://vowerp-backend:8000 \
+  --build-arg NEXT_PUBLIC_API_BASE_URL="/api" \
   --build-arg NEXT_PUBLIC_API_BASE_URL=/api \
   --build-arg USE_NEXT_PROXY=true \
   -t vowerp-frontend .
@@ -127,6 +128,8 @@ docker build \
   docker run -d \
   --name vowerp-frontend \
   --network vowerpnet \
+  -e NEXT_PUBLIC_API_BASE_URL="/api" \
+  -e NEXT_PUBLIC_BACKENDHOST="http://vowerp-backend:8000" \
   -e NEXT_PUBLIC_API_BASE_URL=/api \
   -e NEXT_PUBLIC_BACKENDHOST=http://vowerp-backend:8000 \
   -e USE_NEXT_PROXY=true \

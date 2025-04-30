@@ -1,7 +1,9 @@
 // middleware.ts (Edge Middleware for Tenant + Auth Validation)
 import { NextResponse } from 'next/server';
 import type { NextRequest } from 'next/server';
-import apiRoutes from './utils/api'; // Ensure this has full absolute URLs, not relative
+
+import {apiRoutes} from './utils/api'; // Ensure this has full absolute URLs, not relative
+
 
 const PROTECTED_PATHS = ['/dashboardctrldesk', '/dashboardadmin', '/dashboardportal'];
 const PUBLIC_PATHS = ['/', '/login', '/_next', '/favicon.ico'];

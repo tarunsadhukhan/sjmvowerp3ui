@@ -4,7 +4,9 @@ import { useRouter } from "next/navigation";
 import { Form } from "@/components/ui/form";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
-import apiRoutes from "@/utils/api";
+
+import { apiRoutes } from "@/utils/api";
+
 import { fetchWithCookie } from "@/utils/apiClient2";
 import FormFieldWrapper from "@/components/ui/FormFieldWrapper";
 import { Checkbox } from "@/components/ui/checkbox";

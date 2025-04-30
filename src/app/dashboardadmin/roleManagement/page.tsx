@@ -4,7 +4,9 @@ import { SearchablePaginatedTable } from "@/components/ui/searchablePaginatedTab
 import { Column } from "@/components/ui/datatablewithedit";
 import { Button } from "@/components/ui/button";
 import { PencilIcon } from "lucide-react";
-import apiRoutes from "@/utils/api";
+
+import {apiRoutes} from "@/utils/api";
+
 import { fetchWithCookie } from "@/utils/apiClient2";
 
 // Sample Role type

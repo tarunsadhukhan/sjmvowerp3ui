@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
-import apiRoutes from "@/utils/api";
+import { apiRoutes } from "@/utils/api";
 import axios from "axios";
 
 interface MenuItem {

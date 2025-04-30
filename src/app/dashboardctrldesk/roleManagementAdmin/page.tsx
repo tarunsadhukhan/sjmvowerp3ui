@@ -4,9 +4,7 @@ import { SearchablePaginatedTable } from "@/components/ui/searchablePaginatedTab
 import { Column } from "@/components/ui/datatablewithedit";
 import { Button } from "@/components/ui/button";
 import { PencilIcon } from "lucide-react";
-
 import { apiRoutes } from "@/utils/api";
-
 import { fetchWithCookie } from "@/utils/apiClient2";
 
 // Sample Role type
@@ -39,7 +37,7 @@ const fetchRoles = async (page: number, search?: string, sortKey?: string | null
     queryParams.append('sort_order', sortOrder || 'asc');
   }
 
-  const url = `${apiRoutes.ROLES_COMP_CONSOLE}?${queryParams}`;
+  const url = `${apiRoutes.ROLES_CONSOLE_CONSOLE}?${queryParams}`;
   console.log("Fetching roles with URL:", url);
 
   const { data, error } = await fetchWithCookie(url, "GET");

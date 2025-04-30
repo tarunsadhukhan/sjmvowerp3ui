@@ -1,5 +1,25 @@
 const API_URL=process.env.NEXT_PUBLIC_API_BASE_URL || '/apix';
-console.log('API_URL', API_URL);
+console.log('API_URL for all', API_URL);
+
+// const isProxyEnabled = process.env.NEXT_PUBLIC_API_BASE_URL?.startsWith("/");
+// const isProxyEnabled = process.env.NEXT_PUBLIC_API_BASE_URL?.startsWith("/");
+
+
+// const API_URL = (relativePath: string) => {
+//   if (isProxyEnabled) {
+//     return `/api/${relativePath}`;
+//   } else {
+//     return `${process.env.NEXT_PUBLIC_API_BASE_URL}${relativePath}`;
+//   }
+// };
+
+// const API_URL = (relativePath: string) => {
+//     if (isProxyEnabled) {
+//       return `/api${relativePath}`;
+//     } else {
+//       return `${process.env.NEXT_PUBLIC_API_BASE_URL}${relativePath}`;
+//     }
+//   };
 
 // const isProxyEnabled = process.env.NEXT_PUBLIC_API_BASE_URL?.startsWith("/");
 // const isProxyEnabled = process.env.NEXT_PUBLIC_API_BASE_URL?.startsWith("/");
@@ -56,14 +76,16 @@ const apiRoutes ={
     PORTAL_APPROVAL_LEVELS_DATA: `${API_URL}/admin/PortalData/approval_level_data_setup`,
     PORTAL_APPROVAL_LEVELS_DATA_SUBMIT: `${API_URL}/admin/PortalData/approval_level_data_setup_submit`,
     PORTAL_MENU_ITEMS: `${API_URL}/admin/PortalData/portal_menu_items`,
-    ROLES_COMP_CONSOLE: `${API_URL}/companyRoutes/roles_sls`,
-    ROLES_MENU_CONSOLE: `${API_URL}/rolesmenuRoutes/roles_menus`,
-    
 
-    
-    
+    ROLES_CONSOLE_CONSOLE: `${API_URL}/consoleAdmin/roles_console_admin`,
+};
+const apiRoutesconsole = {
+    //ctrl desk and console
+    CREATE_ROLE_CONSOLE_ADMIN: `${API_URL}/consoleAdmin/create_role_console_admin`
+
+
 };
 
-export default apiRoutes;
+export { apiRoutes, apiRoutesconsole };
 
 // NEXT_PUBLIC_API_BASE_URL=/api

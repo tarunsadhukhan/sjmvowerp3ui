@@ -16,7 +16,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { PencilIcon, UserCircle, Share, HelpCircle, Loader2 } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
-import apiRoutes from "@/utils/api";
+import { apiRoutes } from "@/utils/api";
 
 interface Role {
   id: number;
@@ -33,7 +33,6 @@ interface ApiResponse {
 //const API_URL = 'http://localhost:3001/api';
 
 const API_URL = 'http://localhost:8000';
-
 
 export default function RoleManagement() {
   const [displayedRoles, setDisplayedRoles] = useState<Role[]>([]);

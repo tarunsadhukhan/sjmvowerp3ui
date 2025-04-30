@@ -4,7 +4,7 @@ import LogoSection from "./LogoSection";
 import { FixedMenu } from "./FixedMenu";
 import { urlcheck } from "@/utils/auth";
 import { fetchWithCookie } from "@/utils/apiClient2";
-import apiRoutes from "@/utils/api";
+import { apiRoutes } from "@/utils/api";
 import {
   Select,
   SelectContent,

@@ -4,7 +4,9 @@ import { SearchablePaginatedTable } from "@/components/ui/searchablePaginatedTab
 import { Column } from "@/components/ui/datatablewithedit";
 import { Button } from "@/components/ui/button";
 import { PencilIcon } from "lucide-react";
+
 import { apiRoutes } from "@/utils/api";
+
 import { fetchWithCookie } from "@/utils/apiClient2";
 
 // Sample User type
@@ -66,7 +68,9 @@ const columns: Column<User>[] = [
         size="icon"
         onClick={() => {
           const UserId = row.user_id;
+
           window.location.href = `/dashboardadmin/userManagement/CreateUser?userId=${UserId}`;
+
         }}
       >
         <PencilIcon className="h-4 w-4" />
@@ -84,7 +88,9 @@ export default function UserTenantAdmin() {
             <Button
             className="bg-[#95C11F] hover:bg-[#85ad1b] text-white"
             onClick={() => {
+
               window.location.href = "/dashboardadmin/userManagement/CreateUser";
+
             }}
             >
             + Create User

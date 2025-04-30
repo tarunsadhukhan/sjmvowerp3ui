@@ -11,6 +11,7 @@ import { apiRoutes } from '@/utils/api';
 import FormFieldWrapper from '@/components/ui/FormFieldWrapper';
 import MenuTableDropdown from '@/components/ui/MenuTableDropdown';
 
+
 // Loading component for Suspense fallback
 function LoadingFallback() {
     return <div className="p-6">Loading role data...</div>;
@@ -25,9 +26,11 @@ function CreateRoleAdminContent() {
     const [loading, setLoading] = useState<boolean>(false);
     const [error, setError] = useState<string | null>(null);
     const [roleName, setRoleName] = useState<string>('');
+
     const [menuData, setMenuData] = useState<any[]>([]);
     const [selectedMenuIds, setSelectedMenuIds] = useState<number[]>([]);
     const [menuAccessLevels, setMenuAccessLevels] = useState<Record<number, string>>({});
+
     
     // Initialize form with the role name
     const form = useForm({
@@ -51,6 +54,7 @@ function CreateRoleAdminContent() {
             try {
                 if (roleId) {
                     // Fetch role data for editing
+
                     const response = await fetchWithCookie(`${apiRoutes.ADMIN_TENANT_MENU_BY_ROLEID}${roleId}`, 'GET');
                     if (response.error) {
                         throw new Error(response.error);
@@ -59,6 +63,7 @@ function CreateRoleAdminContent() {
                     const roleData = response.data;
                     setRoleName(roleData.role_name || '');
                     form.setValue('roleName', roleData.role_name || '');
+
                     setMenuData(roleData.menu_items || []);
                     
                     // Set selected menus and access levels from response
@@ -88,6 +93,7 @@ function CreateRoleAdminContent() {
         };
 
         fetchData();
+
     }, [roleId, form]);
 
     const onSubmit = async (data: any) => {
@@ -95,6 +101,7 @@ function CreateRoleAdminContent() {
         setError(null);
         
         try {
+
             // Prepare menu access list
             const menuAccessList = selectedMenuIds.map(menuId => ({
                 menuId,
@@ -105,6 +112,7 @@ function CreateRoleAdminContent() {
             const payload = {
                 role_name: data.roleName,
                 menuAccessList
+
             };
             
             let response;
@@ -135,7 +143,9 @@ function CreateRoleAdminContent() {
                 {roleId ? 'Edit Role' : 'Create Role'}
             </h1>
             {error && <p className="text-red-500 mb-4">{error}</p>}
+
             <Card className="p-6 max-w-full">
+
                 <Form {...form}>
                     <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
                         <FormFieldWrapper
@@ -147,6 +157,7 @@ function CreateRoleAdminContent() {
                             required={true}
                         />
                         
+
                         {loading ? (
                             <div className="text-center">Loading menu structure...</div>
                         ) : (
@@ -171,6 +182,7 @@ function CreateRoleAdminContent() {
                             </div>
                         )}
                         
+
                         <div className="flex justify-end space-x-4">
                             <Button 
                                 type="button" 
@@ -196,4 +208,6 @@ function CreateRoleAdminContent() {
 
 // Main export that wraps the content with Suspense
 export default function CreateRoleAdminPage() {
+
     return (
+

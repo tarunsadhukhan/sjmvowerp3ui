@@ -118,7 +118,7 @@ function CreateRoleAdminContent() {
                 selectedMenuIds,
                 menuAccessList,
                 ...(roleId ? { roleId: Number(roleId) } : {}) // Include roleId in payload for edit flow
-\
+
             };
             
             let response;

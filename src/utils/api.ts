@@ -1,65 +1,7 @@
 const API_URL=process.env.NEXT_PUBLIC_API_BASE_URL || '/apix';
 console.log('API_URL for all', API_URL);
 
-// const isProxyEnabled = process.env.NEXT_PUBLIC_API_BASE_URL?.startsWith("/");
-// const isProxyEnabled = process.env.NEXT_PUBLIC_API_BASE_URL?.startsWith("/");
 
-
-// const API_URL = (relativePath: string) => {
-//   if (isProxyEnabled) {
-//     return `/api/${relativePath}`;
-//   } else {
-//     return `${process.env.NEXT_PUBLIC_API_BASE_URL}${relativePath}`;
-//   }
-// };
-
-// const API_URL = (relativePath: string) => {
-//     if (isProxyEnabled) {
-//       return `/api${relativePath}`;
-//     } else {
-//       return `${process.env.NEXT_PUBLIC_API_BASE_URL}${relativePath}`;
-//     }
-//   };
-
-// const isProxyEnabled = process.env.NEXT_PUBLIC_API_BASE_URL?.startsWith("/");
-// const isProxyEnabled = process.env.NEXT_PUBLIC_API_BASE_URL?.startsWith("/");
-
-
-// const API_URL = (relativePath: string) => {
-//   if (isProxyEnabled) {
-//     return `/api/${relativePath}`;
-//   } else {
-//     return `${process.env.NEXT_PUBLIC_API_BASE_URL}${relativePath}`;
-//   }
-// };
-
-// const API_URL = (relativePath: string) => {
-//     if (isProxyEnabled) {
-//       return `/api${relativePath}`;
-//     } else {
-//       return `${process.env.NEXT_PUBLIC_API_BASE_URL}${relativePath}`;
-//     }
-//   };
-
-// const isProxyEnabled = process.env.NEXT_PUBLIC_API_BASE_URL?.startsWith("/");
-// const isProxyEnabled = process.env.NEXT_PUBLIC_API_BASE_URL?.startsWith("/");
-
-
-// const API_URL = (relativePath: string) => {
-//   if (isProxyEnabled) {
-//     return `/api/${relativePath}`;
-//   } else {
-//     return `${process.env.NEXT_PUBLIC_API_BASE_URL}${relativePath}`;
-//   }
-// };
-
-// const API_URL = (relativePath: string) => {
-//     if (isProxyEnabled) {
-//       return `/api${relativePath}`;
-//     } else {
-//       return `${process.env.NEXT_PUBLIC_API_BASE_URL}${relativePath}`;
-//     }
-//   };
 
 const apiRoutes ={
     //ctrl desk and console

@@ -4,7 +4,7 @@ import { SearchablePaginatedTable } from "@/components/ui/searchablePaginatedTab
 import { Column } from "@/components/ui/datatablewithedit";
 import { Button } from "@/components/ui/button";
 import { PencilIcon } from "lucide-react";
-import { apiRoutes } from "@/utils/api";
+import { apiRoutes,apiRoutesconsole } from "@/utils/api";
 import { fetchWithCookie } from "@/utils/apiClient2";
 
 // Sample Role type
@@ -37,7 +37,7 @@ const fetchRoles = async (page: number, search?: string, sortKey?: string | null
     queryParams.append('sort_order', sortOrder || 'asc');
   }
 
-  const url = `${apiRoutes.ROLES_CONSOLE_CONSOLE}?${queryParams}`;
+  const url = `${apiRoutesconsole.ROLES_CTRLDSK}?${queryParams}`;
   console.log("Fetching roles with URL:", url);
 
   const { data, error } = await fetchWithCookie(url, "GET");
@@ -108,7 +108,7 @@ const createEditUrl = (role: Role): string => {
   });
 
   // Update the path to match your app’s routing if necessary
-  return `/dashboardadmin/roleManagementAdmin/createRoleAdmin?${params.toString()}`;
+  return `/dashboardctrldesk/roleManagementAdmin/createRoleAdmin?${params.toString()}`;
 }
 
 // Table columns
@@ -152,7 +152,7 @@ export default function SampleRoleTablePage() {
             <Button
             className="bg-[#95C11F] hover:bg-[#85ad1b] text-white"
             onClick={() => {
-              window.location.href = "/dashboardadmin/roleManagementAdmin/createRoleAdmin";
+              window.location.href = "/dashboardctrldesk/roleManagementAdmin/createRoleAdmin";
             }}
             >
             + Create Role

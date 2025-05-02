@@ -34,7 +34,8 @@ export function DynamicMenuConsole({ isCollapsed }: { isCollapsed: boolean }) {
     return (
       <div key={item.title}>
         <Link
-          href={item.path || "#"}
+          // href={item.path || "#"}
+          href={item.path?.startsWith("/") ? item.path : `/${item.path}` || "#"}
           className="flex items-center px-4 py-2 text-sm text-white hover:bg-[#005580] transition-colors"
           onClick={(e) => {
             if (hasSubmenu) {

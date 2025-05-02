@@ -4,7 +4,10 @@ import LogoSection from "./LogoSection";
 import { FixedMenu } from "./FixedMenu";
 import { urlcheck } from "@/utils/auth";
 import { fetchWithCookie } from "@/utils/apiClient2";
-import apiRoutes from "@/utils/api";
+
+
+import { apiRoutes } from "@/utils/api";
+
 import {
   Select,
   SelectContent,
@@ -131,6 +134,7 @@ export default function Sidebar({ isCollapsed, onToggle }: SidebarProps) {
     setParentMenus(parents);
   }, [selectedCompany, selectedBranches]);
 
+
   // Handle company selection change
   const handleCompanyChange = (companyId: string) => {
     const company = companies.find(c => c.co_id.toString() === companyId);
@@ -139,6 +143,7 @@ export default function Sidebar({ isCollapsed, onToggle }: SidebarProps) {
       setSelectedBranches([]); // Reset branch selection
     }
   };
+
 
   // Toggle branch selection
   const handleBranchChange = (branchId: number, isChecked: boolean) => {

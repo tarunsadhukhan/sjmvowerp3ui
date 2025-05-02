@@ -7,11 +7,9 @@ import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { useSearchParams, useRouter } from 'next/navigation';
 import { fetchWithCookie } from '@/utils/apiClient2';
-
-import { apiRoutes } from '@/utils/api';
+import { apiRoutes, apiRoutesconsole } from '@/utils/api';
 import FormFieldWrapper from '@/components/ui/FormFieldWrapper';
 import MenuTable from '@/components/ui/expandableMenu';
-
 
 
 // Loading component for Suspense fallback
@@ -28,7 +26,6 @@ function CreateRoleAdminContent() {
     const [loading, setLoading] = useState<boolean>(false);
     const [error, setError] = useState<string | null>(null);
     const [roleName, setRoleName] = useState<string>('');
-
 
     const [menuData, setMenuData] = useState<any[]>([]);
     const [selectedMenuIds, setSelectedMenuIds] = useState<number[]>([]);
@@ -57,12 +54,10 @@ function CreateRoleAdminContent() {
             try {
                 if (roleId) {
                     // Fetch role data for editing
-
-                    const response = await fetchWithCookie(`${apiRoutes.ADMIN_TENANT_MENU_BY_ROLEID}${roleId}`, 'GET');
+                    const response = await fetchWithCookie(`${apiRoutesconsole.ADMIN_CTRLDSK_MENU_BY_ROLEID}${roleId}`, 'GET');
                     if (response.error) {
                         throw new Error(response.error);
                     }
-
                     // Use response.data.data for menu items and response.data.roleName for role name
                     setRoleName(response.data.roleName || '');
                     form.setValue('roleName', response.data.roleName || '');
@@ -81,7 +76,7 @@ function CreateRoleAdminContent() {
                     setMenuAccessLevels(accessLevels);
                 } else {
                     // Fetch menu structure for new role
-                    const response = await fetchWithCookie(apiRoutes.TENANT_ALL_MENUS, 'GET');
+                    const response = await fetchWithCookie(apiRoutesconsole.CTRLDSK_ALL_MENUS, 'GET');
                     if (response.error) {
                         throw new Error(response.error);
                     }
@@ -97,7 +92,6 @@ function CreateRoleAdminContent() {
 
         fetchData();
 
-
     }, [roleId, form]);
 
     const onSubmit = async (data: any) => {
@@ -105,7 +99,6 @@ function CreateRoleAdminContent() {
         setError(null);
         
         try {
-
             // Prepare menu access list
             const menuAccessList = selectedMenuIds.map(menuId => ({
                 menuId,
@@ -118,18 +111,15 @@ function CreateRoleAdminContent() {
                 selectedMenuIds,
                 menuAccessList,
                 ...(roleId ? { roleId: Number(roleId) } : {}) // Include roleId in payload for edit flow
-
             };
             
             let response;
             if (roleId) {
                 // Update existing role
-
-                response = await fetchWithCookie(apiRoutes.EDIT_ROLE_TENANT_MENU, 'PUT', payload);
+                response = await fetchWithCookie(apiRoutesconsole.EDIT_ROLE_CTRLDSK_MENU, 'PUT', payload);
             } else {
                 // Create new role
-                response = await fetchWithCookie(apiRoutes.CREATE_ROLE_TENANT_ADMIN, 'PUT', payload);
-
+                response = await fetchWithCookie(apiRoutesconsole.CREATE_ROLE_CTRLDSK_ADMIN, 'PUT', payload);
             }
             
             if (response.error) {
@@ -137,7 +127,7 @@ function CreateRoleAdminContent() {
             }
             
             // Redirect back to role management page on success
-            router.push('/dashboardadmin/roleManagementAdmin');
+            router.push('/dashboardctrldesk/roleManagementAdmin');
         } catch (err) {
             setError(err instanceof Error ? err.message : 'An error occurred');
         } finally {
@@ -152,9 +142,7 @@ function CreateRoleAdminContent() {
             </h1>
             {error && <p className="text-red-500 mb-4">{error}</p>}
 
-
             <Card className="p-6 max-w-full">
-
 
                 <Form {...form}>
                     <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
@@ -166,7 +154,6 @@ function CreateRoleAdminContent() {
                             type="text"
                             required={true}
                         />
-
                         {/* Menu selection using MenuTable (expandableMenu) */}
                         <div className="mt-6">
                             <h2 className="text-lg font-semibold mb-4">Menu Permissions</h2>
@@ -184,12 +171,11 @@ function CreateRoleAdminContent() {
                         {loading && (
                             <div className="text-center">Loading menu structure...</div>
                         )}
-
                         <div className="flex justify-end space-x-4">
                             <Button 
                                 type="button" 
                                 variant="outline" 
-                                onClick={() => router.push('/dashboardadmin/roleManagementAdmin')}
+                                onClick={() => router.push('/dashboardctrldesk/roleManagementAdmin')}
                             >
                                 Cancel
                             </Button>

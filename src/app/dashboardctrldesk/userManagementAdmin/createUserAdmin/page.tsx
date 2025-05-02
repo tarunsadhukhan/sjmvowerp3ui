@@ -4,9 +4,7 @@ import React, { useEffect, useState, Suspense } from 'react';
 import { useSearchParams, useRouter } from 'next/navigation';
 import UserAdmin from "./userAdmin";
 
-
-import { apiRoutes } from "@/utils/api";
-
+import { apiRoutes, apiRoutesconsole } from "@/utils/api";
 
 import { fetchWithCookie } from "@/utils/apiClient2";
 
@@ -75,7 +73,7 @@ function CreateUserAdminContent() {
             const fetchUserData = async () => {
                 setLoading(true);
                 try {
-                    const response = await fetchWithCookie(`${apiRoutes.EDIT_USER_TENANT_MENU}/${userId}`, "GET");
+                    const response = await fetchWithCookie(`${apiRoutesconsole.EDIT_USER_CTRLDSK_MENU}/${userId}`, "GET");
                     if (response.error) {
                         throw new Error(response.error);
                     }

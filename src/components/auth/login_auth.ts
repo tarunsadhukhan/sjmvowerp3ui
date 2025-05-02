@@ -2,7 +2,7 @@
 
 import axios from "axios";
 import Swal from "sweetalert2";
-import apiRoutes from "@/utils/api";
+import { apiRoutes } from "@/utils/api";
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL;
 
@@ -84,7 +84,10 @@ export const loginConsole = async (
       rememberMe,
     };
 
-    console.log("API Request Data:", requestData, apiRoutes.SUPERADMINLOGINCONSOLE);
+    const API_URL=process.env.NEXT_PUBLIC_API_BASE_URL || '/apix';
+console.log('API_URL for all', API_URL);
+
+    console.log("API Request Data:", requestData,'path', apiRoutes.SUPERADMINLOGINCONSOLE);
 
     const response = await axios.post(
       apiRoutes.SUPERADMINLOGINCONSOLE,

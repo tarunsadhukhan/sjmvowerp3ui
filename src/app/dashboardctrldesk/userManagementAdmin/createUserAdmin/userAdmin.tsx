@@ -5,8 +5,7 @@ import { Form } from "@/components/ui/form";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 
-
-import { apiRoutes } from "@/utils/api";
+import { apiRoutes, apiRoutesconsole } from "@/utils/api";
 
 import { fetchWithCookie } from "@/utils/apiClient2";
 import FormFieldWrapper from "@/components/ui/FormFieldWrapper";
@@ -106,7 +105,7 @@ const UserAdmin = ({
         const fetchAvailableRoles = async () => {
             try {
                 // Use the correct roles dropdown endpoint
-                const response = await fetchWithCookie(apiRoutes.ROLES_DROPDOWN_TENANT_ADMIN, "GET");
+                const response = await fetchWithCookie(apiRoutesconsole.ROLES_DROPDOWN_CTRLDSK_ADMIN, "GET");
                 if (response.error) {
                     throw new Error(response.error);
                 }
@@ -239,8 +238,8 @@ const UserAdmin = ({
 
             // Choose API endpoint based on whether we're creating or editing
             const apiUrl = userId
-                ? apiRoutes.EDIT_USER_TENANT_MENU  // Add userId to URL
-                : apiRoutes.CREATE_USER_TENANT_ADMIN;
+                ? apiRoutesconsole.EDIT_USER_CTRLDESK_MENU  // Add userId to URL
+                : apiRoutesconsole.CREATE_USER_CTRLDESK_ADMIN;
             
             const method = "POST";  // Fix method for editing (PUT)
             
@@ -260,7 +259,7 @@ const UserAdmin = ({
             if (response.error) {
                 throw new Error(response.error);
             }
-            router.push("/dashboardadmin/userManagementAdmin");
+            router.push("/dashboardctrldesk/userManagementAdmin");
         } catch (err) {
             setError(err instanceof Error ? err.message : "An unknown error occurred");
         } finally {
@@ -383,7 +382,7 @@ const UserAdmin = ({
                         <Button 
                             type="button" 
                             variant="outline" 
-                            onClick={() => router.push("/dashboardadmin/userManagementAdmin")}
+                            onClick={() => router.push("/dashboardctrldesk/userManagementAdmin")}
                         >
                             Cancel
                         </Button>

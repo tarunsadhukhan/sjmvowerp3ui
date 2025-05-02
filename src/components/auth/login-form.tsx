@@ -67,7 +67,10 @@ export function LoginForm({ subdomain }: LoginFormsProps) {
         values.rememberMe
       );
 
-      console.log("API Response Data:", data);
+
+      console.log("API Response Data   1:", data);
+
+
       
       // Check if login was successful (status should be 200)
       if (data.status === 200) {
@@ -75,6 +78,7 @@ export function LoginForm({ subdomain }: LoginFormsProps) {
         if (data.user_id) {
           localStorage.setItem("user_id", data.user_id.toString());
         }
+
         
         if (subdomain) {
           localStorage.setItem("subdomain", subdomain);
@@ -85,7 +89,7 @@ export function LoginForm({ subdomain }: LoginFormsProps) {
         
         // Determine where to redirect based on login type and subdomain
         let redirectPath = '/dashboardadmin'; // Default redirect path
-        
+
         if (subdomain === "admin") {
           redirectPath = '/dashboardctrldesk';
         } else if (values.loginType === "portal") {

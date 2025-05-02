@@ -9,7 +9,7 @@ import { useSearchParams, useRouter } from 'next/navigation';
 import { fetchWithCookie } from '@/utils/apiClient2';
 import { apiRoutes } from '@/utils/api';
 import FormFieldWrapper from '@/components/ui/FormFieldWrapper';
-import MenuTableDropdown from '@/components/ui/MenuTableDropdown';
+import MenuTable from '@/components/ui/expandableMenu';
 
 
 // Loading component for Suspense fallback
@@ -54,22 +54,19 @@ function CreateRoleAdminContent() {
             try {
                 if (roleId) {
                     // Fetch role data for editing
-
                     const response = await fetchWithCookie(`${apiRoutes.ADMIN_TENANT_MENU_BY_ROLEID}${roleId}`, 'GET');
                     if (response.error) {
                         throw new Error(response.error);
                     }
-                    
-                    const roleData = response.data;
-                    setRoleName(roleData.role_name || '');
-                    form.setValue('roleName', roleData.role_name || '');
+                    // Use response.data.data for menu items and response.data.roleName for role name
+                    setRoleName(response.data.roleName || '');
+                    form.setValue('roleName', response.data.roleName || '');
+                    setMenuData(Array.isArray(response.data.data) ? response.data.data : []);
 
-                    setMenuData(roleData.menu_items || []);
-                    
                     // Set selected menus and access levels from response
                     const selectedIds: number[] = [];
                     const accessLevels: Record<number, string> = {};
-                    roleData.menu_items?.forEach((item: any) => {
+                    (Array.isArray(response.data.data) ? response.data.data : []).forEach((item: any) => {
                         if (item.role_id) {
                             selectedIds.push(item.menu_id);
                             accessLevels[item.menu_id] = item.access_type_id?.toString() || "1";
@@ -83,7 +80,8 @@ function CreateRoleAdminContent() {
                     if (response.error) {
                         throw new Error(response.error);
                     }
-                    setMenuData(response.data || []);
+                    // Always set menuData as an array from response.data.data
+                    setMenuData(Array.isArray(response.data?.data) ? response.data.data : []);
                 }
             } catch (err) {
                 setError(err instanceof Error ? err.message : 'Failed to fetch data');
@@ -101,7 +99,6 @@ function CreateRoleAdminContent() {
         setError(null);
         
         try {
-
             // Prepare menu access list
             const menuAccessList = selectedMenuIds.map(menuId => ({
                 menuId,
@@ -110,18 +107,19 @@ function CreateRoleAdminContent() {
 
             // Prepare payload based on create or update
             const payload = {
-                role_name: data.roleName,
-                menuAccessList
-
+                roleName: data.roleName,
+                selectedMenuIds,
+                menuAccessList,
+                ...(roleId ? { roleId: Number(roleId) } : {}) // Include roleId in payload for edit flow
             };
             
             let response;
             if (roleId) {
                 // Update existing role
-                response = await fetchWithCookie(`${apiRoutes.EDIT_ROLE_TENANT_MENU}${roleId}`, 'PUT', payload);
+                response = await fetchWithCookie(apiRoutes.EDIT_ROLE_TENANT_MENU, 'PUT', payload);
             } else {
                 // Create new role
-                response = await fetchWithCookie(apiRoutes.CREATE_ROLE_TENANT_ADMIN, 'POST', payload);
+                response = await fetchWithCookie(apiRoutes.CREATE_ROLE_TENANT_ADMIN, 'PUT', payload);
             }
             
             if (response.error) {
@@ -156,33 +154,23 @@ function CreateRoleAdminContent() {
                             type="text"
                             required={true}
                         />
-                        
-
-                        {loading ? (
+                        {/* Menu selection using MenuTable (expandableMenu) */}
+                        <div className="mt-6">
+                            <h2 className="text-lg font-semibold mb-4">Menu Permissions</h2>
+                            <MenuTable
+                                menuData={menuData}
+                                onSelectionChange={setSelectedMenuIds}
+                                fieldMapping={{
+                                    idField: "con_menu_id",
+                                    nameField: "con_menu_name",
+                                    parentIdField: "con_menu_parent_id",
+                                    roleIdField: roleId ? "con_role_id" : undefined
+                                }}
+                            />
+                        </div>
+                        {loading && (
                             <div className="text-center">Loading menu structure...</div>
-                        ) : (
-                            <div className="mt-6">
-                                <h2 className="text-lg font-semibold mb-4">Menu Permissions</h2>
-                                <MenuTableDropdown
-                                    menuData={menuData}
-                                    onSelectionChange={(selectedIds, accessLevels) => {
-                                        setSelectedMenuIds(selectedIds);
-                                        if (accessLevels) {
-                                            setMenuAccessLevels(accessLevels);
-                                        }
-                                    }}
-                                    fieldMapping={{
-                                        idField: "menu_id",
-                                        nameField: "menu_name",
-                                        parentIdField: "menu_parent_id",
-                                        roleIdField: "role_id",
-                                        accessLevelField: "access_type_id"
-                                    }}
-                                />
-                            </div>
                         )}
-                        
-
                         <div className="flex justify-end space-x-4">
                             <Button 
                                 type="button" 
@@ -208,6 +196,10 @@ function CreateRoleAdminContent() {
 
 // Main export that wraps the content with Suspense
 export default function CreateRoleAdminPage() {
-
     return (
+        <Suspense fallback={<LoadingFallback />}>
+            <CreateRoleAdminContent />
+        </Suspense>
+    );
+}
 

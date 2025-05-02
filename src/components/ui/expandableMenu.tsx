@@ -157,7 +157,9 @@ const MenuTable: React.FC<Props> = ({
           <React.Fragment key={parent[idField]}>
             <tr className="bg-white border-t">
               <td className="px-4 py-2 font-medium">
+
                 <button type="button" onClick={() => toggleExpand(parent[idField])}>
+
                   {expandedParents.includes(parent[idField]) ? "▼" : "►"} {parent[nameField]}
                 </button>
               </td>

@@ -5,7 +5,9 @@ import { Column } from "@/components/ui/datatablewithedit";
 import { Button } from "@/components/ui/button";
 import { PencilIcon } from "lucide-react";
 
+
 import { apiRoutes } from "@/utils/api";
+
 
 import { fetchWithCookie } from "@/utils/apiClient2";
 
@@ -69,6 +71,7 @@ const columns: Column<User>[] = [
         onClick={() => {
           const UserId = row.user_id;
 
+
           window.location.href = `/dashboardadmin/userManagement/CreateUser?userId=${UserId}`;
 
         }}
@@ -89,7 +92,9 @@ export default function UserTenantAdmin() {
             className="bg-[#95C11F] hover:bg-[#85ad1b] text-white"
             onClick={() => {
 
+
               window.location.href = "/dashboardadmin/userManagement/CreateUser";
+
 
             }}
             >

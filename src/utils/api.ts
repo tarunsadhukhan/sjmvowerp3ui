@@ -41,6 +41,26 @@ console.log('API_URL for all', API_URL);
 //     }
 //   };
 
+// const isProxyEnabled = process.env.NEXT_PUBLIC_API_BASE_URL?.startsWith("/");
+// const isProxyEnabled = process.env.NEXT_PUBLIC_API_BASE_URL?.startsWith("/");
+
+
+// const API_URL = (relativePath: string) => {
+//   if (isProxyEnabled) {
+//     return `/api/${relativePath}`;
+//   } else {
+//     return `${process.env.NEXT_PUBLIC_API_BASE_URL}${relativePath}`;
+//   }
+// };
+
+// const API_URL = (relativePath: string) => {
+//     if (isProxyEnabled) {
+//       return `/api${relativePath}`;
+//     } else {
+//       return `${process.env.NEXT_PUBLIC_API_BASE_URL}${relativePath}`;
+//     }
+//   };
+
 const apiRoutes ={
     //ctrl desk and console
     MENU_CTRLDESK : `${API_URL}/companyRoutes/console_menu_items`,
@@ -77,6 +97,7 @@ const apiRoutes ={
     PORTAL_APPROVAL_LEVELS_DATA_SUBMIT: `${API_URL}/admin/PortalData/approval_level_data_setup_submit`,
     PORTAL_MENU_ITEMS: `${API_URL}/admin/PortalData/portal_menu_items`,
 
+
     ROLES_CONSOLE_CONSOLE: `${API_URL}/consoleAdmin/roles_console_admin`,
 };
 const apiRoutesconsole = {
@@ -87,6 +108,7 @@ const apiRoutesconsole = {
     CREATE_ROLE_CTRLDSK_ADMIN: `${API_URL}/ctrldskAdmin/create_role_ctrldsk_admin`,
     EDIT_ROLE_CTRLDSK_MENU: `${API_URL}/ctrldskAdmin/edit_role_ctrldsk_admin/`,
     ADMIN_CTRLDSK_MENU_BY_ROLEID: `${API_URL}/ctrldskAdmin/admin_ctrldsk_menu_by_roleid/`,
+
     
     GET_USER_CTRLDSK_ADMIN: `${API_URL}/ctrldskAdmin/get_user_ctrldsk_admin`,
     EDIT_USER_CTRLDSK_MENU: `${API_URL}/ctrldskAdmin/edit_user_ctrldsk_admin/`,

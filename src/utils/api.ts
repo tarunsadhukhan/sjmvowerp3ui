@@ -58,7 +58,16 @@ const apiRoutesconsole = {
     CREATE_USER_CTRLDESK_ADMIN: `${API_URL}/ctrldskAdmin/create_user_ctrldsk_admin`,
     EDIT_USER_CTRLDESK_MENU: `${API_URL}/ctrldskAdmin/edit_user_ctrldsk_admin`,
     
-    GET_ORG_DATA_ALL: `${API_URL}/ctrldskAdmin/get_org_data_all`,
+    GET_ORG_ALL: `${API_URL}/ctrldskAdmin/get_org_data_all`,
+    GET_ORG_BY_ID: `${API_URL}/ctrldskAdmin/get_org_data_by_id/`,
+    CREATE_ORG_SETUP: `${API_URL}/ctrldskAdmin/create_org_setup_data`,
+    CREATE_ORG: `${API_URL}/ctrldskAdmin/create_org_data`,
+    EDIT_ORG: `${API_URL}/ctrldskAdmin/edit_org_data`,
+
+    GET_CO_DATA_ALL: `${API_URL}/ctrldskAdmin/get_co_data_all`,
+    GET_CO_DATA_BY_ID: `${API_URL}/ctrldskAdmin/get_co_data_by_id/`,
+    CREATE_CO_DATA: `${API_URL}/ctrldskAdmin/create_co_data`,
+    EDIT_CO_DATA: `${API_URL}/ctrldskAdmin/edit_co_data`,
 
 
 };

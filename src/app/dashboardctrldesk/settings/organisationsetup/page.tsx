@@ -21,11 +21,12 @@ type Orgs = {
     con_org_name: string;
     con_org_email: string;
     active: number;
+    con_status_name: string;
 }
 ;
 
 // Real API fetch function with pagination and search
-const fetchOrgs = async (page: number, search?: string) => {
+const fetchOrgs = async (page: number, search?: string, filters?: { key: string; value: string }[]) => {
   const limit = 20;
   const queryParams = new URLSearchParams({
     page: page.toString(),
@@ -33,12 +34,28 @@ const fetchOrgs = async (page: number, search?: string) => {
     // user_id: localStorage.getItem('user_id') || '', // Ensure user_id is not null
     // org_id: localStorage.getItem('org_id') || '',
   });
+  
   if (search) {
     queryParams.append('search', search);
   }
+  
+  // Add filter parameters
+  if (filters && filters.length > 0) {
+    filters.forEach(filter => {
+      if (filter.key === 'active') {
+        // Convert "Yes"/"No" to 1/0 for the backend
+        const activeValue = filter.value.toLowerCase() === 'yes' ? '1' : 
+                           filter.value.toLowerCase() === 'no' ? '0' : filter.value;
+        queryParams.append('active', activeValue);
+      }
+      else if (filter.key === 'con_org_email_id') {
+        queryParams.append('email', filter.value);
+      }
+    });
+  }
 
   const { data, error } = await fetchWithCookie(
-    `${apiRoutesconsole.GET_ORG_DATA_ALL}?${queryParams}`,
+    `${apiRoutesconsole.GET_ORG_ALL}?${queryParams}`,
     "GET"
   );
 
@@ -55,7 +72,9 @@ const createEditUrl = (org: Orgs) => {
     orgId: org.con_org_id.toString(),
     orgName: encodeURIComponent(org.con_org_name),
     orgEmail: encodeURIComponent(org.con_org_email),
-    active: org.active.toString()
+    active: org.active.toString(),
+    statusName: encodeURIComponent(org.con_status_name)
+    
   });
   
   console.log("Creating edit URL with params:", Object.fromEntries(params.entries()));
@@ -68,22 +87,25 @@ const columns: Column<Orgs>[] = [
     key: "con_org_name",
     label: "Name",
     className: "bg-[#3ea6da] text-white font-medium",
+    sortable: true,
   },
   {
     key: "con_org_email_id",
     label: "Email",
     className: "bg-[#3ea6da] text-white font-medium",
+    sortable: true,
   },
   {
     key: "con_org_shortname",
     label: "Short Name",
     className: "bg-[#3ea6da] text-white font-medium",
+    sortable: true,
   },
   {
-    key: "active",
-    label: "Active",
+    key: "con_status_name",
+    label: "Status",
     className: "bg-[#3ea6da] text-white",
-    render: (val) => (val === 1 ? "Yes" : "No"),
+    sortable: true,
   },
   {
     key: "actions",
@@ -115,8 +137,10 @@ export default function UserTenantAdmin() {
               window.location.href = "/dashboardctrldesk/settings/organisationsetup/createOrg";
             }}
             >
-            + Create Organisation
+                + Create Organisation
             </Button>
+
+
         </div>
 
         <SearchablePaginatedTable columns={columns} fetchFn={fetchOrgs} />

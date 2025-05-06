@@ -64,10 +64,11 @@ const apiRoutesconsole = {
     CREATE_ORG: `${API_URL}/ctrldskAdmin/create_org_data`,
     EDIT_ORG: `${API_URL}/ctrldskAdmin/edit_org_data`,
 
-    GET_CO_DATA_ALL: `${API_URL}/ctrldskAdmin/get_co_data_all`,
-    GET_CO_DATA_BY_ID: `${API_URL}/ctrldskAdmin/get_co_data_by_id/`,
-    CREATE_CO_DATA: `${API_URL}/ctrldskAdmin/create_co_data`,
-    EDIT_CO_DATA: `${API_URL}/ctrldskAdmin/edit_co_data`,
+    GET_CO_ALL: `${API_URL}/companyAdmin/get_co_data_all`,
+    GET_CO_BY_ID: `${API_URL}/companyAdmin/get_co_data_by_id/`,
+    CREATE_CO_SETUP: `${API_URL}/companyAdmin/create_co_setup_data`,
+    CREATE_CO: `${API_URL}/companyAdmin/create_co_data`,
+    EDIT_CO: `${API_URL}/companyAdmin/edit_co_data`,
 
 
 };

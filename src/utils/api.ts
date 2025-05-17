@@ -70,6 +70,12 @@ const apiRoutesconsole = {
     CREATE_CO: `${API_URL}/companyAdmin/create_co_data`,
     EDIT_CO: `${API_URL}/companyAdmin/edit_co_data`,
 
+    GET_BRANCH_ALL: `${API_URL}/companyAdmin/get_branch_data_all`,
+    GET_BRANCH_BY_ID: `${API_URL}/companyAdmin/get_branch_data_by_id/`,
+    CREATE_BRANCH_SETUP: `${API_URL}/companyAdmin/create_branch_setup_data`,
+    CREATE_BRANCH: `${API_URL}/companyAdmin/create_branch_data`,
+    EDIT_BRANCH: `${API_URL}/companyAdmin/edit_branch_data`,
+
 
 };
 

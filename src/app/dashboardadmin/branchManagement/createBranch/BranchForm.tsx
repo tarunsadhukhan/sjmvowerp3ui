@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useMemo, useEffect, useState } from "react";
+import React, { useMemo, useEffect, useState, useCallback, useRef } from "react";
 import { useForm, FormProvider, Controller } from "react-hook-form";
 import { 
   TextField, 
@@ -15,41 +15,40 @@ import {
   Box,
   Typography,
   CircularProgress,
-  OutlinedInput,
   Checkbox,
-  ListItemText
+  Switch,
+  FormControlLabel
 } from "@mui/material";
 
-interface CoFormData {
-  co_name: string;
-  co_prefix: string;
-  co_address1: string;
-  co_address2: string;
-  co_zipcode: string;
+interface BranchFormData {
+  branch_name: string;
+  branch_address1: string;
+  branch_address2: string;
+  branch_zipcode: string;
   country_id: string;
   state_id: string;
   city_id: string;
-  co_cin_no: string;
-  co_email_id: string;
-  co_pan_no: string;
-  alert_email_id: string;
+  co_id: string;
+  branch_email: string;
+  contact_no: string;
+  active: boolean;
 }
 
-interface CoFormProps {
-  initialValues?: Partial<CoFormData> | null;
-  allModules: any[];
+interface BranchFormProps {
+  initialValues?: Partial<BranchFormData> | null;
+  companies: any[];
   countries: any[];
   states: any[];
   cities: any[];
-  alert_email_id: string[];  
-  onSubmit: (data: CoFormData) => void;
+  alert_email_id?: string[];  // Optional for backward compatibility
+  onSubmit: (data: BranchFormData) => void;
   loading: boolean;
   isEdit: boolean;
 }
 
-const CoForm: React.FC<CoFormProps> = ({
+const BranchForm: React.FC<BranchFormProps> = ({
   initialValues,
-  allModules,
+  companies,
   countries,
   states,
   cities,
@@ -57,30 +56,109 @@ const CoForm: React.FC<CoFormProps> = ({
   loading,
   isEdit,
 }) => {
-  const methods = useForm<CoFormData>({
+  const methods = useForm<BranchFormData>({
     defaultValues: {
-      co_name: "",
-      co_prefix: "",
-      co_address1: "",
-      co_address2: "",
-      co_zipcode: "",
+      branch_name: "",
+      branch_address1: "",
+      branch_address2: "",
+      branch_zipcode: "",
       country_id: "",
       state_id: "",
       city_id: "",
-      co_cin_no: "",
-      co_email_id: "",
-      co_pan_no: "",
-      alert_email_id: "",
+      co_id: "",
+      branch_email: "",
+      contact_no: "",
+      active: true,
     },
   });
-
-  const { handleSubmit, watch, control, reset, setValue, getValues } = methods;
+  const { handleSubmit, watch, control, reset, setValue, getValues, formState: { errors }, setError, clearErrors } = methods;
   const watchedCountry = watch("country_id");
   const watchedState = watch("state_id");
+  const watchedCompany = watch("co_id");
+  const watchedBranchName = watch("branch_name");
   
   // States for filtered options
   const [filteredStates, setFilteredStates] = useState<any[]>([]);
   const [filteredCities, setFilteredCities] = useState<any[]>([]);
+  const [existingBranches, setExistingBranches] = useState<string[]>([]);
+  
+  // For debounced validation
+  const [branchNameError, setBranchNameError] = useState<string | null>(null);
+  const branchNameTimerRef = useRef<NodeJS.Timeout | null>(null);
+  // Function to check branch name uniqueness with debounce
+  const checkBranchNameUniqueness = useCallback((value: string) => {
+    // Clear any previous timer
+    if (branchNameTimerRef.current) {
+      clearTimeout(branchNameTimerRef.current);
+    }
+    
+    // If empty value or no company selected, don't validate
+    if (!value || !watchedCompany) {
+      setBranchNameError(null);
+      return;
+    }
+    
+    // In edit mode, if we're keeping the same branch name, don't validate
+    if (isEdit && initialValues?.branch_name === value) {
+      console.log("Edit mode: Using the same branch name, skipping validation");
+      setBranchNameError(null);
+      return;
+    }
+    
+    console.log(`Starting 2-second timer for validating branch name: "${value}"`);
+    
+    // Set a new timer for 2 seconds
+    branchNameTimerRef.current = setTimeout(() => {
+      const lowercaseName = value.toLowerCase();
+      console.log(`Validating branch name after 2 seconds: "${value}"`);
+      console.log(`Company ID: ${watchedCompany}`);
+      console.log(`Existing branch names: ${JSON.stringify(existingBranches)}`);
+      
+      // Check if the branch name exists for the selected company
+      const exists = existingBranches.some((name) => name === lowercaseName);
+      
+      if (exists) {
+        const errorMessage = `Branch name "${value}" already exists for this company`;
+        console.log(`Validation failed: ${errorMessage}`);
+        
+        // Set error state
+        setBranchNameError(errorMessage);
+        setError("branch_name", { type: "manual", message: errorMessage });
+        
+        // Clear the branch name field
+        console.log("Clearing branch name field");
+        setValue("branch_name", "");
+      } else {
+        // Clear any previous error
+        console.log(`Validation passed for branch name: "${value}"`);
+        setBranchNameError(null);
+        clearErrors("branch_name");
+      }
+    }, 2000); // 2 seconds delay
+  }, [watchedCompany, existingBranches, isEdit, initialValues, setError, clearErrors, setValue]);
+    // Effect to validate branch name uniqueness
+  useEffect(() => {
+    if (watchedCompany && companies) {
+      console.log('Checking branches for company ID:', watchedCompany);
+      // Find selected company
+      const selectedCompany = companies.find(c => c.co_id.toString() === watchedCompany);
+      
+      if (selectedCompany && selectedCompany.branches) {
+        console.log('Found company with branches:', selectedCompany);
+        
+        // Extract branch names from the selected company
+        const branchNames = selectedCompany.branches.map((branch: any) => {
+          return branch.branch_name.toLowerCase();
+        }).filter((name: string) => name !== ''); // Filter out any empty strings
+        
+        console.log("Existing branch names for this company:", branchNames);
+        setExistingBranches(branchNames);
+      } else {
+        console.log('No branches found for company ID:', watchedCompany);
+        setExistingBranches([]);
+      }
+    }
+  }, [watchedCompany, companies]);
   
   // Effect to update states when country changes
   useEffect(() => {
@@ -100,6 +178,21 @@ const CoForm: React.FC<CoFormProps> = ({
       setFilteredCities([]);
     }
   }, [watchedCountry, states, setValue]);
+    // Effect to trigger debounced branch name validation
+  useEffect(() => {
+    // Only validate if we have a branch name and company
+    if (watchedBranchName && watchedCompany) {
+      console.log(`Debounced validation will start for: "${watchedBranchName}" in 2 seconds`);
+      checkBranchNameUniqueness(watchedBranchName);
+    }
+    
+    // Cleanup the timer when component unmounts or when dependencies change
+    return () => {
+      if (branchNameTimerRef.current) {
+        clearTimeout(branchNameTimerRef.current);
+      }
+    };
+  }, [watchedBranchName, watchedCompany, checkBranchNameUniqueness]);
   
   // Effect to filter cities when state changes
   useEffect(() => {
@@ -147,7 +240,29 @@ const CoForm: React.FC<CoFormProps> = ({
         }
       }
     }
-  }, [initialValues, reset, loading, states, cities]);
+  }, [initialValues, reset, loading, states, cities]);  // Function to validate branch name uniqueness (used by react-hook-form validation)
+  const validateBranchName = (value: string) => {
+    if (!value) return "Branch Name is required";
+    
+    // In edit mode, if we're keeping the same branch name, it's valid
+    if (isEdit && initialValues?.branch_name === value) {
+      return true;
+    }
+    
+    // If no company is selected yet, we can't validate branch uniqueness
+    if (!watchedCompany) {
+      return true;
+    }
+    
+    // Check if branch name already exists in the selected company
+    // First convert to lowercase for case-insensitive comparison
+    const lowercaseName = value.toLowerCase();
+    if (existingBranches.includes(lowercaseName)) {
+      return `Branch name "${value}" already exists for this company`;
+    }
+    
+    return true;
+  };
 
   if (loading) return <CircularProgress />;
 
@@ -157,43 +272,62 @@ const CoForm: React.FC<CoFormProps> = ({
         <FormProvider {...methods}>
           <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
             <Controller
-              name="co_name"
+              name="co_id"
               control={control}
-              rules={{ required: "Company Name is required" }}
+              rules={{ required: "Company is required" }}
               render={({ field, fieldState: { error } }) => (
-                <TextField
-                  {...field}
-                  label="Company Name"
-                  fullWidth
-                  margin="normal"
-                  placeholder="Enter Company Name"
-                  error={!!error}
-                  helperText={error?.message}
-                  required
-                />
+                <FormControl fullWidth margin="normal" error={!!error} required>
+                  <InputLabel>Company</InputLabel>
+                  <Select
+                    {...field}
+                    label="Company"
+                    value={field.value || ""}
+                    disabled={isEdit} // Disable changing company in edit mode
+                  >
+                    {companies.map((c) => (
+                      <MenuItem key={c.co_id} value={c.co_id.toString()}>
+                        {c.co_name}
+                      </MenuItem>
+                    ))}
+                  </Select>
+                  {error && <FormHelperText>{error.message}</FormHelperText>}
+                </FormControl>
               )}
-            />
-            
-            <Controller
-              name="co_prefix"
+            />              <Controller
+              name="branch_name"
               control={control}
-              rules={{ required: "Prefix is required" }}
+              rules={{ 
+                required: "Branch Name is required",
+                validate: validateBranchName
+              }}
               render={({ field, fieldState: { error } }) => (
                 <TextField
                   {...field}
-                  label="Prefix"
+                  label="Branch Name"
                   fullWidth
                   margin="normal"
-                  placeholder="Enter prefix"
-                  error={!!error}
-                  helperText={error?.message}
+                  placeholder="Enter Branch Name"
+                  error={!!error || !!branchNameError}
+                  helperText={error?.message || branchNameError}
                   required
+                  onChange={(e) => {
+                    const value = e.target.value;
+                    field.onChange(e);
+                    
+                    // Additional logging for debugging
+                    console.log(`Branch name changed to: "${value}"`);
+                    if (watchedCompany) {
+                      console.log(`Selected company ID: ${watchedCompany}`);
+                    } else {
+                      console.log("No company selected yet");
+                    }
+                  }}
                 />
               )}
             />
                         
             <Controller
-              name="co_email_id"
+              name="branch_email"
               control={control}
               rules={{ 
                 required: "Email is required",
@@ -218,7 +352,25 @@ const CoForm: React.FC<CoFormProps> = ({
             />
             
             <Controller
-              name="co_address1"
+              name="contact_no"
+              control={control}
+              rules={{ required: "Phone number is required" }}
+              render={({ field, fieldState: { error } }) => (
+                <TextField
+                  {...field}
+                  label="Phone"
+                  fullWidth
+                  margin="normal"
+                  placeholder="Enter phone number"
+                  error={!!error}
+                  helperText={error?.message}
+                  required
+                />
+              )}
+            />
+            
+            <Controller
+              name="branch_address1"
               control={control}
               rules={{ required: "Address is required" }}
               render={({ field, fieldState: { error } }) => (
@@ -236,7 +388,7 @@ const CoForm: React.FC<CoFormProps> = ({
             />
 
             <Controller
-              name="co_address2"
+              name="branch_address2"
               control={control}
               render={({ field, fieldState: { error } }) => (
                 <TextField
@@ -252,14 +404,14 @@ const CoForm: React.FC<CoFormProps> = ({
             />
             
             <Controller
-              name="co_zipcode"
+              name="branch_zipcode"
               control={control}
               rules={{ required: "Zipcode is required" }}
               render={({ field, fieldState: { error } }) => (
                 <TextField
                   {...field}
                   label="Zipcode"
-                  type="number"
+                  type="text"
                   fullWidth
                   margin="normal"
                   placeholder="Enter zipcode"
@@ -347,50 +499,18 @@ const CoForm: React.FC<CoFormProps> = ({
             />
 
             <Controller
-              name="co_cin_no"
+              name="active"
               control={control}
-              render={({ field, fieldState: { error } }) => (
-                <TextField
-                  {...field}
-                  label="CIN Number"
-                  fullWidth
-                  margin="normal"
-                  placeholder="Enter CIN Number"
-                  error={!!error}
-                  helperText={error?.message}
-                />
-              )}
-            />
-
-            <Controller
-              name="co_pan_no"
-              control={control}
-              render={({ field, fieldState: { error } }) => (
-                <TextField
-                  {...field}
-                  label="PAN Number"
-                  fullWidth
-                  margin="normal"
-                  placeholder="Enter PAN Number"
-                  error={!!error}
-                  helperText={error?.message}
-                />
-              )}
-            />
-
-            <Controller
-              name="alert_email_id"
-              control={control}
-              render={({ field, fieldState: { error } }) => (
-                <TextField
-                  {...field}
-                  label="Alert Email"
-                  type="email"
-                  fullWidth
-                  margin="normal"
-                  placeholder="Enter alert email"
-                  error={!!error}
-                  helperText={error?.message}
+              render={({ field }) => (
+                <FormControlLabel
+                  control={
+                    <Switch
+                      checked={field.value}
+                      onChange={(e) => field.onChange(e.target.checked)}
+                      color="primary"
+                    />
+                  }
+                  label="Active"
                 />
               )}
             />
@@ -407,7 +527,7 @@ const CoForm: React.FC<CoFormProps> = ({
                   }
                 }}
               >
-                {isEdit ? "Update" : "Create"} Company
+                {isEdit ? "Update" : "Create"} Branch
               </Button>
             </Box>
           </form>
@@ -417,4 +537,4 @@ const CoForm: React.FC<CoFormProps> = ({
   );
 };
 
-export default CoForm;
+export default BranchForm;

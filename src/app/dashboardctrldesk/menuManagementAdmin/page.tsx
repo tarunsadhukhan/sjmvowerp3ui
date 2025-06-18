@@ -5,10 +5,12 @@ import { PencilIcon, Search } from "lucide-react";
 import { apiRoutes, apiRoutesconsole } from "@/utils/api";
 import { fetchWithCookie } from "@/utils/apiClient2";
 import { DataGrid, GridColDef, GridPaginationModel } from '@mui/x-data-grid';
-import { Box, TextField, InputAdornment, Tooltip, tooltipClasses  } from '@mui/material';
+import { Box, TextField, InputAdornment, Tooltip  } from '@mui/material';
 import { useState, useEffect } from 'react';
 import { styled } from '@mui/material/styles';
-import type { TooltipProps } from '@mui/material/Tooltip';
+//import type { TooltipProps } from '@mui/material/Tooltip';
+import  CustomTooltip  from "@/components/ui/CustomTooltip"; // Adjust import path as necessary
+
 // Sample Role type
 
 type Menu = {
@@ -37,19 +39,6 @@ export default function MenuManagement() {
   const [searchQuery, setSearchQuery] = useState('');
   const [searchTimeout, setSearchTimeout] = useState<NodeJS.Timeout | null>(null);
 
-const CustomTooltip = styled((props: TooltipProps) => (
-  <Tooltip {...props} classes={{ popper: props.className }} />
-))(({ theme }) => ({
-  [`& .${tooltipClasses.tooltip}`]: {
-    backgroundColor: '#1976d2',
-    color: '#fff', 
-    fontSize: '14px',
-    maxWidth: 220,
-    padding: '10px 15px',
-    borderRadius: '8px',
-    boxShadow: theme.shadows[4],
-  },
-}));
 
 // Real API fetch function with pagination and search
 const fetchPortalMenus1 = async (page: number, search?: string) => {

@@ -129,6 +129,20 @@
   border-radius: 10px;
 }
 
+.button-normal {
+  background-color: #9BC837;
+  color: white;
+  border-radius: 10px;
+  padding: 0.5rem 1rem;
+  font-size: 1rem;
+  font-weight: bold;
+  text-align: center;
+}
+
+.button-normal:hover {
+  background-color: #8BB72E;
+}
+
 
 
 @layer base {

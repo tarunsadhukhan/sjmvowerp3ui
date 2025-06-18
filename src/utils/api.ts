@@ -56,9 +56,53 @@ const apiRoutesconsole = {
     EDIT_USER_CTRLDSK_MENU: `${API_URL}/ctrldskAdmin/edit_user_ctrldsk_admin`,
     ROLES_DROPDOWN_CTRLDSK_ADMIN: `${API_URL}/ctrldskAdmin/get_roles_ctrldsk_admin_assign`,
     CREATE_USER_CTRLDESK_ADMIN: `${API_URL}/ctrldskAdmin/create_user_ctrldsk_admin`,
+
+    EDIT_USER_CTRLDESK_MENU: `${API_URL}/ctrldskAdmin/edit_user_ctrldsk_admin`,
+    
+    GET_ORG_ALL: `${API_URL}/ctrldskAdmin/get_org_data_all`,
+    GET_ORG_BY_ID: `${API_URL}/ctrldskAdmin/get_org_data_by_id/`,
+    CREATE_ORG_SETUP: `${API_URL}/ctrldskAdmin/create_org_setup_data`,
+    CREATE_ORG: `${API_URL}/ctrldskAdmin/create_org_data`,
+    EDIT_ORG: `${API_URL}/ctrldskAdmin/edit_org_data`,
+
+
+
+    GET_CO_ALL: `${API_URL}/companyAdmin/get_co_data_all`,
+    GET_CO_BY_ID: `${API_URL}/companyAdmin/get_co_data_by_id/`,
+    CREATE_CO_SETUP: `${API_URL}/companyAdmin/create_co_setup_data`,
+    CREATE_CO: `${API_URL}/companyAdmin/create_co_data`,
+    EDIT_CO: `${API_URL}/companyAdmin/edit_co_data`,
+
+    GET_PORTAL_ALLMENU_CTRLDSK_ADMIN_BY_ID: `${API_URL}/ctrldskAdmin/portal_allmenu_details_by_id`,
+    GET_PORTAL_ALLMENU_CTRLDSK_ADMIN: `${API_URL}/ctrldskAdmin/portal_allmenu_details`,
+    GET_PORTAL_MENU_CTRLDSK_ADMIN: `${API_URL}/ctrldskAdmin/portal_menu_details`,
+    EDIT_PORTAL_MENU_CTRLDSK_MENU: `${API_URL}/ctrldskAdmin/edit_user_ctrldsk_admin`,
+    GET_PORTAL_PARENT_MENU: `${API_URL}/ctrldskAdmin/portal_parentmenudetails`,
+    GET_PORTAL_MODULE_NAME: `${API_URL}/ctrldskAdmin/portalmodulename`,
+    GET_PORTAL_MENU_TYPE: `${API_URL}/ctrldskAdmin/portalmenutypedetails`,     
+    GET_PORTAL_MENU_NAME: `${API_URL}/ctrldskAdmin/portalmenuname`,     
+    PORTAL_MENU_CREATE: `${API_URL}/ctrldskAdmin/portalmenucreate`,     
+    PORTAL_MENU_EDIT: `${API_URL}/ctrldskAdmin/portalmenuedit`,     
+    ORG_MODULE_MAP: `${API_URL}/ctrldskAdmin/orgmodulemapdetails`,
+    ADMIN_CTRLDSK_MODULE_BY_ORGID: `${API_URL}/ctrldskAdmin/admin_ctrldsk_module_by_orgid/`,
+    ORGS_DROPDOWN_CTRLDSK_ADMIN: `${API_URL}/ctrldskAdmin/admin_ctrldsk_dropdown_org/`,
+    EDIT_ORG_MODULE_MAP_CTRLDSK: `${API_URL}/ctrldskAdmin/edit_org_module_map_ctrldesk/`,
+
+
     EDIT_USER_CTRLDESK_MENU: `${API_URL}/ctrldskAdmin/edit_user_ctrldsk_admin`
 
 
+    GET_BRANCH_ALL: `${API_URL}/companyAdmin/get_branch_data_all`,
+    GET_BRANCH_BY_ID: `${API_URL}/companyAdmin/get_branch_data_by_id/`,
+    CREATE_BRANCH_SETUP: `${API_URL}/companyAdmin/create_branch_setup_data`,
+    CREATE_BRANCH: `${API_URL}/companyAdmin/create_branch_data`,
+    EDIT_BRANCH: `${API_URL}/companyAdmin/edit_branch_data`,
+
+    GET_DEPARTMENT_ALL: `${API_URL}/companyAdmin/get_department_data_all`,
+    CREATE_DEPARTMENT: `${API_URL}/companyAdmin/create_department_data`,
+    EDIT_DEPARTMENT: `${API_URL}/companyAdmin/edit_department_data`,
+    GET_DEPARTMENT_BY_ID: `${API_URL}/companyAdmin/get_department_data_by_id/`,
+    GET_SUBDEPARTMENT_ALL: `${API_URL}/companyAdmin/get_subdepartment_data_all`,
 };
 
 export { apiRoutes, apiRoutesconsole };

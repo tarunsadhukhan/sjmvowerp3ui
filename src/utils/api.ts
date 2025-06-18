@@ -89,9 +89,6 @@ const apiRoutesconsole = {
     EDIT_ORG_MODULE_MAP_CTRLDSK: `${API_URL}/ctrldskAdmin/edit_org_module_map_ctrldesk/`,
 
 
-    EDIT_USER_CTRLDESK_MENU: `${API_URL}/ctrldskAdmin/edit_user_ctrldsk_admin`
-
-
     GET_BRANCH_ALL: `${API_URL}/companyAdmin/get_branch_data_all`,
     GET_BRANCH_BY_ID: `${API_URL}/companyAdmin/get_branch_data_by_id/`,
     CREATE_BRANCH_SETUP: `${API_URL}/companyAdmin/create_branch_setup_data`,

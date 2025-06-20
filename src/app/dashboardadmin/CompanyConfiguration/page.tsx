@@ -24,16 +24,14 @@ export default function CompanyManagement() {
   });
   const [totalRows, setTotalRows] = useState(0);
   const [searchQuery, setSearchQuery] = useState('');
-  const [searchTimeout, setSearchTimeout] = useState<NodeJS.Timeout | null>(null);
-
-  // Helper function to create URL for editing
+  const [searchTimeout, setSearchTimeout] = useState<NodeJS.Timeout | null>(null);  // Helper function to create URL for editing
   const createEditUrl = (company: Company) => {
     const params = new URLSearchParams({
-      coId: company.co_id.toString(),
-      coName: encodeURIComponent(company.co_name),
+      companyId: company.co_id.toString(),
+      companyName: encodeURIComponent(company.co_name),
     });
     
-    return `/dashboardadmin/companyManagement/editConfiguration?${params.toString()}`;
+    return `/dashboardadmin/CompanyConfiguration/editConfiguration?${params.toString()}`;
   };
 
   // Fetch companies from API with pagination and search

@@ -3,55 +3,45 @@
 import Link from "next/link";
 import { ChevronDown } from "lucide-react";
 //import { cn } from "@/lib/utils";
-import { useCompany } from "@/hooks/use-org";
-import {  useState } from "react"
-interface MenuItem {
-  title: string;
-  path?: string;
-  icon: React.ReactNode;
-  submenu?: MenuItem[];
-}
+import { useSidebarContext } from "@/components/dashboard/sidebarContext";
+import { useState } from "react";
 
 export function DynamicMenu({ isCollapsed }: { isCollapsed: boolean }) {
-  const { menuItems } = useCompany();
-  const [openMenus, setOpenMenus] = useState<string[]>([]);
-  
-  console.log(menuItems)
+  const { menuItems } = useSidebarContext();
+  const [openMenus, setOpenMenus] = useState<number[]>([]);
 
-
-  const toggleSubmenu = (title: string) => {
+  const toggleSubmenu = (menu_id: number) => {
     setOpenMenus(prev =>
-      prev.includes(title) ? prev.filter(item => item !== title) : [...prev, title]
+      prev.includes(menu_id) ? prev.filter(id => id !== menu_id) : [...prev, menu_id]
     );
   };
 
-  const renderMenuItem = (item: MenuItem) => {
-    const hasSubmenu = item.submenu && item.submenu.length > 0;
-    const isOpen = openMenus.includes(item.title);
-
+  const renderMenuItem = (item: any) => {
+    const hasSubmenu = Array.isArray(item.submenu) && item.submenu.length > 0;
+    const isOpen = openMenus.includes(item.menu_id);
     return (
-      <div key={item.title}>
+      <div key={item.menu_id}>
         <Link
-          href={item.path || "#"}
+          href={item.menu_path || "#"}
           className="flex items-center px-4 py-2 text-sm text-white hover:bg-[#005580] transition-colors"
-          onClick={(e) => {
+          onClick={e => {
             if (hasSubmenu) {
               e.preventDefault();
-              toggleSubmenu(item.title);
+              toggleSubmenu(item.menu_id);
             }
           }}
         >
-          <span className="mr-3">{item.icon}</span>
+          {/* You can add an icon here if your menu data supports it */}
           {!isCollapsed && (
             <>
-              <span className="flex-1">{item.title}</span>
-              {hasSubmenu && <ChevronDown size={16} className={isOpen ? "rotate-180" : ""} />}
+              <span className="flex-1">{item.menu_name}</span>
+              {hasSubmenu && <span><ChevronDown size={16} className={isOpen ? "rotate-180" : ""} /></span>}
             </>
           )}
         </Link>
         {hasSubmenu && isOpen && !isCollapsed && (
           <div className="ml-4 border-l border-[#005580]">
-            {item.submenu?.map(subItem => renderMenuItem(subItem))}
+            {item.submenu?.map((subItem: any) => renderMenuItem(subItem))}
           </div>
         )}
       </div>

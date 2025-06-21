@@ -73,6 +73,10 @@ const apiRoutesconsole = {
     CREATE_CO: `${API_URL}/companyAdmin/create_co_data`,
     EDIT_CO: `${API_URL}/companyAdmin/edit_co_data`,
 
+    CO_CONFIG: `${API_URL}/companyAdmin/co_config`,
+    EDIT_CO_CONFIG: `${API_URL}/companyAdmin/company_config`,
+
+
     GET_PORTAL_ALLMENU_CTRLDSK_ADMIN_BY_ID: `${API_URL}/ctrldskAdmin/portal_allmenu_details_by_id`,
     GET_PORTAL_ALLMENU_CTRLDSK_ADMIN: `${API_URL}/ctrldskAdmin/portal_allmenu_details`,
     GET_PORTAL_MENU_CTRLDSK_ADMIN: `${API_URL}/ctrldskAdmin/portal_menu_details`,

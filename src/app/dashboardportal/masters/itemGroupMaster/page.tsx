@@ -4,9 +4,10 @@ import { Button } from "@/components/ui/button";
 import { PencilIcon, Search } from "lucide-react";
 import { apiRoutes, apiRoutesconsole } from "@/utils/api";
 import { fetchWithCookie } from "@/utils/apiClient2";
-import { DataGrid, GridColDef, GridPaginationModel } from '@mui/x-data-grid';
+import MuiDataGrid from '@/components/ui/muiDataGrid';
 import { Box, TextField, InputAdornment } from '@mui/material';
 import { useState, useEffect } from 'react';
+import { GridColDef, GridPaginationModel, GridRenderCellParams } from '@mui/x-data-grid';
 
 type Company = {
   co_id: number;
@@ -24,14 +25,16 @@ export default function CompanyManagement() {
   });
   const [totalRows, setTotalRows] = useState(0);
   const [searchQuery, setSearchQuery] = useState('');
-  const [searchTimeout, setSearchTimeout] = useState<NodeJS.Timeout | null>(null);  // Helper function to create URL for editing
+  const [searchTimeout, setSearchTimeout] = useState<NodeJS.Timeout | null>(null);
+
+  // Helper function to create URL for editing
   const createEditUrl = (company: Company) => {
     const params = new URLSearchParams({
-      companyId: company.co_id.toString(),
-      companyName: encodeURIComponent(company.co_name),
+      coId: company.co_id.toString(),
+      coName: encodeURIComponent(company.co_name),
     });
-    
-    return `/dashboardadmin/CompanyConfiguration/editConfiguration?${params.toString()}`;
+
+    return `/dashboardportal/masters/itemGroupMaster/createItemGroup?${params.toString()}`;
   };
 
   // Fetch companies from API with pagination and search
@@ -54,14 +57,14 @@ export default function CompanyManagement() {
       );
 
       if (error || !data) {
-        throw new Error(error || 'Failed to fetch companies');
+        throw new Error(error || 'Failed to fetch item groups');
       }
 
       // API returns data in { data: [...], total: number } format
       setRows(data.data || []);
       setTotalRows(data.total || 0);
     } catch (error) {
-      console.error("Error fetching companies:", error);
+      console.error("Error fetching item groups:", error);
     } finally {
       setLoading(false);
     }
@@ -102,33 +105,26 @@ export default function CompanyManagement() {
   const columns: GridColDef[] = [
     { 
       field: 'co_name', 
-      headerName: 'Name', 
+      headerName: 'Item Group Code', 
       flex: 1,
       minWidth: 180,
       headerClassName: 'bg-[#3ea6da] text-white',
     },
     { 
       field: 'co_email_id', 
-      headerName: 'Email', 
+      headerName: 'Item Group Name', 
       flex: 1,
       minWidth: 200,
       headerClassName: 'bg-[#3ea6da] text-white',
     },
-    { 
-      field: 'co_prefix', 
-      headerName: 'Short Name', 
-      flex: 0.7,
-      minWidth: 120,
-      headerClassName: 'bg-[#3ea6da] text-white',
-    },
     {
       field: 'actions',
-      headerName: 'Actions',
+      headerName: 'edit',
       width: 100,
       headerClassName: 'bg-[#3ea6da] text-white',
       sortable: false,
       filterable: false,
-      renderCell: (params) => (
+      renderCell: (params: GridRenderCellParams) => (
         <Button
           variant="ghost"
           size="icon"
@@ -146,12 +142,20 @@ export default function CompanyManagement() {
     <div className="min-h-screen bg-gray-50 p-8">
       <div className="mx-auto max-w-7xl">
         <div className="mb-8 flex items-center justify-between">
-          <h1 className="text-2xl font-bold text-[#0C3C60]">Company Configuration</h1>
+          <h1 className="text-2xl font-bold text-[#0C3C60]">Item Group Master</h1>
+          <Button
+            className="bg-[#95C11F] hover:bg-[#85ad1b] text-white"
+            onClick={() => {
+              window.location.href = "/dashboardportal/masters/itemGroupMastercreateItemGroup";
+            }}
+          >
+            + Create Item Group
+          </Button>
         </div>
         
         <Box sx={{ width: '100%', mb: 2 }}>
           <TextField
-            placeholder="Search companies..."
+            placeholder="Search item groups..."
             onChange={handleSearchChange}
             fullWidth
             variant="outlined"
@@ -167,42 +171,15 @@ export default function CompanyManagement() {
           />
         </Box>
         
-        <Box sx={{ 
-          height: 500, 
-          width: '100%',
-          '& .MuiDataGrid-root': {
-            border: 'none',
-            borderRadius: '8px',
-            boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06)'
-          },
-          '& .MuiDataGrid-cell:focus': {
-            outline: 'none'
-          }
-        }}>
-          <DataGrid
-            rows={rows}
-            columns={columns}
-            getRowId={(row) => row.co_id}
-            paginationModel={paginationModel}
-            onPaginationModelChange={handlePaginationModelChange}
-            pageSizeOptions={[10, 20, 50]}
-            pagination
-            paginationMode="server"
-            rowCount={totalRows}
-            loading={loading}
-            disableRowSelectionOnClick
-            sx={{
-              '& .MuiDataGrid-columnHeader': {
-                backgroundColor: '#3ea6da',
-                color: 'white',
-                fontWeight: 'bold',
-              },
-              '& .MuiDataGrid-columnHeaderTitle': {
-                fontWeight: 'bold',
-              }
-            }}
-          />
-        </Box>
+        <MuiDataGrid
+          rows={rows}
+          columns={columns}
+          rowCount={totalRows}
+          paginationModel={paginationModel}
+          onPaginationModelChange={handlePaginationModelChange}
+          loading={loading}
+          showLoadingUntilLoaded={true}
+        />
       </div>
     </div>
   );

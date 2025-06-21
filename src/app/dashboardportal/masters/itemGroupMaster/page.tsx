@@ -8,6 +8,9 @@ import MuiDataGrid from '@/components/ui/muiDataGrid';
 import { Box, TextField, InputAdornment } from '@mui/material';
 import { useState, useEffect } from 'react';
 import { GridColDef, GridPaginationModel, GridRenderCellParams } from '@mui/x-data-grid';
+import CreateItemGroup from './createItemGroup';
+
+
 
 type Company = {
   co_id: number;
@@ -26,6 +29,8 @@ export default function CompanyManagement() {
   const [totalRows, setTotalRows] = useState(0);
   const [searchQuery, setSearchQuery] = useState('');
   const [searchTimeout, setSearchTimeout] = useState<NodeJS.Timeout | null>(null);
+  const [dialogOpen, setDialogOpen] = useState(false);
+  const [editData, setEditData] = useState<Company | null>(null);
 
   // Helper function to create URL for editing
   const createEditUrl = (company: Company) => {
@@ -101,6 +106,31 @@ export default function CompanyManagement() {
     setSearchTimeout(timeout);
   };
 
+  // Open dialog for create
+  const handleOpenCreate = () => {
+    setEditData(null);
+    setDialogOpen(true);
+  };
+
+  // Open dialog for edit
+  const handleOpenEdit = (company: Company) => {
+    setEditData(company);
+    setDialogOpen(true);
+  };
+
+  // Handle dialog close
+  const handleDialogClose = () => {
+    setDialogOpen(false);
+    setEditData(null);
+  };
+
+  // Handle dialog submit
+  const handleDialogSubmit = (data: { co_name: string; co_email_id: string; co_id?: number }) => {
+    console.log('Submitted:', data);
+    handleDialogClose();
+    fetchCompanies(); // reload table
+  };
+
   // Column definitions for the DataGrid
   const columns: GridColDef[] = [
     { 
@@ -128,9 +158,7 @@ export default function CompanyManagement() {
         <Button
           variant="ghost"
           size="icon"
-          onClick={() => {
-            window.location.href = createEditUrl(params.row as Company);
-          }}
+          onClick={() => handleOpenEdit(params.row as Company)}
         >
           <PencilIcon className="h-4 w-4" />
         </Button>
@@ -144,15 +172,18 @@ export default function CompanyManagement() {
         <div className="mb-8 flex items-center justify-between">
           <h1 className="text-2xl font-bold text-[#0C3C60]">Item Group Master</h1>
           <Button
-            className="bg-[#95C11F] hover:bg-[#85ad1b] text-white"
-            onClick={() => {
-              window.location.href = "/dashboardportal/masters/itemGroupMastercreateItemGroup";
-            }}
+            className="btn-primary"
+            onClick={handleOpenCreate}
           >
             + Create Item Group
           </Button>
         </div>
-        
+        <CreateItemGroup
+          open={dialogOpen}
+          onClose={handleDialogClose}
+          onSubmit={handleDialogSubmit}
+          initialData={editData}
+        />
         <Box sx={{ width: '100%', mb: 2 }}>
           <TextField
             placeholder="Search item groups..."
@@ -170,7 +201,6 @@ export default function CompanyManagement() {
             }}
           />
         </Box>
-        
         <MuiDataGrid
           rows={rows}
           columns={columns}

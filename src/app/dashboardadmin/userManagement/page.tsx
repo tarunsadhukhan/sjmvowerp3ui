@@ -89,7 +89,7 @@ export default function UserTenantAdmin() {
         <div className="mb-8 flex items-center justify-between">
           <h1 className="text-2xl font-bold text-[#0C3C60]">User Management Portal</h1>
             <Button
-            className="bg-[#95C11F] hover:bg-[#85ad1b] text-white"
+            className="btn-primary"
             onClick={() => {
 
 

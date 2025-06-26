@@ -2,7 +2,7 @@
 
 import { Button } from "@/components/ui/button";
 import { PencilIcon, Search } from "lucide-react";
-import { apiRoutes, apiRoutesconsole } from "@/utils/api";
+import { apiRoutesPortalMasters, apiRoutesconsole } from "@/utils/api";
 import { fetchWithCookie } from "@/utils/apiClient2";
 import MuiDataGrid from '@/components/ui/muiDataGrid';
 import { Box, TextField, InputAdornment } from '@mui/material';
@@ -12,15 +12,18 @@ import CreateItemGroup from './createItemGroup';
 
 
 
-type Company = {
-  co_id: number;
-  co_name: string;
-  co_email_id: string;
-  co_prefix: string;
-};
+
+
+type ItemGroup =  {
+  item_grp_id: number;
+  active: number;
+  item_grp_name_display: string;
+  item_grp_code_display: string;
+  item_type_id: number;
+}
 
 export default function CompanyManagement() {
-  const [rows, setRows] = useState<Company[]>([]);
+  const [rows, setRows] = useState<ItemGroup[]>([]);
   const [loading, setLoading] = useState(true);
   const [paginationModel, setPaginationModel] = useState({
     pageSize: 10,
@@ -30,26 +33,30 @@ export default function CompanyManagement() {
   const [searchQuery, setSearchQuery] = useState('');
   const [searchTimeout, setSearchTimeout] = useState<NodeJS.Timeout | null>(null);
   const [dialogOpen, setDialogOpen] = useState(false);
-  const [editData, setEditData] = useState<Company | null>(null);
+  const [editData, setEditData] = useState<ItemGroup | null>(null);
 
   // Helper function to create URL for editing
-  const createEditUrl = (company: Company) => {
+  const createEditUrl = (itemGroup: ItemGroup) => {
     const params = new URLSearchParams({
-      coId: company.co_id.toString(),
-      coName: encodeURIComponent(company.co_name),
+      itemGroupId: itemGroup.item_grp_id.toString(),
+      itemGroupName: encodeURIComponent(itemGroup.item_grp_name_display),
     });
 
     return `/dashboardportal/masters/itemGroupMaster/createItemGroup?${params.toString()}`;
   };
 
   // Fetch companies from API with pagination and search
-  const fetchCompanies = async () => {
+  const fetchItemGrps = async () => {
     setLoading(true);
     
     try {
+      const selectedCompany = localStorage.getItem('sidebar_selectedCompany');
+      const co_id = selectedCompany ? JSON.parse(selectedCompany).co_id : '';
+      
       const queryParams = new URLSearchParams({
         page: (paginationModel.page + 1).toString(), // Convert from 0-based to 1-based indexing
         limit: paginationModel.pageSize.toString(),
+        co_id: co_id,
       });
       
       if (searchQuery) {
@@ -57,7 +64,7 @@ export default function CompanyManagement() {
       }
 
       const { data, error } = await fetchWithCookie(
-        `${apiRoutesconsole.GET_CO_ALL}?${queryParams}`,
+        `${apiRoutesPortalMasters.GET_ALL_ITEM_GRP}?${queryParams}`,
         "GET"
       );
 
@@ -66,7 +73,9 @@ export default function CompanyManagement() {
       }
 
       // API returns data in { data: [...], total: number } format
-      setRows(data.data || []);
+      // Add 'id' property for MUI DataGrid
+      const mappedRows = (data.data || []).map((row: any) => ({ ...row, id: row.item_grp_id }));
+      setRows(mappedRows);
       setTotalRows(data.total || 0);
     } catch (error) {
       console.error("Error fetching item groups:", error);
@@ -77,7 +86,7 @@ export default function CompanyManagement() {
 
   // Effect to fetch data when pagination or search changes
   useEffect(() => {
-    fetchCompanies();
+    fetchItemGrps();
   }, [paginationModel.page, paginationModel.pageSize, searchQuery]);
 
   // Handle pagination model change
@@ -113,8 +122,8 @@ export default function CompanyManagement() {
   };
 
   // Open dialog for edit
-  const handleOpenEdit = (company: Company) => {
-    setEditData(company);
+  const handleOpenEdit = (itemGroup: ItemGroup) => {
+    setEditData(itemGroup);
     setDialogOpen(true);
   };
 
@@ -125,23 +134,23 @@ export default function CompanyManagement() {
   };
 
   // Handle dialog submit
-  const handleDialogSubmit = (data: { co_name: string; co_email_id: string; co_id?: number }) => {
+  const handleDialogSubmit = (data: { item_grp_code_display: string; item_grp_name_display: string; item_grp_id?: number }) => {
     console.log('Submitted:', data);
     handleDialogClose();
-    fetchCompanies(); // reload table
+    fetchItemGrps(); // reload table
   };
 
   // Column definitions for the DataGrid
   const columns: GridColDef[] = [
     { 
-      field: 'co_name', 
+      field: 'item_grp_code_display', 
       headerName: 'Item Group Code', 
       flex: 1,
       minWidth: 180,
       headerClassName: 'bg-[#3ea6da] text-white',
     },
     { 
-      field: 'co_email_id', 
+      field: 'item_grp_name_display', 
       headerName: 'Item Group Name', 
       flex: 1,
       minWidth: 200,
@@ -149,7 +158,7 @@ export default function CompanyManagement() {
     },
     {
       field: 'actions',
-      headerName: 'edit',
+      headerName: 'Edit',
       width: 100,
       headerClassName: 'bg-[#3ea6da] text-white',
       sortable: false,
@@ -158,7 +167,7 @@ export default function CompanyManagement() {
         <Button
           variant="ghost"
           size="icon"
-          onClick={() => handleOpenEdit(params.row as Company)}
+          onClick={() => handleOpenEdit(params.row as ItemGroup)}
         >
           <PencilIcon className="h-4 w-4" />
         </Button>

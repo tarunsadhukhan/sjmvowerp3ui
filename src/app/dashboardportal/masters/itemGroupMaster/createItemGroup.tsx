@@ -4,27 +4,27 @@ import { Dialog, DialogTitle, DialogContent, DialogActions, Button, TextField } 
 interface CreateItemGroupProps {
   open: boolean;
   onClose: () => void;
-  onSubmit: (data: { co_name: string; co_email_id: string; co_id?: number }) => void;
-  initialData?: { co_name: string; co_email_id: string; co_id?: number } | null;
+  onSubmit: (data: { item_grp_code_display: string; item_grp_name_display: string; item_grp_id?: number }) => void;
+  initialData?: { item_grp_code_display: string; item_grp_name_display: string; item_grp_id?: number } | null;
 }
 
 const CreateItemGroup: React.FC<CreateItemGroupProps> = ({ open, onClose, onSubmit, initialData }) => {
-  const [coName, setCoName] = useState('');
-  const [coEmailId, setCoEmailId] = useState('');
+  const [code, setCode] = useState('');
+  const [name, setName] = useState('');
 
   useEffect(() => {
     if (initialData) {
-      setCoName(initialData.co_name || '');
-      setCoEmailId(initialData.co_email_id || '');
+      setCode(initialData.item_grp_code_display || '');
+      setName(initialData.item_grp_name_display || '');
     } else {
-      setCoName('');
-      setCoEmailId('');
+      setCode('');
+      setName('');
     }
   }, [initialData, open]);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    onSubmit({ co_name: coName, co_email_id: coEmailId, co_id: initialData?.co_id });
+    onSubmit({ item_grp_code_display: code, item_grp_name_display: name, item_grp_id: initialData?.item_grp_id });
   };
 
   return (
@@ -34,16 +34,16 @@ const CreateItemGroup: React.FC<CreateItemGroupProps> = ({ open, onClose, onSubm
         <DialogContent>
           <TextField
             label="Item Group Code"
-            value={coName}
-            onChange={e => setCoName(e.target.value)}
+            value={code}
+            onChange={e => setCode(e.target.value)}
             fullWidth
             margin="normal"
             required
           />
           <TextField
             label="Item Group Name"
-            value={coEmailId}
-            onChange={e => setCoEmailId(e.target.value)}
+            value={name}
+            onChange={e => setName(e.target.value)}
             fullWidth
             margin="normal"
             required

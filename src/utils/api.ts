@@ -106,6 +106,10 @@ const apiRoutesconsole = {
     GET_SUBDEPARTMENT_ALL: `${API_URL}/companyAdmin/get_subdepartment_data_all`,
 };
 
-export { apiRoutes, apiRoutesconsole };
+const apiRoutesPortalMasters = {
+    GET_ALL_ITEM_GRP: `${API_URL}/itemMaster/get_all_item_groups`,
+};
+
+export { apiRoutes, apiRoutesconsole, apiRoutesPortalMasters };
 
 // NEXT_PUBLIC_API_BASE_URL=/api

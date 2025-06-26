@@ -45,7 +45,7 @@ const MuiDataGrid: React.FC<MuiDataGridProps> = ({
       <DataGrid
         rows={rows}
         columns={columns}
-        getRowId={(row) => row.co_id}
+        getRowId={(row) => row.id ?? row.co_id}
         loading={showLoadingUntilLoaded ? loading : false}
         paginationModel={paginationModel}
         onPaginationModelChange={onPaginationModelChange}

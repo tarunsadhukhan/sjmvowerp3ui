@@ -17,7 +17,8 @@ import CreateItemGroup from './createItemGroup';
 type ItemGroup =  {
   item_grp_id: number;
   active: number;
-  item_grp_name_display: string;
+  item_grp_name_parent: string;
+  item_sub_grp_name: string;
   item_grp_code_display: string;
   item_type_id: number;
 }
@@ -39,7 +40,7 @@ export default function CompanyManagement() {
   const createEditUrl = (itemGroup: ItemGroup) => {
     const params = new URLSearchParams({
       itemGroupId: itemGroup.item_grp_id.toString(),
-      itemGroupName: encodeURIComponent(itemGroup.item_grp_name_display),
+      itemGroupName: encodeURIComponent(itemGroup.item_grp_name_parent),
     });
 
     return `/dashboardportal/masters/itemGroupMaster/createItemGroup?${params.toString()}`;
@@ -135,7 +136,11 @@ export default function CompanyManagement() {
 
   // Handle dialog submit
   const handleDialogSubmit = (data: { item_grp_code_display: string; item_grp_name_display: string; item_grp_id?: number }) => {
-    console.log('Submitted:', data);
+    console.log('Submitted:', {
+      item_grp_code_display: data.item_grp_code_display,
+      item_grp_name_display: data.item_grp_name_display,
+      item_grp_id: data.item_grp_id,
+    });
     handleDialogClose();
     fetchItemGrps(); // reload table
   };
@@ -150,12 +155,31 @@ export default function CompanyManagement() {
       headerClassName: 'bg-[#3ea6da] text-white',
     },
     { 
-      field: 'item_grp_name_display', 
-      headerName: 'Item Group Name', 
+        field: 'item_grp_name_parent', 
+        headerName: 'Item Group Name', 
+        flex: 1,
+        minWidth: 200,
+        headerClassName: 'bg-[#3ea6da] text-white',
+    },
+    { 
+      field: 'item_sub_grp_name', 
+      headerName: 'Item Sub Group Name', 
       flex: 1,
       minWidth: 200,
       headerClassName: 'bg-[#3ea6da] text-white',
     },
+    { 
+      field: 'active', 
+      headerName: 'Active', 
+      width: 100,
+      headerClassName: 'bg-[#3ea6da] text-white',
+      renderCell: (params: GridRenderCellParams) => (
+        <span className={params.value ? "text-green-600" : "text-red-600"}>
+          {params.value ? "Yes" : "No"}
+        </span>
+      ),
+    },
+
     {
       field: 'actions',
       headerName: 'Edit',
@@ -191,7 +215,11 @@ export default function CompanyManagement() {
           open={dialogOpen}
           onClose={handleDialogClose}
           onSubmit={handleDialogSubmit}
-          initialData={editData}
+          initialData={editData ? {
+            item_grp_code_display: editData.item_grp_code_display,
+            item_grp_name_display: editData.item_grp_name_parent,
+            item_grp_id: editData.item_grp_id
+          } : null}
         />
         <Box sx={{ width: '100%', mb: 2 }}>
           <TextField

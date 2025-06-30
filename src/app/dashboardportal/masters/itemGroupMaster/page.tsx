@@ -1,14 +1,13 @@
 "use client";
 
 import { Button } from "@/components/ui/button";
-import { PencilIcon, Search } from "lucide-react";
-import { apiRoutesPortalMasters, apiRoutesconsole } from "@/utils/api";
+import { Search } from "lucide-react";
+import { apiRoutesPortalMasters } from "@/utils/api";
 import { fetchWithCookie } from "@/utils/apiClient2";
 import MuiDataGrid from '@/components/ui/muiDataGrid';
-import { Box, TextField, InputAdornment } from '@mui/material';
+import { Box, TextField, InputAdornment, Switch, Snackbar, Alert } from '@mui/material';
 import { useState, useEffect } from 'react';
 import { GridColDef, GridPaginationModel, GridRenderCellParams } from '@mui/x-data-grid';
-import CreateItemGroup from './createItemGroup';
 
 
 
@@ -33,18 +32,7 @@ export default function CompanyManagement() {
   const [totalRows, setTotalRows] = useState(0);
   const [searchQuery, setSearchQuery] = useState('');
   const [searchTimeout, setSearchTimeout] = useState<NodeJS.Timeout | null>(null);
-  const [dialogOpen, setDialogOpen] = useState(false);
-  const [editData, setEditData] = useState<ItemGroup | null>(null);
-
-  // Helper function to create URL for editing
-  const createEditUrl = (itemGroup: ItemGroup) => {
-    const params = new URLSearchParams({
-      itemGroupId: itemGroup.item_grp_id.toString(),
-      itemGroupName: encodeURIComponent(itemGroup.item_grp_name_parent),
-    });
-
-    return `/dashboardportal/masters/itemGroupMaster/createItemGroup?${params.toString()}`;
-  };
+  const [snackbar, setSnackbar] = useState<{ open: boolean; message: string; severity: 'success' | 'error' }>({ open: false, message: '', severity: 'success' });
 
   // Fetch companies from API with pagination and search
   const fetchItemGrps = async () => {
@@ -74,8 +62,12 @@ export default function CompanyManagement() {
       }
 
       // API returns data in { data: [...], total: number } format
-      // Add 'id' property for MUI DataGrid
-      const mappedRows = (data.data || []).map((row: any) => ({ ...row, id: row.item_grp_id }));
+      // Add 'id' property for MUI DataGrid and ensure 'active' is a number
+      const mappedRows = (data.data || []).map((row: any) => ({
+        ...row,
+        id: row.item_grp_id,
+        active: typeof row.active === 'string' ? Number(row.active) : row.active,
+      }));
       setRows(mappedRows);
       setTotalRows(data.total || 0);
     } catch (error) {
@@ -118,31 +110,31 @@ export default function CompanyManagement() {
 
   // Open dialog for create
   const handleOpenCreate = () => {
-    setEditData(null);
-    setDialogOpen(true);
+    window.location.href = "/dashboardportal/masters/itemGroupMaster/CreateItemGroup";
   };
 
-  // Open dialog for edit
-  const handleOpenEdit = (itemGroup: ItemGroup) => {
-    setEditData(itemGroup);
-    setDialogOpen(true);
-  };
-
-  // Handle dialog close
-  const handleDialogClose = () => {
-    setDialogOpen(false);
-    setEditData(null);
-  };
-
-  // Handle dialog submit
-  const handleDialogSubmit = (data: { item_grp_code_display: string; item_grp_name_display: string; item_grp_id?: number }) => {
-    console.log('Submitted:', {
-      item_grp_code_display: data.item_grp_code_display,
-      item_grp_name_display: data.item_grp_name_display,
-      item_grp_id: data.item_grp_id,
-    });
-    handleDialogClose();
-    fetchItemGrps(); // reload table
+  // Toggle active status handler
+  const handleToggleActive = async (item_grp_id: number, currentActive: number) => {
+    setLoading(true);
+    try {
+      const selectedCompany = localStorage.getItem('sidebar_selectedCompany');
+      const co_id = selectedCompany ? JSON.parse(selectedCompany).co_id : '';
+      const { data, error } = await fetchWithCookie(
+        apiRoutesPortalMasters.UPDATE_ITEM_GRP_ACTIVE,
+        'POST',
+        { item_grp_id, active: currentActive ? 0 : 1, co_id }
+      );
+      if (error) {
+        setSnackbar({ open: true, message: error, severity: 'error' });
+      } else {
+        setSnackbar({ open: true, message: 'Status updated successfully', severity: 'success' });
+        fetchItemGrps(); // Refresh data
+      }
+    } catch (err: any) {
+      setSnackbar({ open: true, message: err.message || 'Failed to update status', severity: 'error' });
+    } finally {
+      setLoading(false);
+    }
   };
 
   // Column definitions for the DataGrid
@@ -168,33 +160,18 @@ export default function CompanyManagement() {
       minWidth: 200,
       headerClassName: 'bg-[#3ea6da] text-white',
     },
-    { 
-      field: 'active', 
-      headerName: 'Active', 
-      width: 100,
-      headerClassName: 'bg-[#3ea6da] text-white',
-      renderCell: (params: GridRenderCellParams) => (
-        <span className={params.value ? "text-green-600" : "text-red-600"}>
-          {params.value ? "Yes" : "No"}
-        </span>
-      ),
-    },
-
     {
-      field: 'actions',
-      headerName: 'Edit',
-      width: 100,
+      field: 'active',
+      headerName: 'Active',
+      width: 120,
       headerClassName: 'bg-[#3ea6da] text-white',
-      sortable: false,
-      filterable: false,
       renderCell: (params: GridRenderCellParams) => (
-        <Button
-          variant="ghost"
-          size="icon"
-          onClick={() => handleOpenEdit(params.row as ItemGroup)}
-        >
-          <PencilIcon className="h-4 w-4" />
-        </Button>
+        <Switch
+          checked={!!params.value}
+          color="primary"
+          onChange={() => handleToggleActive(params.row.item_grp_id, params.value)}
+          disabled={loading}
+        />
       ),
     },
   ];
@@ -211,16 +188,6 @@ export default function CompanyManagement() {
             + Create Item Group
           </Button>
         </div>
-        <CreateItemGroup
-          open={dialogOpen}
-          onClose={handleDialogClose}
-          onSubmit={handleDialogSubmit}
-          initialData={editData ? {
-            item_grp_code_display: editData.item_grp_code_display,
-            item_grp_name_display: editData.item_grp_name_parent,
-            item_grp_id: editData.item_grp_id
-          } : null}
-        />
         <Box sx={{ width: '100%', mb: 2 }}>
           <TextField
             placeholder="Search item groups..."
@@ -247,6 +214,16 @@ export default function CompanyManagement() {
           loading={loading}
           showLoadingUntilLoaded={true}
         />
+        <Snackbar
+          open={snackbar.open}
+          autoHideDuration={4000}
+          onClose={() => setSnackbar({ ...snackbar, open: false })}
+          anchorOrigin={{ vertical: 'top', horizontal: 'center' }}
+        >
+          <Alert severity={snackbar.severity} onClose={() => setSnackbar({ ...snackbar, open: false })} sx={{ width: '100%' }}>
+            {snackbar.message}
+          </Alert>
+        </Snackbar>
       </div>
     </div>
   );

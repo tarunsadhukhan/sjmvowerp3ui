@@ -110,7 +110,8 @@ const apiRoutesPortalMasters = {
     GET_ALL_ITEM_GRP: `${API_URL}/itemMaster/get_all_item_groups`,
     CREATE_ITEM_GRP_SETUP: `${API_URL}/itemMaster/createItemGroupSetup`,
     CREATE_ITEM_GRP: `${API_URL}/itemMaster/createItemGroup`,
-
+    EDIT_ITEM_GRP: `${API_URL}/itemMaster/editItemGroup`,
+    UPDATE_ITEM_GRP_ACTIVE: `${API_URL}/itemMaster/updateItemGroupActive`,
 };
 
 export { apiRoutes, apiRoutesconsole, apiRoutesPortalMasters };

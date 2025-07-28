@@ -1,3 +1,6 @@
+// For more info, see https://github.com/storybookjs/eslint-plugin-storybook#configuration-flat-config-format
+import storybook from "eslint-plugin-storybook";
+
 // import { dirname } from "path";
 // import { fileURLToPath } from "url";
 // import { FlatCompat } from "@eslint/eslintrc";
@@ -31,7 +34,6 @@ const compat = new FlatCompat({
 /** final config */
 const eslintConfig = [
   ...compat.extends("next/core-web-vitals", "next/typescript"),
-
   // Add this ruleset to restrict browser globals in server components
   {
     files: ["app/**/*.{js,ts,jsx,tsx}"],
@@ -53,7 +55,6 @@ const eslintConfig = [
       ],
     },
   },
-
   // Optional: Add react-server plugin to enforce server/client boundaries
   {
     plugins: {
@@ -63,6 +64,7 @@ const eslintConfig = [
       "react-server/no-browser-globals": "error",
     },
   },
+  ...storybook.configs["flat/recommended"]
 ];
 
 export default eslintConfig;

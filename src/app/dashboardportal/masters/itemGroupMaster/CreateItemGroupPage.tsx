@@ -120,6 +120,23 @@ export default function CreateItemGroupPage({ open = true, onClose }: ItemGroupF
     setFilteredParentGroups(filtered);
   }, [setupData, parentGroupSearch]);
 
+  // Duplicate validation
+  const [duplicateError, setDuplicateError] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (!setupData?.item_groups) return;
+    let errorMsg = null;
+    if (form.item_grp_code) {
+      const codeExists = setupData.item_groups.some((g: any) => g.item_grp_code_display === form.item_grp_code);
+      if (codeExists) errorMsg = 'Item Group Code already exists.';
+    }
+    if (!errorMsg && form.item_grp_name) {
+      const nameExists = setupData.item_groups.some((g: any) => g.item_grp_name_display === form.item_grp_name);
+      if (nameExists) errorMsg = 'Item Group Name already exists.';
+    }
+    setDuplicateError(errorMsg);
+  }, [form.item_grp_code, form.item_grp_name, setupData]);
+
   // Cancel handler: use onClose if provided, else redirect
   const handleCancel = () => {
     if (onClose) {
@@ -202,13 +219,14 @@ export default function CreateItemGroupPage({ open = true, onClose }: ItemGroupF
           label="GST Applicable"
         />
       )}
+      {duplicateError && <FormHelperText error>{duplicateError}</FormHelperText>}
       {error && <FormHelperText error>{error}</FormHelperText>}
       <Box sx={{ mt: 2, display: 'flex', justifyContent: 'flex-end' }}>
         {/* Always show Cancel button in dialog mode */}
         {typeof open === 'boolean' && (
           <Button onClick={handleCancel} color="secondary" sx={{ mr: 2 }} disabled={submitting}>Cancel</Button>
         )}
-        <Button type="submit" variant="contained" color="primary" disabled={submitting || loading}>
+        <Button type="submit" variant="contained" color="primary" disabled={submitting || loading || !!duplicateError}>
           {submitting ? <CircularProgress size={20} /> : "Create"}
         </Button>
       </Box>

@@ -113,6 +113,7 @@ const apiRoutesPortalMasters = {
     EDIT_ITEM_GRP: `${API_URL}/itemMaster/editItemGroup`,
     UPDATE_ITEM_GRP_ACTIVE: `${API_URL}/itemMaster/updateItemGroupActive`,
     ITEM_GROUP_DETAILS: `${API_URL}/itemMaster/itemGroupDetails`, // Added for details dialog
+    GET_ITEM_TABLE: `${API_URL}/itemMaster/get_item_table`,
 };
 
 export { apiRoutes, apiRoutesconsole, apiRoutesPortalMasters };

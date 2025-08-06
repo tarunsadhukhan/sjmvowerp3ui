@@ -8,6 +8,7 @@ import MuiDataGrid from '@/components/ui/muiDataGrid';
 import { Box, TextField, InputAdornment, Switch, Snackbar, Alert, Dialog, DialogTitle, DialogContent, DialogActions, CircularProgress } from '@mui/material';
 import { useState, useEffect } from 'react';
 import { GridColDef, GridPaginationModel, GridRenderCellParams } from '@mui/x-data-grid';
+import CreateItemGroupPage from "@/app/dashboardportal/masters/itemGroupMaster/CreateItemGroupPage";
 
 
 
@@ -112,8 +113,13 @@ export default function CompanyManagement() {
   };
 
   // Open dialog for create
+  const [createDialogOpen, setCreateDialogOpen] = useState(false);
   const handleOpenCreate = () => {
-    window.location.href = "/dashboardportal/masters/itemGroupMaster/CreateItemGroup";
+    setCreateDialogOpen(true);
+  };
+  const handleCloseCreateDialog = () => {
+    setCreateDialogOpen(false);
+    fetchItemGrps(); // Refresh grid after create
   };
 
   // Toggle active status handler
@@ -226,12 +232,14 @@ export default function CompanyManagement() {
         <div className="mx-auto max-w-7xl">
           <div className="mb-8 flex items-center justify-between">
             <h1 className="text-2xl font-bold text-[#0C3C60]">Item Group Master</h1>
-            <Button
-              className="btn-primary"
-              onClick={handleOpenCreate}
-            >
-              + Create Item Group
-            </Button>
+          <Button
+            className="btn-primary"
+            onClick={handleOpenCreate}
+          >
+            + Create Item Group
+          </Button>
+          {/* Create Item Group Dialog */}
+          <CreateItemGroupPage open={createDialogOpen} onClose={handleCloseCreateDialog} />
           </div>
           <Box sx={{ width: '100%', mb: 2 }}>
             <TextField

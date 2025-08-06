@@ -126,23 +126,39 @@ export default function CreateItemGroupPage({ open = true, onClose }: ItemGroupF
   useEffect(() => {
     if (!setupData?.item_groups) return;
     let errorMsg = null;
-    if (form.item_grp_code) {
+    // If parent is selected, only check for combined code duplicate
+    if (form.item_grp_code && form.parent_grp_id) {
+      const parent = setupData.item_groups.find((g: any) => g.item_grp_id === form.parent_grp_id);
+      if (parent && parent.item_grp_code_display) {
+        const combinedCode = `${parent.item_grp_code_display}-${form.item_grp_code}`;
+        const combinedCodeExists = setupData.item_groups.some((g: any) => g.item_grp_code_display === combinedCode);
+        if (combinedCodeExists) errorMsg = 'Item Group Code already exists.';
+      }
+    } else if (form.item_grp_code) {
+      // Only check direct code if no parent
       const codeExists = setupData.item_groups.some((g: any) => g.item_grp_code_display === form.item_grp_code);
       if (codeExists) errorMsg = 'Item Group Code already exists.';
     }
-    if (!errorMsg && form.item_grp_name) {
+    // If parent is selected, only check for combined name duplicate
+    if (!errorMsg && form.item_grp_name && form.parent_grp_id) {
+      const parent = setupData.item_groups.find((g: any) => g.item_grp_id === form.parent_grp_id);
+      if (parent && parent.item_grp_name_display) {
+        const combinedName = `${parent.item_grp_name_display}-${form.item_grp_name}`;
+        const combinedNameExists = setupData.item_groups.some((g: any) => g.item_grp_name_display === combinedName);
+        if (combinedNameExists) errorMsg = 'Item Group Name already exists.';
+      }
+    } else if (!errorMsg && form.item_grp_name) {
+      // Only check direct name if no parent
       const nameExists = setupData.item_groups.some((g: any) => g.item_grp_name_display === form.item_grp_name);
       if (nameExists) errorMsg = 'Item Group Name already exists.';
     }
     setDuplicateError(errorMsg);
-  }, [form.item_grp_code, form.item_grp_name, setupData]);
+  }, [form.item_grp_code, form.item_grp_name, form.parent_grp_id, setupData]);
 
   // Cancel handler: use onClose if provided, else redirect
   const handleCancel = () => {
     if (onClose) {
       onClose();
-    } else {
-      window.location.href = "/dashboardportal/masters/itemGroupMaster";
     }
   };
 
@@ -247,11 +263,17 @@ export default function CreateItemGroupPage({ open = true, onClose }: ItemGroupF
         </Box>
       )}
       {/* Success Dialog */}
-      <MuiDialog open={successDialogOpen} onClose={() => {}} maxWidth="xs" fullWidth>
+      <MuiDialog open={successDialogOpen} onClose={() => {
+        setSuccessDialogOpen(false);
+        if (onClose) onClose();
+      }} maxWidth="xs" fullWidth>
         <MuiDialogTitle>Success</MuiDialogTitle>
         <MuiDialogContent>Item created successfully.</MuiDialogContent>
         <MuiDialogActions>
-          <Button onClick={() => { window.location.href = "/dashboardportal/masters/itemGroupMaster"; }} autoFocus>Okay</Button>
+          <Button onClick={() => {
+            setSuccessDialogOpen(false);
+            if (onClose) onClose();
+          }} autoFocus>Okay</Button>
         </MuiDialogActions>
       </MuiDialog>
     </>

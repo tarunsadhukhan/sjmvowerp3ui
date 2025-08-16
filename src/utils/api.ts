@@ -114,6 +114,7 @@ const apiRoutesPortalMasters = {
     UPDATE_ITEM_GRP_ACTIVE: `${API_URL}/itemMaster/updateItemGroupActive`,
     ITEM_GROUP_DETAILS: `${API_URL}/itemMaster/itemGroupDetails`, // Added for details dialog
     GET_ITEM_TABLE: `${API_URL}/itemMaster/get_item_table`,
+    ITEM_CREATE_SETUP: `${API_URL}/itemMaster/item_create_setup`,
 };
 
 export { apiRoutes, apiRoutesconsole, apiRoutesPortalMasters };

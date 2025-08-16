@@ -2,7 +2,9 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
-import { Box, Button, TextField, Snackbar, Alert, Dialog, DialogTitle, DialogContent, DialogActions, Tooltip } from "@mui/material";
+import { Button } from "@/components/ui/button";
+import { Box, TextField, Snackbar, Alert, Tooltip, Dialog, DialogTitle, DialogContent, DialogActions } from "@mui/material";
+import CreateItem from "./createItem";
 import MuiDataGrid from "@/components/ui/muiDataGrid";
 import { GridColDef, GridPaginationModel, GridRenderCellParams } from "@mui/x-data-grid";
 import { fetchWithCookie } from "@/utils/apiClient2";
@@ -16,8 +18,15 @@ type Item = {
   active: number;
   [key: string]: any;
 };
-
 export default function ItemMasterPage() {
+  const [createDialogOpen, setCreateDialogOpen] = useState(false);
+  const handleOpenCreate = () => {
+    setCreateDialogOpen(true);
+  };
+  const handleCloseCreateDialog = () => {
+    setCreateDialogOpen(false);
+    fetchItems(); // Optionally refresh grid after create
+  };
   const [rows, setRows] = useState<Item[]>([]);
   const [loading, setLoading] = useState(true);
   const [paginationModel, setPaginationModel] = useState({
@@ -93,10 +102,8 @@ export default function ItemMasterPage() {
     setSearchTimeout(timeout);
   };
 
-  // Open dialog for create
-  const handleOpenCreate = () => {
-    window.location.href = "/dashboardportal/masters/itemMaster/CreateItem";
-  };
+  // Open dialog for create (handled by CreateItem component)
+  // ...existing code...
 
   // Handler to open details dialog and fetch data
   const handleOpenDetails = async (item_id: number) => {
@@ -182,9 +189,13 @@ export default function ItemMasterPage() {
         <div className="mx-auto max-w-7xl">
           <div className="mb-8 flex items-center justify-between">
             <h1 className="text-2xl font-bold text-[#0C3C60]">Item Master</h1>
-            <Button className="btn-primary" onClick={handleOpenCreate}>
-              + Create Item
-            </Button>
+          <Button
+            className="btn-primary"
+            onClick={handleOpenCreate}
+          >
+            + Create Item
+          </Button>
+          <CreateItem open={createDialogOpen} onClose={handleCloseCreateDialog} />
           </div>
           <Box sx={{ width: "100%", mb: 2 }}>
             <TextField

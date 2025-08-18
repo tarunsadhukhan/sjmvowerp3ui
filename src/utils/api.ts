@@ -115,6 +115,11 @@ const apiRoutesPortalMasters = {
     ITEM_GROUP_DETAILS: `${API_URL}/itemMaster/itemGroupDetails`, // Added for details dialog
     GET_ITEM_TABLE: `${API_URL}/itemMaster/get_item_table`,
     ITEM_CREATE_SETUP: `${API_URL}/itemMaster/item_create_setup`,
+    ITEM_CREATE: `${API_URL}/itemMaster/item_create`,
+    ITEM_EDIT_VIEW: `${API_URL}/itemMaster/item_edit_view`,
+    ITEM_EDIT: `${API_URL}/itemMaster/item_edit`,
+    ITEM_VIEW: `${API_URL}/itemMaster/item_view`,
+    GET_WAREHOUSE_TABLE: `${API_URL}/itemMaster/get_warehouse_table`,
 };
 
 export { apiRoutes, apiRoutesconsole, apiRoutesPortalMasters };

@@ -3,7 +3,8 @@
 
 import React, { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
-import { Box, TextField, Snackbar, Alert, Tooltip, Dialog, DialogTitle, DialogContent, DialogActions } from "@mui/material";
+import { Box, TextField, Snackbar, Alert, Tooltip, Dialog, DialogTitle, DialogContent, DialogActions, IconButton, Stack, Button as MuiButton } from "@mui/material";
+import { Eye, Edit } from 'lucide-react';
 import CreateItem from "./createItem";
 import MuiDataGrid from "@/components/ui/muiDataGrid";
 import { GridColDef, GridPaginationModel, GridRenderCellParams } from "@mui/x-data-grid";
@@ -40,6 +41,8 @@ export default function ItemMasterPage() {
   const [detailsDialogOpen, setDetailsDialogOpen] = useState(false);
   const [detailsLoading, setDetailsLoading] = useState(false);
   const [detailsData, setDetailsData] = useState<any>(null);
+  const [editDialogOpen, setEditDialogOpen] = useState(false);
+  const [editItemData, setEditItemData] = useState<any>(null);
 
   // Fetch items from API with pagination and search
   const fetchItems = async () => {
@@ -122,6 +125,13 @@ export default function ItemMasterPage() {
     }
   };
 
+  // Handler to open edit dialog (placeholder)
+  const handleOpenEdit = (item_id: number) => {
+    const row = rows.find(r => r.id === item_id) || null;
+    setEditItemData(row);
+    setEditDialogOpen(true);
+  };
+
   // Column definitions for the DataGrid
   const columns: GridColDef[] = [
     {
@@ -181,6 +191,28 @@ export default function ItemMasterPage() {
         <span>{params.value ? "Yes" : "No"}</span>
       ),
     },
+    {
+      field: "actions",
+      headerName: "Actions",
+      width: 120,
+      sortable: false,
+      filterable: false,
+      headerClassName: "bg-[#3ea6da] text-white",
+      renderCell: (params: GridRenderCellParams) => (
+        <Stack direction="row" spacing={0.5}>
+          <Tooltip title="View">
+            <IconButton size="small" onClick={() => handleOpenDetails(params.row.id)}>
+              <Eye size={16} />
+            </IconButton>
+          </Tooltip>
+          <Tooltip title="Edit">
+            <IconButton size="small" onClick={() => handleOpenEdit(params.row.id)}>
+              <Edit size={16} />
+            </IconButton>
+          </Tooltip>
+        </Stack>
+      ),
+    },
   ];
 
   return (
@@ -231,7 +263,28 @@ export default function ItemMasterPage() {
           )}
         </DialogContent>
         <DialogActions>
-          <Button onClick={() => setDetailsDialogOpen(false)} autoFocus>Okay</Button>
+          <MuiButton onClick={() => setDetailsDialogOpen(false)} autoFocus>Okay</MuiButton>
+        </DialogActions>
+      </Dialog>
+
+      {/* Edit Dialog (placeholder) */}
+      <Dialog open={editDialogOpen} onClose={() => setEditDialogOpen(false)} maxWidth="sm" fullWidth>
+        <DialogTitle>Edit Item</DialogTitle>
+        <DialogContent>
+          {editItemData ? <pre>{JSON.stringify(editItemData, null, 2)}</pre> : <div>No item selected</div>}
+        </DialogContent>
+        <DialogActions>
+          <MuiButton onClick={() => setEditDialogOpen(false)}>Cancel</MuiButton>
+          <MuiButton
+            variant="contained"
+            onClick={() => {
+              console.log('Edit requested for item:', editItemData?.id);
+              // Placeholder: wire actual edit flow here (open edit form, navigate, etc.)
+              setEditDialogOpen(false);
+            }}
+          >
+            Start Edit
+          </MuiButton>
         </DialogActions>
       </Dialog>
     </>

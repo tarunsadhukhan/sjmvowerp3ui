@@ -10,15 +10,27 @@ interface MinMaxMappingTableProps {
     min_order_qty: number | null;
     lead_time: number | null;
   }>;
+  onChange?: (rows: Array<{
+    branch_id: number;
+    branch_name: string;
+    minqty: number | null;
+    maxqty: number | null;
+    min_order_qty: number | null;
+    lead_time: number | null;
+  }>) => void;
 }
 
-const MinMaxMappingTable: React.FC<MinMaxMappingTableProps> = ({ mapping }) => {
+const MinMaxMappingTable: React.FC<MinMaxMappingTableProps> = ({ mapping, onChange }) => {
   const [rows, setRows] = React.useState(mapping);
 
   const handleChange = (index: number, field: string, value: string) => {
-    setRows(prev => prev.map((row, i) =>
-      i === index ? { ...row, [field]: value === "" ? null : Number(value) } : row
-    ));
+    setRows(prev => {
+      const next = prev.map((row, i) =>
+        i === index ? { ...row, [field]: value === "" ? null : Number(value) } : row
+      );
+      onChange?.(next);
+      return next;
+    });
   };
 
   return (

@@ -103,17 +103,20 @@ function displayValue(field: Field, value: any): React.ReactNode {
 	return String(value ?? "");
 }
 
-export const MuiForm: React.FC<MuiFormProps> = ({
-	schema,
-	initialValues,
-	mode: modeProp,
-	hideModeToggle,
-	onSubmit,
-	onModeChange,
-	submitLabel,
-	cancelLabel,
-	onCancel,
-}) => {
+export const MuiForm = React.forwardRef(function MuiForm(
+	{
+		schema,
+		initialValues,
+		mode: modeProp,
+		hideModeToggle,
+		onSubmit,
+		onModeChange,
+		submitLabel,
+		cancelLabel,
+		onCancel,
+	}: MuiFormProps,
+	ref
+) {
 	const [mode, setMode] = React.useState<MuiFormMode>(modeProp ?? "create");
 	const [values, setValues] = React.useState<Record<string, any>>(
 		getInitialValues(schema, initialValues)
@@ -168,6 +171,11 @@ export const MuiForm: React.FC<MuiFormProps> = ({
 		}
 	};
 
+	// expose submit to parent via ref
+	React.useImperativeHandle(ref, () => ({
+		submit,
+	}));
+
 	const renderField = (field: Field) => {
 		if (!isVisible(field, mode)) return null;
 		const disabled = getDisabled(field, values, mode);
@@ -197,8 +205,7 @@ export const MuiForm: React.FC<MuiFormProps> = ({
 
 				return (
 					<Box key={field.name} sx={{ ...widthSx }}>
-				{mode === "view" && field.type !== "checkbox" && field.type !== "multiselect" &&
-				field.type !== "select" ? (
+				{mode === "view" && field.type !== "checkbox" ? (
 					<Box>
 						<Typography variant="caption" color="text.secondary">
 							{field.label}
@@ -239,31 +246,27 @@ export const MuiForm: React.FC<MuiFormProps> = ({
 						)}
 					</FormControl>
 				) : field.type === "select" ? (
-					<FormControl fullWidth size="small" disabled={disabled} error={Boolean(errors[field.name])}>
-						<InputLabel id={`${field.name}-label`}>{field.label}{field.required ? " *" : ""}</InputLabel>
-						<Select
-							labelId={`${field.name}-label`}
-							value={value ?? ""}
-							label={`${field.label}${field.required ? " *" : ""}`}
-							onChange={(e) => {
-								console.log(`Select change for ${field.name}:`, e.target.value);
-								handleChange(field.name, e.target.value);
-							}}
-						>
-							<MenuItem value="">
-								<em>None</em>
-							</MenuItem>
-							{(field.options ?? []).map((opt) => {
-								console.log(`Rendering MenuItem for ${field.name}:`, opt);
-								return (
-									<MenuItem key={String(opt.value)} value={opt.value as any}>
-										{opt.label}
-									</MenuItem>
-								);
-							})}
-						</Select>
-						<FormHelperText>{errors[field.name] || field.helperText}</FormHelperText>
-					</FormControl>
+					// single-select rendered as Autocomplete for autofill/filtering
+					<Autocomplete
+						options={(field.options ?? []) as Option[]}
+						getOptionLabel={(opt) => (opt && typeof opt === 'object' && 'label' in opt ? (opt as Option).label : String(opt ?? ''))}
+						isOptionEqualToValue={(o, v) => !!o && !!v && (o as Option).value === (v as Option).value}
+						value={((field.options ?? []) as Option[]).find((o) => String(o.value) === String(value)) ?? null}
+						onChange={(_, newOpt) => handleChange(field.name, (newOpt as Option | null)?.value ?? "")}
+						disableClearable={Boolean(field.required)}
+						disabled={disabled}
+						noOptionsText={"No options"}
+						renderInput={(params) => (
+							<TextField
+								{...params}
+								label={`${field.label}${field.required ? " *" : ""}`}
+								fullWidth
+								size="small"
+								helperText={errors[field.name] || field.helperText}
+								error={Boolean(errors[field.name])}
+							/>
+						)}
+					/>
 				) : field.type === "multiselect" ? (
 					<Autocomplete
 						sx={{ width: '100%' }}
@@ -344,7 +347,7 @@ export const MuiForm: React.FC<MuiFormProps> = ({
 			)}
 		</Box>
 	);
-};
+});
 
 export default MuiForm;
 

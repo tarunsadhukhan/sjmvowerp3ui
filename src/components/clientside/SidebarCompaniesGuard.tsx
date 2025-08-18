@@ -2,7 +2,7 @@
 
 import React from 'react';
 import { usePathname, useRouter } from 'next/navigation';
-import { Box, CircularProgress } from '@mui/material';
+// no UI needed while initializing; allow flicker
 
 function normalize(p?: string) {
   return (p ?? '').replace(/^\/+|\/+$/g, '').toLowerCase();
@@ -67,17 +67,8 @@ export default function SidebarCompaniesGuard() {
     }
   }, [ready, pathname, menuPaths, router]);
 
-  // show a brief spinner while we initialize to avoid UI flicker
-  if (!ready) {
-    if (pathname?.startsWith('/dashboardportal/')) {
-      return (
-        <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: '40vh' }}>
-          <CircularProgress />
-        </Box>
-      );
-    }
-    return null;
-  }
+  // while initializing, return null (allow a brief flicker)
+  if (!ready) return null;
 
   return null;
 }

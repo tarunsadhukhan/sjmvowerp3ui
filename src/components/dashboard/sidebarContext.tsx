@@ -124,13 +124,25 @@ export const SidebarProvider = ({ children }: { children: ReactNode }) => {
   const handleCompanyChange = useCallback((companyId: number) => {
     const company = companies.find(c => c.co_id === companyId);
     if (company) {
+      // only reload if the company actually changed
+      const prevId = selectedCompany?.co_id;
       setSelectedCompany(company);
-      setSelectedBranches(company.branches.length > 0 ? [company.branches[0].branch_id] : []);
+      const defaultBranches = company.branches.length > 0 ? [company.branches[0].branch_id] : [];
+      setSelectedBranches(defaultBranches);
+      if (prevId !== companyId) {
+        // reload to refresh data for the newly selected company
+        setTimeout(() => window.location.reload(), 50);
+      }
     }
   }, [companies]);
 
   const handleBranchChange = useCallback((branchIds: number[]) => {
+    // only reload when branches actually change
+    const same = branchIds.length === selectedBranches.length && branchIds.every(id => selectedBranches.includes(id));
     setSelectedBranches(branchIds);
+    if (!same) {
+      setTimeout(() => window.location.reload(), 50);
+    }
   }, []);
 
   return (

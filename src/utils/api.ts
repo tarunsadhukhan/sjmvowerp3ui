@@ -120,6 +120,9 @@ const apiRoutesPortalMasters = {
     ITEM_EDIT: `${API_URL}/itemMaster/item_edit`,
     ITEM_VIEW: `${API_URL}/itemMaster/item_view`,
     GET_WAREHOUSE_TABLE: `${API_URL}/itemMaster/get_warehouse_table`,
+    ITEM_MAKE_TABLE: `${API_URL}/itemMaster/item_make_table`,
+    ITEM_MAKE_CREATE_SETUP: `${API_URL}/itemMaster/item_make_create_setup`,
+    ITEM_MAKE_CREATE: `${API_URL}/itemMaster/item_make_create`
 };
 
 export { apiRoutes, apiRoutesconsole, apiRoutesPortalMasters };

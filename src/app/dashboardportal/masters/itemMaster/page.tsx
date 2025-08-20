@@ -4,7 +4,7 @@
 import React, { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Box, TextField, Snackbar, Alert, Tooltip, Dialog, DialogTitle, DialogContent, DialogActions, IconButton, Stack, Button as MuiButton } from "@mui/material";
-import { Eye, Edit } from 'lucide-react';
+import { Edit } from 'lucide-react';
 import CreateItem from "./createItem";
 import MuiDataGrid from "@/components/ui/muiDataGrid";
 import { GridColDef, GridPaginationModel, GridRenderCellParams } from "@mui/x-data-grid";
@@ -38,11 +38,12 @@ export default function ItemMasterPage() {
   const [searchQuery, setSearchQuery] = useState("");
   const [searchTimeout, setSearchTimeout] = useState<NodeJS.Timeout | null>(null);
   const [snackbar, setSnackbar] = useState<{ open: boolean; message: string; severity: "success" | "error" }>({ open: false, message: "", severity: "success" });
-  const [detailsDialogOpen, setDetailsDialogOpen] = useState(false);
-  const [detailsLoading, setDetailsLoading] = useState(false);
-  const [detailsData, setDetailsData] = useState<any>(null);
+  const [viewDialogOpen, setViewDialogOpen] = useState(false);
+  const [viewLoading, setViewLoading] = useState(false);
+  const [viewData, setViewData] = useState<any>(null);
   const [editDialogOpen, setEditDialogOpen] = useState(false);
   const [editItemData, setEditItemData] = useState<any>(null);
+  const [editItemId, setEditItemId] = useState<number | null>(null);
 
   // Fetch items from API with pagination and search
   const fetchItems = async () => {
@@ -108,28 +109,48 @@ export default function ItemMasterPage() {
   // Open dialog for create (handled by CreateItem component)
   // ...existing code...
 
-  // Handler to open details dialog and fetch data
-  const handleOpenDetails = async (item_id: number) => {
-    setDetailsDialogOpen(true);
-    setDetailsLoading(true);
-    setDetailsData(null);
+  // Handler to open view dialog and fetch edit/setup payload then show CreateItem in view mode
+  const handleOpenView = async (item_id: number) => {
+    setViewDialogOpen(true);
+    setViewLoading(true);
+    setViewData(null);
     try {
-      // You may need to implement a details API for items if not present
-      // For now, just show row data
-      const row = rows.find(r => r.id === item_id);
-      setDetailsData(row || { error: "No details found" });
+      const selectedCompany = localStorage.getItem("sidebar_selectedCompany");
+      const co_id = selectedCompany ? JSON.parse(selectedCompany).co_id : "";
+      const params = new URLSearchParams({ item_id: String(item_id), co_id: co_id });
+      const apiUrl = `${apiRoutesPortalMasters.ITEM_EDIT_SETUP}?${params}`;
+      const { data, error } = await fetchWithCookie(apiUrl, 'GET') as any;
+      if (error || !data) throw new Error(error || 'Failed to fetch view payload');
+      setViewData(data);
     } catch (err: any) {
-      setDetailsData({ error: err.message || "Failed to fetch details" });
+      setSnackbar({ open: true, message: err.message || 'Failed to load item for view', severity: 'error' });
+      setViewDialogOpen(false);
     } finally {
-      setDetailsLoading(false);
+      setViewLoading(false);
     }
   };
 
-  // Handler to open edit dialog (placeholder)
-  const handleOpenEdit = (item_id: number) => {
-    const row = rows.find(r => r.id === item_id) || null;
-    setEditItemData(row);
+  // Handler to open edit dialog: fetch ITEM_EDIT_SETUP and open the edit form with prefetched data
+  const handleOpenEdit = async (item_id: number) => {
     setEditDialogOpen(true);
+    setEditItemData(null);
+    setEditItemId(item_id);
+    try {
+      const selectedCompany = localStorage.getItem("sidebar_selectedCompany");
+      const co_id = selectedCompany ? JSON.parse(selectedCompany).co_id : "";
+      const params = new URLSearchParams({ item_id: String(item_id), co_id: co_id });
+      const apiUrl = `${apiRoutesPortalMasters.ITEM_EDIT_SETUP}?${params}`;
+      const { data, error } = await fetchWithCookie(apiUrl, 'GET') as any;
+      if (error || !data) {
+        throw new Error(error || 'Failed to fetch edit setup');
+      }
+      // store the prefetched payload so we can pass it to the edit dialog
+      setEditItemData(data);
+    } catch (err: any) {
+      setSnackbar({ open: true, message: err.message || 'Failed to load edit setup', severity: 'error' });
+      setEditDialogOpen(false);
+      setEditItemId(null);
+    }
   };
 
   // Column definitions for the DataGrid
@@ -141,15 +162,15 @@ export default function ItemMasterPage() {
       minWidth: 120,
       headerClassName: "bg-[#3ea6da] text-white",
       renderCell: (params: GridRenderCellParams) => (
-        <Tooltip title="View details">
-          <span
-            className="text-blue-700 underline cursor-pointer"
-            onClick={() => handleOpenDetails(params.row.id)}
-          >
-            {params.value}
-          </span>
-        </Tooltip>
-      ),
+          <Tooltip title="View details">
+            <span
+              className="text-blue-700 underline cursor-pointer"
+              onClick={() => handleOpenView(params.row.id)}
+            >
+              {params.value}
+            </span>
+          </Tooltip>
+        ),
     },
     {
       field: "item_name",
@@ -158,15 +179,15 @@ export default function ItemMasterPage() {
       minWidth: 180,
       headerClassName: "bg-[#3ea6da] text-white",
       renderCell: (params: GridRenderCellParams) => (
-        <Tooltip title="View details">
-          <span
-            className="text-blue-700 underline cursor-pointer"
-            onClick={() => handleOpenDetails(params.row.id)}
-          >
-            {params.value}
-          </span>
-        </Tooltip>
-      ),
+          <Tooltip title="View details">
+            <span
+              className="text-blue-700 underline cursor-pointer"
+              onClick={() => handleOpenView(params.row.id)}
+            >
+              {params.value}
+            </span>
+          </Tooltip>
+        ),
     },
     {
       field: "item_group_code_display",
@@ -182,15 +203,7 @@ export default function ItemMasterPage() {
       minWidth: 180,
       headerClassName: "bg-[#3ea6da] text-white",
     },
-    {
-      field: "active",
-      headerName: "Active",
-      width: 100,
-      headerClassName: "bg-[#3ea6da] text-white",
-      renderCell: (params: GridRenderCellParams) => (
-        <span>{params.value ? "Yes" : "No"}</span>
-      ),
-    },
+  // 'active' column intentionally removed per requirements
     {
       field: "actions",
       headerName: "Actions",
@@ -200,11 +213,6 @@ export default function ItemMasterPage() {
       headerClassName: "bg-[#3ea6da] text-white",
       renderCell: (params: GridRenderCellParams) => (
         <Stack direction="row" spacing={0.5}>
-          <Tooltip title="View">
-            <IconButton size="small" onClick={() => handleOpenDetails(params.row.id)}>
-              <Eye size={16} />
-            </IconButton>
-          </Tooltip>
           <Tooltip title="Edit">
             <IconButton size="small" onClick={() => handleOpenEdit(params.row.id)}>
               <Edit size={16} />
@@ -250,43 +258,33 @@ export default function ItemMasterPage() {
           />
         </div>
       </div>
-      {/* Details Dialog */}
-      <Dialog open={detailsDialogOpen} onClose={() => setDetailsDialogOpen(false)} maxWidth="sm" fullWidth>
-        <DialogTitle>Item Details</DialogTitle>
-        <DialogContent>
-          {detailsLoading ? (
-            <div>Loading...</div>
-          ) : detailsData && !detailsData.error ? (
-            <pre>{JSON.stringify(detailsData, null, 2)}</pre>
-          ) : (
-            <div>{detailsData?.error || "No details found"}</div>
-          )}
-        </DialogContent>
-        <DialogActions>
-          <MuiButton onClick={() => setDetailsDialogOpen(false)} autoFocus>Okay</MuiButton>
-        </DialogActions>
-      </Dialog>
+      {/* View dialog: show CreateItem form in view mode (inputs disabled) */}
+      <CreateItem
+        open={viewDialogOpen}
+        onClose={() => {
+          setViewDialogOpen(false);
+          setViewData(null);
+        }}
+        mode="view"
+        itemId={viewData?.item_details?.item_id ?? viewData?.item_id ?? undefined}
+        prefetchedSetup={viewData}
+        prefetchedItem={viewData}
+      />
 
-      {/* Edit Dialog (placeholder) */}
-      <Dialog open={editDialogOpen} onClose={() => setEditDialogOpen(false)} maxWidth="sm" fullWidth>
-        <DialogTitle>Edit Item</DialogTitle>
-        <DialogContent>
-          {editItemData ? <pre>{JSON.stringify(editItemData, null, 2)}</pre> : <div>No item selected</div>}
-        </DialogContent>
-        <DialogActions>
-          <MuiButton onClick={() => setEditDialogOpen(false)}>Cancel</MuiButton>
-          <MuiButton
-            variant="contained"
-            onClick={() => {
-              console.log('Edit requested for item:', editItemData?.id);
-              // Placeholder: wire actual edit flow here (open edit form, navigate, etc.)
-              setEditDialogOpen(false);
-            }}
-          >
-            Start Edit
-          </MuiButton>
-        </DialogActions>
-      </Dialog>
+      {/* Edit dialog: use CreateItem form in edit mode with prefetched setup/item */}
+      <CreateItem
+        open={editDialogOpen}
+        onClose={() => {
+          setEditDialogOpen(false);
+          setEditItemData(null);
+          setEditItemId(null);
+          fetchItems();
+        }}
+        mode="edit"
+        itemId={editItemId ?? undefined}
+        prefetchedSetup={editItemData}
+        prefetchedItem={editItemData}
+      />
     </>
   );
 }

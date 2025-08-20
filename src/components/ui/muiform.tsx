@@ -65,6 +65,7 @@ export type MuiFormProps = {
 	submitLabel?: string;
 	cancelLabel?: string;
 	onCancel?: () => void;
+	externalDirty?: boolean; // allow parent to mark form dirty (e.g. tables outside form)
 };
 
 function getInitialValues(schema: Schema, provided?: Record<string, any>) {
@@ -114,6 +115,7 @@ export const MuiForm = React.forwardRef(function MuiForm(
 		submitLabel,
 		cancelLabel,
 		onCancel,
+		externalDirty,
 	}: MuiFormProps,
 	ref
 ) {
@@ -124,12 +126,27 @@ export const MuiForm = React.forwardRef(function MuiForm(
 	const [errors, setErrors] = React.useState<Record<string, string>>({});
 	const [submitting, setSubmitting] = React.useState(false);
 
+	// track an initial snapshot of values to detect dirty state in edit mode
+	const initialSnapshotRef = React.useRef<string>(JSON.stringify(getInitialValues(schema, initialValues)));
+
+	const dirty = React.useMemo(() => {
+		if (externalDirty) return true;
+		try {
+			return initialSnapshotRef.current !== JSON.stringify(values);
+		} catch {
+			return false;
+		}
+	}, [values, externalDirty]);
+
 	React.useEffect(() => {
 		if (typeof modeProp !== "undefined") setMode(modeProp);
 	}, [modeProp]);
 
 	React.useEffect(() => {
-		setValues(getInitialValues(schema, initialValues));
+		const base = getInitialValues(schema, initialValues);
+		setValues(base);
+		// update the snapshot when schema/initial values change
+		initialSnapshotRef.current = JSON.stringify(base);
 	}, [schema, initialValues]);
 
 	const handleModeChange = (m: MuiFormMode) => {
@@ -166,6 +183,8 @@ export const MuiForm = React.forwardRef(function MuiForm(
 		try {
 			setSubmitting(true);
 			await onSubmit?.(values, mode);
+			// if submit succeeded, reset the initial snapshot so the form is no longer dirty
+			initialSnapshotRef.current = JSON.stringify(values);
 		} finally {
 			setSubmitting(false);
 		}
@@ -333,18 +352,24 @@ export const MuiForm = React.forwardRef(function MuiForm(
 						{schema.fields.map((f) => renderField(f))}
 					</Box>
 
-			{mode !== "view" && (
-				<Box sx={{ display: "flex", gap: 1, justifyContent: "flex-end", mt: 2 }}>
-					{onCancel && (
-						<Button variant="text" onClick={onCancel} disabled={submitting}>
-							{cancelLabel ?? "Cancel"}
-						</Button>
-					)}
-					<Button variant="contained" onClick={submit} disabled={submitting}>
-						{submitLabel ?? (mode === "create" ? "Create" : "Save")}
-					</Button>
-				</Box>
-			)}
+				{mode !== "view" && (
+					<Box sx={{ display: "flex", gap: 1, justifyContent: "flex-end", mt: 2 }}>
+						{onCancel && (
+							<Button variant="text" onClick={onCancel} disabled={submitting}>
+								{cancelLabel ?? "Cancel"}
+							</Button>
+						)}
+						{/* show submit/save only when creating or when edit form is dirty */}
+						{(mode === "create" || (mode === "edit" && dirty)) && (
+							<>
+								{ /* existing submit button rendering (keeps labels and disabled state) */ }
+								<Button variant="contained" onClick={submit} disabled={submitting}>
+									{submitLabel ?? (mode === "create" ? "Create" : "Save")}
+								</Button>
+							</>
+						)}
+					</Box>
+				)}
 		</Box>
 	);
 });

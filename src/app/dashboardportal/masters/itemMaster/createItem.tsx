@@ -355,7 +355,10 @@ const CreateItem: React.FC<CreateItemProps> = ({ open, onClose, mode = 'create',
       }
 
       console.log('Item saved', data);
-      onClose();
+  // reset mapping snapshots so form is no longer dirty
+  try { uomSnapshotRef.current = JSON.stringify([]); } catch {}
+  try { minMaxSnapshotRef.current = JSON.stringify([]); } catch {}
+  onClose();
     } catch (err: any) {
       setErrorMsg(err?.message ?? 'Failed to save item');
     }
@@ -487,6 +490,12 @@ const CreateItem: React.FC<CreateItemProps> = ({ open, onClose, mode = 'create',
   // local states to hold mapping rows before submit
   const [uomMappings, setUomMappings] = React.useState<any[]>([]);
   const [minMaxMappings, setMinMaxMappings] = React.useState<any[]>([]);
+  // snapshots to detect dirty changes in mapping tables
+  const uomSnapshotRef = React.useRef<string>(JSON.stringify(uomMappings));
+  const minMaxSnapshotRef = React.useRef<string>(JSON.stringify(minMaxMappings));
+
+  React.useEffect(() => { uomSnapshotRef.current = JSON.stringify(uomMappings); }, [uomMappings]);
+  React.useEffect(() => { minMaxSnapshotRef.current = JSON.stringify(minMaxMappings); }, [minMaxMappings]);
 
   // compute mapping rows to pass into UOMMappingTable
   const computedUomMapping: any[] = React.useMemo(() => {
@@ -549,6 +558,11 @@ const CreateItem: React.FC<CreateItemProps> = ({ open, onClose, mode = 'create',
               mode={mode}
               hideModeToggle
               onSubmit={handleFormSubmit}
+              onCancel={() => onClose()}
+              externalDirty={
+                // form is considered dirty if either mapping snapshots differ or the form itself is dirty
+                (uomSnapshotRef.current !== JSON.stringify(uomMappings)) || (minMaxSnapshotRef.current !== JSON.stringify(minMaxMappings))
+              }
             />
             {/* Show mapping tables for edit/view modes only (hidden on create) */}
             {mode !== 'create' && Array.isArray(setupData?.uom_groups) && (
@@ -566,18 +580,12 @@ const CreateItem: React.FC<CreateItemProps> = ({ open, onClose, mode = 'create',
                 <MinMaxMappingTable mapping={minMaxMappings} onChange={(rows) => setMinMaxMappings(rows)} />
               </Box>
             )}
-            {/* External Cancel / Submit below the tables */}
-            <Box sx={{ display: 'flex', gap: 1, justifyContent: 'flex-end', mt: 2 }}>
-              <Button variant="text" onClick={onClose}>Cancel</Button>
-              <Button
-                variant="contained"
-                onClick={async () => {
-                  if (formRef.current?.submit) await formRef.current.submit();
-                }}
-              >
-                {mode === 'create' ? 'Create' : mode === 'edit' ? 'Save' : 'Close'}
-              </Button>
-            </Box>
+            {/* In view mode we still render a close button; create/edit use MuiForm's actions */}
+            {mode === 'view' && (
+              <Box sx={{ display: 'flex', gap: 1, justifyContent: 'flex-end', mt: 2 }}>
+                <Button variant="contained" onClick={onClose}>Close</Button>
+              </Box>
+            )}
           </Box>
         )}
       </DialogContent>

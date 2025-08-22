@@ -122,7 +122,13 @@ const apiRoutesPortalMasters = {
     GET_WAREHOUSE_TABLE: `${API_URL}/itemMaster/get_warehouse_table`,
     ITEM_MAKE_TABLE: `${API_URL}/itemMaster/item_make_table`,
     ITEM_MAKE_CREATE_SETUP: `${API_URL}/itemMaster/item_make_create_setup`,
-    ITEM_MAKE_CREATE: `${API_URL}/itemMaster/item_make_create`
+    ITEM_MAKE_CREATE: `${API_URL}/itemMaster/item_make_create`,
+
+    PARTY_TABLE: `${API_URL}/partyMaster/get_party_table`,
+    PARTY_CREATE_SETUP: `${API_URL}/partyMaster/party_create_setup`,
+    PARTY_CREATE: `${API_URL}/partyMaster/party_create`,
+    PARTY_EDIT_SETUP: `${API_URL}/partyMaster/party_edit_setup`,
+    PARTY_EDIT: `${API_URL}/partyMaster/party_edit`
 };
 
 export { apiRoutes, apiRoutesconsole, apiRoutesPortalMasters };

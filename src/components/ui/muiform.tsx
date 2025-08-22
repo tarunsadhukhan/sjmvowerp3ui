@@ -62,6 +62,7 @@ export type MuiFormProps = {
 	hideModeToggle?: boolean;
 	onSubmit?: (values: Record<string, any>, mode: MuiFormMode) => void | Promise<void>;
 	onModeChange?: (mode: MuiFormMode) => void;
+	onValuesChange?: (values: Record<string, any>) => void;
 	submitLabel?: string;
 	cancelLabel?: string;
 	onCancel?: () => void;
@@ -112,6 +113,7 @@ export const MuiForm = React.forwardRef(function MuiForm(
 		hideModeToggle,
 		onSubmit,
 		onModeChange,
+		onValuesChange,
 		submitLabel,
 		cancelLabel,
 		onCancel,
@@ -157,6 +159,14 @@ export const MuiForm = React.forwardRef(function MuiForm(
 	const handleChange = (name: string, value: any) => {
 		setValues((prev) => ({ ...prev, [name]: value }));
 	};
+
+	// call onValuesChange after values have been updated to avoid setState during render
+	React.useEffect(() => {
+		if (onValuesChange) {
+			onValuesChange(values);
+		}
+		// eslint-disable-next-line react-hooks/exhaustive-deps
+	}, [values]);
 
 	const validate = () => {
 		const next: Record<string, string> = {};

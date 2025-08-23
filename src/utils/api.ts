@@ -119,7 +119,6 @@ const apiRoutesPortalMasters = {
     ITEM_EDIT_SETUP: `${API_URL}/itemMaster/item_edit_setup`,
     ITEM_EDIT: `${API_URL}/itemMaster/item_edit`,
     ITEM_VIEW: `${API_URL}/itemMaster/item_view`,
-    GET_WAREHOUSE_TABLE: `${API_URL}/itemMaster/get_warehouse_table`,
     ITEM_MAKE_TABLE: `${API_URL}/itemMaster/item_make_table`,
     ITEM_MAKE_CREATE_SETUP: `${API_URL}/itemMaster/item_make_create_setup`,
     ITEM_MAKE_CREATE: `${API_URL}/itemMaster/item_make_create`,
@@ -128,7 +127,13 @@ const apiRoutesPortalMasters = {
     PARTY_CREATE_SETUP: `${API_URL}/partyMaster/party_create_setup`,
     PARTY_CREATE: `${API_URL}/partyMaster/party_create`,
     PARTY_EDIT_SETUP: `${API_URL}/partyMaster/party_edit_setup`,
-    PARTY_EDIT: `${API_URL}/partyMaster/party_edit`
+    PARTY_EDIT: `${API_URL}/partyMaster/party_edit`,
+
+    WAREHOUSE_TABLE: `${API_URL}/warehouseMaster/get_warehouse_table`,
+    WAREHOUSE_CREATE_SETUP: `${API_URL}/warehouseMaster/warehouse_create_setup`,
+    WAREHOUSE_CREATE: `${API_URL}/warehouseMaster/warehouse_create`,
+    WAREHOUSE_EDIT_SETUP: `${API_URL}/warehouseMaster/warehouse_edit_setup`,
+    WAREHOUSE_EDIT: `${API_URL}/warehouseMaster/warehouse_edit`,
 };
 
 export { apiRoutes, apiRoutesconsole, apiRoutesPortalMasters };

@@ -3,10 +3,12 @@
 import React, { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import MuiDataGrid from "@/components/ui/muiDataGrid";
-import { Box, TextField, Tooltip, Dialog, DialogTitle, DialogContent, DialogActions, Switch, Snackbar, Alert } from "@mui/material";
+import { Box, TextField, Tooltip, Dialog, DialogTitle, DialogContent, DialogActions, Switch, Snackbar, Alert, IconButton } from "@mui/material";
 import { GridColDef, GridPaginationModel, GridRenderCellParams } from "@mui/x-data-grid";
 import { fetchWithCookie } from "@/utils/apiClient2";
 import { apiRoutesPortalMasters } from "@/utils/api";
+import { Edit } from 'lucide-react';
+import CreateWarehouse from './createWarehouse';
 
 type WarehouseRow = {
   id?: number | string;
@@ -20,14 +22,16 @@ type WarehouseRow = {
 export default function WarehouseMasterPage() {
   const [rows, setRows] = useState<WarehouseRow[]>([]);
   const [loading, setLoading] = useState(true);
-  const [paginationModel, setPaginationModel] = useState<GridPaginationModel>({ pageSize: 10, page: 0 });
   const [totalRows, setTotalRows] = useState(0);
+  const [paginationModel, setPaginationModel] = useState<GridPaginationModel>({ pageSize: 10, page: 0 });
   const [searchQuery, setSearchQuery] = useState("");
   const [searchTimeout, setSearchTimeout] = useState<NodeJS.Timeout | null>(null);
   const [snackbar, setSnackbar] = useState<{ open: boolean; message: string; severity: "success" | "error" }>({ open: false, message: "", severity: "success" });
   const [detailsDialogOpen, setDetailsDialogOpen] = useState(false);
   const [detailsLoading, setDetailsLoading] = useState(false);
+    const [createDialogOpen, setCreateDialogOpen] = useState(false);
   const [detailsData, setDetailsData] = useState<any>(null);
+  const [detailsDialogMode, setDetailsDialogMode] = useState<'view' | 'edit'>('view');
 
   const fetchWarehouses = async () => {
     setLoading(true);
@@ -41,13 +45,37 @@ export default function WarehouseMasterPage() {
       });
       if (searchQuery) queryParams.append("search", searchQuery);
 
-      const { data, error } = await fetchWithCookie(`${apiRoutesPortalMasters.GET_WAREHOUSE_TABLE}?${queryParams}`, "GET");
+      // Add branches param from localStorage
+      const selectedBranches = localStorage.getItem("sidebar_selectedBranches");
+      if (selectedBranches) {
+        try {
+          const branchesArr = JSON.parse(selectedBranches);
+          if (Array.isArray(branchesArr) && branchesArr.length > 0) {
+            queryParams.append("branches", branchesArr.join(","));
+          }
+        } catch {}
+      }
+
+      const { data, error } = await fetchWithCookie(`${apiRoutesPortalMasters.WAREHOUSE_TABLE}?${queryParams}`, "GET");
       if (error || !data) throw new Error(error || "Failed to fetch warehouses");
 
       // API expected shape: { data: [...], total: number }
+      // build branch id -> name map from response
+      const branchList = data.branches ?? data.branch_list ?? [];
+      const branchMap = new Map<string | number, string>();
+      for (const b of branchList) {
+        const id = b.branch_id ?? b.id;
+        const name = b.branch_name ?? b.name ?? '';
+        if (typeof id !== 'undefined') branchMap.set(String(id), String(name));
+      }
+
       const mapped = (data.data || []).map((r: any) => ({
         ...r,
         id: r.warehouse_id ?? r.id,
+        branch_id: r.branch_id,
+        branch_name: branchMap.get(String(r.branch_id)) ?? String(r.branch_id ?? ''),
+        warehouse_path: r.warehouse_path ?? r.warehouse_name ?? r.warehouse_display ?? '',
+        warehouse_type: r.warehouse_type ?? r.type ?? '',
         active: typeof r.active === "string" ? Number(r.active) : r.active,
       }));
       setRows(mapped);
@@ -77,6 +105,7 @@ export default function WarehouseMasterPage() {
   };
 
   const handleOpenDetails = (id: number | string) => {
+    setDetailsDialogMode('view');
     setDetailsDialogOpen(true);
     setDetailsLoading(true);
     setDetailsData(null);
@@ -91,34 +120,20 @@ export default function WarehouseMasterPage() {
   };
 
   const columns: GridColDef[] = [
+    { field: 'branch_name', headerName: 'Branch', flex: 1, minWidth: 180, headerClassName: 'bg-[#3ea6da] text-white' },
+    { field: 'warehouse_path', headerName: 'Warehouse', flex: 1, minWidth: 260, headerClassName: 'bg-[#3ea6da] text-white' },
+    { field: 'warehouse_type', headerName: 'Warehouse Type', flex: 1, minWidth: 160, headerClassName: 'bg-[#3ea6da] text-white' },
     {
-      field: "warehouse_name",
-      headerName: "Warehouse Name",
-      flex: 1,
-      minWidth: 180,
-      headerClassName: "bg-[#3ea6da] text-white",
-      renderCell: (params: GridRenderCellParams) => (
-        <Tooltip title="View details">
-          <span className="text-blue-700 underline cursor-pointer" onClick={() => handleOpenDetails(params.row.id)}>
-            {params.value}
-          </span>
-        </Tooltip>
-      ),
-    },
-    {
-      field: "sub_warehouse_name",
-      headerName: "Subwarehouse Name",
-      flex: 1,
-      minWidth: 180,
-      headerClassName: "bg-[#3ea6da] text-white",
-    },
-    {
-      field: "active",
-      headerName: "Active",
-      width: 120,
-      headerClassName: "bg-[#3ea6da] text-white",
-      renderCell: (params: GridRenderCellParams) => (
-        <span>{params.value ? "Yes" : "No"}</span>
+      field: 'actions', headerName: 'Actions', width: 80, sortable: false, filterable: false, headerClassName: 'bg-[#3ea6da] text-white',
+      renderCell: (params) => (
+        <IconButton size="small" onClick={() => {
+          // open edit dialog for the row
+          setDetailsDialogMode('edit');
+          setDetailsDialogOpen(true);
+          setDetailsData(params.row);
+        }}>
+          <Edit size={14} />
+        </IconButton>
       ),
     },
   ];
@@ -128,7 +143,7 @@ export default function WarehouseMasterPage() {
       <div className="mx-auto max-w-7xl">
         <div className="mb-8 flex items-center justify-between">
           <h1 className="text-2xl font-bold text-[#0C3C60]">Warehouse Master</h1>
-          <Button className="btn-primary" onClick={() => { /* create flow can be added */ }}>
+          <Button className="btn-primary" onClick={() => setCreateDialogOpen(true)}>
             + Create Warehouse
           </Button>
         </div>
@@ -169,6 +184,7 @@ export default function WarehouseMasterPage() {
           <Button onClick={() => setDetailsDialogOpen(false)} autoFocus>Okay</Button>
         </DialogActions>
       </Dialog>
+  <CreateWarehouse open={createDialogOpen} onClose={() => setCreateDialogOpen(false)} onSaved={() => { setCreateDialogOpen(false); fetchWarehouses(); }} />
     </div>
   );
 }

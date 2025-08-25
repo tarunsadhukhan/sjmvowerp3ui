@@ -134,6 +134,12 @@ const apiRoutesPortalMasters = {
     WAREHOUSE_CREATE: `${API_URL}/warehouseMaster/warehouse_create`,
     WAREHOUSE_EDIT_SETUP: `${API_URL}/warehouseMaster/warehouse_edit_setup`,
     WAREHOUSE_EDIT: `${API_URL}/warehouseMaster/warehouse_edit`,
+
+    COSTFACTOR_TABLE: `${API_URL}/costFactorMaster/get_cost_factor_table`,
+    COSTFACTOR_CREATE_SETUP: `${API_URL}/costFactorMaster/cost_factor_create_setup`,
+    COSTFACTOR_CREATE: `${API_URL}/costFactorMaster/cost_factor_create`,
+    COSTFACTOR_EDIT_SETUP: `${API_URL}/costFactorMaster/cost_factor_edit_setup`,
+    COSTFACTOR_EDIT: `${API_URL}/costFactorMaster/cost_factor_edit`,
 };
 
 export { apiRoutes, apiRoutesconsole, apiRoutesPortalMasters };

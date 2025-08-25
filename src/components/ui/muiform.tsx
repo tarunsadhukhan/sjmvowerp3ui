@@ -67,6 +67,7 @@ export type MuiFormProps = {
 	cancelLabel?: string;
 	onCancel?: () => void;
 	externalDirty?: boolean; // allow parent to mark form dirty (e.g. tables outside form)
+	hideSubmit?: boolean; // parent can hide internal submit button and render it elsewhere
 };
 
 function getInitialValues(schema: Schema, provided?: Record<string, any>) {
@@ -111,6 +112,7 @@ export const MuiForm = React.forwardRef(function MuiForm(
 		initialValues,
 		mode: modeProp,
 		hideModeToggle,
+		hideSubmit,
 		onSubmit,
 		onModeChange,
 		onValuesChange,
@@ -203,6 +205,8 @@ export const MuiForm = React.forwardRef(function MuiForm(
 	// expose submit to parent via ref
 	React.useImperativeHandle(ref, () => ({
 		submit,
+		// expose dirty state so parents can show/hide their own submit buttons
+		isDirty: () => dirty,
 	}));
 
 	const renderField = (field: Field) => {
@@ -362,7 +366,7 @@ export const MuiForm = React.forwardRef(function MuiForm(
 						{schema.fields.map((f) => renderField(f))}
 					</Box>
 
-				{mode !== "view" && (
+				{mode !== "view" && !hideSubmit && (
 					<Box sx={{ display: "flex", gap: 1, justifyContent: "flex-end", mt: 2 }}>
 						{onCancel && (
 							<Button variant="text" onClick={onCancel} disabled={submitting}>

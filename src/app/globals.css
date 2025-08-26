@@ -151,3 +151,13 @@
     @apply bg-background text-foreground;
   }
 }
+
+.btn-primary {
+  background-color: #95C11F !important;
+  color: white !important;
+  transition: background 0.2s !important;
+}
+
+.btn-primary:hover {
+  background-color: #85ad1b !important;
+}

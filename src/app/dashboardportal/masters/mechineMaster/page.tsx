@@ -3,7 +3,7 @@
 import React, { useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
 import MuiDataGrid from "@/components/ui/muiDataGrid";
-import { Box, TextField, Snackbar, Alert, Dialog, DialogTitle, DialogContent, DialogActions } from "@mui/material";
+import { Box, TextField, Snackbar, Alert } from "@mui/material";
 import { GridColDef, GridPaginationModel, GridRenderCellParams } from "@mui/x-data-grid";
 import { fetchWithCookie } from "@/utils/apiClient2";
 import CreateMechineMasterPage from "./CreateMechineMasterPage";
@@ -19,7 +19,7 @@ export default function MechineMasterPage() {
   const [paginationModel, setPaginationModel] = useState<GridPaginationModel>({ pageSize: 10, page: 0 });
   const [totalRows, setTotalRows] = useState<number>(0);
   const [searchQuery, setSearchQuery] = useState<string>("");
-  const [searchTimeout, setSearchTimeout] = useState<any>(null);
+  const [searchTimeout, setSearchTimeout] = useState<NodeJS.Timeout | null>(null);
 
   const [snackbar, setSnackbar] = useState<{ open: boolean; message: string; severity: "success" | "error" }>({ open: false, message: "", severity: "success" });
   const [createOpen, setCreateOpen] = useState<boolean>(false);
@@ -32,32 +32,31 @@ export default function MechineMasterPage() {
     try {
           const selectedCompany = localStorage.getItem("sidebar_selectedCompany");
       const co_id = selectedCompany ? JSON.parse(selectedCompany).co_id : "";
-      const selectedBranches = localStorage.getItem("sidebar_selectedBranches");
-      console.log('localstorage', selectedBranches);
+  const selectedBranches = localStorage.getItem("sidebar_selectedBranches");
       let branch_ids = "";
       if (selectedBranches) {
-        try {
-          const parsed = JSON.parse(selectedBranches);
-          console.log('parsed selectedBranches', parsed);
-          branch_ids=parsed
-          if (Array.isArray(parsed)) {
-            // support array of objects [{ branch_id: 1 }] OR array of primitives [1,2] OR mixed
-            const ids = parsed
-              .map((b: any) => {
-                if (b && typeof b === 'object') return b.branch_id ?? b.id ?? b.value ?? '';
-                // allow numeric 0 as valid id
-                if (b === 0) return '0';
-                if (b) return String(b);
-                return '';
-              })
-              .map(String)
-              .filter(Boolean);
-            branch_ids = ids.join(',');
-            console.log('branch_ids', branch_ids);
-          } 
-        } catch (e) {
-          console.warn("Failed to parse selectedBranches:", e);
-        }
+          try {
+            const parsed = JSON.parse(selectedBranches);
+            if (Array.isArray(parsed)) {
+              // support array of objects [{ branch_id: 1 }] OR array of primitives [1,2] OR mixed
+              const ids = parsed
+                .map((b: any) => {
+                  if (b && typeof b === 'object') return b.branch_id ?? b.id ?? b.value ?? '';
+                  // allow numeric 0 as valid id
+                  if (b === 0) return '0';
+                  if (b) return String(b);
+                  return '';
+                })
+                .map(String)
+                .filter(Boolean);
+              branch_ids = ids.join(',');
+              void 0;
+            } else if (parsed) {
+              branch_ids = String(parsed);
+            }
+          } catch (e) {
+            void 0;
+          }
       }
       const queryParams = new URLSearchParams({
         page: String((paginationModel.page ?? 0) + 1),
@@ -73,7 +72,7 @@ export default function MechineMasterPage() {
     } catch (err:any) { setSnackbar({ open: true, message: err?.message || 'Error fetching', severity: 'error' }); } finally { setLoading(false); }
   }
 
-  useEffect(()=>{ fetchMechines(); /* eslint-disable-next-line */ }, [paginationModel.page, paginationModel.pageSize, searchQuery]);
+  useEffect(()=>{ fetchMechines();   }, [paginationModel.page, paginationModel.pageSize, searchQuery]);
 
   const handlePaginationModelChange = (newModel: GridPaginationModel) => setPaginationModel(newModel);
   const handleSearchChange = (e: React.ChangeEvent<HTMLInputElement>) => { const v = e.target.value; if (searchTimeout) clearTimeout(searchTimeout); const t = setTimeout(()=> { setSearchQuery(v); setPaginationModel((p)=> ({ ...p, page: 0 })); }, 500); setSearchTimeout(t); };
@@ -84,7 +83,7 @@ export default function MechineMasterPage() {
 
   const handleOpenEdit = (id: number | string) => { setSelectedId(id); setEditDialogOpen(true); };
 
-  const handleSaveEdit = async () => { /* implement when API known */ };
+  const _handleSaveEdit = async () => { /* implement when API known */ };
 
   const columns: GridColDef[] = [
     { field: 'mechine_code', headerName: 'Machine Code', flex: 1, minWidth: 140, headerClassName: 'bg-[#3ea6da] text-white' },

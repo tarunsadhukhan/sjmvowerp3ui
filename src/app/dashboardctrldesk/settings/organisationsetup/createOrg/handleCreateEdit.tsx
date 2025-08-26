@@ -33,7 +33,7 @@ const HandleCreateEditOrg = () => {
           
           // Find the state object first
           const stateId = data.data.con_org_state_id?.toString();
-          let foundState = data.states.find((s: any) => s.state_id.toString() === stateId);
+          const foundState = data.states.find((s: any) => s.state_id.toString() === stateId);
           
           // Get the country ID from the state
           const countryId = foundState ? foundState.country_id?.toString() : "";

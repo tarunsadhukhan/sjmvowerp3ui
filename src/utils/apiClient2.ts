@@ -1,59 +1,73 @@
 import { useState, useEffect } from "react";
-import axios from "axios";
+import axios, { AxiosResponse } from "axios";
+
+type FetchResult<T = any> = {
+    data: T | null;
+    error: string | null;
+    status: number;
+};
 
 // Regular function for direct API calls
-export const fetchWithCookie = async (url: string, method: string = "GET", body?: any) => {
+export const fetchWithCookie = async <T = any>(
+    url: string,
+    method: string = "GET",
+    body?: unknown,
+): Promise<FetchResult<T>> => {
     try {
-        // Get cookies from document if we're in browser
-        const cookies = typeof document !== 'undefined' ? document.cookie : '';
-        console.log(`Making ${method} request to ${url} with cookies:`, cookies);
-        
-        const response = await axios({
+        const cookies = typeof document !== "undefined" ? document.cookie : "";
+        // Keep a small debug log but avoid logging bodies in production
+        console.debug(`Making ${method} request to ${url} with cookies length: ${cookies.length}`);
+
+        const response: AxiosResponse<T> = await axios({
             url,
             method,
             headers: {
                 "Content-Type": "application/json",
-                // Include any custom headers here if needed
             },
-            withCredentials: true, // This ensures cookies are sent with the request
+            withCredentials: true,
             data: body,
-            // Don't reject promises on non-2xx responses
-            validateStatus: function (status) {
-                return status >= 200 && status < 500; // Only reject on server errors
-            }
+            validateStatus: (status) => status >= 200 && status < 500,
         });
-        
-        console.log(`Response from ${url}:`, {
-            status: response.status,
-            statusText: response.statusText,
-            hasData: !!response.data
-        });
-        
-    return { data: response.data, error: null, status: response.status };
-    } catch (err) {
-        console.error(`Error in fetchWithCookie for ${url}:`, err);
-    return { data: null, error: (err as Error).message, status: 0 };
+
+        return { data: response.data ?? null, error: null, status: response.status };
+    } catch (err: unknown) {
+        // Normalize error to string
+        const message = err instanceof Error ? err.message : String(err);
+        console.error(`Error in fetchWithCookie for ${url}:`, message);
+        return { data: null, error: message, status: 0 };
     }
 };
 
 // Hook version for components
-export const useDataWithCookie = (url: string, method: "GET" | "POST" = "GET", body?: any) => {
-    const [data, setData] = useState<any>(null);
+export const useDataWithCookie = <T = any>(
+    url: string,
+    method: "GET" | "POST" = "GET",
+    body?: unknown,
+) => {
+    const [data, setData] = useState<T | null>(null);
     const [error, setError] = useState<string | null>(null);
     const [loading, setLoading] = useState<boolean>(true);
 
     useEffect(() => {
+        let mounted = true;
+
         const fetchData = async () => {
-            const result = await fetchWithCookie(url, method, body);
+            setLoading(true);
+            const result = await fetchWithCookie<T>(url, method, body);
+            if (!mounted) return;
             setData(result.data);
             setError(result.error);
             setLoading(false);
         };
 
         fetchData();
-    }, [url, method, body]);
+        return () => {
+            mounted = false;
+        };
+        // stringify body so identity changes don't retrigger unnecessarily
+    }, [url, method, JSON.stringify(body ?? null)]);
 
-    return { data, error, loading };
+    return { data, error, loading } as const;
 };
 
 export default useDataWithCookie;

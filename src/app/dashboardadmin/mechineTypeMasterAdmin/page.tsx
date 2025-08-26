@@ -83,7 +83,7 @@ export default function MechineTypeMasterPage() {
     }
   };
 
-  useEffect(() => { fetchMechines(); /* eslint-disable-next-line */ }, [paginationModel.page, paginationModel.pageSize, searchQuery]);
+  useEffect(() => { fetchMechines();   }, [paginationModel.page, paginationModel.pageSize, searchQuery]);
 
   const handlePaginationModelChange = (newModel: GridPaginationModel) => setPaginationModel(newModel);
   const handleSearchChange = (e: React.ChangeEvent<HTMLInputElement>) => {

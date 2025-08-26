@@ -1,11 +1,10 @@
 "use client"
 
-import { useEffect } from "react"
-import { useRouter } from "next/navigation"
+// ...existing code...
 
 
 export default function DashboardPage() {
-  const router = useRouter()
+  // no router needed here
 
 
   return (

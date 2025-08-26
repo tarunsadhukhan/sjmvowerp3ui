@@ -134,7 +134,7 @@ const ExpandableTableWithDropdown: React.FC<Props> = ({
   const handleParentCheckboxChange = (parentId: number, isChecked: boolean) => {
     const childIds = getChildItemIds(parentId);
     let newSelectedIds;
-    let newAccessLevels = { ...accessLevels };
+    const newAccessLevels = { ...accessLevels };
 
     if (isChecked) {
       // Add parent and all children to selection (avoid duplicates)
@@ -174,7 +174,7 @@ const ExpandableTableWithDropdown: React.FC<Props> = ({
       delete newAccessLevels[childId];
 
       // Check if any other children of the same parent are still selected
-      let finalIds = filteredIds;
+      const finalIds = filteredIds;
       if (parentId !== null) {
           const childIdsOfParent = getChildItemIds(parentId);
           const anyOtherChildSelected = childIdsOfParent.some(id => id !== childId && filteredIds.includes(id));

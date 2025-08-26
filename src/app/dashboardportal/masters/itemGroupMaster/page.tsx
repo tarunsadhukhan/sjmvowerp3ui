@@ -74,8 +74,8 @@ export default function CompanyManagement() {
       }));
       setRows(mappedRows);
       setTotalRows(data.total || 0);
-    } catch (error) {
-      console.error("Error fetching item groups:", error);
+    } catch (error: any) {
+      setSnackbar({ open: true, message: error?.message || 'Error fetching item groups', severity: 'error' });
     } finally {
       setLoading(false);
     }

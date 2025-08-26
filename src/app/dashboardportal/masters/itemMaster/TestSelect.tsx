@@ -33,8 +33,8 @@ const TestSelect: React.FC<TestSelectProps> = ({ open, onClose }) => {
   };
 
   const handleFormSubmit = async (vals: Record<string, any>) => {
-    console.log("Test select submit:", vals);
-    onClose();
+  void 0;
+  onClose();
   };
 
   return (

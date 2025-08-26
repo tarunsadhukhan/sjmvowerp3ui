@@ -86,7 +86,7 @@ const UOMMappingTable: React.FC<UOMMappingTableProps> = ({ mapping = [], uomOpti
 
     const t = setTimeout(() => { syncingFromPropRef.current = false; }, 0);
     return () => clearTimeout(t);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+     
   }, [mapping, itemDefaultUom, uomOptions]);
 
   const isRowEmpty = (r: UOMRow) => !r.mapToUom && (r.relationValue === null || r.relationValue === undefined) && (r.rounding === null || r.rounding === undefined);

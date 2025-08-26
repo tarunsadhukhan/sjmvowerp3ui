@@ -1,10 +1,14 @@
 "use client";
 
+// Opt out of static prerendering because this page uses client-side navigation hooks
+export const dynamic = 'force-dynamic';
+
 import { fetchWithCookie } from "@/utils/apiClient2";
 import { apiRoutes, apiRoutesconsole } from "@/utils/api";
 import { useState, useEffect } from 'react';
 import { Button } from "@/components/ui/button";
-import { useSearchParams, useRouter } from 'next/navigation';
+// useSearchParams and useRouter cause prerender-time issues; use browser APIs in a client effect instead
+// to avoid Suspense requirements during build.
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Switch, FormControlLabel, FormGroup } from '@mui/material';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -57,11 +61,16 @@ type CompanyConfig = {
 };
 
 export default function CompanyConfigEditPage() {
-  const searchParams = useSearchParams();
-  const router = useRouter();
-  
-  const companyId = searchParams.get('companyId');
-  const companyName = searchParams.get('companyName');
+  const [companyId, setCompanyId] = useState<string | null>(null);
+  const [companyName, setCompanyName] = useState<string | null>(null);
+
+  // read query params in effect (browser-only)
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    const sp = new URLSearchParams(window.location.search);
+    setCompanyId(sp.get("companyId"));
+    setCompanyName(sp.get("companyName"));
+  }, []);
     const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
   const [currencies, setCurrencies] = useState<Currency[]>([]);
@@ -97,16 +106,7 @@ export default function CompanyConfigEditPage() {
   //   ]
   // }
   useEffect(() => {
-    if (!companyId) {
-      toast({
-        title: "Error",
-        description: "Company ID is required",
-        variant: "destructive",
-      });
-      router.push('/dashboardadmin/CompanyConfiguration');
-      return;
-    }
-    
+    if (!companyId) return;
     fetchCompanyConfig();
   }, [companyId]);
     const fetchCompanyConfig = async () => {
@@ -192,7 +192,8 @@ export default function CompanyConfigEditPage() {
       title: "Success",
       description: "Company configuration saved successfully",
     });
-    router.push('/dashboardadmin/CompanyConfiguration');
+  // use a full navigation as a fallback (safe in client-only interaction)
+  window.location.href = '/dashboardadmin/CompanyConfiguration';
   } catch (error) {
     console.error("Error saving company configuration:", error);
     toast({
@@ -205,7 +206,7 @@ export default function CompanyConfigEditPage() {
   }
 };
   const handleBack = () => {
-    router.push('/dashboardadmin/CompanyConfiguration');
+  window.location.href = '/dashboardadmin/CompanyConfiguration';
   };
   
   return (

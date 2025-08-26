@@ -133,7 +133,7 @@ export default function CreateCostFactor({ open, onClose, onSaved, editId }: Pro
 
   React.useEffect(() => {
     if (open) loadSetup(editId);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+     
   }, [open, editId]);
 
   const initialValues = React.useMemo(() => (isEditMode && editInitialValues ? editInitialValues : { branch_id: setupData?.branchOptions?.[0]?.value ?? "" }), [setupData?.branchOptions, isEditMode, editInitialValues]);
@@ -158,7 +158,7 @@ export default function CreateCostFactor({ open, onClose, onSaved, editId }: Pro
     // initially show departments for first branch if present, otherwise all
     schemaRef.current.fields[3].options = setupData.deptOptions ?? [];
     setSchemaVersion((v) => v + 1);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+     
   }, [setupData]);
 
   const handleSubmit = async (values: Record<string, any>, mode: MuiFormMode) => {

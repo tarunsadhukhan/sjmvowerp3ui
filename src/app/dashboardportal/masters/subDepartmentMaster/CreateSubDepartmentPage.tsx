@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useEffect, useState } from "react";
-import { Box, Button, Dialog, DialogActions, DialogContent, DialogTitle, MenuItem, TextField, FormControlLabel, Switch, CircularProgress, FormHelperText } from "@mui/material";
+import { Box, Button, Dialog, DialogContent, DialogTitle, MenuItem, TextField, FormControlLabel, Switch, CircularProgress, FormHelperText } from "@mui/material";
 import { fetchWithCookie } from "@/utils/apiClient2";
 import { apiRoutesPortalMasters } from "@/utils/api";
  
@@ -30,10 +30,10 @@ export default function CreateSubDepartmentPage({ open = true, onClose, existing
         const selectedCompany = localStorage.getItem("sidebar_selectedCompany");
             const sidebar_selectedBranches = localStorage.getItem("sidebar_selectedBranches");
             const co_id = selectedCompany ? JSON.parse(selectedCompany).co_id : "";
-        const params = sidebar_selectedBranches
-            console.log('sidebar_selectedBranches====', sidebar_selectedBranches);
-            const url = `${apiRoutesPortalMasters.SUBDEPT_MASTER_CREATE_SETUP}?${params}`;
-            console.log('Fetch URL777:', url);
+    const params = sidebar_selectedBranches;
+      // debug: sidebar_selectedBranches value
+      void sidebar_selectedBranches;
+      const url = `${apiRoutesPortalMasters.SUBDEPT_MASTER_CREATE_SETUP}?${params}`;
             const { data, error } = await fetchWithCookie(url, "GET") as any;
         if (error || !data) throw new Error(error || "Failed to load setup");
         const candidate = data?.data ?? data;
@@ -59,7 +59,8 @@ export default function CreateSubDepartmentPage({ open = true, onClose, existing
         }
         setSetupData(candidate);
       } catch (err: any) {
-        console.warn("Failed to load subdept create setup:", err?.message || err);
+        // Surface the error to the form instead of logging to console so it can be handled in UI (Stage A cleanup)
+        setError(err?.message || String(err));
         setBranchOptions([]);
         setDepartmentOptions([]);
         setSetupData(null);

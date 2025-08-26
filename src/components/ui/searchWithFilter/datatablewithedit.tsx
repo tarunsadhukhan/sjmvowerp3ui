@@ -20,7 +20,7 @@ export type Column<T> = {
   key: keyof T | string;
   label: string;
   className?: string;
-  render?: (value: any, row: T) => React.ReactNode;
+  render?: (value: unknown, row: T) => React.ReactNode;
   sortable?: boolean;
   filterable?: boolean;
   filterOptions?: string[]; // Optional predefined filter options
@@ -71,15 +71,16 @@ export function DataTable<T>({
     columns.forEach(col => {
       if (col.filterable) {
         const key = col.key as string;
-        
+
         // If predefined options are provided, use those
         if (col.filterOptions) {
           options[key] = new Set(col.filterOptions);
         } else {
           // Otherwise derive from data
           options[key] = new Set();
-          data.forEach(row => {
-            const value = (row as any)[key];
+          data.forEach((row: unknown) => {
+            const r = row as Record<string, unknown>;
+            const value = r[key];
             if (value !== undefined && value !== null) {
               // Handle special rendering for the active column
               if (key === 'active' && typeof value === 'number') {
@@ -103,17 +104,18 @@ export function DataTable<T>({
       return;
     }
 
-    const result = data.filter(row => {
+    const result = data.filter((row: unknown) => {
+      const r = row as Record<string, unknown>;
       return filters.every(filter => {
-        const value = (row as any)[filter.key];
+        const value = r[filter.key];
         if (value === undefined || value === null) return false;
-        
+
         // Handle special case for active column
         if (filter.key === 'active' && typeof value === 'number') {
           const stringVal = value === 1 ? 'Yes' : 'No';
           return stringVal === filter.value;
         }
-        
+
         return String(value).toLowerCase() === filter.value.toLowerCase();
       });
     });

@@ -1,9 +1,9 @@
-import { DataGrid, GridColDef, GridPaginationModel } from '@mui/x-data-grid';
+import { DataGrid, GridColDef, GridPaginationModel, GridRowsProp } from '@mui/x-data-grid';
 import { Box } from '@mui/material';
 import React from 'react';
 
 interface MuiDataGridProps {
-  rows: unknown[];
+  rows: GridRowsProp;
   columns: GridColDef[];
   rowCount: number;
   onPaginationModelChange: (model: GridPaginationModel) => void;

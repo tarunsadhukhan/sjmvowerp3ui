@@ -62,10 +62,12 @@ export type MuiFormProps = {
 	hideModeToggle?: boolean;
 	onSubmit?: (values: Record<string, any>, mode: MuiFormMode) => void | Promise<void>;
 	onModeChange?: (mode: MuiFormMode) => void;
+	onValuesChange?: (values: Record<string, any>) => void;
 	submitLabel?: string;
 	cancelLabel?: string;
 	onCancel?: () => void;
 	externalDirty?: boolean; // allow parent to mark form dirty (e.g. tables outside form)
+	hideSubmit?: boolean; // parent can hide internal submit button and render it elsewhere
 };
 
 function getInitialValues(schema: Schema, provided?: Record<string, any>) {
@@ -110,8 +112,10 @@ export const MuiForm = React.forwardRef(function MuiForm(
 		initialValues,
 		mode: modeProp,
 		hideModeToggle,
+		hideSubmit,
 		onSubmit,
 		onModeChange,
+		onValuesChange,
 		submitLabel,
 		cancelLabel,
 		onCancel,
@@ -158,6 +162,14 @@ export const MuiForm = React.forwardRef(function MuiForm(
 		setValues((prev) => ({ ...prev, [name]: value }));
 	};
 
+	// call onValuesChange after values have been updated to avoid setState during render
+	React.useEffect(() => {
+		if (onValuesChange) {
+			onValuesChange(values);
+		}
+		// eslint-disable-next-line react-hooks/exhaustive-deps
+	}, [values]);
+
 	const validate = () => {
 		const next: Record<string, string> = {};
 		for (const f of schema.fields) {
@@ -193,6 +205,8 @@ export const MuiForm = React.forwardRef(function MuiForm(
 	// expose submit to parent via ref
 	React.useImperativeHandle(ref, () => ({
 		submit,
+		// expose dirty state so parents can show/hide their own submit buttons
+		isDirty: () => dirty,
 	}));
 
 	const renderField = (field: Field) => {
@@ -352,7 +366,7 @@ export const MuiForm = React.forwardRef(function MuiForm(
 						{schema.fields.map((f) => renderField(f))}
 					</Box>
 
-				{mode !== "view" && (
+				{mode !== "view" && !hideSubmit && (
 					<Box sx={{ display: "flex", gap: 1, justifyContent: "flex-end", mt: 2 }}>
 						{onCancel && (
 							<Button variant="text" onClick={onCancel} disabled={submitting}>

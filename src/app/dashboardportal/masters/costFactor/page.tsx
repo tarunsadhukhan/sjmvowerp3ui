@@ -1,39 +1,38 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
 import MuiDataGrid from "@/components/ui/muiDataGrid";
-import { Box, TextField, Tooltip, Dialog, DialogTitle, DialogContent, DialogActions, Switch, Snackbar, Alert, IconButton } from "@mui/material";
+import { Box, TextField, Tooltip, Dialog, DialogTitle, DialogContent, DialogActions, Snackbar, Alert, IconButton } from "@mui/material";
 import { GridColDef, GridPaginationModel, GridRenderCellParams } from "@mui/x-data-grid";
 import { fetchWithCookie } from "@/utils/apiClient2";
 import { apiRoutesPortalMasters } from "@/utils/api";
 import { Edit } from 'lucide-react';
-import CreateWarehouse from './createWarehouse';
+import CreateCostFactor from './createCostFactor';
 
-type WarehouseRow = {
+type CostFactorRow = {
   id?: number | string;
-  warehouse_id?: number;
-  warehouse_name?: string;
-  sub_warehouse_name?: string;
-  active?: number | string | boolean;
+  cost_factor?: string | number;
+  description?: string;
+  department?: string;
+  branch_id?: number | string;
+  branch_name?: string;
   [key: string]: any;
 };
 
-export default function WarehouseMasterPage() {
-  const [rows, setRows] = useState<WarehouseRow[]>([]);
+export default function CostFactorPage() {
+  const [rows, setRows] = useState<CostFactorRow[]>([]);
   const [loading, setLoading] = useState(true);
-  const [totalRows, setTotalRows] = useState(0);
   const [paginationModel, setPaginationModel] = useState<GridPaginationModel>({ pageSize: 10, page: 0 });
+  const [totalRows, setTotalRows] = useState(0);
   const [searchQuery, setSearchQuery] = useState("");
   const [searchTimeout, setSearchTimeout] = useState<NodeJS.Timeout | null>(null);
   const [snackbar, setSnackbar] = useState<{ open: boolean; message: string; severity: "success" | "error" }>({ open: false, message: "", severity: "success" });
-  const [detailsDialogOpen, setDetailsDialogOpen] = useState(false);
-  const [detailsLoading, setDetailsLoading] = useState(false);
-    const [createDialogOpen, setCreateDialogOpen] = useState(false);
-  const [detailsData, setDetailsData] = useState<any>(null);
-  const [detailsDialogMode, setDetailsDialogMode] = useState<'view' | 'edit'>('view');
+  const [editDialogOpen, setEditDialogOpen] = useState(false);
+  const [editData, setEditData] = useState<any>(null);
+  const [createOpen, setCreateOpen] = useState(false);
 
-  const fetchWarehouses = async () => {
+  const fetchCostFactors = async () => {
     setLoading(true);
     try {
       const selectedCompany = localStorage.getItem("sidebar_selectedCompany");
@@ -56,11 +55,10 @@ export default function WarehouseMasterPage() {
         } catch {}
       }
 
-      const { data, error } = await fetchWithCookie(`${apiRoutesPortalMasters.WAREHOUSE_TABLE}?${queryParams}`, "GET");
-      if (error || !data) throw new Error(error || "Failed to fetch warehouses");
+      const { data, error } = await fetchWithCookie(`${apiRoutesPortalMasters.COSTFACTOR_TABLE}?${queryParams}`, "GET");
+      if (error || !data) throw new Error(error || "Failed to fetch cost factors");
 
-      // API expected shape: { data: [...], total: number }
-      // build branch id -> name map from response
+      // build branch map from response if present
       const branchList = data.branches ?? data.branch_list ?? [];
       const branchMap = new Map<string | number, string>();
       for (const b of branchList) {
@@ -71,24 +69,27 @@ export default function WarehouseMasterPage() {
 
       const mapped = (data.data || []).map((r: any) => ({
         ...r,
-        id: r.warehouse_id ?? r.id,
+        id: r.cost_factor_id ?? r.id,
+        // prefer explicit API fields when present
+        cost_factor: r.cost_factor_name ?? r.cost_factor ?? r.name,
+        description: r.cost_factor_desc ?? r.description ?? r.desc ?? r.note,
+  // prefer dept_desc, then dept_name from API; fallback to dept_id string or any available department field
+  department: r.dept_desc ?? r.dept_name ?? r.department_name ?? (typeof r.dept_id !== 'undefined' ? String(r.dept_id) : r.department),
         branch_id: r.branch_id,
         branch_name: branchMap.get(String(r.branch_id)) ?? String(r.branch_id ?? ''),
-        warehouse_path: r.warehouse_path ?? r.warehouse_name ?? r.warehouse_display ?? '',
-        warehouse_type: r.warehouse_type ?? r.type ?? '',
-        active: typeof r.active === "string" ? Number(r.active) : r.active,
       }));
+
       setRows(mapped);
       setTotalRows(data.total || 0);
     } catch (err: any) {
-      setSnackbar({ open: true, message: err.message || "Error fetching warehouses", severity: "error" });
+      setSnackbar({ open: true, message: err.message || "Error fetching cost factors", severity: "error" });
     } finally {
       setLoading(false);
     }
   };
 
   useEffect(() => {
-    fetchWarehouses();
+    fetchCostFactors();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [paginationModel.page, paginationModel.pageSize, searchQuery]);
 
@@ -104,36 +105,26 @@ export default function WarehouseMasterPage() {
     setSearchTimeout(t);
   };
 
-  const handleOpenDetails = (id: number | string) => {
-    setDetailsDialogMode('view');
-    setDetailsDialogOpen(true);
-    setDetailsLoading(true);
-    setDetailsData(null);
-    try {
-      const row = rows.find(r => r.id === id);
-      setDetailsData(row || { error: "No details found" });
-    } catch (err: any) {
-      setDetailsData({ error: err.message || "Failed to load details" });
-    } finally {
-      setDetailsLoading(false);
-    }
+  const handleEdit = (row: any) => {
+  setEditData(row);
+  // open create dialog in edit mode; do not open the details JSON dialog
+  setCreateOpen(true);
+  setEditDialogOpen(false);
   };
 
   const columns: GridColDef[] = [
-    { field: 'branch_name', headerName: 'Branch', flex: 1, minWidth: 180, headerClassName: 'bg-[#3ea6da] text-white' },
-    { field: 'warehouse_path', headerName: 'Warehouse', flex: 1, minWidth: 260, headerClassName: 'bg-[#3ea6da] text-white' },
-    { field: 'warehouse_type', headerName: 'Warehouse Type', flex: 1, minWidth: 160, headerClassName: 'bg-[#3ea6da] text-white' },
+    { field: 'branch_name', headerName: 'Branch', flex: 1, minWidth: 160, headerClassName: 'bg-[#3ea6da] text-white' },
+    { field: 'cost_factor', headerName: 'Cost Factor', flex: 1, minWidth: 160, headerClassName: 'bg-[#3ea6da] text-white' },
+    { field: 'description', headerName: 'Description', flex: 1.5, minWidth: 220, headerClassName: 'bg-[#3ea6da] text-white' },
+    { field: 'department', headerName: 'Department', flex: 1, minWidth: 180, headerClassName: 'bg-[#3ea6da] text-white' },
     {
       field: 'actions', headerName: 'Actions', width: 80, sortable: false, filterable: false, headerClassName: 'bg-[#3ea6da] text-white',
-      renderCell: (params) => (
-        <IconButton size="small" onClick={() => {
-          // open edit dialog for the row
-          setDetailsDialogMode('edit');
-          setDetailsDialogOpen(true);
-          setDetailsData(params.row);
-        }}>
-          <Edit size={14} />
-        </IconButton>
+      renderCell: (params: GridRenderCellParams) => (
+        <Tooltip title="Edit">
+          <IconButton size="small" onClick={() => handleEdit(params.row)}>
+            <Edit size={14} />
+          </IconButton>
+        </Tooltip>
       ),
     },
   ];
@@ -142,14 +133,14 @@ export default function WarehouseMasterPage() {
     <div className="min-h-screen bg-gray-50 p-8">
       <div className="mx-auto max-w-7xl">
         <div className="mb-8 flex items-center justify-between">
-          <h1 className="text-2xl font-bold text-[#0C3C60]">Warehouse Master</h1>
-          <Button className="btn-primary" onClick={() => setCreateDialogOpen(true)}>
-            + Create Warehouse
+          <h1 className="text-2xl font-bold text-[#0C3C60]">Cost Factor Master</h1>
+          <Button className="btn-primary" onClick={() => setCreateOpen(true)}>
+            + Create Cost Factor
           </Button>
         </div>
 
         <Box sx={{ width: "100%", mb: 2 }}>
-          <TextField placeholder="Search warehouses..." onChange={handleSearchChange} fullWidth variant="outlined" size="small" sx={{ maxWidth: 350 }} />
+          <TextField placeholder="Search cost factors..." onChange={handleSearchChange} fullWidth variant="outlined" size="small" sx={{ maxWidth: 350 }} />
         </Box>
 
         <MuiDataGrid
@@ -169,22 +160,17 @@ export default function WarehouseMasterPage() {
         </Snackbar>
       </div>
 
-      <Dialog open={detailsDialogOpen} onClose={() => setDetailsDialogOpen(false)} maxWidth="sm" fullWidth>
-        <DialogTitle>Warehouse Details</DialogTitle>
+  <CreateCostFactor open={createOpen} onClose={() => setCreateOpen(false)} onSaved={() => { setCreateOpen(false); fetchCostFactors(); }} editId={editData?.cost_factor_id ?? editData?.id} />
+
+      <Dialog open={editDialogOpen} onClose={() => setEditDialogOpen(false)} maxWidth="sm" fullWidth>
+        <DialogTitle>Cost Factor Details</DialogTitle>
         <DialogContent>
-          {detailsLoading ? (
-            <div>Loading...</div>
-          ) : detailsData && !detailsData.error ? (
-            <pre>{JSON.stringify(detailsData, null, 2)}</pre>
-          ) : (
-            <div>{detailsData?.error || "No details found"}</div>
-          )}
+          {editData ? <pre>{JSON.stringify(editData, null, 2)}</pre> : <div>No details</div>}
         </DialogContent>
         <DialogActions>
-          <Button onClick={() => setDetailsDialogOpen(false)} autoFocus>Okay</Button>
+          <Button onClick={() => setEditDialogOpen(false)}>Close</Button>
         </DialogActions>
       </Dialog>
-  <CreateWarehouse open={createDialogOpen} onClose={() => setCreateDialogOpen(false)} onSaved={() => { setCreateDialogOpen(false); fetchWarehouses(); }} />
     </div>
   );
 }

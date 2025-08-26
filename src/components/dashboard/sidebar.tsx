@@ -32,6 +32,24 @@ export default function Sidebar({ isCollapsed, onToggle }: SidebarProps) {
 
   useEffect(() => {
     if (!isClient || compshow !== 2) return;
+
+    // First try to reuse cached companies from localStorage to avoid
+    // calling the portal menu API on every navigation/redirect.
+    try {
+      const cached = localStorage.getItem('sidebar_companies');
+      if (cached) {
+        const parsed = JSON.parse(cached);
+        if (Array.isArray(parsed) && parsed.length > 0) {
+          setCompanies(parsed);
+          return; // cached data present, skip network request
+        }
+      }
+    } catch (err) {
+      // fall through to fetching from API if parsing fails
+      console.warn('Failed to parse cached sidebar_companies', err);
+    }
+
+    // No valid cache found - fetch once and let SidebarProvider persist it to localStorage
     const fetchCompanyData = async () => {
       setIsLoading(true);
       try {

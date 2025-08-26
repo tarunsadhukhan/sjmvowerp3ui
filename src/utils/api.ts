@@ -112,6 +112,66 @@ const apiRoutesPortalMasters = {
     CREATE_ITEM_GRP: `${API_URL}/itemMaster/createItemGroup`,
     EDIT_ITEM_GRP: `${API_URL}/itemMaster/editItemGroup`,
     UPDATE_ITEM_GRP_ACTIVE: `${API_URL}/itemMaster/updateItemGroupActive`,
+    ITEM_GROUP_DETAILS: `${API_URL}/itemMaster/itemGroupDetails`, // Added for details dialog
+    GET_ITEM_TABLE: `${API_URL}/itemMaster/get_item_table`,
+    ITEM_CREATE_SETUP: `${API_URL}/itemMaster/item_create_setup`,
+    ITEM_CREATE: `${API_URL}/itemMaster/item_create`,
+    ITEM_EDIT_SETUP: `${API_URL}/itemMaster/item_edit_setup`,
+    ITEM_EDIT: `${API_URL}/itemMaster/item_edit`,
+    ITEM_VIEW: `${API_URL}/itemMaster/item_view`,
+    ITEM_MAKE_TABLE: `${API_URL}/itemMaster/item_make_table`,
+    ITEM_MAKE_CREATE_SETUP: `${API_URL}/itemMaster/item_make_create_setup`,
+    ITEM_MAKE_CREATE: `${API_URL}/itemMaster/item_make_create`,
+
+    
+    DEPT_MASTER_TABLE: `${API_URL}/deptMaster/dept_master_table`,
+    DEPT_MASTER_VALIDATE_TABLE: `${API_URL}/deptMaster/dept_master_validate_table`,
+    DEPT_MASTER_CREATE_SETUP: `${API_URL}/deptMaster/dept_master_create_setup`,
+    DEPT_MASTER_CREATE: `${API_URL}/deptMaster/dept_master_create`,
+    DEPT_MASTER_VIEW: `${API_URL}/deptMaster/dept_master_view`,
+
+    SUBDEPT_MASTER_TABLE : `${API_URL}/deptMaster/subdept_master_table`,
+    SUBDEPT_MASTER_CREATE_SETUP : `${API_URL}/deptMaster/subdept_master_create_setup`,
+    SUBDEPT_MASTER_CREATE : `${API_URL}/deptMaster/subdept_master_create`,
+    SUBDEPT_MASTER_VIEW : `${API_URL}/deptMaster/subdept_master_view`,
+
+    MECHINE_TYPE_MASTER_TABLE : `${API_URL}/mechMaster/mechine_type_master_table`,
+    MECHINE_TYPE_MASTER_CREATE_SETUP : `${API_URL}/mechMaster/mechine_type_master_create_setup`,
+    MECHINE_TYPE_MASTER_CREATE : `${API_URL}/mechMaster/mechine_type_master_create`,
+    MECHINE_TYPE_MASTER_VIEW : `${API_URL}/mechMaster/mechine_type_master_view`,
+
+    MECHINE_MASTER_TABLE : `${API_URL}/mechMaster/mechine_master_table`,
+    MECHINE_MASTER_CREATE_SETUP : `${API_URL}/mechMaster/mechine_master_create_setup`,
+    MECHINE_MASTER_CREATE : `${API_URL}/mechMaster/mechine_master_create`,
+    MECHINE_MASTER_EDIT_SETUP : `${API_URL}/mechMaster/mechine_master_edit_setup`,
+    MECHINE_MASTER_EDIT : `${API_URL}/mechMaster/mechine_master_edit`,
+    MECHINE_MASTER_VIEW : `${API_URL}/mechMaster/mechine_master_view`
+    ,
+    PROJECT_MASTER_TABLE: `${API_URL}/projectMaster/project_master_table`,
+    PROJECT_MASTER_CREATE_SETUP: `${API_URL}/projectMaster/project_master_create_setup`,
+    PROJECT_MASTER_CREATE: `${API_URL}/projectMaster/project_master_create`,
+    PROJECT_MASTER_EDIT: `${API_URL}/projectMaster/project_master_edit`,
+    PROJECT_MASTER_VIEW: `${API_URL}/projectMaster/project_master_view`
+
+
+    PARTY_TABLE: `${API_URL}/partyMaster/get_party_table`,
+    PARTY_CREATE_SETUP: `${API_URL}/partyMaster/party_create_setup`,
+    PARTY_CREATE: `${API_URL}/partyMaster/party_create`,
+    PARTY_EDIT_SETUP: `${API_URL}/partyMaster/party_edit_setup`,
+    PARTY_EDIT: `${API_URL}/partyMaster/party_edit`,
+
+    WAREHOUSE_TABLE: `${API_URL}/warehouseMaster/get_warehouse_table`,
+    WAREHOUSE_CREATE_SETUP: `${API_URL}/warehouseMaster/warehouse_create_setup`,
+    WAREHOUSE_CREATE: `${API_URL}/warehouseMaster/warehouse_create`,
+    WAREHOUSE_EDIT_SETUP: `${API_URL}/warehouseMaster/warehouse_edit_setup`,
+    WAREHOUSE_EDIT: `${API_URL}/warehouseMaster/warehouse_edit`,
+
+    COSTFACTOR_TABLE: `${API_URL}/costFactorMaster/get_cost_factor_table`,
+    COSTFACTOR_CREATE_SETUP: `${API_URL}/costFactorMaster/cost_factor_create_setup`,
+    COSTFACTOR_CREATE: `${API_URL}/costFactorMaster/cost_factor_create`,
+    COSTFACTOR_EDIT_SETUP: `${API_URL}/costFactorMaster/cost_factor_edit_setup`,
+    COSTFACTOR_EDIT: `${API_URL}/costFactorMaster/cost_factor_edit`,
+
 };
 
 export { apiRoutes, apiRoutesconsole, apiRoutesPortalMasters };

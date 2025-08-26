@@ -5,9 +5,10 @@ import { Search } from "lucide-react";
 import { apiRoutesPortalMasters } from "@/utils/api";
 import { fetchWithCookie } from "@/utils/apiClient2";
 import MuiDataGrid from '@/components/ui/muiDataGrid';
-import { Box, TextField, InputAdornment, Switch, Snackbar, Alert } from '@mui/material';
+import { Box, TextField, InputAdornment, Switch, Snackbar, Alert, Dialog, DialogTitle, DialogContent, DialogActions, CircularProgress } from '@mui/material';
 import { useState, useEffect } from 'react';
 import { GridColDef, GridPaginationModel, GridRenderCellParams } from '@mui/x-data-grid';
+import CreateItemGroupPage from "@/app/dashboardportal/masters/itemGroupMaster/CreateItemGroupPage";
 
 
 
@@ -33,6 +34,9 @@ export default function CompanyManagement() {
   const [searchQuery, setSearchQuery] = useState('');
   const [searchTimeout, setSearchTimeout] = useState<NodeJS.Timeout | null>(null);
   const [snackbar, setSnackbar] = useState<{ open: boolean; message: string; severity: 'success' | 'error' }>({ open: false, message: '', severity: 'success' });
+  const [detailsDialogOpen, setDetailsDialogOpen] = useState(false);
+  const [detailsLoading, setDetailsLoading] = useState(false);
+  const [detailsData, setDetailsData] = useState<any>(null);
 
   // Fetch companies from API with pagination and search
   const fetchItemGrps = async () => {
@@ -109,8 +113,13 @@ export default function CompanyManagement() {
   };
 
   // Open dialog for create
+  const [createDialogOpen, setCreateDialogOpen] = useState(false);
   const handleOpenCreate = () => {
-    window.location.href = "/dashboardportal/masters/itemGroupMaster/CreateItemGroup";
+    setCreateDialogOpen(true);
+  };
+  const handleCloseCreateDialog = () => {
+    setCreateDialogOpen(false);
+    fetchItemGrps(); // Refresh grid after create
   };
 
   // Toggle active status handler
@@ -137,21 +146,62 @@ export default function CompanyManagement() {
     }
   };
 
+  // Handler to open details dialog and fetch data
+  const handleOpenDetails = async (item_grp_id: number) => {
+    setDetailsDialogOpen(true);
+    setDetailsLoading(true);
+    setDetailsData(null);
+    try {
+      const selectedCompany = localStorage.getItem('sidebar_selectedCompany');
+      const co_id = selectedCompany ? JSON.parse(selectedCompany).co_id : '';
+      const { data, error } = await fetchWithCookie(
+        apiRoutesPortalMasters.ITEM_GROUP_DETAILS, // Ensure this endpoint exists in your api.ts
+        'POST',
+        { itemgroupid: item_grp_id, co_id }
+      );
+      if (!error && data) {
+        setDetailsData(data);
+      } else {
+        setDetailsData({ error: error || 'Failed to fetch details' });
+      }
+    } catch (err: any) {
+      setDetailsData({ error: err.message || 'Failed to fetch details' });
+    } finally {
+      setDetailsLoading(false);
+    }
+  };
+
   // Column definitions for the DataGrid
   const columns: GridColDef[] = [
-    { 
-      field: 'item_grp_code_display', 
-      headerName: 'Item Group Code', 
+    {
+      field: 'item_grp_code_display',
+      headerName: 'Item Group Code',
       flex: 1,
       minWidth: 180,
       headerClassName: 'bg-[#3ea6da] text-white',
+      renderCell: (params: GridRenderCellParams) => (
+        <span
+          className="text-blue-700 underline cursor-pointer"
+          onClick={() => handleOpenDetails(params.row.item_grp_id)}
+        >
+          {params.value}
+        </span>
+      ),
     },
-    { 
-        field: 'item_grp_name_parent', 
-        headerName: 'Item Group Name', 
-        flex: 1,
-        minWidth: 200,
-        headerClassName: 'bg-[#3ea6da] text-white',
+    {
+      field: 'item_grp_name_parent',
+      headerName: 'Item Group Name',
+      flex: 1,
+      minWidth: 200,
+      headerClassName: 'bg-[#3ea6da] text-white',
+      renderCell: (params: GridRenderCellParams) => (
+        <span
+          className="text-blue-700 underline cursor-pointer"
+          onClick={() => handleOpenDetails(params.row.item_grp_id)}
+        >
+          {params.value}
+        </span>
+      ),
     },
     { 
       field: 'item_sub_grp_name', 
@@ -177,54 +227,105 @@ export default function CompanyManagement() {
   ];
 
   return (
-    <div className="min-h-screen bg-gray-50 p-8">
-      <div className="mx-auto max-w-7xl">
-        <div className="mb-8 flex items-center justify-between">
-          <h1 className="text-2xl font-bold text-[#0C3C60]">Item Group Master</h1>
+    <>
+      <div className="min-h-screen bg-gray-50 p-8">
+        <div className="mx-auto max-w-7xl">
+          <div className="mb-8 flex items-center justify-between">
+            <h1 className="text-2xl font-bold text-[#0C3C60]">Item Group Master</h1>
           <Button
             className="btn-primary"
             onClick={handleOpenCreate}
           >
             + Create Item Group
           </Button>
-        </div>
-        <Box sx={{ width: '100%', mb: 2 }}>
-          <TextField
-            placeholder="Search item groups..."
-            onChange={handleSearchChange}
-            fullWidth
-            variant="outlined"
-            size="small"
-            sx={{ maxWidth: 350 }}
-            InputProps={{
-              startAdornment: (
-                <InputAdornment position="start">
-                  <Search className="h-4 w-4" />
-                </InputAdornment>
-              ),
-            }}
+          {/* Create Item Group Dialog */}
+          <CreateItemGroupPage open={createDialogOpen} onClose={handleCloseCreateDialog} />
+          </div>
+          <Box sx={{ width: '100%', mb: 2 }}>
+            <TextField
+              placeholder="Search item groups..."
+              onChange={handleSearchChange}
+              fullWidth
+              variant="outlined"
+              size="small"
+              sx={{ maxWidth: 350 }}
+              InputProps={{
+                startAdornment: (
+                  <InputAdornment position="start">
+                    <Search className="h-4 w-4" />
+                  </InputAdornment>
+                ),
+              }}
+            />
+          </Box>
+          <MuiDataGrid
+            rows={rows}
+            columns={columns}
+            rowCount={totalRows}
+            paginationModel={paginationModel}
+            onPaginationModelChange={handlePaginationModelChange}
+            loading={loading}
+            showLoadingUntilLoaded={true}
           />
-        </Box>
-        <MuiDataGrid
-          rows={rows}
-          columns={columns}
-          rowCount={totalRows}
-          paginationModel={paginationModel}
-          onPaginationModelChange={handlePaginationModelChange}
-          loading={loading}
-          showLoadingUntilLoaded={true}
-        />
-        <Snackbar
-          open={snackbar.open}
-          autoHideDuration={4000}
-          onClose={() => setSnackbar({ ...snackbar, open: false })}
-          anchorOrigin={{ vertical: 'top', horizontal: 'center' }}
-        >
-          <Alert severity={snackbar.severity} onClose={() => setSnackbar({ ...snackbar, open: false })} sx={{ width: '100%' }}>
-            {snackbar.message}
-          </Alert>
-        </Snackbar>
+          <Snackbar
+            open={snackbar.open}
+            autoHideDuration={4000}
+            onClose={() => setSnackbar({ ...snackbar, open: false })}
+            anchorOrigin={{ vertical: 'top', horizontal: 'center' }}
+          >
+            <Alert severity={snackbar.severity} onClose={() => setSnackbar({ ...snackbar, open: false })} sx={{ width: '100%' }}>
+              {snackbar.message}
+            </Alert>
+          </Snackbar>
+        </div>
       </div>
-    </div>
+      {/* Details Dialog */}
+      <Dialog open={detailsDialogOpen} onClose={() => setDetailsDialogOpen(false)} maxWidth="sm" fullWidth>
+        <DialogTitle>Item Group Details</DialogTitle>
+        <DialogContent>
+          {detailsLoading ? (
+            <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: 120 }}>
+              <CircularProgress />
+            </Box>
+          ) : detailsData && !detailsData.error ? (
+            <Box sx={{ mt: 1 }}>
+              <TextField
+                label="Item Group Name"
+                value={detailsData.item_grp_name || ''}
+                fullWidth
+                margin="normal"
+                InputProps={{ readOnly: true }}
+              />
+              <TextField
+                label="Item Group Code"
+                value={detailsData.item_grp_code || ''}
+                fullWidth
+                margin="normal"
+                InputProps={{ readOnly: true }}
+              />
+              <TextField
+                label="Item Type ID"
+                value={detailsData.item_type_id || ''}
+                fullWidth
+                margin="normal"
+                InputProps={{ readOnly: true }}
+              />
+              <TextField
+                label="Active"
+                value={detailsData.active == 1 || detailsData.active === '1' ? 'Yes' : 'No'}
+                fullWidth
+                margin="normal"
+                InputProps={{ readOnly: true }}
+              />
+            </Box>
+          ) : (
+            <Alert severity="error">{detailsData?.error || 'No details found.'}</Alert>
+          )}
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setDetailsDialogOpen(false)} autoFocus>Okay</Button>
+        </DialogActions>
+      </Dialog>
+    </>
   );
 }

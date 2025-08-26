@@ -29,10 +29,10 @@ export const fetchWithCookie = async (url: string, method: string = "GET", body?
             hasData: !!response.data
         });
         
-        return { data: response.data, error: null };
+    return { data: response.data, error: null, status: response.status };
     } catch (err) {
         console.error(`Error in fetchWithCookie for ${url}:`, err);
-        return { data: null, error: (err as Error).message };
+    return { data: null, error: (err as Error).message, status: 0 };
     }
 };
 

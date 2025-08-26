@@ -151,7 +151,7 @@ const apiRoutesPortalMasters = {
     PROJECT_MASTER_CREATE_SETUP: `${API_URL}/projectMaster/project_master_create_setup`,
     PROJECT_MASTER_CREATE: `${API_URL}/projectMaster/project_master_create`,
     PROJECT_MASTER_EDIT: `${API_URL}/projectMaster/project_master_edit`,
-    PROJECT_MASTER_VIEW: `${API_URL}/projectMaster/project_master_view`
+    PROJECT_MASTER_VIEW: `${API_URL}/projectMaster/project_master_view`,
 
 
     PARTY_TABLE: `${API_URL}/partyMaster/get_party_table`,

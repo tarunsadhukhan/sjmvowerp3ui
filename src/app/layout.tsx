@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import { Inter } from "next/font/google";
 import "./globals.css";
-import SidebarCompaniesGuard from "@/components/clientside/SidebarCompaniesGuard";
+import SidebarCompaniesGuardClient from '@/components/clientside/SidebarCompaniesGuardClient';
 
 const inter = Inter({ subsets: ["latin"] });
 /* 
@@ -32,7 +32,7 @@ export default function RootLayout({
     <html lang="en">
       <body className={`${inter.className}`}>
         {/* <AuthProvider>    */}
-          <SidebarCompaniesGuard />
+          <SidebarCompaniesGuardClient />
           {children}
          {/* </AuthProvider>  */}
       </body>

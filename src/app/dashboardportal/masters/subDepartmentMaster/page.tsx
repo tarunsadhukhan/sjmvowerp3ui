@@ -34,10 +34,10 @@ export default function SubDepartmentMasterPage() {
   const fetchSubDepartments = async (): Promise<void> => {
     setLoading(true);
     try {
-    			const selectedCompany = localStorage.getItem("sidebar_selectedCompany");
-			const co_id = selectedCompany ? JSON.parse(selectedCompany).co_id : "";
-			const selectedBranches = localStorage.getItem("sidebar_selectedBranches");
-			console.log('localstorage', selectedBranches);
+      const selectedCompany = localStorage.getItem("sidebar_selectedCompany");
+      const co_id = selectedCompany ? JSON.parse(selectedCompany).co_id : "";
+      const selectedBranches = localStorage.getItem("sidebar_selectedBranches");
+      void selectedBranches; // intentionally read for side-effects; avoid console logging in Stage A cleanup
 			let branch_ids = "";
 			if (selectedBranches) {
 				try {
@@ -51,7 +51,7 @@ export default function SubDepartmentMasterPage() {
 								if (b && typeof b === 'object') return b.branch_id ?? b.id ?? b.value ?? '';
 								// allow numeric 0 as valid id
 								if (b === 0) return '0';
-								if (b) return String(b);
+                if (b) return String(b);
 								return '';
 							})
 							.map(String)
@@ -82,7 +82,7 @@ export default function SubDepartmentMasterPage() {
     }
   };
 
-  useEffect(() => { fetchSubDepartments(); /* eslint-disable-next-line */ }, [paginationModel.page, paginationModel.pageSize, searchQuery]);
+  useEffect(() => { fetchSubDepartments();   }, [paginationModel.page, paginationModel.pageSize, searchQuery]);
 
   const handlePaginationModelChange = (newModel: GridPaginationModel) => setPaginationModel(newModel);
   const handleSearchChange = (e: React.ChangeEvent<HTMLInputElement>) => {

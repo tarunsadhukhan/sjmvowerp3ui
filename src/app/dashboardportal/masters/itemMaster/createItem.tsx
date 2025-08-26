@@ -85,54 +85,17 @@ const CreateItem: React.FC<CreateItemProps> = ({ open, onClose, mode = 'create',
           error: string | null;
         };
 
-        // Console log the raw API response for debugging
-        console.log("=== ITEM_CREATE_SETUP API Response ===");
-        console.log("API URL:", apiUrl);
-        console.log("Raw response data:", data);
-        console.log("Raw response error:", error);
-        console.log("Data type:", typeof data);
-        console.log("Is data null?", data === null);
-        console.log("Is data undefined?", data === undefined);
-        
-  if (data) {
-          console.log("=== Setup Data Structure ===");
-          console.log("Available keys in data:", Object.keys(data));
-          console.log("item_groups:", data.item_groups);
-          console.log("item_groups type:", typeof data.item_groups);
-          console.log("item_groups is array?", Array.isArray(data.item_groups));
-          console.log("item_groups length:", data.item_groups?.length);
-          
-          console.log("uom_groups:", data.uom_groups);
-          console.log("uom_groups type:", typeof data.uom_groups);
-          console.log("uom_groups is array?", Array.isArray(data.uom_groups));
-          console.log("uom_groups length:", data.uom_groups?.length);
-          
-          console.log("minmax_mapping:", data.minmax_mapping);
-          console.log("minmax_mapping type:", typeof data.minmax_mapping);
-          console.log("minmax_mapping is array?", Array.isArray(data.minmax_mapping));
-          console.log("minmax_mapping length:", data.minmax_mapping?.length);
-          
-          // Log first few items for structure inspection
-          if (Array.isArray(data.item_groups) && data.item_groups.length > 0) {
-            console.log("First item group sample:", data.item_groups[0]);
-          }
-          if (Array.isArray(data.uom_groups) && data.uom_groups.length > 0) {
-            console.log("First UOM group sample:", data.uom_groups[0]);
-          }
-        }
-        console.log("=== End API Response Debug ===");
-
   if (cancelled) return;
   if (error) throw new Error(error);
 
         // Normalize backend response shape: some endpoints return `itemgroups`/`uomgroups`,
         // other endpoints return `item_groups`/`uom_groups`. Normalize to internal shape
         // used by this component: `item_groups` and `uom_groups`.
-        const normalized: SetupData = {
-          item_groups: (data as any)?.itemgroups ?? (data as any)?.item_groups ?? [],
-          uom_groups: (data as any)?.uomgroups ?? (data as any)?.uom_groups ?? [],
-          minmax_mapping: (data as any)?.minmax_mapping ?? (data as any)?.minmax_mapping ?? [],
-        };
+          const normalized: SetupData = {
+            item_groups: (data as any)?.itemgroups ?? (data as any)?.item_groups ?? [],
+            uom_groups: (data as any)?.uomgroups ?? (data as any)?.uom_groups ?? [],
+            minmax_mapping: (data as any)?.minmax_mapping ?? (data as any)?.minmax_mapping ?? [],
+          };
 
   setSetupData(normalized);
         if (co_id && normalized) cacheByCompany.set(co_id, normalized);
@@ -167,60 +130,15 @@ const CreateItem: React.FC<CreateItemProps> = ({ open, onClose, mode = 'create',
     }
   }, [setupData]);
 
-  const itemGroupOptions = React.useMemo(
-    () => {
-      console.log("=== Processing Item Group Options ===");
-      console.log("setupData:", setupData);
-      console.log("setupData?.item_groups:", setupData?.item_groups);
-      console.log("Is item_groups array?", Array.isArray(setupData?.item_groups));
-      
-      if (!Array.isArray(setupData?.item_groups)) {
-        console.log("No valid item_groups data, returning empty array");
-        return [];
-      }
-      
-      const options = setupData.item_groups.map((g) => {
-        console.log("Processing item group:", g);
-        const option = {
-          label: `${g.item_grp_name_display} (${g.item_grp_code_display})`,
-          value: String(g.item_grp_id),
-        };
-        console.log("Created option:", option);
-        return option;
-      });
-      
-      console.log("Final Item Group options:", options);
-      console.log("=== End Item Group Options Processing ===");
-      return options;
-    },
-    [setupData]
-  );
+  const itemGroupOptions = React.useMemo(() => {
+    if (!Array.isArray(setupData?.item_groups)) return [];
+    return setupData.item_groups.map((g:any) => ({ label: `${g.item_grp_name_display} (${g.item_grp_code_display})`, value: String(g.item_grp_id) }));
+  }, [setupData]);
 
-  const uomOptions = React.useMemo(
-    () => {
-      console.log("=== Processing UOM Options ===");
-      console.log("setupData:", setupData);
-      console.log("setupData?.uom_groups:", setupData?.uom_groups);
-      console.log("Is uom_groups array?", Array.isArray(setupData?.uom_groups));
-      
-      if (!Array.isArray(setupData?.uom_groups)) {
-        console.log("No valid uom_groups data, returning empty array");
-        return [];
-      }
-      
-      const options = setupData.uom_groups.map((u) => {
-        console.log("Processing UOM:", u);
-        const option = { label: u.uom_name, value: String(u.uom_id) };
-        console.log("Created UOM option:", option);
-        return option;
-      });
-      
-      console.log("Final UOM options:", options);
-      console.log("=== End UOM Options Processing ===");
-      return options;
-    },
-    [setupData]
-  );
+  const uomOptions = React.useMemo(() => {
+    if (!Array.isArray(setupData?.uom_groups)) return [];
+    return setupData.uom_groups.map((u:any) => ({ label: u.uom_name, value: String(u.uom_id) }));
+  }, [setupData]);
   const schema: Schema = React.useMemo(() => {
     return {
       title: mode === 'create' ? 'Create Item' : mode === 'edit' ? 'Edit Item' : 'View Item',
@@ -320,7 +238,7 @@ const CreateItem: React.FC<CreateItemProps> = ({ open, onClose, mode = 'create',
         if (parsed?.co_id) payload.co_id = Number(parsed.co_id);
       } catch (e) {
         // ignore parse errors and proceed without co_id
-        console.warn('Failed to read sidebar_selectedCompany for co_id', e);
+        void 0;
       }
     }
 
@@ -354,7 +272,7 @@ const CreateItem: React.FC<CreateItemProps> = ({ open, onClose, mode = 'create',
         return;
       }
 
-      console.log('Item saved', data);
+  void 0;
   // reset mapping snapshots so form is no longer dirty
   try { uomSnapshotRef.current = JSON.stringify([]); } catch {}
   try { minMaxSnapshotRef.current = JSON.stringify([]); } catch {}
@@ -444,9 +362,9 @@ const CreateItem: React.FC<CreateItemProps> = ({ open, onClose, mode = 'create',
         setInitialValues(mapped);
 
         // Transform UOM mappings into table shape expected by UOMMappingTable
-        const rawUomMaps = (data.uom_mappings ?? data.uom_mappings ?? data.uom_mappings ?? data.uom_mappings) ?? data.uom_mappings ?? [];
-        const sourceUomMaps = Array.isArray(data.uom_mappings) ? data.uom_mappings : (Array.isArray((data as any).uom_mappings) ? (data as any).uom_mappings : (data.uom_mappings ?? []));
-        const uomSource = data.uom_mappings ?? data.uom_mappings ?? [];
+  const _rawUomMaps = (data.uom_mappings ?? data.uom_mappings ?? data.uom_mappings ?? data.uom_mappings) ?? data.uom_mappings ?? [];
+  const _sourceUomMaps = Array.isArray(data.uom_mappings) ? data.uom_mappings : (Array.isArray((data as any).uom_mappings) ? (data as any).uom_mappings : (data.uom_mappings ?? []));
+  const _uomSource = data.uom_mappings ?? data.uom_mappings ?? [];
         const mappedUoms = (Array.isArray(data.uom_mappings) ? data.uom_mappings : (Array.isArray((data as any).uom_mappings) ? (data as any).uom_mappings : (data.uom_mappings ?? [])))
           .map((m: any) => ({
             mapFromUom: String(m.map_from_id ?? m.map_from ?? m.mapFromId ?? m.map_from_id),

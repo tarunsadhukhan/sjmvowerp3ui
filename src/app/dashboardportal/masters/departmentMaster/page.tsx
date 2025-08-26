@@ -66,19 +66,18 @@ export default function DepartmentMasterPage() {
 	const [editCodeError, setEditCodeError] = useState<string | null>(null);
 
 	const fetchDepartments = async (): Promise<void> => {
-		console.log('localstorage', localStorage.sidebar_selectedBranches);
+		void 0;
 
 		setLoading(true);
 		try {
 			const selectedCompany = localStorage.getItem("sidebar_selectedCompany");
 			const co_id = selectedCompany ? JSON.parse(selectedCompany).co_id : "";
 			const selectedBranches = localStorage.getItem("sidebar_selectedBranches");
-			console.log('localstorage', selectedBranches);
+			void 0;
 			let branch_ids = "";
 			if (selectedBranches) {
 				try {
 					const parsed = JSON.parse(selectedBranches);
-					console.log('parsed selectedBranches', parsed);
 					branch_ids=parsed
 			 		if (Array.isArray(parsed)) {
 						// support array of objects [{ branch_id: 1 }] OR array of primitives [1,2] OR mixed
@@ -93,10 +92,9 @@ export default function DepartmentMasterPage() {
 							.map(String)
 							.filter(Boolean);
 						branch_ids = ids.join(',');
-						console.log('branch_ids', branch_ids);
 					} 
 				} catch (e) {
-					console.warn("Failed to parse selectedBranches:", e);
+					void 0;
 				}
 			}
 			const queryParams = new URLSearchParams({

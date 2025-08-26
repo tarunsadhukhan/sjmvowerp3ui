@@ -3,8 +3,8 @@
 import React, { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import MuiDataGrid from "@/components/ui/muiDataGrid";
-import { Box, TextField, Tooltip, Dialog, DialogTitle, DialogContent, DialogActions, Switch, Snackbar, Alert, IconButton } from "@mui/material";
-import { GridColDef, GridPaginationModel, GridRenderCellParams } from "@mui/x-data-grid";
+import { Box, TextField, Dialog, DialogTitle, DialogContent, DialogActions, Snackbar, Alert, IconButton } from "@mui/material";
+import { GridColDef, GridPaginationModel } from "@mui/x-data-grid";
 import { fetchWithCookie } from "@/utils/apiClient2";
 import { apiRoutesPortalMasters } from "@/utils/api";
 import { Edit } from 'lucide-react';
@@ -104,7 +104,7 @@ export default function WarehouseMasterPage() {
     setSearchTimeout(t);
   };
 
-  const handleOpenDetails = (id: number | string) => {
+  const _handleOpenDetails = (id: number | string) => {
     setDetailsDialogMode('view');
     setDetailsDialogOpen(true);
     setDetailsLoading(true);

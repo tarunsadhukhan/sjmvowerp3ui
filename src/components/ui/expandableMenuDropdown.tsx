@@ -122,7 +122,7 @@ const MenuTableDropdown: React.FC<Props> = ({
   const handleParentCheckboxChange = (parentId: number, isChecked: boolean) => {
     const childIds = getChildMenuIds(parentId);
     let newSelectedIds;
-    let newAccessLevels = { ...accessLevels };
+    const newAccessLevels = { ...accessLevels };
 
     if (isChecked) {
       // Add parent and all children to selection (avoid duplicates)

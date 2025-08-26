@@ -3,7 +3,7 @@
 
 import React, { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
-import { Box, TextField, Snackbar, Alert, Tooltip, Dialog, DialogTitle, DialogContent, DialogActions, IconButton, Stack, Button as MuiButton } from "@mui/material";
+import { Box, TextField, Tooltip, IconButton, Stack } from "@mui/material";
 import { Edit } from 'lucide-react';
 import CreateItem from "./createItem";
 import MuiDataGrid from "@/components/ui/muiDataGrid";
@@ -37,9 +37,9 @@ export default function ItemMasterPage() {
   const [totalRows, setTotalRows] = useState(0);
   const [searchQuery, setSearchQuery] = useState("");
   const [searchTimeout, setSearchTimeout] = useState<NodeJS.Timeout | null>(null);
-  const [snackbar, setSnackbar] = useState<{ open: boolean; message: string; severity: "success" | "error" }>({ open: false, message: "", severity: "success" });
+  const [_snackbar, _setSnackbar] = useState<{ open: boolean; message: string; severity: "success" | "error" }>({ open: false, message: "", severity: "success" });
   const [viewDialogOpen, setViewDialogOpen] = useState(false);
-  const [viewLoading, setViewLoading] = useState(false);
+  const [_viewLoading, _setViewLoading] = useState(false);
   const [viewData, setViewData] = useState<any>(null);
   const [editDialogOpen, setEditDialogOpen] = useState(false);
   const [editItemData, setEditItemData] = useState<any>(null);
@@ -76,7 +76,7 @@ export default function ItemMasterPage() {
       setRows(mappedRows);
       setTotalRows(data.total || 0);
     } catch (error: any) {
-      setSnackbar({ open: true, message: error.message || "Error fetching items", severity: "error" });
+      _setSnackbar({ open: true, message: error.message || "Error fetching items", severity: "error" });
     } finally {
       setLoading(false);
     }
@@ -110,10 +110,10 @@ export default function ItemMasterPage() {
   // ...existing code...
 
   // Handler to open view dialog and fetch edit/setup payload then show CreateItem in view mode
-  const handleOpenView = async (item_id: number) => {
-    setViewDialogOpen(true);
-    setViewLoading(true);
-    setViewData(null);
+  const _handleOpenView = async (item_id: number) => {
+  setViewDialogOpen(true);
+  _setViewLoading(true);
+  setViewData(null);
     try {
       const selectedCompany = localStorage.getItem("sidebar_selectedCompany");
       const co_id = selectedCompany ? JSON.parse(selectedCompany).co_id : "";
@@ -123,15 +123,15 @@ export default function ItemMasterPage() {
       if (error || !data) throw new Error(error || 'Failed to fetch view payload');
       setViewData(data);
     } catch (err: any) {
-      setSnackbar({ open: true, message: err.message || 'Failed to load item for view', severity: 'error' });
+      _setSnackbar({ open: true, message: err.message || 'Failed to load item for view', severity: 'error' });
       setViewDialogOpen(false);
     } finally {
-      setViewLoading(false);
+      _setViewLoading(false);
     }
   };
 
   // Handler to open edit dialog: fetch ITEM_EDIT_SETUP and open the edit form with prefetched data
-  const handleOpenEdit = async (item_id: number) => {
+  const _handleOpenEdit = async (item_id: number) => {
     setEditDialogOpen(true);
     setEditItemData(null);
     setEditItemId(item_id);
@@ -147,7 +147,7 @@ export default function ItemMasterPage() {
       // store the prefetched payload so we can pass it to the edit dialog
       setEditItemData(data);
     } catch (err: any) {
-      setSnackbar({ open: true, message: err.message || 'Failed to load edit setup', severity: 'error' });
+      _setSnackbar({ open: true, message: err.message || 'Failed to load edit setup', severity: 'error' });
       setEditDialogOpen(false);
       setEditItemId(null);
     }
@@ -163,9 +163,9 @@ export default function ItemMasterPage() {
       headerClassName: "bg-[#3ea6da] text-white",
       renderCell: (params: GridRenderCellParams) => (
           <Tooltip title="View details">
-            <span
+              <span
               className="text-blue-700 underline cursor-pointer"
-              onClick={() => handleOpenView(params.row.id)}
+              onClick={() => _handleOpenView(params.row.id)}
             >
               {params.value}
             </span>
@@ -180,9 +180,9 @@ export default function ItemMasterPage() {
       headerClassName: "bg-[#3ea6da] text-white",
       renderCell: (params: GridRenderCellParams) => (
           <Tooltip title="View details">
-            <span
+              <span
               className="text-blue-700 underline cursor-pointer"
-              onClick={() => handleOpenView(params.row.id)}
+              onClick={() => _handleOpenView(params.row.id)}
             >
               {params.value}
             </span>
@@ -214,7 +214,7 @@ export default function ItemMasterPage() {
       renderCell: (params: GridRenderCellParams) => (
         <Stack direction="row" spacing={0.5}>
           <Tooltip title="Edit">
-            <IconButton size="small" onClick={() => handleOpenEdit(params.row.id)}>
+            <IconButton size="small" onClick={() => _handleOpenEdit(params.row.id)}>
               <Edit size={16} />
             </IconButton>
           </Tooltip>

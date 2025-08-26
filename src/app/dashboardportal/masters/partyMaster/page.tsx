@@ -89,7 +89,7 @@ export default function PartyMasterPage() {
     }
   };
 
-  useEffect(() => { fetchParties(); /* eslint-disable-next-line react-hooks/exhaustive-deps */ }, [paginationModel.page, paginationModel.pageSize, searchQuery]);
+  useEffect(() => { fetchParties();   }, [paginationModel.page, paginationModel.pageSize, searchQuery]);
 
   const handlePaginationModelChange = (newModel: GridPaginationModel) => setPaginationModel(newModel);
 

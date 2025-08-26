@@ -78,7 +78,7 @@ const fetchRoles = async (page: number, search?: string, sortKey?: string | null
         return { 
           data: arrayValue as any[], 
           total: countProps[1] as number 
-        };
+  };
       }
       
       // If we found an array but no count, use the array length
@@ -146,7 +146,7 @@ const columns: Column<Role>[] = [
       </Button>
     ),
   },
-];.0
+];
 
 export default function SampleRoleTablePage() {
   return (

@@ -52,8 +52,8 @@ export default function CreateMechineMasterPage({ open = false, onClose, existin
         const params = new URLSearchParams({ co_id, branch_id: branch_ids });
         const url = `${apiRoutesPortalMasters.MECHINE_MASTER_CREATE_SETUP}?${params}`;
         const { data, error } = await fetchWithCookie(url, "GET") as any;
-      if (error || !data) throw new Error(error || 'Failed to load setup');
-      console.log('Setup data loaded successfully:', data);
+  if (error || !data) throw new Error(error || 'Failed to load setup');
+  void 0;
       const candidate = data?.data ?? data;
         const branches = candidate?.branchs || candidate?.branches || candidate?.branch_list || candidate?.branch || [];
         const depts = candidate?.departments || candidate?.dept_list || candidate?.dept || [];
@@ -79,7 +79,7 @@ export default function CreateMechineMasterPage({ open = false, onClose, existin
         }
         setSetupData(candidate);
       } catch (err:any) {
-        console.warn('Failed to load create setup', err?.message || err);
+        // Failed to load create setup; surface via state and avoid console noise
         setBranchOptions([]); setDepartmentOptions([]); setMechineTypeOptions([]); setSetupData(null);
       } finally { setLoading(false); }
     })();
@@ -89,15 +89,15 @@ export default function CreateMechineMasterPage({ open = false, onClose, existin
 
   useEffect(() => {
   if (!initialValues) return;
-  console.log('Create received view initialValues:', initialValues);
-  // existing mapping logic...
+  // initial values received; mapping logic handled in next effect
+  void 0;
 }, [initialValues]);
 
   // apply initial values when provided (for view/edit)
   useEffect(()=>{
     if (!initialValues) return;
     // debug
-    try { console.debug('CreateMechineMasterPage.initialValues', initialValues); } catch(e) {}
+  try { void 0; } catch(e) {}
     // support initialValues passed as an array (e.g. [{...}]) by normalizing to the first element
     const iv = Array.isArray(initialValues) ? initialValues[0] : initialValues;
     const pick = (keys: string[]) => {
@@ -105,18 +105,16 @@ export default function CreateMechineMasterPage({ open = false, onClose, existin
       for (const k of keys) if (iv[k] !== undefined && iv[k] !== null) return iv[k];
       return undefined;
     };
-  console.log('Create=========== received view initialValues (normalized):', iv);
+  void 0;
 
     const branchVal = pick(['branch_id','branch','branch_display']);
-    console.log('pick branchVal:', branchVal);
     const deptVal = pick(['dept_id','dept','department_id','dept_name']);
     const typeVal = pick(['mechine_type_name']);
     const nameVal = pick(['mechine_name','mechine_nm','name']);
     const codeVal = pick(['mechine_code','code','mechine_cd']);
     const postingVal = pick(['mechine_posting_code','mech_posting_code','mech_posting','posting_code','mech_post_code']);
     const activeVal = pick(['active']);
-    console.log('======================CreateMechineMasterPage.mapped initialValues', { branchVal, deptVal, typeVal, nameVal, codeVal, postingVal, activeVal });
-    setForm((f)=> ({
+  setForm((f)=> ({
       ...f,
       branch_id: String(branchVal ?? ''),
       dept_id: String(deptVal ?? ''),
@@ -126,7 +124,7 @@ export default function CreateMechineMasterPage({ open = false, onClose, existin
       mechine_posting_code: postingVal ?? f.mechine_posting_code ?? '',
       active: activeVal === undefined ? f.active : (activeVal === 1 || activeVal === true || activeVal === '1'),
     }));
-    try { console.debug('CreateMechineMasterPage views .form after initialValues===','branchVal', { branchVal, deptVal, typeVal, nameVal, codeVal, postingVal, activeVal }); } catch(e) {}
+  try { void 0; } catch(e) {}
   }, [initialValues]);
 
   const getCandidates = (props?: any[])=> {

@@ -1,20 +1,7 @@
 "use client";
 
 import * as React from "react";
-import {
-	Box,
-	Button,
-	Chip,
-	Checkbox,
-	FormControl,
-	FormControlLabel,
-	FormHelperText,
-	InputLabel,
-	MenuItem,
-	Select,
-	TextField,
-	Typography,
-} from "@mui/material";
+import { Box, Button, Chip, Checkbox, FormControl, FormControlLabel, FormHelperText, TextField, Typography } from "@mui/material";
 import Autocomplete from "@mui/material/Autocomplete";
 // Using Box-based layout to keep typings simple across MUI versions
 
@@ -42,8 +29,8 @@ export type Field = {
 	placeholder?: string;
 	helperText?: string;
 	options?: Option[]; // for select/multiselect
-	defaultValue?: any;
-	disabled?: boolean | ((values: Record<string, any>) => boolean);
+	defaultValue?: unknown;
+	disabled?: boolean | ((values: Record<string, unknown>) => boolean);
 	readOnly?: boolean; // force read only regardless of mode
 	grid?: { xs?: number; sm?: number; md?: number; lg?: number; xl?: number };
 	visibleInModes?: MuiFormMode[]; // default: all
@@ -57,12 +44,12 @@ export type Schema = {
 
 export type MuiFormProps = {
 	schema: Schema;
-	initialValues?: Record<string, any>;
+	initialValues?: Record<string, unknown>;
 	mode?: MuiFormMode; // if omitted, defaults to "create"
 	hideModeToggle?: boolean;
-	onSubmit?: (values: Record<string, any>, mode: MuiFormMode) => void | Promise<void>;
+	onSubmit?: (values: Record<string, unknown>, mode: MuiFormMode) => void | Promise<void>;
 	onModeChange?: (mode: MuiFormMode) => void;
-	onValuesChange?: (values: Record<string, any>) => void;
+	onValuesChange?: (values: Record<string, unknown>) => void;
 	submitLabel?: string;
 	cancelLabel?: string;
 	onCancel?: () => void;
@@ -70,8 +57,8 @@ export type MuiFormProps = {
 	hideSubmit?: boolean; // parent can hide internal submit button and render it elsewhere
 };
 
-function getInitialValues(schema: Schema, provided?: Record<string, any>) {
-	const base: Record<string, any> = {};
+function getInitialValues(schema: Schema, provided?: Record<string, unknown>) {
+	const base: Record<string, unknown> = {};
 	for (const f of schema.fields) {
 		if (provided && f.name in provided) base[f.name] = provided[f.name];
 		else if (typeof f.defaultValue !== "undefined") base[f.name] = f.defaultValue;
@@ -86,22 +73,21 @@ function isVisible(field: Field, mode: MuiFormMode) {
 	return !field.visibleInModes || field.visibleInModes.includes(mode);
 }
 
-function getDisabled(field: Field, values: Record<string, any>, mode: MuiFormMode) {
+function getDisabled(field: Field, values: Record<string, unknown>, mode: MuiFormMode) {
 	if (field.readOnly) return true;
 	if (typeof field.disabled === "function") return field.disabled(values);
 	if (typeof field.disabled === "boolean") return field.disabled;
 	if (mode === "view") return true;
 	return false;
 }
-
-function displayValue(field: Field, value: any): React.ReactNode {
+function displayValue(field: Field, value: unknown): React.ReactNode {
 	if (field.type === "checkbox") return value ? "Yes" : "No";
 	if ((field.type === "select" || field.type === "multiselect") && field.options) {
-		const map = new Map(field.options.map((o) => [o.value, o.label]));
+		const map = new Map(field.options.map((o) => [String(o.value), o.label]));
 		if (field.type === "multiselect" && Array.isArray(value)) {
-			return value.map((v: any) => map.get(v) ?? String(v)).join(", ");
+			return (value as Array<unknown>).map((v) => map.get(String(v)) ?? String(v)).join(", ");
 		}
-		return map.get(value) ?? String(value ?? "");
+		return map.get(String(value)) ?? String(value ?? "");
 	}
 	return String(value ?? "");
 }
@@ -121,10 +107,10 @@ export const MuiForm = React.forwardRef(function MuiForm(
 		onCancel,
 		externalDirty,
 	}: MuiFormProps,
-	ref
+	ref: React.ForwardedRef<{ submit: () => Promise<void>; isDirty: () => boolean } | null>
 ) {
 	const [mode, setMode] = React.useState<MuiFormMode>(modeProp ?? "create");
-	const [values, setValues] = React.useState<Record<string, any>>(
+	const [values, setValues] = React.useState<Record<string, unknown>>(
 		getInitialValues(schema, initialValues)
 	);
 	const [errors, setErrors] = React.useState<Record<string, string>>({});
@@ -158,7 +144,7 @@ export const MuiForm = React.forwardRef(function MuiForm(
 		onModeChange?.(m);
 	};
 
-	const handleChange = (name: string, value: any) => {
+	const handleChange = (name: string, value: unknown) => {
 		setValues((prev) => ({ ...prev, [name]: value }));
 	};
 
@@ -167,8 +153,7 @@ export const MuiForm = React.forwardRef(function MuiForm(
 		if (onValuesChange) {
 			onValuesChange(values);
 		}
-		// eslint-disable-next-line react-hooks/exhaustive-deps
-	}, [values]);
+	}, [values, onValuesChange]);
 
 	const validate = () => {
 		const next: Record<string, string> = {};
@@ -280,10 +265,10 @@ export const MuiForm = React.forwardRef(function MuiForm(
 					</FormControl>
 				) : field.type === "select" ? (
 					// single-select rendered as Autocomplete for autofill/filtering
-					<Autocomplete
+					<Autocomplete<Option, false, boolean, false>
 						options={(field.options ?? []) as Option[]}
-						getOptionLabel={(opt) => (opt && typeof opt === 'object' && 'label' in opt ? (opt as Option).label : String(opt ?? ''))}
-						isOptionEqualToValue={(o, v) => !!o && !!v && (o as Option).value === (v as Option).value}
+						getOptionLabel={(opt: Option) => opt.label}
+						isOptionEqualToValue={(o: Option, v: Option) => String(o.value) === String(v.value)}
 						value={((field.options ?? []) as Option[]).find((o) => String(o.value) === String(value)) ?? null}
 						onChange={(_, newOpt) => handleChange(field.name, (newOpt as Option | null)?.value ?? "")}
 						disableClearable={Boolean(field.required)}
@@ -301,20 +286,20 @@ export const MuiForm = React.forwardRef(function MuiForm(
 						)}
 					/>
 				) : field.type === "multiselect" ? (
-					<Autocomplete
+					<Autocomplete<Option, true, boolean, false>
 						sx={{ width: '100%' }}
 						multiple
 						options={(field.options ?? []) as Option[]}
-						getOptionLabel={(opt) => (opt && typeof opt === 'object' && 'label' in opt ? (opt as Option).label : String(opt ?? ''))}
-						isOptionEqualToValue={(o, v) => !!o && !!v && (o as Option).value === (v as Option).value}
-						value={((field.options ?? []) as Option[]).filter((o) => Array.isArray(value) && (value as any[]).includes(o.value))}
+						getOptionLabel={(opt: Option) => opt.label}
+						isOptionEqualToValue={(o: Option, v: Option) => String(o.value) === String(v.value)}
+						value={((field.options ?? []) as Option[]).filter((o) => Array.isArray(value) && (value as Array<unknown>).some((v) => String(v) === String(o.value)))}
 						onChange={(_, newOpts) => handleChange(field.name, (newOpts as Option[]).map((o) => o.value))}
 						disabled={disabled}
 						noOptionsText={"No options"}
-						renderTags={(selected, getTagProps) => (
+						renderTags={(selected: Option[], getTagProps) => (
 							<Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5 }}>
 								{selected.map((opt, index) => (
-									<Chip {...getTagProps({ index })} key={String((opt as Option).value)} label={(opt as Option).label} size="small" />
+									<Chip {...getTagProps({ index })} key={String(opt.value)} label={opt.label} size="small" />
 								))}
 							</Box>
 						)}

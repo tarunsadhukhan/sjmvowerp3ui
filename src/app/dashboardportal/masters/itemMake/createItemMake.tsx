@@ -1,11 +1,11 @@
 "use client";
 
-import React, { useEffect, useState } from 'react';
-import { Dialog, DialogTitle, DialogContent, DialogActions, Box, Snackbar, Alert } from '@mui/material';
+import { useEffect, useState } from 'react';
+import { Dialog, DialogTitle, DialogContent, Box, Snackbar, Alert } from '@mui/material';
 import { MuiForm, Schema, Option } from '@/components/ui/muiform';
 import { fetchWithCookie } from '@/utils/apiClient2';
 import { apiRoutesPortalMasters } from '@/utils/api';
-import { Button } from '@/components/ui/button';
+// Button not used; MuiForm provides its own actions
 
 type Props = {
   open: boolean;
@@ -15,7 +15,7 @@ type Props = {
 
 export default function CreateItemMake({ open, onClose, onCreated }: Props) {
   const [schema, setSchema] = useState<Schema | null>(null);
-  const [loadingSetup, setLoadingSetup] = useState(false);
+  const [_loadingSetup, setLoadingSetup] = useState(false);
   const [snackbar, setSnackbar] = useState<{ open: boolean; message: string; severity: 'success' | 'error' }>({ open: false, message: '', severity: 'success' });
 
   useEffect(() => {

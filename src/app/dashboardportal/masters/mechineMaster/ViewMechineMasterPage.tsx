@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useEffect, useState } from "react";
-import { Dialog } from "@mui/material";
+// Dialog is not used in this view component; keep out to reduce lint noise
 import { fetchWithCookie } from "@/utils/apiClient2";
 import { apiRoutesPortalMasters } from "@/utils/api";
 import CreateMechineMasterPage from "./CreateMechineMasterPage";
@@ -21,12 +21,11 @@ export default function ViewMechineMasterPage({ open = false, onClose, mechine_m
     (async ()=>{
       try {
         const { data } = await fetchWithCookie(`${apiRoutesPortalMasters.MECHINE_MASTER_VIEW}?mechine_master_id=${mechine_master_id}&co_id=${co_id}`, 'GET') as any;
-        const candidate = data?.data ?? data ?? null;
-        setRawResponse(candidate);
-        const rec = candidate ? (candidate?.mechine_master || candidate?.mechine || candidate) : null;
-        console.log('ViewMechineMasterPage fetched record:', rec, 'raw:', candidate);
-        setRecord(rec);
-      } catch(err:any){ console.error(err); }
+  const candidate = data?.data ?? data ?? null;
+  setRawResponse(candidate);
+  const rec = candidate ? (candidate?.mechine_master || candidate?.mechine || candidate) : null;
+  setRecord(rec);
+  } catch(err:any){ void 0; }
       finally { setLoading(false); }
     })();
   }, [open, mechine_master_id]);
@@ -46,7 +45,7 @@ export default function ViewMechineMasterPage({ open = false, onClose, mechine_m
       </div>
     );
   }
-  console.log('View -> passing initialValues to CreateMechineMasterPage:', record);
+  void 0;
 
   // Render the shared form component directly. It renders its own Dialog when `open` is boolean.
   return <CreateMechineMasterPage open={open} onClose={onClose} readOnly={true} initialValues={record} />;

@@ -1,11 +1,11 @@
 "use client";
 
 import { Button } from "@/components/ui/button";
-import { Search, Edit } from "lucide-react";
+import { Search } from "lucide-react";
 import { apiRoutesPortalMasters } from "@/utils/api";
 import { fetchWithCookie } from "@/utils/apiClient2";
 import MuiDataGrid from '@/components/ui/muiDataGrid';
-import { Box, TextField, InputAdornment, Snackbar, Alert, IconButton } from '@mui/material';
+import { Box, TextField, InputAdornment, Snackbar, Alert } from '@mui/material';
 import { useState, useEffect } from 'react';
 import { GridColDef, GridPaginationModel, GridRenderCellParams } from '@mui/x-data-grid';
 import CreateItemMake from './createItemMake';
@@ -62,7 +62,7 @@ export default function ItemMakePage() {
     }
   };
 
-  useEffect(() => { fetchItemMakes(); /* eslint-disable-next-line react-hooks/exhaustive-deps */ }, [paginationModel.page, paginationModel.pageSize, searchQuery]);
+  useEffect(() => { fetchItemMakes();   }, [paginationModel.page, paginationModel.pageSize, searchQuery]);
 
   const handlePaginationModelChange = (newPaginationModel: GridPaginationModel) => {
     setPaginationModel(newPaginationModel);
@@ -109,7 +109,7 @@ export default function ItemMakePage() {
   // actions column removed per request
   ];
 
-  const handleEdit = (row: any) => {
+  const _handleEdit = (row: any) => {
     // placeholder: open edit modal or navigate to edit page
     setSnackbar({ open: true, message: `Edit clicked for ${row.item_make_id ?? row.id}`, severity: 'success' });
   };

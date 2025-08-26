@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useEffect, useState } from "react";
-import { Box, Button, Dialog, DialogActions, DialogContent, DialogTitle, MenuItem, TextField, FormControlLabel, Switch, CircularProgress, FormHelperText } from "@mui/material";
+import { Box, Button, Dialog, DialogContent, DialogTitle, MenuItem, TextField, FormControlLabel, Switch, CircularProgress, FormHelperText } from "@mui/material";
 import { apiRoutesPortalMasters } from "@/utils/api";
 import { fetchWithCookie } from "@/utils/apiClient2";
 
@@ -29,10 +29,8 @@ export default function CreateDepartmentPage({ open = true, onClose, existingRow
         const selectedCompany = localStorage.getItem("sidebar_selectedCompany");
         const sidebar_selectedBranches = localStorage.getItem("sidebar_selectedBranches");
         const co_id = selectedCompany ? JSON.parse(selectedCompany).co_id : "";
-		const params = sidebar_selectedBranches
-        console.log('sidebar_selectedBranches====', sidebar_selectedBranches);
-        const url = `${apiRoutesPortalMasters.DEPT_MASTER_CREATE_SETUP}?${params}`;
-        console.log('Fetch URL777:', url);
+  const params = sidebar_selectedBranches;
+  const url = `${apiRoutesPortalMasters.DEPT_MASTER_CREATE_SETUP}?${params}`;
         const { data, error } = await fetchWithCookie(url, "GET") as any;
         if (error || !data) {
           throw new Error(error || "Failed to load setup");
@@ -52,7 +50,8 @@ export default function CreateDepartmentPage({ open = true, onClose, existingRow
         if (normalized.length > 0) setForm((f) => ({ ...f, branch_id: normalized[0].id }));
         setSetupData(candidate);
       } catch (err: any) {
-        console.warn("Failed to load dept create setup:", err?.message || err);
+        // Surface error to UI instead of logging to console (Stage A)
+        setError(err?.message || String(err));
         setBranchOptions([]);
         setSetupData(null);
       } finally {

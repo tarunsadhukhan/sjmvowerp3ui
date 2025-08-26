@@ -1,6 +1,11 @@
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
+  // Allow skipping ESLint during build for incremental migration. Set
+  // SKIP_ESLINT_ON_BUILD=true in your environment to disable lint step.
+  eslint: {
+    ignoreDuringBuilds: process.env.SKIP_ESLINT_ON_BUILD === 'true',
+  },
   // async rewrites() {
   //   // Determine the backend URL based on the environment
   //   const isProduction = process.env.NODE_ENV === 'production';

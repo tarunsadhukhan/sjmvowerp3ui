@@ -5,7 +5,6 @@ import { Box, Button, Dialog, DialogActions, DialogContent, DialogTitle, MenuIte
 import { apiRoutesPortalMasters } from "@/utils/api";
 import { fetchWithCookie } from "@/utils/apiClient2";
 import { SelectChangeEvent } from "@mui/material";
-import { Dialog as MuiDialog, DialogTitle as MuiDialogTitle, DialogContent as MuiDialogContent, DialogActions as MuiDialogActions } from '@mui/material';
 
 interface ItemGroupFormProps {
   open?: boolean;
@@ -16,8 +15,8 @@ export default function CreateItemGroupPage({ open = true, onClose }: ItemGroupF
   const [loading, setLoading] = useState(true);
   const [setupData, setSetupData] = useState<any>(null);
   const [parentGroupSearch, setParentGroupSearch] = useState("");
-  const [filteredParentGroups, setFilteredParentGroups] = useState<any[]>([]);
-  const [showParentGroup, setShowParentGroup] = useState(false);
+  const [_filteredParentGroups, _setFilteredParentGroups] = useState<any[]>([]);
+  const [_showParentGroup, _setShowParentGroup] = useState(false);
   const [successDialogOpen, setSuccessDialogOpen] = useState(false);
 
   // Helper to get initial form state
@@ -54,10 +53,8 @@ export default function CreateItemGroupPage({ open = true, onClose }: ItemGroupF
       url = urlObj.toString();
     }
 
-    fetchWithCookie(
-      url,
-      "GET"
-    ).then(({ data, error }) => {
+    fetchWithCookie(url, "GET")
+      .then(({ data, error }) => {
         setSetupData(data);
         setError(error);
       })
@@ -90,11 +87,11 @@ export default function CreateItemGroupPage({ open = true, onClose }: ItemGroupF
       if (selectedCompany) {
         co_id = JSON.parse(selectedCompany).co_id;
       }
-    } catch (err) {
+    } catch (_err) {
       // ignore
     }
     const apiUrl = apiRoutesPortalMasters.CREATE_ITEM_GRP;
-    let payload: any = { ...form };
+    const payload: any = { ...form };
     // Convert empty strings to null
     Object.keys(payload).forEach(key => {
       if (payload[key] === "") payload[key] = null;
@@ -117,7 +114,7 @@ export default function CreateItemGroupPage({ open = true, onClose }: ItemGroupF
       pg.item_grp_name_display.toLowerCase().includes(lowerCaseSearch) ||
       pg.item_grp_code_display.toLowerCase().includes(lowerCaseSearch)
     );
-    setFilteredParentGroups(filtered);
+    _setFilteredParentGroups(filtered);
   }, [setupData, parentGroupSearch]);
 
   // Duplicate validation
@@ -263,19 +260,19 @@ export default function CreateItemGroupPage({ open = true, onClose }: ItemGroupF
         </Box>
       )}
       {/* Success Dialog */}
-      <MuiDialog open={successDialogOpen} onClose={() => {
+      <Dialog open={successDialogOpen} onClose={() => {
         setSuccessDialogOpen(false);
         if (onClose) onClose();
       }} maxWidth="xs" fullWidth>
-        <MuiDialogTitle>Success</MuiDialogTitle>
-        <MuiDialogContent>Item created successfully.</MuiDialogContent>
-        <MuiDialogActions>
+        <DialogTitle>Success</DialogTitle>
+        <DialogContent>Item created successfully.</DialogContent>
+        <DialogActions>
           <Button onClick={() => {
             setSuccessDialogOpen(false);
             if (onClose) onClose();
           }} autoFocus>Okay</Button>
-        </MuiDialogActions>
-      </MuiDialog>
+        </DialogActions>
+      </Dialog>
     </>
   );
 }

@@ -30,7 +30,8 @@ export default function CreateProjectPage({ open = false, onClose, existingRows 
         const params = new URLSearchParams();
         if (co_id) params.append("co_id", co_id);
         if (sidebar_selectedBranches) params.append("branch_id", sidebar_selectedBranches);
-            console.log('sidebar_selectedBranches====', sidebar_selectedBranches);
+  // Surface the selected branches to the UI instead of logging to console (Stage A)
+  setError(`Selected branches: ${sidebar_selectedBranches}`);
 
 //        const params = new URLSearchParams({ co_id, branch_id: branch_ids });
         const url = `${apiRoutesPortalMasters.PROJECT_MASTER_CREATE_SETUP}?${params}`;
@@ -71,7 +72,8 @@ export default function CreateProjectPage({ open = false, onClose, existingRows 
         }
         setSetupData(candidate);
       } catch (err:any) {
-        console.warn('Failed to load project create setup', err?.message || err);
+        // Surface the error to the UI instead of logging to console (Stage A)
+        setError(err?.message || String(err));
         setBranchOptions([]); setDepartmentOptions([]); setPartyOptions([]); setStatusOptions([]); setSetupData(null);
       } finally { setLoading(false); }
     })();

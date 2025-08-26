@@ -3,7 +3,7 @@ import { Box } from '@mui/material';
 import React from 'react';
 
 interface MuiDataGridProps {
-  rows: any[];
+  rows: unknown[];
   columns: GridColDef[];
   rowCount: number;
   onPaginationModelChange: (model: GridPaginationModel) => void;

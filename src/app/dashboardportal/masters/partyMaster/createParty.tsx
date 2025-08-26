@@ -1,9 +1,9 @@
 "use client";
 
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { Dialog, DialogTitle, DialogContent, Box, Snackbar, Alert, DialogActions, FormControl, InputLabel, Select, MenuItem, TextField, Table, TableHead, TableBody, TableRow, TableCell, IconButton, Switch, TableContainer } from '@mui/material';
 import { Delete } from 'lucide-react';
-import { MuiForm, Schema, Option } from '@/components/ui/muiform';
+import { MuiForm, Schema } from '@/components/ui/muiform';
 import { fetchWithCookie } from '@/utils/apiClient2';
 import { apiRoutesPortalMasters } from '@/utils/api';
 import { Button } from '@/components/ui/button';
@@ -31,7 +31,7 @@ type BranchRow = {
 export default function CreateParty({ open, onClose, mode = 'create', editId, onSaved }: Props) {
   const [schema, setSchema] = useState<Schema | null>(null);
   const [initialValues, setInitialValues] = useState<Record<string, any> | undefined>(undefined);
-  const [loading, setLoading] = useState(false);
+  const [_loading, setLoading] = useState(false);
   const [snackbar, setSnackbar] = useState<{ open: boolean; message: string; severity: 'success' | 'error' }>({ open: false, message: '', severity: 'success' });
   const [branches, setBranches] = useState<BranchRow[]>([]);
   const [statesByCountry, setStatesByCountry] = useState<Record<string, any[]>>({});

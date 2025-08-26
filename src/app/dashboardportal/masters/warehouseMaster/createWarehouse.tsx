@@ -1,12 +1,11 @@
 "use client";
 
-import React, { useEffect, useState } from 'react';
-import { useRef } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { Dialog, DialogTitle, DialogContent, Box, Snackbar, Alert } from '@mui/material';
 import { MuiForm, Schema, Option } from '@/components/ui/muiform';
 import { fetchWithCookie } from '@/utils/apiClient2';
 import { apiRoutesPortalMasters } from '@/utils/api';
-import { Button } from '@/components/ui/button';
+// Button not used; MuiForm provides its own actions
 
 type Props = {
   open: boolean;
@@ -18,10 +17,10 @@ export default function CreateWarehouse({ open, onClose, onSaved }: Props) {
   const [schema, setSchema] = useState<Schema | null>(null);
   const [initialValues, setInitialValues] = useState<Record<string, any> | undefined>(undefined);
   const [warehouseListState, setWarehouseListState] = useState<any[]>([]);
-  const [currentParentOptions, setCurrentParentOptions] = useState<any[]>([]);
+  const [_currentParentOptions, setCurrentParentOptions] = useState<any[]>([]);
   const [selectedBranchId, setSelectedBranchId] = useState<string | undefined>(undefined);
   const latestValuesRef = useRef<Record<string, any> | null>(null);
-  const [loading, setLoading] = useState(false);
+  const [_loading, setLoading] = useState(false);
   const [snackbar, setSnackbar] = useState<{ open: boolean; message: string; severity: 'success' | 'error' }>({ open: false, message: '', severity: 'success' });
   const [validationError, setValidationError] = useState<string | null>(null);
 

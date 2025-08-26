@@ -12,10 +12,10 @@ interface CompanySelectionProps {
 export function CompanySelection({ isCollapsed }: CompanySelectionProps) {
   const { companies, selectedCompany, handleCompanyChange, loading } = useCompany();
 
-  // ✅ Transform API data into dropdown options
+  // ✅ Transform API data into dropdown options using SidebarContext Company shape
   const companyOptions = companies.map((company) => ({
-    value: company.id,
-    label: `${company.name} (${company.code})`,
+  value: String(company.co_id),
+    label: `${company.co_name}`,
   }));
 
   // ✅ Custom Styles for react-select
@@ -60,10 +60,10 @@ export function CompanySelection({ isCollapsed }: CompanySelectionProps) {
         <div className="react-dropdown-select">
           <Selects
             options={companyOptions}
-            value={companyOptions.find((option) => option.value === selectedCompany?.id)}
+            value={companyOptions.find((option) => option.value === String(selectedCompany?.co_id))}
             onChange={(selectedOption) => {
-              const company = companies.find((c) => c.id === selectedOption?.value);
-              if (company) handleCompanyChange(company);
+              const companyIdStr = selectedOption?.value as string | undefined;
+              if (typeof companyIdStr !== "undefined") handleCompanyChange(Number(companyIdStr));
             }}
             isSearchable
             styles={customStyles}

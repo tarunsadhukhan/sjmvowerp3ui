@@ -3,7 +3,7 @@
 import React, { useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
 import MuiDataGrid from "@/components/ui/muiDataGrid";
-import { Box, TextField, Snackbar, Alert, Dialog } from "@mui/material";
+import { Box, TextField, Snackbar, Alert } from "@mui/material";
 import { GridColDef, GridPaginationModel } from "@mui/x-data-grid";
 import { fetchWithCookie } from "@/utils/apiClient2";
 import CreateProjectPage from "./CreateProjectPage";
@@ -19,7 +19,7 @@ export default function ProjectMasterPage(){
   const [paginationModel, setPaginationModel] = useState<GridPaginationModel>({ pageSize: 10, page: 0 });
   const [totalRows, setTotalRows] = useState<number>(0);
   const [searchQuery, setSearchQuery] = useState<string>("");
-  const [searchTimeout, setSearchTimeout] = useState<any>(null);
+  const [searchTimeout, setSearchTimeout] = useState<NodeJS.Timeout | null>(null);
   const [snackbar, setSnackbar] = useState<{ open: boolean; message: string; severity: "success" | "error" }>({ open: false, message: "", severity: "success" });
 
   const [createOpen, setCreateOpen] = useState<boolean>(false);
@@ -33,12 +33,10 @@ export default function ProjectMasterPage(){
                 const selectedCompany = localStorage.getItem("sidebar_selectedCompany");
             const co_id = selectedCompany ? JSON.parse(selectedCompany).co_id : "";
             const selectedBranches = localStorage.getItem("sidebar_selectedBranches");
-            console.log('localstorage', selectedBranches);
             let branch_ids = "";
             if (selectedBranches) {
                 try {
                     const parsed = JSON.parse(selectedBranches);
-                    console.log('parsed selectedBranches', parsed);
                     branch_ids=parsed
                     if (Array.isArray(parsed)) {
                         // support array of objects [{ branch_id: 1 }] OR array of primitives [1,2] OR mixed
@@ -53,7 +51,7 @@ export default function ProjectMasterPage(){
                             .map(String)
                             .filter(Boolean);
                         branch_ids = ids.join(',');
-                        console.log('branch_ids', branch_ids);
+                        // branch_ids prepared for API
                     } 
                 } catch (e) {
                     console.warn("Failed to parse selectedBranches:", e);
@@ -118,10 +116,9 @@ export default function ProjectMasterPage(){
         </Snackbar>
       </div>
 
-      <CreateProjectPage open={createOpen} onClose={() => { closeCreate(); fetchProjects(); }} existingRows={rows} />
+        <CreateProjectPage open={createOpen} onClose={() => { closeCreate(); fetchProjects(); }} existingRows={rows} />
       <ViewProjectPage open={viewOpen} project_id={selectedId ?? undefined} onClose={handleCloseView} />
-  <CreateProjectPage open={createOpen} onClose={() => { closeCreate(); fetchProjects(); }} existingRows={rows} />
-  <ViewProjectPage open={viewOpen} project_id={selectedId ?? undefined} onClose={handleCloseView} />
+  
   <EditProjectPage open={editOpen} project_id={selectedId ?? undefined} onClose={(saved?: boolean) => { setEditOpen(false); setSelectedId(null); if (saved) fetchProjects(); }} />
     </div>
   );

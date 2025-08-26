@@ -1,7 +1,7 @@
 "use client";
 
 import { useSidebarContext } from "@/components/dashboard/sidebarContext";
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { getUser, urlcheck } from "@/utils/auth";
 const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:3000";
 
@@ -12,12 +12,14 @@ export function useCompany() {
     menuItems, setMenuItems,
     handleCompanyChange,
   } = useSidebarContext();
+  const [loading, setLoading] = useState<boolean>(false);
   const { compshow, currentHost } = urlcheck();
 
   // Fetch companies after the component is mounted
   useEffect(() => {
-    const fetchCompanies = async (userId: string) => {
+  const fetchCompanies = async (userId: string) => {
       try {
+    setLoading(true);
         const response = await fetch(
           `${API_URL}/api/companyRoutes/companies?userId=${userId}`,
           {
@@ -39,6 +41,9 @@ export function useCompany() {
         }
       } catch (error) {
         setCompanies([]);
+      }
+      finally {
+        setLoading(false);
       }
     };
     const user = getUser();
@@ -81,5 +86,6 @@ export function useCompany() {
     selectedCompany,
     menuItems,
     handleCompanyChange,
+  loading,
   };
 }

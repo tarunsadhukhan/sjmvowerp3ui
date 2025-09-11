@@ -172,6 +172,10 @@ const apiRoutesPortalMasters = {
     COSTFACTOR_EDIT_SETUP: `${API_URL}/costFactorMaster/cost_factor_edit_setup`,
     COSTFACTOR_EDIT: `${API_URL}/costFactorMaster/cost_factor_edit`,
 
+    GET_INDENT_SETUP_1: `${API_URL}/procurementIndent/get_indent_setup_1`,
+    GET_INDENT_SETUP_2: `${API_URL}/procurementIndent/get_indent_setup_2`
+
+
 };
 
 export { apiRoutes, apiRoutesconsole, apiRoutesPortalMasters };

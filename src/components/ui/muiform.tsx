@@ -25,7 +25,7 @@ export type Field = {
 	name: string;
 	label: string;
 	type: FieldType;
-	required?: boolean;
+	required?: boolean | ((values: Record<string, unknown>) => boolean);
 	placeholder?: string;
 	helperText?: string;
 	options?: Option[]; // for select/multiselect
@@ -134,9 +134,13 @@ export const MuiForm = React.forwardRef(function MuiForm(
 
 	React.useEffect(() => {
 		const base = getInitialValues(schema, initialValues);
-		setValues(base);
-		// update the snapshot when schema/initial values change
-		initialSnapshotRef.current = JSON.stringify(base);
+		// merge existing values to avoid resetting user input when schema/options update
+		setValues((prev) => {
+			const merged = { ...base, ...prev };
+			// update the snapshot to reflect the merged baseline
+			initialSnapshotRef.current = JSON.stringify(merged);
+			return merged;
+		});
 	}, [schema, initialValues]);
 
 	const handleModeChange = (m: MuiFormMode) => {
@@ -159,7 +163,9 @@ export const MuiForm = React.forwardRef(function MuiForm(
 		const next: Record<string, string> = {};
 		for (const f of schema.fields) {
 			if (!isVisible(f, mode)) continue;
-			if (f.required) {
+			// support dynamic required: boolean or (values) => boolean
+			const isReq = typeof f.required === 'function' ? f.required(values) : Boolean(f.required);
+			if (isReq) {
 				const v = values[f.name];
 				if (f.type === "checkbox") {
 					if (!v) next[f.name] = "Required";
@@ -200,10 +206,12 @@ export const MuiForm = React.forwardRef(function MuiForm(
 		const grid = field.grid ?? { xs: 12, sm: 6 };
 		const value = values[field.name];
 
+		// compute required as boolean for MUI props; field.required may be a function
+		const requiredBool = typeof field.required === 'function' ? Boolean((field.required as any)(values)) : Boolean(field.required);
 		const commonTextProps = {
 			label: field.label,
 			fullWidth: true,
-			required: field.required,
+			required: requiredBool,
 			helperText: errors[field.name] || field.helperText,
 			error: Boolean(errors[field.name]),
 			disabled,
@@ -221,8 +229,22 @@ export const MuiForm = React.forwardRef(function MuiForm(
 					'@media (min-width:1536px)': { width: toWidth(grid.xl) ?? toWidth(grid.lg) ?? toWidth(grid.md) ?? toWidth(grid.sm) ?? toWidth(grid.xs) ?? '100%' },
 				} as const;
 
+				const spanXs = grid.xs ?? 12;
+				const spanSm = grid.sm ?? spanXs;
+				const spanMd = grid.md ?? spanSm;
+				const spanLg = grid.lg ?? spanMd;
+				const spanXl = grid.xl ?? spanLg;
 				return (
-					<Box key={field.name} sx={{ ...widthSx }}>
+					<Box key={field.name} sx={{
+						gridColumn: {
+							xs: `span ${spanXs}`,
+							sm: `span ${spanSm}`,
+							md: `span ${spanMd}`,
+							lg: `span ${spanLg}`,
+							xl: `span ${spanXl}`,
+						},
+						minWidth: 0,
+					}}>
 				{mode === "view" && field.type !== "checkbox" ? (
 					<Box>
 						<Typography variant="caption" color="text.secondary">
@@ -347,7 +369,14 @@ export const MuiForm = React.forwardRef(function MuiForm(
 				</Box>
 			)}
 
-					<Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 2 }}>
+					<Box sx={{
+						display: 'grid',
+						gap: 2,
+						gridTemplateColumns: {
+							xs: 'repeat(1, 1fr)',
+							sm: 'repeat(12, 1fr)'
+						},
+					}}>
 						{schema.fields.map((f) => renderField(f))}
 					</Box>
 

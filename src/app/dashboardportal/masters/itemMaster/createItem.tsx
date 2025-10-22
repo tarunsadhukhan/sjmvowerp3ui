@@ -3,9 +3,9 @@ import React from "react";
 import { Dialog, DialogContent, DialogTitle, Box, Button } from "@mui/material";
 import { fetchWithCookie } from "@/utils/apiClient2";
 import { apiRoutesPortalMasters } from "@/utils/api";
-import MinMaxMappingTable from "@/app/dashboardportal/masters/itemMaster/MinMaxMappingTable";
-import UOMMappingTable from "@/app/dashboardportal/masters/itemMaster/UOMMappingTable";
-import MuiForm, { Schema } from "@/components/ui/muiform";
+import MinMaxMappingTable, { MinMaxRow } from "@/app/dashboardportal/masters/itemMaster/MinMaxMappingTable";
+import UOMMappingTable, { UOMRow } from "@/app/dashboardportal/masters/itemMaster/UOMMappingTable";
+import MuiForm, { Schema, CustomFieldRenderProps } from "@/components/ui/muiform";
 
 interface CreateItemProps {
   open: boolean;
@@ -116,20 +116,6 @@ const CreateItem: React.FC<CreateItemProps> = ({ open, onClose, mode = 'create',
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open]);
 
-  // seed mapping states when setupData is available
-  React.useEffect(() => {
-    if (!setupData) return;
-    // Only seed mappings for edit/view modes; in create flow we hide mappings
-    if (mode !== 'create') {
-  // Do NOT pre-seed uomMappings here - edit payload provides actual mappings.
-  const mm = Array.isArray(setupData.minmax_mapping) ? setupData.minmax_mapping : [];
-  setMinMaxMappings(mm);
-    } else {
-      setUomMappings([]);
-      setMinMaxMappings([]);
-    }
-  }, [setupData]);
-
   const itemGroupOptions = React.useMemo(() => {
     if (!Array.isArray(setupData?.item_groups)) return [];
     return setupData.item_groups.map((g:any) => ({ label: `${g.item_grp_name_display} (${g.item_grp_code_display})`, value: String(g.item_grp_id) }));
@@ -197,6 +183,37 @@ const CreateItem: React.FC<CreateItemProps> = ({ open, onClose, mode = 'create',
         { name: 'purchaseable', label: 'Purchaseable', type: 'checkbox', grid: { xs: 6, sm: 3 } },
         { name: 'manufacturable', label: 'Manufacturable', type: 'checkbox', grid: { xs: 6, sm: 3 } },
         { name: 'assembly', label: 'Assembly', type: 'checkbox', grid: { xs: 6, sm: 3 } },
+        {
+          name: 'uomMappings',
+          label: 'UOM Mapping',
+          type: 'custom',
+          visibleInModes: ['edit', 'view'],
+          grid: { xs: 12 },
+          render: ({ value, onChange, values, mode: currentMode }: CustomFieldRenderProps) => (
+            <UOMMappingTable
+              uomOptions={uomOptions}
+              itemDefaultUom={values.uomId as string | number | null}
+              value={(value as UOMRow[]) ?? []}
+              onChange={(rows) => onChange(rows)}
+              disabled={loading}
+              readOnly={currentMode === 'view'}
+            />
+          ),
+        },
+        {
+          name: 'minMaxMappings',
+          label: 'Branch Min/Max/Order/Lead Time',
+          type: 'custom',
+          visibleInModes: ['edit', 'view'],
+          grid: { xs: 12 },
+          render: ({ value, onChange, mode: currentMode }: CustomFieldRenderProps) => (
+            <MinMaxMappingTable
+              value={(value as MinMaxRow[]) ?? []}
+              onChange={(rows) => onChange(rows)}
+              readOnly={currentMode === 'view'}
+            />
+          ),
+        },
       ],
     };
   }, [itemGroupOptions, uomOptions, loading, mode]);
@@ -216,6 +233,8 @@ const CreateItem: React.FC<CreateItemProps> = ({ open, onClose, mode = 'create',
       purchaseable: false,
       manufacturable: false,
       assembly: false,
+      uomMappings: [] as UOMRow[],
+      minMaxMappings: [] as MinMaxRow[],
     }),
     []
   );
@@ -223,11 +242,30 @@ const CreateItem: React.FC<CreateItemProps> = ({ open, onClose, mode = 'create',
   const [initialValues, setInitialValues] = React.useState(defaultInitialValues);
 
   const handleFormSubmit = async (vals: Record<string, any>) => {
-    // include mapping rows in the payload
+    const uomMappings = Array.isArray(vals.uomMappings) ? vals.uomMappings as UOMRow[] : [];
+    const minMaxMappings = Array.isArray(vals.minMaxMappings) ? vals.minMaxMappings as MinMaxRow[] : [];
+
     const payload = {
       ...vals,
-      uom_mappings: mode === 'create' ? [] : uomMappings,
-      minmax_mappings: mode === 'create' ? [] : minMaxMappings,
+      uom_mappings: mode === 'create'
+        ? []
+        : uomMappings.map((row) => ({
+          map_from_id: row.mapFromUom ? Number(row.mapFromUom) : null,
+          map_to_id: row.mapToUom ? Number(row.mapToUom) : null,
+          is_fixed: row.isFixed ? 1 : 0,
+          relation_value: row.relationValue ?? null,
+          rounding: row.rounding ?? null,
+        })),
+      minmax_mappings: mode === 'create'
+        ? []
+        : minMaxMappings.map((row) => ({
+          branch_id: row.branch_id,
+          branch_name: row.branch_name,
+          minqty: row.minqty ?? null,
+          maxqty: row.maxqty ?? null,
+          min_order_qty: row.min_order_qty ?? null,
+          lead_time: row.lead_time ?? null,
+        })),
     } as any;
 
     // attach company id for create flows (read from sidebar selection)
@@ -274,8 +312,6 @@ const CreateItem: React.FC<CreateItemProps> = ({ open, onClose, mode = 'create',
 
   void 0;
   // reset mapping snapshots so form is no longer dirty
-  try { uomSnapshotRef.current = JSON.stringify([]); } catch {}
-  try { minMaxSnapshotRef.current = JSON.stringify([]); } catch {}
   onClose();
     } catch (err: any) {
       setErrorMsg(err?.message ?? 'Failed to save item');
@@ -343,7 +379,48 @@ const CreateItem: React.FC<CreateItemProps> = ({ open, onClose, mode = 'create',
         // item_details key holds the actual item info in edit response
         const details = (data.item_details ?? data.item ?? data) as any;
 
-        const mapped = {
+        const mappedUoms: UOMRow[] = (Array.isArray((data as any)?.uom_mappings)
+          ? (data as any).uom_mappings
+          : Array.isArray((data as any)?.uomMappings)
+            ? (data as any).uomMappings
+            : Array.isArray(data.uom_mappings)
+              ? data.uom_mappings
+              : [])
+          .map((m: any) => ({
+            id: `${m.map_from_id ?? m.map_from ?? m.mapFromId ?? ""}-${m.map_to_id ?? m.map_to ?? m.mapToId ?? Math.random()}`,
+            mapFromUom: (() => {
+              const from = m.map_from_id ?? m.map_from ?? m.mapFromId ?? null;
+              return from != null ? String(from) : null;
+            })(),
+            mapFromName: m.map_from_name ?? m.mapFromName ?? null,
+            mapToUom: (() => {
+              const to = m.map_to_id ?? m.map_to ?? m.mapToId ?? null;
+              return to != null ? String(to) : null;
+            })(),
+            mapToName: m.map_to_name ?? m.mapToName ?? null,
+            isFixed: Boolean(Number(m.is_fixed ?? m.isFixed ?? 0)),
+            relationValue: typeof m.relation_value !== "undefined" ? Number(m.relation_value) : (typeof m.relationValue !== "undefined" ? Number(m.relationValue) : null),
+            rounding: typeof m.rounding !== "undefined" ? Number(m.rounding) : null,
+          }));
+
+        const mappedMM: MinMaxRow[] = (Array.isArray((data as any)?.minmax_mapping)
+          ? (data as any).minmax_mapping
+          : Array.isArray((data as any)?.minMaxMappings)
+            ? (data as any).minMaxMappings
+            : Array.isArray(data.minmax_mapping)
+              ? data.minmax_mapping
+              : [])
+          .map((r: any) => ({
+            branch_id: r.branch_id ?? r.branchId,
+            branch_name: r.branch_name ?? r.branchName,
+            minqty: r.minqty ?? r.min_qty ?? null,
+            maxqty: r.maxqty ?? r.max_qty ?? null,
+            min_order_qty: r.min_order_qty ?? r.minOrderQty ?? null,
+            lead_time: r.lead_time ?? r.leadTime ?? null,
+          }));
+
+        setInitialValues({
+          ...defaultInitialValues,
           itemGroupId: String(details.item_grp_id ?? details.item_group_id ?? details.itemGroupId ?? ""),
           itemCode: details.item_code ?? details.itemCode ?? "",
           itemName: details.item_name ?? details.itemName ?? "",
@@ -357,40 +434,9 @@ const CreateItem: React.FC<CreateItemProps> = ({ open, onClose, mode = 'create',
           purchaseable: Boolean(Number(details.purchaseable ?? details.is_purchaseable ?? 0)),
           manufacturable: Boolean(Number(details.manufacturable ?? details.is_manufacturable ?? 0)),
           assembly: Boolean(Number(details.assembly ?? details.is_assembly ?? 0)),
-        };
-
-        setInitialValues(mapped);
-
-        // Transform UOM mappings into table shape expected by UOMMappingTable
-  const _rawUomMaps = (data.uom_mappings ?? data.uom_mappings ?? data.uom_mappings ?? data.uom_mappings) ?? data.uom_mappings ?? [];
-  const _sourceUomMaps = Array.isArray(data.uom_mappings) ? data.uom_mappings : (Array.isArray((data as any).uom_mappings) ? (data as any).uom_mappings : (data.uom_mappings ?? []));
-  const _uomSource = data.uom_mappings ?? data.uom_mappings ?? [];
-        const mappedUoms = (Array.isArray(data.uom_mappings) ? data.uom_mappings : (Array.isArray((data as any).uom_mappings) ? (data as any).uom_mappings : (data.uom_mappings ?? [])))
-          .map((m: any) => ({
-            mapFromUom: String(m.map_from_id ?? m.map_from ?? m.mapFromId ?? m.map_from_id),
-            mapFromName: m.map_from_name ?? m.map_from_name ?? m.mapFromName ?? m.map_from_name,
-            mapToUom: String(m.map_to_id ?? m.map_to ?? m.mapToId ?? m.map_to_id),
-            mapToName: m.map_to_name ?? m.map_to_name ?? m.mapToName ?? m.map_to_name,
-            isFixed: Boolean(Number(m.is_fixed ?? m.isFixed ?? 0)),
-            relationValue: m.relation_value ?? m.relationValue ?? null,
-            rounding: m.rounding ?? null,
-          }));
-
-        setUomMappings(Array.isArray(mappedUoms) ? mappedUoms : []);
-
-        const mmRaw = data.minmax_mapping ?? data.minmax_mapping ?? data.minmax_mapping ?? [];
-        const mappedMM = Array.isArray(mmRaw)
-          ? mmRaw.map((r: any) => ({
-              branchId: r.branch_id ?? r.branchId,
-              branchName: r.branch_name ?? r.branchName,
-              minqty: r.minqty ?? r.min_qty ?? null,
-              maxqty: r.maxqty ?? r.max_qty ?? null,
-              min_order_qty: r.min_order_qty ?? r.minOrderQty ?? null,
-              lead_time: r.lead_time ?? r.leadTime ?? null,
-            }))
-          : [];
-
-        setMinMaxMappings(mappedMM);
+          uomMappings: mappedUoms,
+          minMaxMappings: mappedMM,
+        });
       } catch (err: any) {
         if (!ac.signal.aborted) setErrorMsg(err?.message ?? 'Failed to load item details');
       } finally {
@@ -400,47 +446,10 @@ const CreateItem: React.FC<CreateItemProps> = ({ open, onClose, mode = 'create',
 
     run();
     return () => ac.abort();
-  }, [open, mode, itemId]);
+  }, [open, mode, itemId, defaultInitialValues]);
 
   // expose form ref so we can trigger submit from outside (below the tables)
   const formRef = React.useRef<{ submit?: () => Promise<void> } | null>(null);
-
-  // local states to hold mapping rows before submit
-  const [uomMappings, setUomMappings] = React.useState<any[]>([]);
-  const [minMaxMappings, setMinMaxMappings] = React.useState<any[]>([]);
-  // snapshots to detect dirty changes in mapping tables
-  const uomSnapshotRef = React.useRef<string>(JSON.stringify(uomMappings));
-  const minMaxSnapshotRef = React.useRef<string>(JSON.stringify(minMaxMappings));
-
-  React.useEffect(() => { uomSnapshotRef.current = JSON.stringify(uomMappings); }, [uomMappings]);
-  React.useEffect(() => { minMaxSnapshotRef.current = JSON.stringify(minMaxMappings); }, [minMaxMappings]);
-
-  // compute mapping rows to pass into UOMMappingTable
-  const computedUomMapping: any[] = React.useMemo(() => {
-    if (Array.isArray(uomMappings) && uomMappings.length > 0) {
-      return uomMappings.map((r: any) => ({
-        id: String(Math.random()),
-        mapFromUom: r.mapFromUom ?? r.map_from_id ?? r.map_from ?? initialValues.uomId ?? null,
-        mapFromName: r.mapFromName ?? r.map_from_name ?? null,
-        mapToUom: r.mapToUom ?? r.map_to_id ?? r.map_to ?? null,
-        mapToName: r.mapToName ?? r.map_to_name ?? null,
-        isFixed: Boolean(r.is_fixed ?? r.isFixed ?? 0),
-        relationValue: r.relation_value ?? r.relationValue ?? null,
-        rounding: r.rounding ?? null,
-      }));
-    }
-    // default single row with mapFrom = current item UOM
-    return [{
-      id: String(Math.random()),
-      mapFromUom: initialValues.uomId ?? null,
-      mapFromName: uomOptions.find(o => String(o.value) === String(initialValues.uomId))?.label ?? null,
-      mapToUom: null,
-      mapToName: null,
-      isFixed: false,
-      relationValue: null,
-      rounding: null,
-    }];
-  }, [uomMappings, initialValues.uomId, uomOptions]);
 
   return (
     <Dialog
@@ -477,27 +486,7 @@ const CreateItem: React.FC<CreateItemProps> = ({ open, onClose, mode = 'create',
               hideModeToggle
               onSubmit={handleFormSubmit}
               onCancel={() => onClose()}
-              externalDirty={
-                // form is considered dirty if either mapping snapshots differ or the form itself is dirty
-                (uomSnapshotRef.current !== JSON.stringify(uomMappings)) || (minMaxSnapshotRef.current !== JSON.stringify(minMaxMappings))
-              }
             />
-            {/* Show mapping tables for edit/view modes only (hidden on create) */}
-            {mode !== 'create' && Array.isArray(setupData?.uom_groups) && (
-              <Box sx={{ mt: 3 }}>
-                <UOMMappingTable
-                  mapping={computedUomMapping}
-                  uomOptions={uomOptions}
-                  itemDefaultUom={initialValues.uomId}
-                  onChange={(rows) => setUomMappings(rows as any[])}
-                />
-              </Box>
-            )}
-            {mode !== 'create' && (
-              <Box sx={{ mt: 3 }}>
-                <MinMaxMappingTable mapping={minMaxMappings} onChange={(rows) => setMinMaxMappings(rows)} />
-              </Box>
-            )}
             {/* In view mode we still render a close button; create/edit use MuiForm's actions */}
             {mode === 'view' && (
               <Box sx={{ display: 'flex', gap: 1, justifyContent: 'flex-end', mt: 2 }}>

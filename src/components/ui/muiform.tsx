@@ -19,7 +19,17 @@ export type FieldType =
 	| "select"
 	| "multiselect"
 	| "checkbox"
-	| "date";
+	| "date"
+	| "custom";
+
+export type CustomFieldRenderProps = {
+	value: unknown;
+	values: Record<string, unknown>;
+	onChange: (value: unknown) => void;
+	setValue: (name: string, value: unknown) => void;
+	disabled: boolean;
+	mode: MuiFormMode;
+};
 
 export type Field = {
 	name: string;
@@ -34,6 +44,9 @@ export type Field = {
 	readOnly?: boolean; // force read only regardless of mode
 	grid?: { xs?: number; sm?: number; md?: number; lg?: number; xl?: number };
 	visibleInModes?: MuiFormMode[]; // default: all
+	render?: (props: CustomFieldRenderProps) => React.ReactNode; // for custom fields
+	customValidate?: (value: unknown, values: Record<string, unknown>) => string | null;
+	isEmpty?: (value: unknown, values: Record<string, unknown>) => boolean;
 };
 
 export type Schema = {
@@ -134,12 +147,32 @@ export const MuiForm = React.forwardRef(function MuiForm(
 
 	React.useEffect(() => {
 		const base = getInitialValues(schema, initialValues);
-		// merge existing values to avoid resetting user input when schema/options update
 		setValues((prev) => {
-			const merged = { ...base, ...prev };
-			// update the snapshot to reflect the merged baseline
-			initialSnapshotRef.current = JSON.stringify(merged);
-			return merged;
+			let next: Record<string, unknown>;
+			let prevString: string | null = null;
+			try {
+				prevString = JSON.stringify(prev);
+			} catch {
+				prevString = null;
+			}
+			const baselineMatches = prevString !== null && prevString === initialSnapshotRef.current;
+			if (baselineMatches) {
+				// No user edits since last baseline; replace with incoming base values.
+				next = { ...base };
+				try {
+					initialSnapshotRef.current = JSON.stringify(next);
+				} catch {
+					initialSnapshotRef.current = prevString ?? "";
+				}
+			} else {
+				// Preserve existing user edits, but ensure any new fields from base are populated.
+				next = { ...prev };
+				for (const key of Object.keys(base)) {
+					if (!(key in next)) next[key] = base[key];
+				}
+				// retain previous snapshot to keep dirty tracking intact
+			}
+			return next;
 		});
 	}, [schema, initialValues]);
 
@@ -148,8 +181,12 @@ export const MuiForm = React.forwardRef(function MuiForm(
 		onModeChange?.(m);
 	};
 
+		const setValue = React.useCallback((name: string, value: unknown) => {
+			setValues((prev) => ({ ...prev, [name]: value }));
+		}, []);
+
 	const handleChange = (name: string, value: unknown) => {
-		setValues((prev) => ({ ...prev, [name]: value }));
+			setValue(name, value);
 	};
 
 	// call onValuesChange after values have been updated to avoid setState during render
@@ -158,6 +195,14 @@ export const MuiForm = React.forwardRef(function MuiForm(
 			onValuesChange(values);
 		}
 	}, [values, onValuesChange]);
+
+	const isEmptyValue = (field: Field, value: unknown) => {
+		if (field.isEmpty) return field.isEmpty(value, values);
+		if (value === null || typeof value === "undefined") return true;
+		if (typeof value === "string") return value.trim().length === 0;
+		if (Array.isArray(value)) return value.length === 0;
+		return false;
+	};
 
 	const validate = () => {
 		const next: Record<string, string> = {};
@@ -171,9 +216,15 @@ export const MuiForm = React.forwardRef(function MuiForm(
 					if (!v) next[f.name] = "Required";
 				} else if (f.type === "multiselect") {
 					if (!Array.isArray(v) || v.length === 0) next[f.name] = "Required";
+				} else if (f.type === "custom") {
+					if (isEmptyValue(f, v)) next[f.name] = "Required";
 				} else if (v === null || v === undefined || v === "") {
 					next[f.name] = "Required";
 				}
+			}
+			if (f.customValidate) {
+				const message = f.customValidate(values[f.name], values);
+				if (message) next[f.name] = message;
 			}
 		}
 		setErrors(next);
@@ -336,6 +387,31 @@ export const MuiForm = React.forwardRef(function MuiForm(
 							/>
 						)}
 					/>
+				) : field.type === "custom" && typeof field.render === "function" ? (
+					<Box>
+						{field.label && (
+							<Typography variant="subtitle2" sx={{ mb: 1 }} color="text.secondary">
+								{field.label}
+							</Typography>
+						)}
+						{field.render({
+							value,
+							values,
+							onChange: (val) => handleChange(field.name, val),
+							setValue,
+							disabled,
+							mode,
+						})}
+						{(errors[field.name] || field.helperText) && (
+							<Typography
+								variant="caption"
+								sx={{ display: "block", mt: 0.5 }}
+								color={errors[field.name] ? "error" : "text.secondary"}
+							>
+								{errors[field.name] || field.helperText}
+							</Typography>
+						)}
+					</Box>
 				) : (
 					// Fallback render as text
 					<Box>

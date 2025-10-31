@@ -13,10 +13,10 @@ type IndentRow = {
 	id: string | number;
 	indent_no: string;
 	indent_date: string;
+	indent_date_raw?: string;
 	branch_name: string;
 	expense_type: string;
 	status: string;
-	raised_by?: string;
 };
 
 const initialPagination: GridPaginationModel = {
@@ -26,14 +26,26 @@ const initialPagination: GridPaginationModel = {
 
 const formatDate = (value?: string) => {
 	if (!value) return "-";
-	const date = new Date(value);
-	return Number.isNaN(date.getTime())
-		? value
-		: new Intl.DateTimeFormat("en-GB", {
-				day: "2-digit",
-				month: "short",
-				year: "numeric",
-			}).format(date);
+	const trimmed = value.trim();
+	let date: Date | null = null;
+	const ymdMatch = trimmed.match(/^([0-9]{4})-([0-9]{2})-([0-9]{2})$/);
+	if (ymdMatch) {
+		const [, year, month, day] = ymdMatch;
+		date = new Date(Number(year), Number(month) - 1, Number(day));
+	} else {
+		const parsed = new Date(trimmed);
+		if (!Number.isNaN(parsed.getTime())) {
+			date = parsed;
+		}
+	}
+	if (!date || Number.isNaN(date.getTime())) {
+		return trimmed;
+	}
+	return new Intl.DateTimeFormat("en-GB", {
+		day: "2-digit",
+		month: "short",
+		year: "numeric",
+	}).format(date);
 };
 
 export default function ProcurementIndentIndexPage() {
@@ -62,9 +74,12 @@ export default function ProcurementIndentIndexPage() {
 			field: "indent_date",
 			headerName: "Indent Date",
 			minWidth: 140,
-			valueGetter: ({ value }) => formatDate(typeof value === "string" ? value : ""),
-			valueFormatter: ({ value }) => value,
 			headerClassName: "bg-[#3ea6da] text-white",
+			renderCell: (params: GridRenderCellParams<IndentRow, string>) => (
+				<Typography component="span" variant="body2">
+					{params.value || formatDate(typeof params.row.indent_date_raw === "string" ? params.row.indent_date_raw : "") || "-"}
+				</Typography>
+			),
 		},
 		{
 			field: "branch_name",
@@ -88,14 +103,6 @@ export default function ProcurementIndentIndexPage() {
 					renderCell: (params: GridRenderCellParams<IndentRow, string>) => (
 				<Chip size="small" color={params.value === "Approved" ? "success" : params.value === "Rejected" ? "error" : "default"} label={params.value || "Pending"} />
 			),
-		},
-		{
-			field: "raised_by",
-			headerName: "Raised By",
-			flex: 1,
-			minWidth: 150,
-			headerClassName: "bg-[#3ea6da] text-white",
-			valueGetter: ({ value }) => value || "-",
 		},
 	], []);
 
@@ -130,15 +137,19 @@ export default function ProcurementIndentIndexPage() {
 			}
 
 			const rawRows = Array.isArray((data as any)?.data) ? (data as any).data : Array.isArray(data) ? data : [];
-			const mappedRows: IndentRow[] = rawRows.map((row: any) => ({
-				id: row.indent_id ?? row.id ?? row.indentId ?? `${row.indent_no ?? "indent"}-${Math.random().toString(36).slice(2, 8)}`,
-				indent_no: row.indent_no ?? row.indentNo ?? "",
-				indent_date: row.indent_date ?? row.indentDate ?? row.created_at ?? "",
-				branch_name: row.branch_name ?? row.branchName ?? row.branch ?? "",
-				expense_type: row.expense_type ?? row.expenseType ?? row.expense_type_name ?? "",
-				status: row.status ?? row.status_name ?? row.current_status ?? "Pending",
-				raised_by: row.raised_by ?? row.created_by ?? row.createdBy ?? "",
-			}));
+			const mappedRows: IndentRow[] = rawRows.map((row: any) => {
+				const rawDate = row.indent_date ?? row.indentDate ?? row.created_at ?? "";
+				const normalizedRaw = typeof rawDate === "string" ? rawDate : rawDate ? String(rawDate) : "";
+				return {
+					id: row.indent_id ?? row.id ?? row.indentId ?? `${row.indent_no ?? "indent"}-${Math.random().toString(36).slice(2, 8)}`,
+					indent_no: row.indent_no ?? row.indentNo ?? "",
+					indent_date_raw: normalizedRaw,
+					indent_date: formatDate(normalizedRaw),
+					branch_name: row.branch_name ?? row.branchName ?? row.branch ?? "",
+					expense_type: row.expense_type ?? row.expenseType ?? row.expense_type_name ?? "",
+					status: row.status ?? row.status_name ?? row.current_status ?? "Pending",
+				};
+			});
 
 			setRows(mappedRows);
 			const total = Number((data as any)?.total ?? mappedRows.length ?? 0);

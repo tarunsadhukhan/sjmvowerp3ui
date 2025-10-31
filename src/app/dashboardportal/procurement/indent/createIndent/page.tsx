@@ -22,7 +22,8 @@ type Row = {
 
 export default function CreateIndentPage() {
 	const formRef = React.useRef<any>(null);
-	const [formValues, setFormValues] = React.useState<Record<string, unknown>>({});
+	const [formDefaults, setFormDefaults] = React.useState<Record<string, unknown>>({});
+	const [formKey, setFormKey] = React.useState(0);
 
 	// start with one blank row for create flow
 	const nextId = React.useRef(1);
@@ -73,6 +74,7 @@ export default function CreateIndentPage() {
 		}
 		return {} as Record<string, unknown>;
 	}, [branchOptionsLocal]);
+
 
 	const isRowFilled = (r: Row) => {
 		// consider a row non-empty if any of the key fields are present
@@ -383,6 +385,13 @@ export default function CreateIndentPage() {
 	// current form values must be declared before effects that reference them
 	const [currentFormValues, setCurrentFormValues] = React.useState<Record<string, unknown>>(() => initialFormValues || {});
 
+	React.useEffect(() => {
+		if (!formDefaults || Object.keys(formDefaults).length === 0) {
+			setFormDefaults(initialFormValues);
+			setCurrentFormValues(initialFormValues);
+		}
+	}, [formDefaults, initialFormValues]);
+
 	// Disable table until indent_type + expense_type are present
 	const tableDisabled = !(Boolean(currentFormValues.indent_type) && Boolean(currentFormValues.expense_type));
 
@@ -512,17 +521,75 @@ export default function CreateIndentPage() {
 		],
 	}), [branchOptionsLocal, apiExpenseOptions, apiProjectOptions]);
 
-
-	const handleRowsChange = (newRows: Row[]) => setRows(newRows);
-
 	const handleSubmit = async (vals: Record<string, unknown>) => {
-		// filter out the trailing blank row(s)
-		const nonEmpty = rows.filter(isRowFilled).map(r => ({ ...r, quantity: Number(r.quantity) }));
-		const payload = { ...vals, items: nonEmpty };
-		// for now log
-		// eslint-disable-next-line no-console
-		console.log('Submitting indent payload:', payload);
-		alert('Submitted (check console)');
+		const nonEmpty = rows.filter(isRowFilled);
+		if (!nonEmpty.every(isRowValid)) {
+			window.alert('Please complete all required fields for each item row.');
+			return;
+		}
+		const itemsPayload = nonEmpty.map((r) => ({
+			department: r.department ?? '',
+			item_group: r.item_group ?? '',
+			item: r.item ?? '',
+			item_make: r.item_make ?? '',
+			quantity: Number(r.quantity),
+			uom: r.uom ?? '',
+			remarks: r.remarks ?? '',
+		}));
+
+		if (itemsPayload.length === 0) {
+			window.alert('Add at least one item before creating an indent.');
+			return;
+		}
+
+		const payload = { ...vals, items: itemsPayload };
+
+		try {
+			const { data, error, status } = await fetchWithCookie(apiRoutesPortalMasters.INDENT_CREATE, 'POST', payload);
+			if (error || !data || status >= 400) {
+				const detail = (data as any)?.detail ?? error ?? 'Failed to create indent';
+				let message: string;
+				if (typeof detail === 'string') {
+					message = detail;
+				} else if (detail && typeof detail === 'object') {
+					const maybeMessage = (detail as any).message;
+					const maybeError = (detail as any).error;
+					message = [maybeMessage, maybeError].filter(Boolean).join(': ') || JSON.stringify(detail);
+				} else {
+					message = 'Failed to create indent';
+				}
+				throw new Error(message);
+			}
+
+			const response = data as { indent_id?: number; indent_no?: number; message?: string };
+			const newIndentNo = response.indent_no ?? response.indent_id;
+			window.alert(newIndentNo ? `Indent ${newIndentNo} created successfully.` : 'Indent created successfully.');
+
+			nextId.current = 1;
+			setRows([blankRow()]);
+			setPerRowOptions({});
+			setCurrentItemOptions([]);
+			setCurrentMakeOptions([]);
+			setCurrentUomOptions([]);
+			setLoadingRows(() => new Set<number>());
+
+			const newDefaults: Record<string, unknown> = {
+				branch: vals.branch ?? formDefaults.branch ?? '',
+				indent_type: vals.indent_type ?? '',
+				expense_type: vals.expense_type ?? '',
+				date: vals.date ?? '',
+				indent_no: newIndentNo ? String(newIndentNo) : '',
+				project: vals.project ?? '',
+				name: '',
+			};
+			setFormDefaults(newDefaults);
+			setCurrentFormValues(newDefaults);
+			setFormKey((prev) => prev + 1);
+		} catch (err) {
+			console.error('Failed to create indent', err);
+			const message = err instanceof Error ? err.message : 'Failed to create indent';
+			window.alert(message);
+		}
 	};
 
 	// track form values so we can enable/disable create button
@@ -542,7 +609,17 @@ export default function CreateIndentPage() {
 
 	return (
 		<Box sx={{ p: 3 }} suppressHydrationWarning>
-			<MuiForm ref={formRef} schema={schema} initialValues={initialFormValues} mode="create" hideModeToggle hideSubmit onSubmit={handleSubmit} onValuesChange={(v) => setCurrentFormValues(v)} />
+			<MuiForm
+				key={formKey}
+				ref={formRef}
+				schema={schema}
+				initialValues={formDefaults}
+				mode="create"
+				hideModeToggle
+				hideSubmit
+				onSubmit={handleSubmit}
+				onValuesChange={(v) => setCurrentFormValues(v)}
+			/>
 
 			<Box sx={{ mt: 3, height: 360 }}>
 				<Box sx={{ position: 'relative', height: '100%' }}>

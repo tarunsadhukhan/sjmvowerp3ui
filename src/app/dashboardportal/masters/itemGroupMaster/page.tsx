@@ -7,6 +7,8 @@ import { fetchWithCookie } from "@/utils/apiClient2";
 import MuiDataGrid from '@/components/ui/muiDataGrid';
 import { Box, TextField, InputAdornment, Switch, Snackbar, Alert, Dialog, DialogTitle, DialogContent, DialogActions, CircularProgress } from '@mui/material';
 import { useState, useEffect } from 'react';
+import { usePathname } from "next/navigation";
+import { useSidebarContext } from "@/components/dashboard/sidebarContext";
 import { GridColDef, GridPaginationModel, GridRenderCellParams } from '@mui/x-data-grid';
 import CreateItemGroupPage from "@/app/dashboardportal/masters/itemGroupMaster/CreateItemGroupPage";
 
@@ -37,6 +39,10 @@ export default function CompanyManagement() {
   const [detailsDialogOpen, setDetailsDialogOpen] = useState(false);
   const [detailsLoading, setDetailsLoading] = useState(false);
   const [detailsData, setDetailsData] = useState<any>(null);
+  const pathname = usePathname();
+  const { hasMenuAccess } = useSidebarContext();
+  const canCreate = hasMenuAccess(pathname, 'create');
+  const canEdit = hasMenuAccess(pathname, 'edit');
 
   // Fetch companies from API with pagination and search
   const fetchItemGrps = async () => {
@@ -115,6 +121,10 @@ export default function CompanyManagement() {
   // Open dialog for create
   const [createDialogOpen, setCreateDialogOpen] = useState(false);
   const handleOpenCreate = () => {
+    if (!canCreate) {
+      setSnackbar({ open: true, message: 'You do not have permission to create item groups', severity: 'error' });
+      return;
+    }
     setCreateDialogOpen(true);
   };
   const handleCloseCreateDialog = () => {
@@ -124,6 +134,10 @@ export default function CompanyManagement() {
 
   // Toggle active status handler
   const handleToggleActive = async (item_grp_id: number, currentActive: number) => {
+    if (!canEdit) {
+      setSnackbar({ open: true, message: 'You do not have permission to edit item groups', severity: 'error' });
+      return;
+    }
     setLoading(true);
     try {
       const selectedCompany = localStorage.getItem('sidebar_selectedCompany');
@@ -220,7 +234,7 @@ export default function CompanyManagement() {
           checked={!!params.value}
           color="primary"
           onChange={() => handleToggleActive(params.row.item_grp_id, params.value)}
-          disabled={loading}
+          disabled={loading || !canEdit}
         />
       ),
     },
@@ -235,6 +249,7 @@ export default function CompanyManagement() {
           <Button
             className="btn-primary"
             onClick={handleOpenCreate}
+            disabled={!canCreate}
           >
             + Create Item Group
           </Button>

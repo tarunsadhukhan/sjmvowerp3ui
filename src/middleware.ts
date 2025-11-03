@@ -3,6 +3,7 @@ import { NextResponse } from 'next/server';
 import type { NextRequest } from 'next/server';
 // Ensure this has full absolute URLs, not relative
 import {apiRoutes} from './utils/api'; // Ensure this has full absolute URLs, not relative
+import { determinePortalAction } from './utils/portalPermissions';
 
 
 const PROTECTED_PATHS = ['/dashboardctrldesk', '/dashboardadmin', '/dashboardportal'];
@@ -12,6 +13,7 @@ export async function middleware(request: NextRequest) {
   const url = request.nextUrl;
   const hostname = request.headers.get('host') || '';
   const accessToken = request.cookies.get('access_token');
+  const permissionToken = request.cookies.get('portal_permission_token');
   const pathname = url.pathname;
 
   console.log('🔍 Middleware - Host:', hostname);
@@ -44,12 +46,17 @@ export async function middleware(request: NextRequest) {
       return NextResponse.redirect(new URL('/login', request.url));
     }
 
+    const cookieHeader = [
+      accessToken?.value ? `access_token=${accessToken.value}` : null,
+      permissionToken?.value ? `portal_permission_token=${permissionToken.value}` : null,
+    ].filter(Boolean).join('; ');
+
     try {
       // Edge-compatible fetch, manually forwarding cookie
       const verifyRes = await fetch(apiRoutes.VERIFYSESSION, {
         method: 'GET',
         headers: {
-          'Cookie': `access_token=${accessToken.value}`,
+          ...(cookieHeader ? { 'Cookie': cookieHeader } : {}),
         },
       });
 
@@ -68,6 +75,39 @@ export async function middleware(request: NextRequest) {
     } catch (err) {
       console.error('❌ Error during token check:', err);
       return NextResponse.redirect(new URL('/login', request.url));
+    }
+
+    if (pathname.startsWith('/dashboardportal')) {
+      try {
+  const action = determinePortalAction(pathname);
+        const permissionRes = await fetch(apiRoutes.PORTAL_MENU_PERMISSION_CHECK, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            ...(cookieHeader ? { 'Cookie': cookieHeader } : {}),
+          },
+          body: JSON.stringify({ path: pathname, action }),
+        });
+
+        if (permissionRes.status === 401 || permissionRes.status === 403) {
+          console.warn('⚠️ Permission token missing or invalid');
+          return NextResponse.redirect(new URL('/login', request.url));
+        }
+
+        if (!permissionRes.ok) {
+          console.warn('⚠️ Permission check failed (status)', permissionRes.status);
+          return NextResponse.redirect(new URL('/dashboardportal', request.url));
+        }
+
+        const permissionPayload = await permissionRes.json();
+        if (!permissionPayload?.allowed) {
+          console.warn('⛔ Access denied for path', pathname, 'required action', action);
+          return NextResponse.redirect(new URL('/dashboardportal', request.url));
+        }
+      } catch (err) {
+        console.error('❌ Error during permission check:', err);
+        return NextResponse.redirect(new URL('/dashboardportal', request.url));
+      }
     }
   }
 

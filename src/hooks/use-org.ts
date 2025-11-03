@@ -3,13 +3,15 @@
 import { useSidebarContext } from "@/components/dashboard/sidebarContext";
 import { useEffect, useState } from "react";
 import { getUser, urlcheck } from "@/utils/auth";
+import { normalisePortalPath } from "@/utils/portalPermissions";
 const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:3000";
 
 export function useCompany() {
   const {
     companies, setCompanies,
-    selectedCompany, setSelectedCompany,
+    selectedCompany,
     menuItems, setMenuItems,
+    setMenuPermissions,
     handleCompanyChange,
   } = useSidebarContext();
   const [loading, setLoading] = useState<boolean>(false);
@@ -27,6 +29,7 @@ export function useCompany() {
               "Content-Type": "application/json",
               Authorization: `Bearer ${userId}`,
             },
+            credentials: "include",
           }
         );
         if (!response.ok) {
@@ -60,26 +63,58 @@ export function useCompany() {
       if (!user) return;
       try {
         const response = await fetch(
-          `${API_URL}/api/menuRoutes/menu_items?company_id=${selectedCompany.co_id}&user_id=${user.id}&currentHost=${currentHost}`,
+          `${API_URL}/api/admin/PortalData/portal_menu_items?company_id=${selectedCompany.co_id}&user_id=${user.id}&currentHost=${currentHost}`,
           {
             headers: {
               "Content-Type": "application/json",
-              Authorization: `Bearer ${user.id}`,
             },
+            credentials: "include",
           }
         );
         if (!response.ok) {
           setMenuItems([]);
+          setMenuPermissions({});
           return;
         }
         const data = await response.json();
         setMenuItems(data);
+        try {
+          const permissionsResponse = await fetch(
+            `${API_URL}/api/admin/PortalData/portal_menu_permissions`,
+            {
+              method: "GET",
+              headers: {
+                "Content-Type": "application/json",
+              },
+              credentials: "include",
+            }
+          );
+          if (!permissionsResponse.ok) {
+            setMenuPermissions({});
+          } else {
+            const permissionsData = await permissionsResponse.json();
+            const rawPermissions = permissionsData?.permissions ?? {};
+            const normalisedPermissions: Record<string, number> = {};
+            Object.entries(rawPermissions).forEach(([key, value]) => {
+              const cleaned = normalisePortalPath(key);
+              if (!cleaned) return;
+              const numericValue = typeof value === "number" ? value : Number(value);
+              if (Number.isFinite(numericValue)) {
+                normalisedPermissions[cleaned] = numericValue;
+              }
+            });
+            setMenuPermissions(normalisedPermissions);
+          }
+        } catch {
+          setMenuPermissions({});
+        }
       } catch {
         setMenuItems([]);
+        setMenuPermissions({});
       }
     };
     fetchMenus();
-  }, [selectedCompany, setMenuItems, currentHost]);
+  }, [selectedCompany, setMenuItems, currentHost, setMenuPermissions]);
 
   return {
     companies,

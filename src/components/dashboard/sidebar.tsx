@@ -8,6 +8,7 @@ import { apiRoutes } from "@/utils/api";
 import MuiSelect from "@/components/ui/muiSelect";
 import { ChevronDown, ChevronRight } from "lucide-react";
 import { useSidebarContext } from "@/components/dashboard/sidebarContext";
+import { normalisePortalPath } from "@/utils/portalPermissions";
 
 interface SidebarProps {
   isCollapsed: boolean;
@@ -18,11 +19,12 @@ export default function Sidebar({ isCollapsed, onToggle }: SidebarProps) {
   const { compshow } = urlcheck();
   const {
     companies, setCompanies,
-    selectedCompany, setSelectedCompany,
+    selectedCompany,
     selectedBranches, setSelectedBranches,
     expandedMenus, setExpandedMenus,
     availableMenus, parentMenus,
-    handleCompanyChange, handleBranchChange
+    handleCompanyChange, handleBranchChange,
+    setMenuPermissions
   } = useSidebarContext();
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -76,6 +78,23 @@ export default function Sidebar({ isCollapsed, onToggle }: SidebarProps) {
 
         if (Array.isArray(result.data)) {
           setCompanies(result.data);
+          const permissionResult = await fetchWithCookie(apiRoutes.PORTAL_MENU_PERMISSIONS, "GET");
+          if (permissionResult.status >= 200 && permissionResult.status < 300 && permissionResult.data) {
+            const payload = permissionResult.data as { permissions?: Record<string, unknown> };
+            const rawPermissions = payload.permissions ?? {};
+            const normalised: Record<string, number> = {};
+            Object.entries(rawPermissions).forEach(([key, value]) => {
+              const cleaned = normalisePortalPath(key);
+              if (!cleaned) return;
+              const numeric = typeof value === 'number' ? value : Number(value);
+              if (Number.isFinite(numeric)) {
+                normalised[cleaned] = numeric;
+              }
+            });
+            setMenuPermissions(normalised);
+          } else {
+            setMenuPermissions({});
+          }
         } else {
           setError("Failed to load company data");
         }
@@ -86,7 +105,7 @@ export default function Sidebar({ isCollapsed, onToggle }: SidebarProps) {
       }
     };
     fetchCompanyData();
-  }, [compshow, isClient, setCompanies]);
+  }, [compshow, isClient, setCompanies, setMenuPermissions]);
 
   // Toggle menu expansion
   const toggleMenu = (menuId: number) => {

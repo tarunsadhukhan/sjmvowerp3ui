@@ -1,10 +1,12 @@
 import React, { createContext, useContext, useState, useEffect, ReactNode, useCallback } from 'react';
+import { normalisePortalPath } from '@/utils/portalPermissions';
 
 export interface MenuItem {
   menu_id: number;
   menu_name: string;
   menu_path: string;
   menu_parent_id: number | null;
+  access_type_id?: number | null;
 }
 
 export interface Branch {
@@ -34,6 +36,9 @@ interface SidebarContextType {
   setParentMenus: React.Dispatch<React.SetStateAction<MenuItem[]>>;
   menuItems: MenuItem[];
   setMenuItems: React.Dispatch<React.SetStateAction<MenuItem[]>>;
+  menuPermissions: Record<string, number>;
+  setMenuPermissions: React.Dispatch<React.SetStateAction<Record<string, number>>>;
+  hasMenuAccess: (path: string, action?: string) => boolean;
   handleCompanyChange: (companyId: number) => void;
   handleBranchChange: (branchIds: number[]) => void;
 }
@@ -49,6 +54,7 @@ export const SidebarProvider = ({ children }: { children: ReactNode }) => {
   const [availableMenus, setAvailableMenus] = useState<MenuItem[]>([]);
   const [parentMenus, setParentMenus] = useState<MenuItem[]>([]);
   const [menuItems, setMenuItems] = useState<MenuItem[]>([]);
+  const [menuPermissions, setMenuPermissions] = useState<Record<string, number>>({});
 
   // Load from localStorage on mount (client only)
   useEffect(() => {
@@ -145,6 +151,51 @@ export const SidebarProvider = ({ children }: { children: ReactNode }) => {
     }
   }, []);
 
+  const normalisePath = useCallback((path: string) => normalisePortalPath(path), []);
+
+  const actionThreshold = useCallback((action: string) => {
+    const map: Record<string, number> = { view: 1, print: 2, create: 3, edit: 4 };
+    return map[action.toLowerCase()] ?? 4;
+  }, []);
+
+  const hasMenuAccess = useCallback((path: string, action: string = 'view') => {
+    const normalised = normalisePath(path);
+    if (!normalised) {
+      return false;
+    }
+
+    const segments = normalised.split('/');
+    let level: number | undefined;
+
+    for (let i = segments.length; i > 0; i -= 1) {
+      const candidate = segments.slice(0, i).join('/');
+      const candidateLevel = menuPermissions[candidate];
+      if (typeof candidateLevel === 'number') {
+        level = candidateLevel;
+        break;
+      }
+    }
+
+    if (typeof level !== 'number') {
+      for (let i = segments.length; i > 0; i -= 1) {
+        const candidate = segments.slice(0, i).join('/');
+        const match = availableMenus.find(menu => normalisePath(menu.menu_path) === candidate);
+        if (match && match.access_type_id != null) {
+          const numeric = Number(match.access_type_id);
+          if (Number.isFinite(numeric)) {
+            level = numeric;
+            break;
+          }
+        }
+      }
+    }
+
+    if (typeof level !== 'number') {
+      return false;
+    }
+    return level >= actionThreshold(action);
+  }, [actionThreshold, availableMenus, menuPermissions, normalisePath]);
+
   return (
     <SidebarContext.Provider value={{
       companies, setCompanies,
@@ -154,6 +205,8 @@ export const SidebarProvider = ({ children }: { children: ReactNode }) => {
       availableMenus, setAvailableMenus,
       parentMenus, setParentMenus,
       menuItems, setMenuItems,
+      menuPermissions, setMenuPermissions,
+      hasMenuAccess,
       handleCompanyChange,
       handleBranchChange
     }}>

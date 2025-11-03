@@ -54,7 +54,27 @@ export default function Sidebar({ isCollapsed, onToggle }: SidebarProps) {
       setIsLoading(true);
       try {
         const result = await fetchWithCookie(apiRoutes.PORTAL_MENU_ITEMS, "GET");
-        if (result.data && !result.error) {
+        if (result.status === 401 || result.status === 403) {
+          console.warn("Access token expired or unauthorized – redirecting to login");
+          try {
+            localStorage.removeItem('sidebar_companies');
+            localStorage.removeItem('sidebar_selectedCompany');
+            localStorage.removeItem('sidebar_selectedBranches');
+            localStorage.removeItem('sidebar_expandedMenus');
+            localStorage.removeItem('sidebar_menuItems');
+          } catch (storageErr) {
+            console.warn('Failed to clear cached sidebar data', storageErr);
+          }
+          window.location.href = "/";
+          return;
+        }
+
+        if (result.error) {
+          setError(result.error);
+          return;
+        }
+
+        if (Array.isArray(result.data)) {
           setCompanies(result.data);
         } else {
           setError("Failed to load company data");

@@ -167,25 +167,34 @@ export const SidebarProvider = ({ children }: { children: ReactNode }) => {
     const segments = normalised.split('/');
     let level: number | undefined;
 
-    for (let i = segments.length; i > 0; i -= 1) {
-      const candidate = segments.slice(0, i).join('/');
-      const candidateLevel = menuPermissions[candidate];
-      if (typeof candidateLevel === 'number') {
-        level = candidateLevel;
-        break;
+    const findLevelFromMenus = () => {
+      let branchLevel: number | undefined;
+      for (let i = segments.length; i > 0; i -= 1) {
+        const candidate = segments.slice(0, i).join('/');
+        const matches = availableMenus.filter(menu => normalisePath(menu.menu_path) === candidate);
+        if (matches.length > 0) {
+          const highest = matches.reduce((max, menu) => {
+            const numeric = Number(menu.access_type_id);
+            return Number.isFinite(numeric) && numeric > max ? numeric : max;
+          }, -Infinity);
+          if (Number.isFinite(highest)) {
+            branchLevel = highest;
+            break;
+          }
+        }
       }
-    }
+      return branchLevel;
+    };
+
+    level = findLevelFromMenus();
 
     if (typeof level !== 'number') {
       for (let i = segments.length; i > 0; i -= 1) {
         const candidate = segments.slice(0, i).join('/');
-        const match = availableMenus.find(menu => normalisePath(menu.menu_path) === candidate);
-        if (match && match.access_type_id != null) {
-          const numeric = Number(match.access_type_id);
-          if (Number.isFinite(numeric)) {
-            level = numeric;
-            break;
-          }
+        const candidateLevel = menuPermissions[candidate];
+        if (typeof candidateLevel === 'number') {
+          level = candidateLevel;
+          break;
         }
       }
     }

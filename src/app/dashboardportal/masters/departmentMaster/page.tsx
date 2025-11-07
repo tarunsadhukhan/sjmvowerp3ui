@@ -1,8 +1,8 @@
 "use client";
 
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import { Button } from "@/components/ui/button";
-import MuiDataGrid from "@/components/ui/muiDataGrid";
+import IndexWrapper from "@/components/ui/IndexWrapper";
 import {
 	Box,
 	TextField,
@@ -38,7 +38,7 @@ export default function DepartmentMasterPage() {
 	const [paginationModel, setPaginationModel] = useState<GridPaginationModel>({ pageSize: 10, page: 0 });
 	const [totalRows, setTotalRows] = useState<number>(0);
 	const [searchQuery, setSearchQuery] = useState<string>("");
-	const [searchTimeout, setSearchTimeout] = useState<any>(null);
+	const [searchTimeout, setSearchTimeout] = useState<NodeJS.Timeout | null>(null);
 
 	const [snackbar, setSnackbar] = useState<{ open: boolean; message: string; severity: "success" | "error" }>(
 		{ open: false, message: "", severity: "success" }
@@ -66,42 +66,35 @@ export default function DepartmentMasterPage() {
 	const [editCodeError, setEditCodeError] = useState<string | null>(null);
 
 	const fetchDepartments = async (): Promise<void> => {
-		void 0;
-
 		setLoading(true);
 		try {
 			const selectedCompany = localStorage.getItem("sidebar_selectedCompany");
 			const co_id = selectedCompany ? JSON.parse(selectedCompany).co_id : "";
 			const selectedBranches = localStorage.getItem("sidebar_selectedBranches");
-			void 0;
-			let branch_ids = "";
+			let branchIds = "";
 			if (selectedBranches) {
 				try {
 					const parsed = JSON.parse(selectedBranches);
-					branch_ids=parsed
-			 		if (Array.isArray(parsed)) {
-						// support array of objects [{ branch_id: 1 }] OR array of primitives [1,2] OR mixed
+					if (Array.isArray(parsed)) {
 						const ids = parsed
 							.map((b: any) => {
-								if (b && typeof b === 'object') return b.branch_id ?? b.id ?? b.value ?? '';
-								// allow numeric 0 as valid id
-								if (b === 0) return '0';
-								if (b) return String(b);
-								return '';
+								if (b && typeof b === "object") return b.branch_id ?? b.id ?? b.value ?? "";
+								if (b === 0) return "0";
+								return b ?? "";
 							})
-							.map(String)
-							.filter(Boolean);
-						branch_ids = ids.join(',');
-					} 
-				} catch (e) {
-					void 0;
+							.map((value: any) => String(value))
+							.filter((value: string) => value.length > 0);
+						if (ids.length > 0) branchIds = ids.join(",");
+					}
+				} catch {
+					/* ignore branch cache parse errors */
 				}
 			}
 			const queryParams = new URLSearchParams({
 				page: String((paginationModel.page ?? 0) + 1),
 				limit: String(paginationModel.pageSize ?? 10),
 				co_id,
-				branch_id: branch_ids
+				branch_id: branchIds,
 			});
 			if (searchQuery) queryParams.append("search", searchQuery);
 
@@ -125,7 +118,6 @@ export default function DepartmentMasterPage() {
 	};
 
 	useEffect(() => {
-		console.log('localstorage', localStorage.sidebar_selectedBranches);
 		fetchDepartments();
 		// eslint-disable-next-line react-hooks/exhaustive-deps
 	}, [paginationModel.page, paginationModel.pageSize, searchQuery]);
@@ -245,63 +237,110 @@ export default function DepartmentMasterPage() {
 		}
 	};
 
-	const columns: GridColDef[] = [
-		{ field: "dept_code", headerName: "Dept Code", flex: 1, minWidth: 140, headerClassName: "bg-[#3ea6da] text-white" },
-		{ field: "dept_name", headerName: "Department", flex: 1, minWidth: 220, headerClassName: "bg-[#3ea6da] text-white" },
-		{ field: "branch_display", headerName: "Branch", flex: 1, minWidth: 180, headerClassName: "bg-[#3ea6da] text-white" },
-		{ field: "active", headerName: "Active", width: 120, headerClassName: "bg-[#3ea6da] text-white", renderCell: (params: GridRenderCellParams) => <span>{params.value ? "Yes" : "No"}</span> },
+	const columns = useMemo<GridColDef<DeptRow>[]>(() => [
+		{ field: "dept_code", headerName: "Dept Code", flex: 1, minWidth: 140 },
+		{ field: "dept_name", headerName: "Department", flex: 1, minWidth: 220 },
+		{ field: "branch_display", headerName: "Branch", flex: 1, minWidth: 180 },
 		{
-			field: "actions",
-			headerName: "Actions",
-			width: 140,
-			sortable: false,
-			filterable: false,
-			headerClassName: "bg-[#3ea6da] text-white",
-			renderCell: (params: GridRenderCellParams) => (
-				<div className="flex items-center gap-2">
-					<button className="text-blue-600 underline" onClick={() => handleOpenView(params.row.id)}>View</button>
-					<button className="text-green-600 underline" onClick={() => handleOpenEdit(params.row.id)}>Edit</button>
-				</div>
+			field: "active",
+			headerName: "Active",
+			width: 120,
+			renderCell: (params: GridRenderCellParams<DeptRow>) => (
+				<span>{params.value ? "Yes" : "No"}</span>
 			),
 		},
-	];
+	], []);
+
+	const viewRowHandler = (row: DeptRow) => {
+		const id = row.id ?? row.dept_master_id ?? row.dept_id;
+		if (id !== null && typeof id !== "undefined") {
+			void handleOpenView(id);
+		}
+	};
+
+	const editRowHandler = (row: DeptRow) => {
+		const id = row.id ?? row.dept_master_id ?? row.dept_id;
+		if (id !== null && typeof id !== "undefined") {
+			void handleOpenEdit(id);
+		}
+	};
 
 	return (
-		<div className="min-h-screen bg-gray-50 p-8">
-			<div className="mx-auto max-w-7xl">
-				<div className="mb-8 flex items-center justify-between">
-					<h1 className="text-2xl font-bold text-[#0C3C60]">Department Master</h1>
-					<Button className="btn-primary" onClick={openCreate}>+ Create Department</Button>
-				</div>
+		<IndexWrapper
+			title="Department Master"
+			rows={rows}
+			columns={columns}
+			rowCount={totalRows}
+			paginationModel={paginationModel}
+			onPaginationModelChange={handlePaginationModelChange}
+			loading={loading}
+			showLoadingUntilLoaded
+			search={{ value: searchQuery, onChange: handleSearchChange, placeholder: "Search departments" }}
+			createAction={{ onClick: openCreate }}
+			onView={viewRowHandler}
+			onEdit={editRowHandler}
+		>
+			<Snackbar
+				open={snackbar.open}
+				autoHideDuration={4000}
+				onClose={() => setSnackbar({ ...snackbar, open: false })}
+				anchorOrigin={{ vertical: "top", horizontal: "center" }}
+			>
+				<Alert severity={snackbar.severity} onClose={() => setSnackbar({ ...snackbar, open: false })} sx={{ width: "100%" }}>
+					{snackbar.message}
+				</Alert>
+			</Snackbar>
 
-				<Box sx={{ width: "100%", mb: 2 }}>
-					<TextField placeholder="Search departments..." onChange={handleSearchChange} fullWidth variant="outlined" size="small" sx={{ maxWidth: 350 }} />
-				</Box>
-
-				<MuiDataGrid rows={rows} columns={columns} rowCount={totalRows} paginationModel={paginationModel} onPaginationModelChange={handlePaginationModelChange} loading={loading} showLoadingUntilLoaded={true} />
-
-				<Snackbar open={snackbar.open} autoHideDuration={4000} onClose={() => setSnackbar({ ...snackbar, open: false })} anchorOrigin={{ vertical: "top", horizontal: "center" }}>
-					<Alert severity={snackbar.severity} onClose={() => setSnackbar({ ...snackbar, open: false })} sx={{ width: "100%" }}>{snackbar.message}</Alert>
-				</Snackbar>
-			</div>
-
-			<CreateDepartmentPage open={createOpen} onClose={() => { closeCreate(); fetchDepartments(); }} existingRows={rows} />
+			<CreateDepartmentPage
+				open={createOpen}
+				onClose={() => {
+					closeCreate();
+					fetchDepartments();
+				}}
+				existingRows={rows}
+			/>
 
 			<Dialog open={viewDialogOpen} onClose={() => setViewDialogOpen(false)} maxWidth="sm" fullWidth>
 				<DialogTitle>Department Details</DialogTitle>
-				<DialogContent>{viewLoading ? <div>Loading...</div> : viewData ? <pre>{JSON.stringify(viewData, null, 2)}</pre> : <div>No details</div>}</DialogContent>
-				<DialogActions><Button onClick={() => setViewDialogOpen(false)}>Close</Button></DialogActions>
+				<DialogContent>
+					{viewLoading ? <div>Loading...</div> : viewData ? <pre>{JSON.stringify(viewData, null, 2)}</pre> : <div>No details</div>}
+				</DialogContent>
+				<DialogActions>
+					<Button onClick={() => setViewDialogOpen(false)}>Close</Button>
+				</DialogActions>
 			</Dialog>
 
 			<Dialog open={editDialogOpen} onClose={closeEdit} maxWidth="sm" fullWidth>
 				<DialogTitle>Edit Department</DialogTitle>
 				<DialogContent>
 					<Box sx={{ display: "flex", flexDirection: "column", gap: 2, mt: 1 }}>
-						<TextField label="Department Name" value={editDeptName} onChange={(e) => { setEditDeptName(e.target.value); if (editNameError) setEditNameError(null); }} error={!!editNameError} helperText={editNameError ?? undefined} fullWidth />
-						<TextField label="Department Code" value={editDeptCode} onChange={(e) => { setEditDeptCode(e.target.value); if (editCodeError) setEditCodeError(null); }} error={!!editCodeError} helperText={editCodeError ?? undefined} fullWidth />
+						<TextField
+							label="Department Name"
+							value={editDeptName}
+							onChange={(e) => {
+								setEditDeptName(e.target.value);
+								if (editNameError) setEditNameError(null);
+							}}
+							error={!!editNameError}
+							helperText={editNameError ?? undefined}
+							fullWidth
+						/>
+						<TextField
+							label="Department Code"
+							value={editDeptCode}
+							onChange={(e) => {
+								setEditDeptCode(e.target.value);
+								if (editCodeError) setEditCodeError(null);
+							}}
+							error={!!editCodeError}
+							helperText={editCodeError ?? undefined}
+							fullWidth
+						/>
 						<TextField select label="Branch" value={editBranchId} onChange={(e) => setEditBranchId(e.target.value)} fullWidth>
 							{branchOptions.map((b: any) => (
-								<MenuItem key={b.id} value={b.id}>{b.label}</MenuItem>
+								<MenuItem key={b.id ?? b.value ?? b.branch_id} value={b.id ?? b.value ?? b.branch_id}>
+									{b.label ?? b.branch_name ?? b.name ?? ""}
+								</MenuItem>
 							))}
 						</TextField>
 						<FormControlLabel control={<Switch checked={editDeptActive} onChange={(e) => setEditDeptActive(e.target.checked)} />} label="Active" />
@@ -309,10 +348,12 @@ export default function DepartmentMasterPage() {
 				</DialogContent>
 				<DialogActions>
 					<Button onClick={closeEdit} disabled={editLoading}>Cancel</Button>
-					<Button className="btn-primary" onClick={handleSaveEdit} disabled={editLoading || !editDeptName || !editDeptCode || !!editNameError || !!editCodeError}>Save</Button>
+					<Button className="btn-primary" onClick={handleSaveEdit} disabled={editLoading || !editDeptName || !editDeptCode || !!editNameError || !!editCodeError}>
+						Save
+					</Button>
 				</DialogActions>
 			</Dialog>
-		</div>
+		</IndexWrapper>
 	);
 }
 

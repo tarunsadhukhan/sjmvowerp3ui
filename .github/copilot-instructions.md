@@ -18,6 +18,10 @@
 - API route constants sit in `src/utils/api.ts`; axios wrappers ( `apiClient2.ts`) add cookies/auth interceptors.
 - State/util logic is concentrated under `src/utils/**` and `src/hooks/**`; favour these over new ad-hoc helpers.
 
+## Permissions & access control
+- Page-level access uses `useSidebarContext()` from `src/components/dashboard/sidebarContext`; call `hasMenuAccess(pathname, action)` to inspect the cached `access_type_id` for the active menu item.
+- `access_type_id` mapping: `1` = read, `2` = read + print, `3` = read + print + create, `4` = read + print + create + edit. Use these tiers when deciding whether to expose view, print, create, or edit affordances.
+
 ## Page archetypes
 - **Index (listing dashboards)** — Example: `src/app/dashboardportal/masters/itemMaster/page.tsx`. Pattern: compose `IndexWrapper` (which handles layout, debounced search, permissions, and `MuiDataGrid` wiring), fetch paged data, and feed wrapper props from local state.
 - **Transaction (form with detail grid)** — Example: `dashboardportal/procurement/indent/createIndent/page.tsx`. Combine `muiform` for header info with `muiDataGrid` for line items; maintain per-row caches and enforce `mode` prop.

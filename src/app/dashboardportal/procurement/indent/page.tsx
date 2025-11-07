@@ -172,6 +172,24 @@ export default function ProcurementIndentIndexPage() {
 		router.push("/dashboardportal/procurement/indent/createIndent");
 	}, [router]);
 
+	const handleView = React.useCallback(
+		(row: IndentRow) => {
+			const id = row.id ?? row.indent_no;
+			if (!id) return;
+			router.push(`/dashboardportal/procurement/indent/createIndent?mode=view&id=${encodeURIComponent(String(id))}`);
+		},
+		[router]
+	);
+
+	const handleEdit = React.useCallback(
+		(row: IndentRow) => {
+			const id = row.id ?? row.indent_no;
+			if (!id) return;
+			router.push(`/dashboardportal/procurement/indent/createIndent?mode=edit&id=${encodeURIComponent(String(id))}`);
+		},
+		[router]
+	);
+
 	return (
 		<IndexWrapper
 			title="Procurement Indents"
@@ -185,6 +203,8 @@ export default function ProcurementIndentIndexPage() {
 			showLoadingUntilLoaded
 			search={{ value: searchValue, onChange: handleSearchChange, placeholder: "Search by indent no., branch, or expense type", debounceDelayMs: 1000 }}
 			createAction={{ onClick: handleCreateIndent, label: "Create Indent" }}
+			onView={handleView}
+			onEdit={handleEdit}
 		>
 			{errorMessage ? (
 				<Alert severity="error" sx={{ mt: 2 }}>

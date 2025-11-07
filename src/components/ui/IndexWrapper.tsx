@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { Box, TextField, Tooltip, IconButton, Typography } from "@mui/material";
+import { Box, TextField, Tooltip, IconButton, Typography, Stack } from "@mui/material";
 import { GridColDef, GridPaginationModel, GridRenderCellParams, GridValidRowModel } from "@mui/x-data-grid";
 import { usePathname } from "next/navigation";
 import { Eye, Edit } from "lucide-react";
@@ -150,8 +150,10 @@ function IndexWrapper<RowType extends GridValidRowModel & { id?: string | number
   }, [triggerSearchChange]);
 
   const actionColumn = useMemo<BaseColumn<RowType> | undefined>(() => {
-    const showEdit = Boolean(onEdit) && canEdit;
-    const showView = Boolean(onView) && !showEdit && canView;
+    const allowEdit = Boolean(onEdit) && canEdit;
+    const allowView = Boolean(onView) && canView;
+    const showEdit = allowEdit;
+    const showView = !allowEdit && allowView;
 
     if (!showEdit && !showView) {
       return undefined;
@@ -167,25 +169,23 @@ function IndexWrapper<RowType extends GridValidRowModel & { id?: string | number
       headerAlign: "center",
       renderCell: (params: GridRenderCellParams<RowType>) => {
         const row = params.row;
-        if (showEdit) {
-          return (
-            <Tooltip title="Edit">
-              <IconButton size="small" onClick={() => onEdit?.(row)}>
-                <Edit size={16} />
-              </IconButton>
-            </Tooltip>
-          );
-        }
-        if (showView) {
-          return (
-            <Tooltip title="View">
-              <IconButton size="small" onClick={() => onView?.(row)}>
-                <Eye size={16} />
-              </IconButton>
-            </Tooltip>
-          );
-        }
-        return null;
+        return (
+          <Stack direction="row" spacing={0.5} justifyContent="center" alignItems="center">
+            {showEdit ? (
+              <Tooltip title="Edit">
+                <IconButton size="small" onClick={() => onEdit?.(row)}>
+                  <Edit size={16} />
+                </IconButton>
+              </Tooltip>
+            ) : showView ? (
+              <Tooltip title="View">
+                <IconButton size="small" onClick={() => onView?.(row)}>
+                  <Eye size={16} />
+                </IconButton>
+              </Tooltip>
+            ) : null}
+          </Stack>
+        );
       },
     } satisfies BaseColumn<RowType>;
   }, [canEdit, canView, onEdit, onView]);

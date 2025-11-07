@@ -1,728 +1,1391 @@
 "use client";
 
-import * as React from "react";
-import MuiForm, { Schema } from "@/components/ui/muiform";
-import { Box, Button, IconButton, Tooltip, CircularProgress, Autocomplete, TextField } from "@mui/material";
-import { Trash2 } from 'lucide-react';
-import { DataGrid, GridColDef } from "@mui/x-data-grid";
-import { useBranchOptions } from '@/utils/branchUtils';
-import { fetchWithCookie } from '@/utils/apiClient2';
-import { apiRoutesPortalMasters } from '@/utils/api';
+import React from "react";
+import { useRouter, useSearchParams } from "next/navigation";
+import TransactionWrapper, { type TransactionAction, type TransactionMetadataItem } from "@/components/ui/TransactionWrapper";
+import MuiForm, { type MuiFormMode, type Schema } from "@/components/ui/muiform";
+import IndentPreview from "../components/IndentPreview";
+import { useBranchOptions } from "@/utils/branchUtils";
+import {
+  createIndent,
+  fetchIndentSetup1,
+  fetchIndentSetup2,
+  getIndentById,
+  updateIndent,
+  type IndentDetails,
+  type IndentLine,
+} from "@/utils/indentService";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { toast } from "@/hooks/use-toast";
 
-type Row = {
-	id: number;
-	department?: string;
-	item_group?: string;
-	item?: string;
-	item_make?: string;
-	quantity?: number | string;
-	uom?: string;
-	remarks?: string;
+type Option = { label: string; value: string };
+
+type EditableLineItem = {
+  id: string;
+  department: string;
+  itemGroup: string;
+  item: string;
+  itemMake: string;
+  quantity: string;
+  uom: string;
+  remarks: string;
 };
 
-export default function CreateIndentPage() {
-	const formRef = React.useRef<any>(null);
-	const [formDefaults, setFormDefaults] = React.useState<Record<string, unknown>>({});
-	const [formKey, setFormKey] = React.useState(0);
+type DepartmentRecord = { id: string; name: string; branchId?: string };
+type ProjectRecord = { id: string; name: string; branchId?: string };
+type ExpenseRecord = { id: string; name: string };
+type ItemGroupRecord = { id: string; label: string };
 
-	// start with one blank row for create flow
-	const nextId = React.useRef(1);
-	const blankRow = (): Row => ({
-		id: nextId.current++,
-		department: '',
-		item_group: '',
-		item: '',
-		item_make: '',
-		quantity: '',
-		uom: '',
-		remarks: '',
-	});
-	const [rows, setRows] = React.useState<Row[]>(() => {
-		return [blankRow()];
-	});
+type ItemOption = Option & { defaultUomId?: string; defaultUomLabel?: string };
 
-	const handleDelete = (id: number) => {
-		if (id == null) return;
-		setRows(prev => {
-			const filtered = prev.filter(r => r.id !== id);
-			return filtered.length ? filtered : [blankRow()];
-		});
-		setPerRowOptions(prev => {
-			const copy = { ...prev };
-			delete copy[id];
-			return copy;
-		});
-	};
+type ItemGroupCacheEntry = {
+  items: ItemOption[];
+  makes: Option[];
+  uomsByItemId: Record<string, Option[]>;
+  itemLabelById: Record<string, string>;
+  makeLabelById: Record<string, string>;
+  uomLabelByItemId: Record<string, Record<string, string>>;
+};
 
-	// branch options from reusable hook (reads sidebar_selectedBranches)
-	const branchOptionsLocal = useBranchOptions();
+const INDENT_TYPE_OPTIONS = [
+  { label: "Regular Indent", value: "regular" },
+  { label: "Open Indent", value: "open" },
+  { label: "BOM", value: "bom" },
+];
 
-	// avoid rendering client-only dependent UI during server render to prevent
-	// hydration mismatches (localStorage-dependent options). Wait until mounted.
-	const [mounted, setMounted] = React.useState(false);
-	React.useEffect(() => { setMounted(true); }, []);
+const buildDefaultFormValues = () => ({
+  branch: "",
+  indent_type: "",
+  expense_type: "",
+  date: new Date().toISOString().slice(0, 10),
+  indent_no: "",
+  project: "",
+  requester: "",
+  remarks: "",
+});
 
-	// columns will be defined after option state vars are declared
+let lineIdSeed = 0;
+const generateLineId = () => {
+  lineIdSeed += 1;
+  return `line-${lineIdSeed}`;
+};
 
-	// schema will be declared after API-driven option state so those option arrays are available
+const createBlankLine = (): EditableLineItem => ({
+  id: generateLineId(),
+  department: "",
+  itemGroup: "",
+  item: "",
+  itemMake: "",
+  quantity: "",
+  uom: "",
+  remarks: "",
+});
 
-	// derive initialValues for the form from branch options (client-only). We avoid putting
-	// this value directly into the schema to prevent SSR/CSR HTML mismatch.
-	const initialFormValues = React.useMemo(() => {
-		if (branchOptionsLocal.length >= 1) {
-			return { branch: branchOptionsLocal[0].value } as Record<string, unknown>;
-		}
-		return {} as Record<string, unknown>;
-	}, [branchOptionsLocal]);
+const lineHasAnyData = (line: EditableLineItem) =>
+  Boolean(
+    line.department ||
+      line.itemGroup ||
+      line.item ||
+      line.itemMake ||
+      line.quantity ||
+      line.uom ||
+      line.remarks
+  );
 
+const lineIsComplete = (line: EditableLineItem) => {
+  const qty = Number(line.quantity);
+  return Boolean(line.itemGroup && line.item && line.uom && Number.isFinite(qty) && qty > 0);
+};
 
-	const isRowFilled = (r: Row) => {
-		// consider a row non-empty if any of the key fields are present
-		return Boolean(r.item_group || r.item || r.quantity);
-	};
+const readStoredCompanyCoId = () => {
+  if (typeof window === "undefined") return "";
+  try {
+    const raw = window.localStorage.getItem("sidebar_selectedCompany");
+    if (!raw) return "";
+    const parsed = JSON.parse(raw);
+    return parsed?.co_id ? String(parsed.co_id) : "";
+  } catch {
+    return "";
+  }
+};
 
-	const isRowValid = (r: Row) => {
-		return Boolean(r.item_group && r.item && r.quantity !== undefined && r.quantity !== "" && Number(r.quantity) > 0);
-	};
+type LineItemsEditorProps = {
+  items: EditableLineItem[];
+  mode: MuiFormMode;
+  onFieldChange: (id: string, field: keyof EditableLineItem, value: string) => void;
+  onRemove: (id: string) => void;
+  departmentOptions: Option[];
+  itemGroupOptions: Option[];
+  getItemOptions: (itemGroupId: string) => ItemOption[];
+  getMakeOptions: (itemGroupId: string) => Option[];
+  getUomOptions: (itemGroupId: string, itemId: string) => Option[];
+  labelResolvers: {
+    department: (id: string) => string;
+    itemGroup: (id: string) => string;
+    item: (groupId: string, itemId: string) => string;
+    itemMake: (groupId: string, makeId: string) => string;
+    uom: (groupId: string, itemId: string, uomId: string) => string;
+  };
+  loadingGroups: Record<string, boolean>;
+};
 
-	const handleCellEdit = (params: any) => {
-		const { id, field, value } = params;
-		setRows((prev) => {
-				const next = prev.map((row) => {
-					if (row.id !== id) return row;
-					if (field === 'quantity') return { ...row, [field]: (value === '' ? '' : Number(value)) };
-					if (field === 'item_group') {
-						// set the new item_group and immediately clear dependent fields so UI doesn't show stale ids
-						return { ...row, item_group: value, item: '', item_make: '', quantity: '', uom: '' };
-					}
-					return { ...row, [field]: value };
-				});
-			// if last row became filled (valid), append a new blank row
-			const last = next[next.length - 1];
-			if (last && isRowFilled(last) && isRowValid(last)) {
-				next.push(blankRow());
-				// clear global pools so new row doesn't inherit previous group's options
-				setCurrentItemOptions([]);
-				setCurrentMakeOptions([]);
-				setCurrentUomOptions([]);
-			}
+const LineItemsEditor: React.FC<LineItemsEditorProps> = ({
+  items,
+  mode,
+  onFieldChange,
+  onRemove,
+  departmentOptions,
+  itemGroupOptions,
+  getItemOptions,
+  getMakeOptions,
+  getUomOptions,
+  labelResolvers,
+  loadingGroups,
+}) => {
+  const canEdit = mode !== "view";
+  const columnTemplate =
+    "grid grid-cols-[48px_1.2fr_1.6fr_1.6fr_1.1fr_0.7fr_0.75fr_1.6fr_76px] gap-x-3";
 
-				// if item_group was edited, fetch dependent options for that group
-				if (field === 'item_group') {
-					// clear current pools while we load new ones to avoid stale dropdowns appearing
-					setCurrentItemOptions([]);
-					setCurrentMakeOptions([]);
-					setCurrentUomOptions([]);
-					// clear per-row pool for this row while loading
-					setPerRowOptions(prev => ({ ...prev, [id]: { items: [], makes: [], uoms: [] } }));
-					(async () => {
-						try {
-							const { items, makes, uoms } = await fetchSetup2(value);
-							// store per-row options so other rows are unaffected
-							setPerRowOptions(prev => ({ ...prev, [id]: { items, makes, uoms } }));
-							// also set global pools for the immediate edit context as fallback
-							setCurrentItemOptions(items);
-							setCurrentMakeOptions(makes);
-							setCurrentUomOptions(uoms);
-						} catch (e) {
-							// ignore
-						}
-					})();
-				}
-			return next;
-		});
-	};
+  const handleTextareaInput = React.useCallback((event: React.FormEvent<HTMLTextAreaElement>) => {
+    const el = event.currentTarget;
+    el.style.height = "auto";
+    el.style.height = `${Math.min(Math.max(el.scrollHeight, 40), 240)}px`;
+  }, []);
 
-	// API-driven options populated by GET_INDENT_SETUP_1
-	const [apiProjectOptions, setApiProjectOptions] = React.useState<any[]>([]);
-	const [apiExpenseOptions, setApiExpenseOptions] = React.useState<any[]>([]);
-	const [fullExpenseOptions, setFullExpenseOptions] = React.useState<any[]>([]);
-	const [apiDepartmentOptions, setApiDepartmentOptions] = React.useState<any[]>([]);
-	const [apiItemGroupOptions, setApiItemGroupOptions] = React.useState<any[]>([]);
+  const placeholderText = canEdit ? "Add items to build the indent." : "No line items available.";
 
-	// dynamic item/make/uom options updated per item_group selection
-	const [currentItemOptions, setCurrentItemOptions] = React.useState<any[]>([]);
-	const [currentMakeOptions, setCurrentMakeOptions] = React.useState<any[]>([]);
-	const [currentUomOptions, setCurrentUomOptions] = React.useState<any[]>([]);
+  return (
+    <div className="space-y-3">
+      <div>
+        <p className="text-base font-semibold text-slate-800">Line Items</p>
+        <p className="text-xs text-slate-500">List the materials or services you intend to procure.</p>
+      </div>
 
-	// per-row option pools to avoid cross-row leakage when different item_groups are selected
-	const [perRowOptions, setPerRowOptions] = React.useState<Record<number, { items: any[]; makes: any[]; uoms: any[] }>>({});
-	// track loading state for rows whose item_group just changed
-	const [loadingRows, setLoadingRows] = React.useState<Set<number>>(new Set());
+      <div className="overflow-x-auto">
+        <div className="min-w-[1120px] overflow-hidden rounded-lg border border-slate-200 bg-white">
+          <div className={`${columnTemplate} bg-slate-100 px-4 py-2 text-xs font-semibold uppercase tracking-wide text-slate-600`}>
+            <span>#</span>
+            <span>Department</span>
+            <span>Item Group</span>
+            <span>Item</span>
+            <span>Item Make</span>
+            <span>Qty</span>
+            <span>UOM</span>
+            <span>Remarks</span>
+            <span className="text-right">{canEdit ? "Actions" : ""}</span>
+          </div>
 
-	// local indent type options
-	const indentTypeOptions = React.useMemo(() => [
-		{ label: "Regular Indent", value: "regular" },
-		{ label: "Open Indent", value: "open" },
-		{ label: "BOM", value: "bom" },
-	], []);
+          {items.length ? (
+            items.map((item, index) => {
+              const itemOptions = getItemOptions(item.itemGroup);
+              const makeOptions = getMakeOptions(item.itemGroup);
+              const uomOptions = getUomOptions(item.itemGroup, item.item);
+              const waitingForGroup = Boolean(item.itemGroup) && !itemOptions.length && loadingGroups[item.itemGroup];
+              const showRemove = canEdit && (items.length > 1 || lineHasAnyData(item));
 
-	// generic autocomplete edit cell for singleSelect fields (full-width + widened popper)
-	const AutocompleteEditCell = React.useCallback((props: any) => {
-		const { id, field, value, api, colDef } = props;
-		const options: any[] = props.options || [];
-		const currentOption = options.find(o => String(o.value) === String(value)) || null;
-		return (
-			<Box sx={{ width: '100%', position: 'relative' }}>
-				<Autocomplete
-					size="small"
-					options={options}
-					fullWidth
-					ListboxProps={{ style: { maxHeight: 320 } }}
-					getOptionLabel={(o: any) => o?.label ?? ''}
-					isOptionEqualToValue={(a, b) => String(a.value) === String(b.value)}
-					value={currentOption}
-					onChange={(_, newOpt) => {
-						const newValue = newOpt ? newOpt.value : '';
-						api.setEditCellValue({ id, field, value: newValue }, undefined);
-						api.stopCellEditMode({ id, field });
-					}}
-					componentsProps={{
-						popper: {
-							modifiers: [
-								{
-									name: 'setWidth',
-									enabled: true,
-									phase: 'beforeWrite',
-									fn: ({ state }: any) => {
-										// Ensure the popper is at least as wide as the edit cell, or 260px minimum
-										const refW = state?.rects?.reference?.width || 0;
-										state.styles.popper.width = `${Math.max(refW, 260)}px`;
-									},
-								},
-							],
-						},
-					}}
-					sx={{
-						width: '100%',
-						'& .MuiOutlinedInput-root': {
-							p: 0,
-							'& fieldset': { border: 'none' },
-							'& input': { py: 0.5, px: 0.5, fontSize: 13 },
-						},
-					}}
-					renderInput={(params) => {
-						const { InputProps, ...rest } = params;
-						return (
-							<TextField
-								{...rest}
-								InputProps={{ ...InputProps, endAdornment: null, disableUnderline: true } as any}
-								variant="standard"
-								fullWidth
-								placeholder={currentOption ? currentOption.label : ''}
-							/>
-						);
-					}}
-				/>
-			</Box>
-		);
-	}, []);
+              return (
+                <div
+                  key={item.id}
+                  className={`${columnTemplate} items-start border-t border-slate-200 px-4 py-3 text-sm ${index % 2 === 0 ? "bg-white" : "bg-slate-50"}`}
+                >
+                  <span className="pt-2 text-xs font-semibold text-slate-500">{index + 1}</span>
 
-	const columns: GridColDef[] = React.useMemo(() => {
-		const findLabel = (options: any[] | undefined, rawVal: any) => {
-			// normalize value shapes (row cells sometimes contain objects)
-			let val = rawVal;
-			if (val == null) return '';
-			if (typeof val === 'object') {
-				// common server-side row shapes
-				if (val.label) return String(val.label);
-				if (val.dept_desc) return String(val.dept_desc);
-				if (val.item_grp_name_display) return String(val.item_grp_name_display);
-				if (val.value !== undefined) val = val.value;
-				else if (val.id !== undefined) val = val.id;
-				else if (val.item_grp_id !== undefined) val = val.item_grp_id;
-			}
-			if (!options || options.length === 0) return String(val ?? '');
-			const first = options[0];
-			if (typeof first !== 'object') {
-				const found = options.find((o: any) => String(o) === String(val));
-				return found ?? String(val ?? '');
-			}
-			const found = options.find((o: any) => {
-				if (!o) return false;
-				return String(o.value) === String(val) || String(o.label) === String(val) || String(o.id) === String(val) || String(o.item_grp_id) === String(val);
-			});
-			return found?.label ?? String(val ?? '');
-		};
+                  <div className="flex flex-col gap-1">
+                    {canEdit ? (
+                      <Select
+                        value={item.department || undefined}
+                        onValueChange={(next) => onFieldChange(item.id, "department", next)}
+                      >
+                        <SelectTrigger className="bg-white">
+                          <SelectValue placeholder="Select department" />
+                        </SelectTrigger>
+                        <SelectContent className="bg-white">
+                          {departmentOptions.length ? (
+                            departmentOptions.map((opt) => (
+                              <SelectItem key={opt.value} value={opt.value}>
+                                {opt.label}
+                              </SelectItem>
+                            ))
+                          ) : (
+                            <SelectItem disabled value="__empty__">
+                              No options
+                            </SelectItem>
+                          )}
+                        </SelectContent>
+                      </Select>
+                    ) : (
+                      <span className="block truncate text-slate-700">{labelResolvers.department(item.department)}</span>
+                    )}
+                  </div>
 
-		return [
-				{
-					field: 'actions',
-					headerName: 'Actions',
-					headerAlign: 'center',
-					width: 60,
-					sortable: false,
-					filterable: false,
-					disableColumnMenu: true,
-					renderCell: (params: any) => (
-						<Tooltip title="Delete Row">
-							<IconButton size="small" color="error" onClick={(e) => { e.stopPropagation(); if (params?.id != null) handleDelete(Number(params.id)); }} aria-label="delete row">
-								<Trash2 size={16} />
-							</IconButton>
-						</Tooltip>
-					),
-				},
+                  <div className="flex flex-col gap-1">
+                    {canEdit ? (
+                      <Select
+                        value={item.itemGroup || undefined}
+                        onValueChange={(next) => onFieldChange(item.id, "itemGroup", next)}
+                      >
+                        <SelectTrigger className="bg-white">
+                          <SelectValue placeholder="Select item group" />
+                        </SelectTrigger>
+                        <SelectContent className="bg-white">
+                          {itemGroupOptions.length ? (
+                            itemGroupOptions.map((opt) => (
+                              <SelectItem key={opt.value} value={opt.value}>
+                                {opt.label}
+                              </SelectItem>
+                            ))
+                          ) : (
+                            <SelectItem disabled value="__empty__">
+                              No options
+                            </SelectItem>
+                          )}
+                        </SelectContent>
+                      </Select>
+                    ) : (
+                      <span className="block truncate text-slate-700">{labelResolvers.itemGroup(item.itemGroup)}</span>
+                    )}
+                  </div>
 
-				{
-					field: "department",
-					headerName: "Department",
-					headerAlign: 'center',
-					width: 160,
-					editable: true,
-					type: 'singleSelect',
-					// provide full option objects so DataGrid can display labels
-					valueOptions: apiDepartmentOptions,
-					valueFormatter: (params: any) => findLabel(apiDepartmentOptions, params?.value),
-					renderCell: (params: any) => {
-						const label = findLabel(apiDepartmentOptions, params?.value);
-						return <Tooltip title={label || ''} arrow><div style={{ width: '100%', overflow: 'hidden', textOverflow: 'ellipsis' }}>{label}</div></Tooltip>;
-					},
-					renderEditCell: (params: any) => <AutocompleteEditCell {...params} options={apiDepartmentOptions} />,
-				},
-			{
-				field: "item_group",
-				headerName: "Item Group",
-				headerAlign: 'center',
-				width: 160,
-				editable: true,
-				type: 'singleSelect',
-				valueOptions: apiItemGroupOptions,
-				valueFormatter: (params: any) => findLabel(apiItemGroupOptions, params?.value),
-				renderCell: (params: any) => {
-					const label = findLabel(apiItemGroupOptions, params?.value);
-					return <Tooltip title={label || ''} arrow><div style={{ width: '100%', overflow: 'hidden', textOverflow: 'ellipsis' }}>{label}</div></Tooltip>;
-				},
-				renderEditCell: (params: any) => <AutocompleteEditCell {...params} options={apiItemGroupOptions} />,
-			},
-			{
-				field: "item",
-				headerName: "Item",
-				headerAlign: 'center',
-				width: 220,
-				editable: true,
-				type: 'singleSelect',
-				// use per-row options when available
-				valueOptions: (params: any) => params?.id != null ? (perRowOptions[params.id]?.items ?? currentItemOptions) : currentItemOptions,
-				valueFormatter: (params: any) => findLabel(params?.id != null ? (perRowOptions[params.id]?.items ?? currentItemOptions) : currentItemOptions, params?.value),
-				renderCell: (params: any) => {
-					const loading = params?.id != null && loadingRows.has(params.id as number);
-					if (loading) return <CircularProgress size={16} />;
-					const label = findLabel(params?.id != null ? (perRowOptions[params.id]?.items ?? currentItemOptions) : currentItemOptions, params?.value);
-					return <Tooltip title={label || ''} arrow><div style={{ width: '100%', overflow: 'hidden', textOverflow: 'ellipsis' }}>{label}</div></Tooltip>;
-				},
-				renderEditCell: (params: any) => <AutocompleteEditCell {...params} options={params?.id != null ? (perRowOptions[params.id]?.items ?? currentItemOptions) : currentItemOptions} />,
-			},
-			{
-				field: "item_make",
-				headerName: "Item Make",
-				headerAlign: 'center',
-				width: 160,
-				editable: true,
-				type: 'singleSelect',
-				valueOptions: (params: any) => params?.id != null ? (perRowOptions[params.id]?.makes ?? currentMakeOptions) : currentMakeOptions,
-				valueFormatter: (params: any) => findLabel(params?.id != null ? (perRowOptions[params.id]?.makes ?? currentMakeOptions) : currentMakeOptions, params?.value),
-				renderCell: (params: any) => {
-					const loading = params?.id != null && loadingRows.has(params.id as number);
-					if (loading) return <CircularProgress size={16} />;
-					const label = findLabel(params?.id != null ? (perRowOptions[params.id]?.makes ?? currentMakeOptions) : currentMakeOptions, params?.value);
-					return <Tooltip title={label || ''} arrow><div style={{ width: '100%', overflow: 'hidden', textOverflow: 'ellipsis' }}>{label}</div></Tooltip>;
-				},
-				renderEditCell: (params: any) => <AutocompleteEditCell {...params} options={params?.id != null ? (perRowOptions[params.id]?.makes ?? currentMakeOptions) : currentMakeOptions} />,
-			},
-			{ field: "quantity", headerName: "Quantity", width: 120, type: 'number', editable: true },
-			{
-				field: "uom",
-				headerName: "UOM",
-				headerAlign: 'center',
-				width: 120,
-				editable: true,
-				type: 'singleSelect',
-				valueOptions: (params: any) => params?.id != null ? (perRowOptions[params.id]?.uoms ?? currentUomOptions) : currentUomOptions,
-				valueFormatter: (params: any) => {
-					const pools = params?.id != null ? (perRowOptions[params.id]?.uoms ?? currentUomOptions) : currentUomOptions;
-					// if no explicit uom chosen yet, try to derive from selected item defaultUom
-					if (!params?.value && params?.row?.item) {
-						const itemPool = params?.id != null ? (perRowOptions[params.id]?.items ?? currentItemOptions) : currentItemOptions;
-						const sel = itemPool.find((it: any) => String(it.value) === String(params.row.item?.value ?? params.row.item));
-						if (sel?.defaultUom?.label) return sel.defaultUom.label;
-					}
-					return findLabel(pools, params?.value);
-				},
-				renderCell: (params: any) => {
-					const loading = params?.id != null && loadingRows.has(params.id as number);
-					if (loading) return <CircularProgress size={16} />;
-					// auto-fill row.uom with default if empty and available (without causing infinite re-render)
-					if (!params.row.uom && params?.id != null && params.row.item) {
-						const itemPool = perRowOptions[params.id]?.items ?? currentItemOptions;
-						const sel = itemPool.find((it: any) => String(it.value) === String(params.row.item?.value ?? params.row.item));
-						if (sel?.defaultUom?.value) {
-							// defer state update to microtask to avoid mutation during render
-							queueMicrotask(() => {
-								setRows(prev => prev.map(r => r.id === params.id ? { ...r, uom: sel.defaultUom.value } : r));
-							});
-							return <div>{sel.defaultUom.label}</div>;
-						}
-					}
-					const pools = params?.id != null ? (perRowOptions[params.id]?.uoms ?? currentUomOptions) : currentUomOptions;
-					return <div>{findLabel(pools, params?.value) || ''}</div>;
-				},
-				renderEditCell: (params: any) => <AutocompleteEditCell {...params} options={params?.id != null ? (perRowOptions[params.id]?.uoms ?? currentUomOptions) : currentUomOptions} />,
-			},
-			{ 
-				field: "remarks", 
-				headerName: "Remarks", 
-				headerAlign: 'center',
-				width: 220, 
-				editable: true,
-				renderCell: (params: any) => {
-					const text = params?.value ?? '';
-					return <Tooltip title={String(text)} arrow><div style={{ width: '100%', overflow: 'hidden', textOverflow: 'ellipsis' }}>{text}</div></Tooltip>;
-				},
-			},
-		];
-	}, [apiDepartmentOptions, apiItemGroupOptions, currentItemOptions, currentMakeOptions, currentUomOptions, loadingRows]);
+                  <div className="flex flex-col gap-1">
+                    {canEdit ? (
+                      <Select
+                        value={item.item || undefined}
+                        onValueChange={(next) => onFieldChange(item.id, "item", next)}
+                        disabled={!item.itemGroup || waitingForGroup}
+                      >
+                        <SelectTrigger className="bg-white">
+                          <SelectValue placeholder={waitingForGroup ? "Loading items..." : "Select item"} />
+                        </SelectTrigger>
+                        <SelectContent className="bg-white">
+                          {itemOptions.length ? (
+                            itemOptions.map((opt) => (
+                              <SelectItem key={opt.value} value={opt.value}>
+                                {opt.label}
+                              </SelectItem>
+                            ))
+                          ) : (
+                            <SelectItem disabled value="__empty__">
+                              {waitingForGroup ? "Loading..." : "No options"}
+                            </SelectItem>
+                          )}
+                        </SelectContent>
+                      </Select>
+                    ) : (
+                      <span className="block truncate text-slate-700">{labelResolvers.item(item.itemGroup, item.item)}</span>
+                    )}
+                  </div>
 
-	// current form values must be declared before effects that reference them
-	const [currentFormValues, setCurrentFormValues] = React.useState<Record<string, unknown>>(() => initialFormValues || {});
+                  <div className="flex flex-col gap-1">
+                    {canEdit ? (
+                      <Select
+                        value={item.itemMake || undefined}
+                        onValueChange={(next) => onFieldChange(item.id, "itemMake", next)}
+                        disabled={!item.itemGroup || waitingForGroup}
+                      >
+                        <SelectTrigger className="bg-white">
+                          <SelectValue placeholder={makeOptions.length ? "Select make" : "No make options"} />
+                        </SelectTrigger>
+                        <SelectContent className="bg-white">
+                          {makeOptions.length ? (
+                            makeOptions.map((opt) => (
+                              <SelectItem key={opt.value} value={opt.value}>
+                                {opt.label}
+                              </SelectItem>
+                            ))
+                          ) : (
+                            <SelectItem disabled value="__empty__">
+                              No options
+                            </SelectItem>
+                          )}
+                        </SelectContent>
+                      </Select>
+                    ) : (
+                      <span className="block truncate text-slate-700">{labelResolvers.itemMake(item.itemGroup, item.itemMake)}</span>
+                    )}
+                  </div>
 
-	React.useEffect(() => {
-		if (!formDefaults || Object.keys(formDefaults).length === 0) {
-			setFormDefaults(initialFormValues);
-			setCurrentFormValues(initialFormValues);
-		}
-	}, [formDefaults, initialFormValues]);
+                  <div className="flex flex-col gap-1">
+                    {canEdit ? (
+                      <Input
+                        type="number"
+                        inputMode="decimal"
+                        value={item.quantity}
+                        onChange={(event) => onFieldChange(item.id, "quantity", event.target.value)}
+                        placeholder="0"
+                        className="bg-white"
+                      />
+                    ) : (
+                      <span className="block truncate text-slate-700">{item.quantity || "-"}</span>
+                    )}
+                  </div>
 
-	// Disable table until indent_type + expense_type are present
-	const tableDisabled = !(Boolean(currentFormValues.indent_type) && Boolean(currentFormValues.expense_type));
+                  <div className="flex flex-col gap-1">
+                    {canEdit ? (
+                      <Select
+                        value={item.uom || undefined}
+                        onValueChange={(next) => onFieldChange(item.id, "uom", next)}
+                        disabled={!item.item || waitingForGroup}
+                      >
+                        <SelectTrigger className="bg-white">
+                          <SelectValue placeholder={waitingForGroup ? "Loading UOMs..." : "Select UOM"} />
+                        </SelectTrigger>
+                        <SelectContent className="bg-white">
+                          {uomOptions.length ? (
+                            uomOptions.map((opt) => (
+                              <SelectItem key={opt.value} value={opt.value}>
+                                {opt.label}
+                              </SelectItem>
+                            ))
+                          ) : (
+                            <SelectItem disabled value="__empty__">
+                              {waitingForGroup ? "Loading..." : "No options"}
+                            </SelectItem>
+                          )}
+                        </SelectContent>
+                      </Select>
+                    ) : (
+                      <span className="block truncate text-slate-700">{labelResolvers.uom(item.itemGroup, item.item, item.uom)}</span>
+                    )}
+                  </div>
 
-	// call GET_INDENT_SETUP_1 when branch is selected/changed
-	React.useEffect(() => {
-		const branchVal = initialFormValues.branch ?? currentFormValues.branch;
-		if (!branchVal) return;
-		const fetchSetup1 = async () => {
-			try {
-				// read co_id from sidebar_selectedCompany stored in localStorage if available
-				let coId: string | undefined = undefined;
-				try {
-					const rawCompany = typeof window !== 'undefined' ? localStorage.getItem('sidebar_selectedCompany') : null;
-					if (rawCompany) {
-						const parsed = JSON.parse(rawCompany);
-						if (parsed && (parsed.co_id ?? parsed.coId ?? parsed.id)) coId = String(parsed.co_id ?? parsed.coId ?? parsed.id);
-					}
-				} catch (e) {
-					// ignore parse errors
-				}
+                  <div className="flex flex-col gap-1">
+                    {canEdit ? (
+                      <textarea
+                        className="h-auto min-h-[40px] w-full resize-none rounded-md border border-slate-200 bg-white px-3 py-2 text-sm shadow-sm focus:outline-none focus:ring-2 focus:ring-primary/40"
+                        rows={1}
+                        value={item.remarks}
+                        placeholder="Notes"
+                        onChange={(event) => {
+                          handleTextareaInput(event);
+                          onFieldChange(item.id, "remarks", event.target.value);
+                        }}
+                        onInput={handleTextareaInput}
+                      />
+                    ) : (
+                      <span className="block truncate text-slate-700" title={item.remarks}>
+                        {item.remarks || "-"}
+                      </span>
+                    )}
+                  </div>
 
-				const qs = `branch_id=${encodeURIComponent(String(branchVal))}` + (coId ? `&co_id=${encodeURIComponent(String(coId))}` : '');
-				const url = `${apiRoutesPortalMasters.GET_INDENT_SETUP_1}?${qs}`;
-				const resp = await fetchWithCookie(url, 'GET');
-				const payload: any = resp.data ?? null;
-				if (payload) {
-					// projects: [{ prj_name, project_id }]
-					setApiProjectOptions((payload.projects || []).map((p: any) => ({ label: p.prj_name ?? p.prj_name ?? p.name, value: String(p.project_id ?? p.projectId ?? p.id) })));
-					// expense_types: [{ expense_type_id, expense_type_name }]
-					const expenseOps = (payload.expense_types || []).map((e: any) => ({ label: e.expense_type_name ?? e.expense_type_name ?? e.name, value: String(e.expense_type_id ?? e.id ?? e.value) }));
-					setApiExpenseOptions(expenseOps);
-					setFullExpenseOptions(expenseOps);
-					// departments: [{ dept_id, dept_desc }]
-					setApiDepartmentOptions((payload.departments || []).map((d: any) => ({ label: d.dept_desc ?? d.dept_desc ?? d.name, value: String(d.dept_id ?? d.id ?? d.value) })));
-					// item_groups: [{ item_grp_id, item_grp_name_display, item_grp_code_display }]
-								setApiItemGroupOptions((payload.item_groups || []).map((g: any) => {
-									const name = g.item_grp_name_display ?? g.name ?? '';
-									const code = g.item_grp_code_display ?? g.item_grp_code ?? g.code ?? '';
-									const label = code ? `${name} (${code})` : (name || String(g.item_grp_id));
-									return { label, value: String(g.item_grp_id ?? g.id) };
-								}));
-				}
-			} catch (e) {
-				// ignore
-			}
-		};
-		fetchSetup1();
-	}, [initialFormValues.branch, currentFormValues.branch]);
+                  <div className="flex items-center justify-end pt-1">
+                    {showRemove ? (
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => onRemove(item.id)}
+                        className="text-xs text-slate-500"
+                      >
+                        Remove
+                      </Button>
+                    ) : null}
+                  </div>
+                </div>
+              );
+            })
+          ) : (
+            <div className="px-4 py-6 text-center text-sm text-slate-500">{placeholderText}</div>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+};
 
-	// filter expense options based on indent_type selection
-	React.useEffect(() => {
-		const indent = String(currentFormValues.indent_type ?? "").toLowerCase();
-		if (!indent) { setApiExpenseOptions(fullExpenseOptions); return; }
-		if (indent === 'regular') {
-			setApiExpenseOptions(fullExpenseOptions.filter((e) => ['1','2','3','4'].includes(String(e.value))));
-		} else if (indent === 'open indent') {
-			setApiExpenseOptions(fullExpenseOptions.filter((e) => ['3','4'].includes(String(e.value))));
-		} else if (indent === 'bom') {
-			setApiExpenseOptions(fullExpenseOptions.filter((e) => ['1','2','3','4'].includes(String(e.value))));
-		}
-	}, [currentFormValues.indent_type, fullExpenseOptions]);
+export default function IndentTransactionPage() {
+  const router = useRouter();
+  const searchParams = useSearchParams();
 
-	// when item_group is selected for a row, call GET_INDENT_SETUP_2 to fetch item/item_makes/uom
-	// Note: backend expects a GET with query params — do not send a body with GET.
-	const fetchSetup2 = React.useCallback(async (item_group_value: unknown) => {
-		try {
-			// normalize if an option object was passed (DataGrid often uses full option objects)
-			let ig = '';
-			if (item_group_value && typeof item_group_value === 'object') {
-				const obj = item_group_value as Record<string, any>;
-				ig = String(obj.value ?? obj.item_grp_id ?? obj.id ?? '');
-			} else {
-				ig = String(item_group_value ?? '');
-			}
+  const modeParam = (searchParams?.get("mode") || "create").toLowerCase();
+  const requestedId = searchParams?.get("id") || "";
 
-			const qs = `item_group=${encodeURIComponent(ig)}`;
-			const url = `${apiRoutesPortalMasters.GET_INDENT_SETUP_2}?${qs}`;
-			const resp = await fetchWithCookie(url, 'GET');
-			const payload: any = resp.data ?? null;
-			if (payload) {
-				// payload.items contains default uom per item (uom_id, uom_name)
-				const rawItems: any[] = payload.items || [];
-				const rawUoms: any[] = payload.uoms || [];
+  const mode: MuiFormMode = modeParam === "edit" ? "edit" : modeParam === "view" ? "view" : "create";
 
-				const items = rawItems.map((i: any) => {
-					const itemId = i.item_id ?? i.id ?? i.value;
-					const itemCode = i.item_code ?? i.code ?? '';
-					const itemName = i.item_name ?? i.name ?? String(itemId);
-					const defaultUom = (i.uom_id || i.uom_name) ? { label: i.uom_name ?? i.uom ?? '', value: String(i.uom_id ?? i.uom ?? '') } : null;
-					// find extra mapped uoms for this item from payload.uoms where map.item_id === itemId
-					const extraUoms = (rawUoms.filter((u: any) => String(u.item_id) === String(itemId)).map((u: any) => ({ label: u.uom_name ?? u.label ?? u.name ?? '', value: String(u.map_to_id ?? u.id ?? u.value) }))) || [];
-					return {
-						label: `${itemName} (${itemCode})`,
-						value: String(itemId),
-						defaultUom,
-						extraUoms,
-					};
-				});
+  const branchOptions = useBranchOptions();
 
-				return {
-					items,
-					makes: (payload.makes || []).map((m: any) => ({ label: m.item_make_name ?? m.label ?? m.name, value: String(m.item_make_id ?? m.id ?? m.value) })),
-					uoms: (rawUoms || []).map((u: any) => ({ label: u.uom_name ?? u.label ?? u.name, value: String(u.map_to_id ?? u.id ?? u.value), item_id: String(u.item_id ?? '') })),
-				};
-			}
-			return { items: [], makes: [], uoms: [] };
-		} catch (e) {
-			return { items: [], makes: [], uoms: [] };
-		}
-	}, []);
+  const [coId, setCoId] = React.useState<string>(() => readStoredCompanyCoId());
+  const [initialValues, setInitialValues] = React.useState<Record<string, unknown>>(buildDefaultFormValues);
+  const [formValues, setFormValues] = React.useState<Record<string, unknown>>(buildDefaultFormValues);
+  const [lineItems, setLineItems] = React.useState<EditableLineItem[]>(() => (mode === "create" ? [createBlankLine()] : []));
+  const [indentDetails, setIndentDetails] = React.useState<IndentDetails | null>(null);
+  const [loading, setLoading] = React.useState<boolean>(mode !== "create");
+  const [saving, setSaving] = React.useState(false);
+  const [pageError, setPageError] = React.useState<string | null>(null);
+  const [setupError, setSetupError] = React.useState<string | null>(null);
+  const [setupLoading, setSetupLoading] = React.useState(false);
+  const [formKey, setFormKey] = React.useState(0);
 
-	// reorder: Indent Type should appear before Expense Type; schema uses API-driven option arrays
-	const schema: Schema = React.useMemo(() => ({
-		title: "Create Indent",
-		fields: [
-			{ 
-				name: "branch", label: "Branch", type: "select", required: true,
-				options: branchOptionsLocal.length ? branchOptionsLocal : [], disabled: branchOptionsLocal.length === 1,
-				grid: { xs: 12, sm: 4 }
-			},
-			{ name: "indent_type", label: "Indent Type", type: "select", required: true, options: indentTypeOptions, grid: { xs: 12, sm: 4 } },
-			{ name: "expense_type", label: "Expense Type", type: "select", required: true, options: apiExpenseOptions, grid: { xs: 12, sm: 4 } },
-			{ name: "date", label: "Date", type: "date", required: true, grid: { xs: 12, sm: 6 } },
-			{ name: "indent_no", label: "Indent No", type: "text", required: false, disabled: true, helperText: "Indent No will be displayed once created", grid: { xs: 12, sm: 6 } },
-			{ name: "project", label: "Project", type: "select", required: false, options: apiProjectOptions, grid: { xs: 12, sm: 6 } },
-			{ name: "name", label: "Name", type: "text", required: (vals) => String(vals.indent_type ?? "").toLowerCase() === "bom", disabled: (vals) => String(vals.indent_type ?? "") !== "bom", grid: { xs: 12, sm: 6 } },
-		],
-	}), [branchOptionsLocal, apiExpenseOptions, apiProjectOptions]);
+  const [departments, setDepartments] = React.useState<DepartmentRecord[]>([]);
+  const [projects, setProjects] = React.useState<ProjectRecord[]>([]);
+  const [expenses, setExpenses] = React.useState<ExpenseRecord[]>([]);
+  const [itemGroups, setItemGroups] = React.useState<ItemGroupRecord[]>([]);
 
-	const handleSubmit = async (vals: Record<string, unknown>) => {
-		const nonEmpty = rows.filter(isRowFilled);
-		if (!nonEmpty.every(isRowValid)) {
-			window.alert('Please complete all required fields for each item row.');
-			return;
-		}
-		const itemsPayload = nonEmpty.map((r) => ({
-			department: r.department ?? '',
-			item_group: r.item_group ?? '',
-			item: r.item ?? '',
-			item_make: r.item_make ?? '',
-			quantity: Number(r.quantity),
-			uom: r.uom ?? '',
-			remarks: r.remarks ?? '',
-		}));
+  const [itemGroupCache, setItemGroupCache] = React.useState<Record<string, ItemGroupCacheEntry>>({});
+  const [itemGroupLoading, setItemGroupLoading] = React.useState<Record<string, boolean>>({});
 
-		if (itemsPayload.length === 0) {
-			window.alert('Add at least one item before creating an indent.');
-			return;
-		}
+  const formRef = React.useRef<{ submit: () => Promise<void>; isDirty: () => boolean } | null>(null);
+  const createDefaultsSeededRef = React.useRef(false);
 
-		const payload = { ...vals, items: itemsPayload };
+  const mapLineToEditable = React.useCallback((line: IndentLine): EditableLineItem => ({
+    id: line.id ? String(line.id) : generateLineId(),
+    department: line.department ?? "",
+    itemGroup: line.itemGroup ?? "",
+    item: line.item ?? "",
+    itemMake: line.itemMake ?? "",
+    quantity: line.quantity != null ? String(line.quantity) : "",
+    uom: line.uom ?? "",
+    remarks: line.remarks ?? "",
+  }), []);
 
-		try {
-			const { data, error, status } = await fetchWithCookie(apiRoutesPortalMasters.INDENT_CREATE, 'POST', payload);
-			if (error || !data || status >= 400) {
-				const detail = (data as any)?.detail ?? error ?? 'Failed to create indent';
-				let message: string;
-				if (typeof detail === 'string') {
-					message = detail;
-				} else if (detail && typeof detail === 'object') {
-					const maybeMessage = (detail as any).message;
-					const maybeError = (detail as any).error;
-					message = [maybeMessage, maybeError].filter(Boolean).join(': ') || JSON.stringify(detail);
-				} else {
-					message = 'Failed to create indent';
-				}
-				throw new Error(message);
-			}
+  React.useEffect(() => {
+    const syncCoId = () => setCoId(readStoredCompanyCoId());
+    syncCoId();
+    const handler = (event: StorageEvent) => {
+      if (event.key === "sidebar_selectedCompany") {
+        syncCoId();
+      }
+    };
+    window.addEventListener("storage", handler);
+    return () => window.removeEventListener("storage", handler);
+  }, []);
 
-			const response = data as { indent_id?: number; indent_no?: number; message?: string };
-			const newIndentNo = response.indent_no ?? response.indent_id;
-			window.alert(newIndentNo ? `Indent ${newIndentNo} created successfully.` : 'Indent created successfully.');
+  React.useEffect(() => {
+    if (mode !== "create") {
+      createDefaultsSeededRef.current = false;
+      return;
+    }
 
-			nextId.current = 1;
-			setRows([blankRow()]);
-			setPerRowOptions({});
-			setCurrentItemOptions([]);
-			setCurrentMakeOptions([]);
-			setCurrentUomOptions([]);
-			setLoadingRows(() => new Set<number>());
+    if (!createDefaultsSeededRef.current) {
+      const base = buildDefaultFormValues();
+      setInitialValues(base);
+      setFormValues(base);
+      setFormKey((prev) => prev + 1);
+      setLineItems((prev) => (prev.length ? prev : [createBlankLine()]));
+      createDefaultsSeededRef.current = true;
+    }
+  }, [mode]);
 
-			const newDefaults: Record<string, unknown> = {
-				branch: vals.branch ?? formDefaults.branch ?? '',
-				indent_type: vals.indent_type ?? '',
-				expense_type: vals.expense_type ?? '',
-				date: vals.date ?? '',
-				indent_no: newIndentNo ? String(newIndentNo) : '',
-				project: vals.project ?? '',
-				name: '',
-			};
-			setFormDefaults(newDefaults);
-			setCurrentFormValues(newDefaults);
-			setFormKey((prev) => prev + 1);
-		} catch (err) {
-			console.error('Failed to create indent', err);
-			const message = err instanceof Error ? err.message : 'Failed to create indent';
-			window.alert(message);
-		}
-	};
+  React.useEffect(() => {
+    if (mode !== "create") return;
+    if (!branchOptions.length) return;
 
-	// track form values so we can enable/disable create button
-	React.useEffect(() => {
-		// noop
-	}, []);
+    setFormValues((prev) => {
+      const currentBranch = (prev.branch as string) || "";
+      if (currentBranch) return prev;
+      const next = { ...prev, branch: branchOptions[0].value };
+      setInitialValues(next);
+      setFormKey((value) => value + 1);
+      return next;
+    });
+  }, [mode, branchOptions]);
 
-	const nonEmptyRows = rows.filter(isRowFilled);
-	const allNonEmptyValid = nonEmptyRows.length > 0 && nonEmptyRows.every(isRowValid);
-	const requiredFormFilled = Boolean(currentFormValues.branch && currentFormValues.expense_type && currentFormValues.indent_type && currentFormValues.date);
-	const canCreate = requiredFormFilled && allNonEmptyValid;
+  React.useEffect(() => {
+    if (mode === "create") {
+      setIndentDetails(null);
+      setPageError(null);
+      setLoading(false);
+      return;
+    }
 
-	if (!mounted) {
-		// during SSR and initial hydration, render a minimal placeholder that matches layout
-		return <Box sx={{ p: 3, minHeight: 24 }} suppressHydrationWarning />;
-	}
+    if (!requestedId) {
+      setIndentDetails(null);
+      setLineItems([]);
+      setPageError("Missing indent identifier in the URL.");
+      setLoading(false);
+      return;
+    }
 
-	return (
-		<Box sx={{ p: 3 }} suppressHydrationWarning>
-			<MuiForm
-				key={formKey}
-				ref={formRef}
-				schema={schema}
-				initialValues={formDefaults}
-				mode="create"
-				hideModeToggle
-				hideSubmit
-				onSubmit={handleSubmit}
-				onValuesChange={(v) => setCurrentFormValues(v)}
-			/>
+    let cancelled = false;
+    setLoading(true);
 
-			<Box sx={{ mt: 3, height: 360 }}>
-				<Box sx={{ position: 'relative', height: '100%' }}>
-					<DataGrid
-					rows={rows as any}
-					columns={columns}
-					sx={{
-						'& .MuiDataGrid-columnHeaders': {
-							borderBottom: '1px solid #d0d7de',
-						},
-						'& .MuiDataGrid-columnHeader': {
-							borderRight: '1px solid #e2e5e9',
-							backgroundColor: '#f8f9fa',
-							fontWeight: 600,
-							fontSize: 13,
-							lineHeight: 1.2,
-							p: 0,
-						},
-						'& .MuiDataGrid-columnHeader:last-of-type': {
-							borderRight: 'none',
-						},
-						'& .MuiDataGrid-cell': {
-							borderRight: '1px solid #e2e5e9',
-							fontSize: 13,
-							padding: '2px 6px',
-						},
-						'& .MuiDataGrid-cell:last-of-type': {
-							borderRight: 'none',
-						},
-						'& .MuiDataGrid-row:nth-of-type(even) .MuiDataGrid-cell': {
-							backgroundColor: '#fafafa',
-						},
-						'& .MuiDataGrid-row:hover .MuiDataGrid-cell': {
-							backgroundColor: '#f0f7ff',
-						},
-						'& .MuiDataGrid-footerContainer': {
-							borderTop: '1px solid #d0d7de',
-						},
-					}}
-					editMode="cell"
-					processRowUpdate={async (newRow, oldRow) => {
-						// detect item_group change to load dependent options
-							if (String(newRow.item_group ?? '') !== String(oldRow?.item_group ?? '')) {
-								// mark row loading and clear option pools & dependent fields immediately
-								setLoadingRows(prev => { const s = new Set(prev); s.add(newRow.id); return s; });
-								setPerRowOptions(prev => ({ ...prev, [newRow.id]: { items: [], makes: [], uoms: [] } }));
-								setCurrentItemOptions([]); setCurrentMakeOptions([]); setCurrentUomOptions([]);
-								newRow = { ...newRow, item: '', item_make: '', quantity: '', uom: '', remarks: '' };
-								setRows(prev => prev.map(r => r.id === newRow.id ? { ...r, ...newRow } : r));
-								try {
-									const { items, makes, uoms } = await fetchSetup2(newRow.item_group ?? '');
-									setPerRowOptions(prev => ({ ...prev, [newRow.id]: { items, makes, uoms } }));
-									setCurrentItemOptions(items); setCurrentMakeOptions(makes); setCurrentUomOptions(uoms);
-								} finally {
-									setLoadingRows(prev => { const s = new Set(prev); s.delete(newRow.id); return s; });
-								}
-							}
+    getIndentById(requestedId)
+      .then((detail) => {
+        if (cancelled) return;
+        setIndentDetails(detail);
+        const base = {
+          branch: detail.branch ?? "",
+          indent_type: detail.indentType ?? "",
+          expense_type: detail.expenseType ?? "",
+          date: detail.indentDate ?? "",
+          indent_no: detail.indentNo ?? "",
+          project: detail.project ?? "",
+          requester: detail.requester ?? "",
+          remarks: detail.remarks ?? "",
+        };
+        setInitialValues(base);
+        setFormValues(base);
+        setFormKey((prev) => prev + 1);
+  const mappedLines = (detail.lines ?? []).map(mapLineToEditable);
+  setLineItems(mappedLines.length ? mappedLines : [createBlankLine()]);
+        setPageError(null);
+      })
+      .catch((error) => {
+        if (cancelled) return;
+        setIndentDetails(null);
+        setLineItems([createBlankLine()]);
+        setPageError(error instanceof Error ? error.message : "Unable to load indent details.");
+      })
+      .finally(() => {
+        if (!cancelled) setLoading(false);
+      });
 
-							// if item selection changed, set UOM options to include the item's default uom + any extra mapped uoms
-							if (String(newRow.item ?? '') !== String(oldRow?.item ?? '')) {
-								// try to locate the selected item in per-row options first, then global
-								const rowPool = perRowOptions[newRow.id]?.items ?? currentItemOptions;
-								const selectedItem = rowPool.find((it: any) => String(it.value) === String(newRow.item) || String(it.value) === String((newRow.item?.value ?? newRow.item)));
-								if (selectedItem) {
-									const defaultUom = selectedItem.defaultUom ? [selectedItem.defaultUom] : [];
-									const extra = selectedItem.extraUoms ?? [];
-									const combined = [...defaultUom, ...extra];
-									// set dropdown options for this item
-									// set per-row UOM options so other rows don't get these options
-									setPerRowOptions(prev => ({ ...prev, [newRow.id]: { items: rowPool, makes: perRowOptions[newRow.id]?.makes ?? currentMakeOptions, uoms: combined } }));
-									setCurrentUomOptions(combined.length ? combined : currentUomOptions);
-									// if defaultUom exists, set the row's uom to it
-									if (defaultUom.length && String(newRow.uom ?? '') !== String(defaultUom[0].value)) {
-										setRows((prev) => prev.map(r => r.id === newRow.id ? { ...r, uom: defaultUom[0].value } : r));
-									}
-								}
-							}
+    return () => {
+      cancelled = true;
+    };
+  }, [mode, requestedId, mapLineToEditable]);
 
-						// update the row in state
-						setRows((prev) => {
-							const next = prev.map((r) => (r.id === newRow.id ? { ...r, ...newRow } : r));
-							// when quantity is entered and the row is valid, append a new blank row
-							const last = next[next.length - 1];
-							if (last && isRowFilled(last) && isRowValid(last)) {
-								next.push(blankRow());
-							}
-							return next;
-						});
-						return newRow;
-					}}
-					onProcessRowUpdateError={() => { /* ignore for now */ }}
-					/>
-					{tableDisabled && (
-						<Box sx={{ position: 'absolute', inset: 0, bgcolor: 'rgba(255,255,255,0.6)', display: 'flex', alignItems: 'center', justifyContent: 'center', pointerEvents: 'auto' }}>
-							<Box sx={{ bgcolor: 'background.paper', p: 2, borderRadius: 1 }}>Please select Indent Type and Expense Type to enable the table</Box>
-						</Box>
-					)}
-				</Box>
-			</Box>
+  const branchValue = React.useMemo(() => String(formValues.branch ?? ""), [formValues.branch]);
+  const branchIdForSetup = React.useMemo(() => (branchValue && /^\d+$/.test(branchValue) ? branchValue : undefined), [branchValue]);
 
-			<Box sx={{ display: 'flex', gap: 1, justifyContent: 'flex-end', mt: 2 }}>
-				<Button variant="contained" disabled={!canCreate} onClick={() => formRef.current?.submit()}>Create</Button>
-			</Box>
-		</Box>
-	);
+  React.useEffect(() => {
+    if (!coId) {
+      setSetupError("Select a company to load indent defaults.");
+      setDepartments([]);
+      setProjects([]);
+      setExpenses([]);
+      setItemGroups([]);
+      setSetupLoading(false);
+      return;
+    }
+
+    let cancelled = false;
+    const load = async () => {
+      setSetupLoading(true);
+      try {
+        const response = await fetchIndentSetup1({ coId, branchId: branchIdForSetup });
+        if (cancelled) return;
+
+        const deptRecords = Array.isArray(response.departments) ? response.departments : [];
+        const projectRecords = Array.isArray(response.projects) ? response.projects : [];
+        const expenseRecords = Array.isArray(response.expense_types) ? response.expense_types : [];
+        const itemGroupRecords = Array.isArray(response.item_groups) ? response.item_groups : [];
+
+        setDepartments(
+          deptRecords
+            .map((row) => {
+              const data = row as any;
+              const id = data?.dept_id ?? data?.department_id ?? data?.id;
+              if (!id) return null;
+              return {
+                id: String(id),
+                name: data?.dept_desc ?? data?.dept_name ?? data?.name ?? String(id),
+                branchId: data?.branch_id != null ? String(data.branch_id) : undefined,
+              } as DepartmentRecord;
+            })
+            .filter(Boolean) as DepartmentRecord[]
+        );
+
+        setProjects(
+          projectRecords
+            .map((row) => {
+              const data = row as any;
+              const id = data?.project_id ?? data?.prj_id ?? data?.id;
+              if (!id) return null;
+              return {
+                id: String(id),
+                name: data?.prj_name ?? data?.project_name ?? data?.name ?? String(id),
+                branchId: data?.branch_id != null ? String(data.branch_id) : undefined,
+              } as ProjectRecord;
+            })
+            .filter(Boolean) as ProjectRecord[]
+        );
+
+        setExpenses(
+          expenseRecords
+            .map((row) => {
+              const data = row as any;
+              const id = data?.expense_type_id ?? data?.id;
+              if (!id) return null;
+              return {
+                id: String(id),
+                name: data?.expense_type_name ?? data?.name ?? String(id),
+              } as ExpenseRecord;
+            })
+            .filter(Boolean) as ExpenseRecord[]
+        );
+
+        setItemGroups(
+          itemGroupRecords
+            .map((row) => {
+              const data = row as any;
+              const id = data?.item_grp_id ?? data?.id;
+              if (!id) return null;
+              const code = data?.item_grp_code_display ?? data?.code;
+              const name = data?.item_grp_name_display ?? data?.name;
+              const labelParts = [code, name].filter(Boolean);
+              return {
+                id: String(id),
+                label: labelParts.length ? labelParts.join(" — ") : String(id),
+              } as ItemGroupRecord;
+            })
+            .filter(Boolean) as ItemGroupRecord[]
+        );
+
+        setSetupError(null);
+      } catch (error) {
+        if (cancelled) return;
+        const message = error instanceof Error ? error.message : "Unable to load indent defaults.";
+        setSetupError(message);
+        setDepartments([]);
+        setProjects([]);
+        setExpenses([]);
+        setItemGroups([]);
+      } finally {
+        if (!cancelled) setSetupLoading(false);
+      }
+    };
+
+    load();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [coId, branchIdForSetup]);
+
+  const expenseOptions = React.useMemo<Option[]>(
+    () =>
+      expenses.map((exp) => ({
+        label: exp.name || exp.id,
+        value: exp.id,
+      })),
+    [expenses]
+  );
+
+  const departmentOptions = React.useMemo<Option[]>(() => {
+    if (!departments.length) return [];
+    const branchFilter = branchIdForSetup;
+    return departments
+      .filter((dept) => !branchFilter || !dept.branchId || dept.branchId === branchFilter)
+      .map((dept) => ({ label: dept.name || dept.id, value: dept.id }));
+  }, [departments, branchIdForSetup]);
+
+  const projectOptions = React.useMemo<Option[]>(() => {
+    if (!projects.length) return [];
+    const branchFilter = branchIdForSetup;
+    return projects
+      .filter((project) => !branchFilter || !project.branchId || project.branchId === branchFilter)
+      .map((project) => ({ label: project.name || project.id, value: project.id }));
+  }, [projects, branchIdForSetup]);
+
+  const itemGroupOptions = React.useMemo<Option[]>(
+    () => itemGroups.map((grp) => ({ label: grp.label || grp.id, value: grp.id })),
+    [itemGroups]
+  );
+
+  const departmentLabelMap = React.useMemo(() => {
+    const map = new Map<string, string>();
+    departments.forEach((dept) => {
+      map.set(dept.id, dept.name || dept.id);
+    });
+    return map;
+  }, [departments]);
+
+  const expenseLabelMap = React.useMemo(() => {
+    const map = new Map<string, string>();
+    expenses.forEach((exp) => {
+      map.set(exp.id, exp.name || exp.id);
+    });
+    return map;
+  }, [expenses]);
+
+  const projectLabelMap = React.useMemo(() => {
+    const map = new Map<string, string>();
+    projects.forEach((proj) => {
+      map.set(proj.id, proj.name || proj.id);
+    });
+    return map;
+  }, [projects]);
+
+  const itemGroupLabelMap = React.useMemo(() => {
+    const map = new Map<string, string>();
+    itemGroups.forEach((grp) => {
+      map.set(grp.id, grp.label || grp.id);
+    });
+    return map;
+  }, [itemGroups]);
+
+  const getItemOptions = React.useCallback(
+    (itemGroupId: string) => itemGroupCache[itemGroupId]?.items ?? [],
+    [itemGroupCache]
+  );
+
+  const getMakeOptions = React.useCallback(
+    (itemGroupId: string) => itemGroupCache[itemGroupId]?.makes ?? [],
+    [itemGroupCache]
+  );
+
+  const getUomOptions = React.useCallback(
+    (itemGroupId: string, itemId: string) =>
+      itemGroupCache[itemGroupId]?.uomsByItemId[itemId] ?? [],
+    [itemGroupCache]
+  );
+
+  React.useEffect(() => {
+    setItemGroupCache({});
+    setItemGroupLoading({});
+  }, [coId]);
+
+  const ensureItemGroupData = React.useCallback(
+    async (itemGroupId: string) => {
+      if (!itemGroupId || itemGroupCache[itemGroupId]) return;
+      setItemGroupLoading((prev) => ({ ...prev, [itemGroupId]: true }));
+      try {
+        const response = await fetchIndentSetup2(itemGroupId);
+
+        const itemsRaw = Array.isArray(response.items) ? response.items : [];
+        const makesRaw = Array.isArray(response.makes) ? response.makes : [];
+        const uomsRaw = Array.isArray(response.uoms) ? response.uoms : [];
+
+        const items: ItemOption[] = itemsRaw
+          .map((row) => {
+            const data = row as any;
+            const id = data?.item_id ?? data?.id;
+            if (!id) return null;
+            const value = String(id);
+            const code = data?.item_code;
+            const name = data?.item_name;
+            const labelParts = [code, name].filter(Boolean);
+            return {
+              value,
+              label: labelParts.length ? labelParts.join(" — ") : value,
+              defaultUomId: data?.uom_id != null ? String(data.uom_id) : undefined,
+              defaultUomLabel: data?.uom_name ? String(data.uom_name) : undefined,
+            } as ItemOption;
+          })
+          .filter(Boolean) as ItemOption[];
+
+        const makes: Option[] = makesRaw
+          .map((row) => {
+            const data = row as any;
+            const id = data?.item_make_id ?? data?.id;
+            if (!id) return null;
+            return {
+              value: String(id),
+              label: data?.item_make_name ?? data?.name ?? String(id),
+            } as Option;
+          })
+          .filter(Boolean) as Option[];
+
+        const uomsByItemId: Record<string, Option[]> = {};
+        const uomLabelByItemId: Record<string, Record<string, string>> = {};
+        uomsRaw.forEach((row) => {
+          const data = row as any;
+          const itemId = data?.item_id ?? data?.id;
+          const uomId = data?.map_to_id ?? data?.uom_id ?? data?.mapToId;
+          if (!itemId || !uomId) return;
+          const itemKey = String(itemId);
+          const uomKey = String(uomId);
+          const label = data?.uom_name ? String(data.uom_name) : uomKey;
+          if (!uomsByItemId[itemKey]) uomsByItemId[itemKey] = [];
+          if (!uomLabelByItemId[itemKey]) uomLabelByItemId[itemKey] = {};
+          if (!uomsByItemId[itemKey].some((opt) => opt.value === uomKey)) {
+            uomsByItemId[itemKey].push({ value: uomKey, label });
+          }
+          uomLabelByItemId[itemKey][uomKey] = label;
+        });
+
+        items.forEach((item) => {
+          if (!item.defaultUomId) return;
+          const bucket = uomsByItemId[item.value] ?? [];
+          if (!bucket.some((opt) => opt.value === item.defaultUomId)) {
+            bucket.unshift({
+              value: item.defaultUomId,
+              label: item.defaultUomLabel ?? item.defaultUomId,
+            });
+          }
+          uomsByItemId[item.value] = bucket;
+          if (!uomLabelByItemId[item.value]) uomLabelByItemId[item.value] = {};
+          uomLabelByItemId[item.value][item.defaultUomId] = item.defaultUomLabel ?? item.defaultUomId ?? item.defaultUomId;
+        });
+
+        const itemLabelById: Record<string, string> = {};
+        items.forEach((item) => {
+          itemLabelById[item.value] = item.label;
+        });
+
+        const makeLabelById: Record<string, string> = {};
+        makes.forEach((make) => {
+          makeLabelById[make.value] = make.label;
+        });
+
+        setItemGroupCache((prev) => ({
+          ...prev,
+          [itemGroupId]: {
+            items,
+            makes,
+            uomsByItemId,
+            itemLabelById,
+            makeLabelById,
+            uomLabelByItemId,
+          },
+        }));
+      } catch (error) {
+        const message = error instanceof Error ? error.message : "Unable to load item options.";
+        toast({
+          variant: "destructive",
+          title: "Item data not available",
+          description: message,
+        });
+      } finally {
+        setItemGroupLoading((prev) => {
+          const next = { ...prev };
+          delete next[itemGroupId];
+          return next;
+        });
+      }
+    },
+    [itemGroupCache]
+  );
+
+  const getDepartmentLabel = React.useCallback(
+    (id: string) => (id ? departmentLabelMap.get(id) ?? id : "-"),
+    [departmentLabelMap]
+  );
+
+  const getItemGroupLabel = React.useCallback(
+    (id: string) => (id ? itemGroupLabelMap.get(id) ?? id : "-"),
+    [itemGroupLabelMap]
+  );
+
+  const getItemLabel = React.useCallback(
+    (groupId: string, itemId: string) => {
+      if (!groupId || !itemId) return "-";
+      return itemGroupCache[groupId]?.itemLabelById[itemId] ?? itemId;
+    },
+    [itemGroupCache]
+  );
+
+  const getItemMakeLabel = React.useCallback(
+    (groupId: string, makeId: string) => {
+      if (!groupId || !makeId) return "-";
+      return itemGroupCache[groupId]?.makeLabelById[makeId] ?? makeId;
+    },
+    [itemGroupCache]
+  );
+
+  const getUomLabel = React.useCallback(
+    (groupId: string, itemId: string, uomId: string) => {
+      if (!groupId || !itemId || !uomId) return "-";
+      const cache = itemGroupCache[groupId];
+      if (!cache) return uomId;
+      const labels = cache.uomLabelByItemId[itemId];
+      if (labels && labels[uomId]) return labels[uomId];
+      const defaultMatch = cache.items.find((opt) => opt.value === itemId && opt.defaultUomId === uomId);
+      if (defaultMatch) return defaultMatch.defaultUomLabel ?? defaultMatch.defaultUomId ?? uomId;
+      return uomId;
+    },
+    [itemGroupCache]
+  );
+
+  const labelResolvers = React.useMemo(
+    () => ({
+      department: getDepartmentLabel,
+      itemGroup: getItemGroupLabel,
+      item: getItemLabel,
+      itemMake: getItemMakeLabel,
+      uom: getUomLabel,
+    }),
+    [getDepartmentLabel, getItemGroupLabel, getItemLabel, getItemMakeLabel, getUomLabel]
+  );
+
+  React.useEffect(() => {
+    if (!Object.keys(itemGroupCache).length) return;
+    setLineItems((prev) => {
+      let changed = false;
+      const next = prev.map((item) => {
+        if (!item.item || item.uom) return item;
+        const cache = itemGroupCache[item.itemGroup];
+        if (!cache) return item;
+        const options = cache.uomsByItemId[item.item] ?? [];
+        const defaultUom = cache.items.find((opt) => opt.value === item.item)?.defaultUomId;
+        const newUom = options[0]?.value ?? defaultUom ?? "";
+        if (!newUom || newUom === item.uom) return item;
+        changed = true;
+        return { ...item, uom: newUom };
+      });
+      return changed ? next : prev;
+    });
+  }, [itemGroupCache]);
+
+  React.useEffect(() => {
+    lineItems.forEach((item) => {
+      if (item.itemGroup && !itemGroupCache[item.itemGroup]) {
+        void ensureItemGroupData(item.itemGroup);
+      }
+    });
+  }, [lineItems, itemGroupCache, ensureItemGroupData]);
+
+  const schema: Schema = React.useMemo(() => ({
+    fields: [
+      {
+        name: "branch",
+        label: "Branch",
+        type: "select",
+        required: true,
+        options: branchOptions,
+        disabled: mode !== "create",
+        grid: { xs: 12, md: 4 },
+      },
+      {
+        name: "indent_type",
+        label: "Indent Type",
+        type: "select",
+        required: true,
+        options: INDENT_TYPE_OPTIONS,
+        grid: { xs: 12, md: 4 },
+      },
+      {
+        name: "expense_type",
+        label: "Expense Type",
+        type: "select",
+        required: true,
+        options: expenseOptions,
+        grid: { xs: 12, md: 4 },
+      },
+      { name: "date", label: "Indent Date", type: "date", required: true, grid: { xs: 12, md: 6 } },
+      {
+        name: "indent_no",
+        label: "Indent No",
+        type: "text",
+        disabled: true,
+        helperText: "Generated after the indent is created",
+        grid: { xs: 12, md: 6 },
+      },
+      {
+        name: "project",
+        label: "Project",
+        type: "select",
+        options: projectOptions,
+        grid: { xs: 12, md: 6 },
+      },
+  { name: "requester", label: "Indent Name", type: "text", grid: { xs: 12, md: 6 } },
+      { name: "remarks", label: "Remarks", type: "textarea", grid: { xs: 12 }, minRows: 1, maxRows: 4 },
+    ],
+  }), [branchOptions, mode, expenseOptions, projectOptions]);
+
+  const filledLineItems = React.useMemo(
+    () =>
+      lineItems.filter(
+        (item) =>
+          item.department ||
+          item.itemGroup ||
+          item.item ||
+          item.itemMake ||
+          item.quantity ||
+          item.uom ||
+          item.remarks
+      ),
+    [lineItems]
+  );
+
+  const lineItemsValid = React.useMemo(() => {
+    if (mode === "view" || pageError || setupError) return true;
+    if (!filledLineItems.length) return false;
+    return filledLineItems.every(lineIsComplete);
+  }, [mode, filledLineItems, pageError, setupError]);
+
+  const handleLineFieldChange = React.useCallback(
+    (id: string, field: keyof EditableLineItem, rawValue: string) => {
+      if (mode === "view") return;
+
+      if (field === "itemGroup") {
+        setLineItems((prev) =>
+          prev.map((item) =>
+            item.id === id
+              ? {
+                  ...item,
+                  itemGroup: rawValue,
+                  item: "",
+                  itemMake: "",
+                  uom: "",
+                }
+              : item
+          )
+        );
+        if (rawValue) {
+          void ensureItemGroupData(rawValue);
+        }
+        return;
+      }
+
+      if (field === "item") {
+        let groupToFetch: string | null = null;
+        setLineItems((prev) =>
+          prev.map((item) => {
+            if (item.id !== id) return item;
+            const currentGroup = item.itemGroup;
+            if (rawValue && currentGroup && !itemGroupCache[currentGroup]) {
+              groupToFetch = currentGroup;
+            }
+            let nextUom = item.uom;
+            if (!rawValue) {
+              nextUom = "";
+            } else {
+              const cache = itemGroupCache[currentGroup ?? ""];
+              const options = cache?.uomsByItemId[rawValue] ?? [];
+              const defaultUom = cache?.items.find((opt) => opt.value === rawValue)?.defaultUomId;
+              if (nextUom && options.some((opt) => opt.value === nextUom)) {
+                // keep existing UOM
+              } else if (options.length) {
+                nextUom = options[0].value;
+              } else if (defaultUom) {
+                nextUom = defaultUom;
+              } else {
+                nextUom = "";
+              }
+            }
+            return {
+              ...item,
+              item: rawValue,
+              uom: nextUom,
+            };
+          })
+        );
+        if (groupToFetch) {
+          void ensureItemGroupData(groupToFetch);
+        }
+        return;
+      }
+
+      if (field === "quantity") {
+        const sanitized = rawValue.replace(/[^0-9.]/g, "");
+        setLineItems((prev) =>
+          prev.map((item) => (item.id === id ? { ...item, quantity: sanitized } : item))
+        );
+        return;
+      }
+
+      setLineItems((prev) =>
+        prev.map((item) =>
+          item.id === id ? { ...item, [field]: rawValue } as EditableLineItem : item
+        )
+      );
+    },
+    [mode, ensureItemGroupData, itemGroupCache]
+  );
+
+  const handleRemoveLine = React.useCallback(
+    (id: string) => {
+      if (mode === "view") return;
+      setLineItems((prev) => {
+        const next = prev.filter((item) => item.id !== id);
+        if (!next.length) {
+          return [createBlankLine()];
+        }
+        return next;
+      });
+    },
+    [mode]
+  );
+
+  // Keep a single trailing blank row so the next line appears automatically during entry.
+  React.useEffect(() => {
+    if (mode === "view") return;
+
+    if (!lineItems.length) {
+      setLineItems([createBlankLine()]);
+      return;
+    }
+
+    const last = lineItems[lineItems.length - 1];
+    if (lineHasAnyData(last)) {
+      setLineItems((prev) => {
+        if (!prev.length) return [createBlankLine()];
+        const currentLast = prev[prev.length - 1];
+        if (!lineHasAnyData(currentLast)) return prev;
+        return [...prev, createBlankLine()];
+      });
+      return;
+    }
+
+    let trailingBlanks = 0;
+    for (let index = lineItems.length - 1; index >= 0; index -= 1) {
+      if (!lineHasAnyData(lineItems[index])) trailingBlanks += 1;
+      else break;
+    }
+
+    if (trailingBlanks > 1) {
+      setLineItems((prev) => {
+        let blanks = 0;
+        for (let index = prev.length - 1; index >= 0; index -= 1) {
+          if (!lineHasAnyData(prev[index])) blanks += 1;
+          else break;
+        }
+        if (blanks <= 1) return prev;
+        return prev.slice(0, prev.length - (blanks - 1));
+      });
+    }
+  }, [mode, lineItems, setLineItems]);
+
+  const handleFormSubmit = React.useCallback(
+    async (values: Record<string, unknown>) => {
+      if (mode === "view" || pageError || setupError) return;
+
+      if (!lineItemsValid) {
+        toast({
+          variant: "destructive",
+          title: "Line items incomplete",
+          description: "Add at least one item and make sure quantity is greater than zero.",
+        });
+        return;
+      }
+
+      const itemsPayload = filledLineItems.map((item) => ({
+        item_group: item.itemGroup || undefined,
+        item: item.item || undefined,
+        quantity: item.quantity || undefined,
+        uom: item.uom || undefined,
+        item_make: item.itemMake || undefined,
+        remarks: item.remarks || undefined,
+        department: item.department || undefined,
+      }));
+
+      const createPayload = {
+        branch: String(values.branch ?? ""),
+        indent_type: String(values.indent_type ?? ""),
+        expense_type: String(values.expense_type ?? ""),
+        date: String(values.date ?? ""),
+        indent_no: values.indent_no ? String(values.indent_no) : undefined,
+        project: values.project ? String(values.project) : undefined,
+        requester: values.requester ? String(values.requester) : undefined,
+        remarks: values.remarks ? String(values.remarks) : undefined,
+        items: itemsPayload,
+      };
+
+      setSaving(true);
+      try {
+        if (mode === "edit" && requestedId) {
+          const updatePayload: Partial<IndentDetails> = {
+            id: requestedId,
+            branch: createPayload.branch,
+            indentType: createPayload.indent_type,
+            expenseType: createPayload.expense_type,
+            indentDate: createPayload.date,
+            project: createPayload.project,
+            requester: createPayload.requester,
+            remarks: createPayload.remarks,
+            lines: filledLineItems.map((item) => ({
+              id: item.id,
+              department: item.department || undefined,
+              itemGroup: item.itemGroup || undefined,
+              item: item.item || undefined,
+              itemMake: item.itemMake || undefined,
+              quantity: item.quantity ? Number(item.quantity) : undefined,
+              uom: item.uom || undefined,
+              remarks: item.remarks || undefined,
+            })),
+          };
+
+          await updateIndent(updatePayload);
+          toast({ title: "Indent updated" });
+          router.replace(`/dashboardportal/procurement/indent/createIndent?mode=view&id=${encodeURIComponent(requestedId)}`);
+        } else {
+          const result = await createIndent(createPayload);
+          toast({
+            title: result?.message ?? "Indent created",
+            description: result?.indent_no ? `Indent No: ${result.indent_no}` : undefined,
+          });
+          const indentId = result?.indent_id ?? result?.indentId;
+          if (indentId) {
+            router.replace(`/dashboardportal/procurement/indent/createIndent?mode=view&id=${encodeURIComponent(String(indentId))}`);
+          }
+        }
+      } catch (error) {
+        toast({
+          variant: "destructive",
+          title: "Unable to save indent",
+          description: error instanceof Error ? error.message : "Please try again.",
+        });
+      } finally {
+        setSaving(false);
+      }
+    },
+    [filledLineItems, lineItemsValid, mode, pageError, setupError, requestedId, router]
+  );
+
+  const pageTitle = mode === "create" ? "Create Indent" : mode === "edit" ? "Edit Indent" : "Indent Details";
+  const subtitle =
+    mode === "create"
+      ? "Capture header information and line items to raise a new indent."
+      : mode === "edit"
+      ? "Update the indent before sending it forward."
+      : "Review the captured indent information.";
+
+  const branchLabel = React.useMemo(() => {
+    const value = String(formValues.branch ?? "");
+    const option = branchOptions.find((opt) => opt.value === value);
+    return option?.label || indentDetails?.branch || "";
+  }, [formValues.branch, branchOptions, indentDetails?.branch]);
+
+  const indentTypeLabel = React.useMemo(() => {
+    const value = String(formValues.indent_type ?? "");
+    return INDENT_TYPE_OPTIONS.find((opt) => opt.value === value)?.label || indentDetails?.indentType || "";
+  }, [formValues.indent_type, indentDetails?.indentType]);
+
+  const expenseTypeLabel = React.useMemo(() => {
+    const value = String(formValues.expense_type ?? "");
+    return expenseLabelMap.get(value) || indentDetails?.expenseType || "";
+  }, [formValues.expense_type, indentDetails?.expenseType, expenseLabelMap]);
+
+  const projectLabel = React.useMemo(() => {
+    const value = String(formValues.project ?? "");
+    return projectLabelMap.get(value) || indentDetails?.project || "";
+  }, [formValues.project, indentDetails?.project, projectLabelMap]);
+
+  const previewItems = React.useMemo(
+    () =>
+      filledLineItems.map((item, index) => ({
+        srNo: index + 1,
+        department: labelResolvers.department(item.department),
+        itemGroup: labelResolvers.itemGroup(item.itemGroup),
+        item: labelResolvers.item(item.itemGroup, item.item),
+        itemMake: labelResolvers.itemMake(item.itemGroup, item.itemMake),
+        quantity: item.quantity || "-",
+        uom: labelResolvers.uom(item.itemGroup, item.item, item.uom),
+        remarks: item.remarks || "-",
+      })),
+    [filledLineItems, labelResolvers]
+  );
+
+  const previewHeader = {
+    indentNo: (formValues.indent_no as string) || indentDetails?.indentNo,
+    indentDate: (formValues.date as string) || indentDetails?.indentDate,
+    branch: branchLabel,
+    indentType: indentTypeLabel,
+    expenseType: expenseTypeLabel,
+    project: projectLabel,
+    requester: (formValues.requester as string) || indentDetails?.requester,
+    status: indentDetails?.status,
+    updatedBy: indentDetails?.updatedBy,
+    updatedAt: indentDetails?.updatedAt,
+  };
+
+  const metadata = React.useMemo<TransactionMetadataItem[]>(() => {
+    const items: TransactionMetadataItem[] = [
+      { label: "Indent No", value: previewHeader.indentNo || "Pending" },
+      { label: "Indent Date", value: previewHeader.indentDate || "-" },
+    ];
+    if (previewHeader.status) items.push({ label: "Status", value: previewHeader.status });
+    if (previewHeader.updatedBy) items.push({ label: "Updated By", value: previewHeader.updatedBy });
+    if (previewHeader.updatedAt) {
+      items.push({
+        label: "Updated At",
+        value: new Date(previewHeader.updatedAt).toLocaleString(),
+      });
+    }
+    return items;
+  }, [previewHeader.indentNo, previewHeader.indentDate, previewHeader.status, previewHeader.updatedBy, previewHeader.updatedAt]);
+
+  const statusChip = React.useMemo(() => {
+    if (!indentDetails?.status) return undefined;
+    const normalized = indentDetails.status.toLowerCase();
+    let color: "default" | "primary" | "secondary" | "success" | "error" | "warning" | "info" = "info";
+    if (normalized === "approved") color = "success";
+    else if (normalized === "rejected") color = "error";
+    return { label: indentDetails.status, color };
+  }, [indentDetails?.status]);
+
+  const primaryActions = React.useMemo<TransactionAction[] | undefined>(() => {
+    if (mode === "view" || pageError || setupError) return undefined;
+    return [
+      {
+        label: mode === "create" ? "Create Indent" : "Save Changes",
+        onClick: () => formRef.current?.submit(),
+        disabled: saving || !lineItemsValid || setupLoading,
+        loading: saving,
+      },
+    ];
+  }, [mode, pageError, setupError, saving, lineItemsValid, setupLoading]);
+
+  const secondaryActions = React.useMemo<TransactionAction[] | undefined>(() => {
+    if (!requestedId || pageError) return undefined;
+    const actions: TransactionAction[] = [];
+    if (mode === "view") {
+      actions.push({
+        label: "Edit",
+        variant: "secondary",
+        onClick: () => router.replace(`/dashboardportal/procurement/indent/createIndent?mode=edit&id=${encodeURIComponent(requestedId)}`),
+      });
+    }
+    if (mode === "edit") {
+      actions.push({
+        label: "Cancel",
+        variant: "ghost",
+        onClick: () => router.replace(`/dashboardportal/procurement/indent/createIndent?mode=view&id=${encodeURIComponent(requestedId)}`),
+      });
+    }
+    return actions.length ? actions : undefined;
+  }, [mode, requestedId, router, pageError]);
+
+  const alerts = pageError || setupError ? (
+    <div className="space-y-2">
+      {pageError ? (
+        <div className="rounded-md border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">{pageError}</div>
+      ) : null}
+      {setupError ? (
+        <div className="rounded-md border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800">{setupError}</div>
+      ) : null}
+    </div>
+  ) : null;
+
+  return (
+    <TransactionWrapper
+      title={pageTitle}
+      subtitle={subtitle}
+      backAction={{ label: "Back", onClick: () => router.back() }}
+      metadata={metadata}
+      statusChip={statusChip}
+      primaryActions={primaryActions}
+      secondaryActions={secondaryActions}
+  loading={loading || setupLoading}
+      alerts={alerts}
+      preview={
+        <IndentPreview
+          header={previewHeader}
+          items={previewItems}
+          remarks={(formValues.remarks as string) || indentDetails?.remarks}
+          onPrint={() => toast({ title: "Print coming soon", description: "The printable version will be wired shortly." })}
+          onDownload={() => toast({ title: "Download coming soon" })}
+          onEmail={() => toast({ title: "Email coming soon" })}
+        />
+      }
+    >
+      <div className="space-y-6">
+        <MuiForm
+          key={formKey}
+          ref={formRef}
+          schema={schema}
+          initialValues={initialValues}
+          mode={mode}
+          hideModeToggle
+          hideSubmit
+          onSubmit={handleFormSubmit}
+          onValuesChange={setFormValues}
+        />
+
+        <LineItemsEditor
+          items={lineItems}
+          mode={mode}
+          onFieldChange={handleLineFieldChange}
+          onRemove={handleRemoveLine}
+          departmentOptions={departmentOptions}
+          itemGroupOptions={itemGroupOptions}
+          getItemOptions={getItemOptions}
+          getMakeOptions={getMakeOptions}
+          getUomOptions={getUomOptions}
+          labelResolvers={labelResolvers}
+          loadingGroups={itemGroupLoading}
+        />
+
+        {mode !== "view" ? (
+          <p className="text-xs text-slate-500">
+            Tip: Keep quantities greater than zero and fill in the UOM so downstream approval can proceed without delays.
+          </p>
+        ) : null}
+      </div>
+    </TransactionWrapper>
+  );
 }

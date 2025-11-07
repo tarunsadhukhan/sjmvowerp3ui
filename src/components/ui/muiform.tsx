@@ -43,6 +43,8 @@ export type Field = {
 	disabled?: boolean | ((values: Record<string, unknown>) => boolean);
 	readOnly?: boolean; // force read only regardless of mode
 	grid?: { xs?: number; sm?: number; md?: number; lg?: number; xl?: number };
+	minRows?: number;
+	maxRows?: number;
 	visibleInModes?: MuiFormMode[]; // default: all
 	render?: (props: CustomFieldRenderProps) => React.ReactNode; // for custom fields
 	customValidate?: (value: unknown, values: Record<string, unknown>) => string | null;
@@ -315,7 +317,8 @@ export const MuiForm = React.forwardRef(function MuiForm(
 				) : field.type === "textarea" ? (
 					<TextField
 						multiline
-						minRows={3}
+						minRows={field.minRows ?? 3}
+						maxRows={field.maxRows}
 						value={value ?? ""}
 						onChange={(e) => handleChange(field.name, e.target.value)}
 						inputProps={mode === "view" ? { readOnly: true } : undefined}
@@ -355,6 +358,7 @@ export const MuiForm = React.forwardRef(function MuiForm(
 								size="small"
 								helperText={errors[field.name] || field.helperText}
 								error={Boolean(errors[field.name])}
+								sx={{ "& .MuiInputBase-root": { backgroundColor: "background.paper" } }}
 							/>
 						)}
 					/>
@@ -384,6 +388,7 @@ export const MuiForm = React.forwardRef(function MuiForm(
 								size="small"
 								helperText={errors[field.name] || field.helperText}
 								error={Boolean(errors[field.name])}
+								sx={{ "& .MuiInputBase-root": { backgroundColor: "background.paper" } }}
 							/>
 						)}
 					/>

@@ -1,13 +1,12 @@
 "use client";
 
 import * as React from "react";
-import Link from "next/link";
-import { Box, Chip, Stack, TextField, Typography } from "@mui/material";
-import { Button } from "@/components/ui/button";
-import MuiDataGrid from "@/components/ui/muiDataGrid";
+import { Alert, Chip, Typography } from "@mui/material";
 import type { GridColDef, GridPaginationModel, GridRenderCellParams } from "@mui/x-data-grid";
 import { fetchWithCookie } from "@/utils/apiClient2";
 import { apiRoutesPortalMasters } from "@/utils/api";
+import IndexWrapper from "@/components/ui/IndexWrapper";
+import { useRouter } from "next/navigation";
 
 type IndentRow = {
 	id: string | number;
@@ -17,11 +16,6 @@ type IndentRow = {
 	branch_name: string;
 	expense_type: string;
 	status: string;
-};
-
-const initialPagination: GridPaginationModel = {
-	page: 0,
-	pageSize: 10,
 };
 
 const formatDate = (value?: string) => {
@@ -49,12 +43,12 @@ const formatDate = (value?: string) => {
 };
 
 export default function ProcurementIndentIndexPage() {
+	const router = useRouter();
 	const [rows, setRows] = React.useState<IndentRow[]>([]);
 	const [totalRows, setTotalRows] = React.useState(0);
 	const [loading, setLoading] = React.useState(false);
-	const [paginationModel, setPaginationModel] = React.useState<GridPaginationModel>(initialPagination);
+	const [paginationModel, setPaginationModel] = React.useState<GridPaginationModel>({ page: 0, pageSize: 10 });
 	const [searchValue, setSearchValue] = React.useState("");
-	const searchTimeoutRef = React.useRef<ReturnType<typeof setTimeout> | null>(null);
 	const [errorMessage, setErrorMessage] = React.useState<string | null>(null);
 
 	const columns = React.useMemo<GridColDef[]>(() => [
@@ -63,8 +57,7 @@ export default function ProcurementIndentIndexPage() {
 			headerName: "Indent No.",
 			flex: 1,
 			minWidth: 140,
-			headerClassName: "bg-[#3ea6da] text-white",
-					renderCell: (params: GridRenderCellParams<IndentRow, string>) => (
+			renderCell: (params: GridRenderCellParams<IndentRow, string>) => (
 				<Typography component="span" variant="body2" color="primary" sx={{ fontWeight: 600 }}>
 					{params.value || "-"}
 				</Typography>
@@ -74,7 +67,6 @@ export default function ProcurementIndentIndexPage() {
 			field: "indent_date",
 			headerName: "Indent Date",
 			minWidth: 140,
-			headerClassName: "bg-[#3ea6da] text-white",
 			renderCell: (params: GridRenderCellParams<IndentRow, string>) => (
 				<Typography component="span" variant="body2">
 					{params.value || formatDate(typeof params.row.indent_date_raw === "string" ? params.row.indent_date_raw : "") || "-"}
@@ -86,20 +78,17 @@ export default function ProcurementIndentIndexPage() {
 			headerName: "Branch",
 			flex: 1,
 			minWidth: 160,
-			headerClassName: "bg-[#3ea6da] text-white",
 		},
 		{
 			field: "expense_type",
 			headerName: "Expense Type",
 			flex: 1,
 			minWidth: 160,
-			headerClassName: "bg-[#3ea6da] text-white",
 		},
 		{
 			field: "status",
 			headerName: "Status",
 			minWidth: 130,
-			headerClassName: "bg-[#3ea6da] text-white",
 					renderCell: (params: GridRenderCellParams<IndentRow, string>) => (
 				<Chip size="small" color={params.value === "Approved" ? "success" : params.value === "Rejected" ? "error" : "default"} label={params.value || "Pending"} />
 			),
@@ -127,7 +116,8 @@ export default function ProcurementIndentIndexPage() {
 				limit: String(paginationModel.pageSize),
 			});
 			if (co_id) query.set("co_id", co_id);
-			if (searchValue.trim()) query.set("search", searchValue.trim());
+			const trimmedSearch = searchValue.trim();
+			if (trimmedSearch) query.set("search", trimmedSearch);
 
 			const url = `${apiRoutesPortalMasters.INDENT_TABLE}?${query.toString()}`;
 			const { data, error } = await fetchWithCookie(url, "GET");
@@ -168,71 +158,39 @@ export default function ProcurementIndentIndexPage() {
 		fetchIndents();
 	}, [fetchIndents]);
 
-	React.useEffect(() => {
-		return () => {
-			if (searchTimeoutRef.current) {
-				clearTimeout(searchTimeoutRef.current);
-			}
-		};
-	}, []);
-
 	const handlePaginationModelChange = (model: GridPaginationModel) => {
 		setPaginationModel(model);
 	};
 
-	const handleSearchChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+	const handleSearchChange = React.useCallback((event: React.ChangeEvent<HTMLInputElement>) => {
 		const value = event.target.value;
-		if (searchTimeoutRef.current) {
-			clearTimeout(searchTimeoutRef.current);
-		}
-		searchTimeoutRef.current = setTimeout(() => {
-			setPaginationModel((prev) => ({ ...prev, page: 0 }));
-			setSearchValue(value);
-		}, 400);
-	};
+		setPaginationModel(prev => ({ ...prev, page: 0 }));
+		setSearchValue(value);
+	}, []);
+
+	const handleCreateIndent = React.useCallback(() => {
+		router.push("/dashboardportal/procurement/indent/createIndent");
+	}, [router]);
 
 	return (
-		<div className="min-h-screen bg-gray-50 p-8">
-			<div className="mx-auto max-w-7xl">
-				<Stack direction="row" justifyContent="space-between" alignItems="center" sx={{ mb: 4 }}>
-					<div>
-						<Typography variant="h5" sx={{ fontWeight: 600, color: "#0C3C60" }}>
-							Procurement Indents
-						</Typography>
-						<Typography variant="body2" color="text.secondary">
-							Review existing indents or raise a new one.
-						</Typography>
-					</div>
-					<Button asChild className="btn-primary">
-						<Link href="/dashboardportal/procurement/indent/createIndent">+ Create Indent</Link>
-					</Button>
-				</Stack>
-
-				<Stack direction={{ xs: "column", sm: "row" }} spacing={2} sx={{ mb: 3 }} alignItems={{ xs: "stretch", sm: "center" }}>
-					<TextField
-						placeholder="Search by indent no., branch, or expense type"
-						size="small"
-						fullWidth
-						sx={{ maxWidth: 360 }}
-						onChange={handleSearchChange}
-					/>
-					{errorMessage && (
-						<Typography variant="body2" color="error">
-							{errorMessage}
-						</Typography>
-					)}
-				</Stack>
-
-				<MuiDataGrid
-					rows={rows}
-					columns={columns}
-					rowCount={totalRows}
-					paginationModel={paginationModel}
-					onPaginationModelChange={handlePaginationModelChange}
-					loading={loading}
-					showLoadingUntilLoaded
-				/>
-			</div>
-		</div>
+		<IndexWrapper
+			title="Procurement Indents"
+			subtitle="Review existing indents or raise a new one."
+			rows={rows}
+			columns={columns}
+			rowCount={totalRows}
+			paginationModel={paginationModel}
+			onPaginationModelChange={handlePaginationModelChange}
+			loading={loading}
+			showLoadingUntilLoaded
+			search={{ value: searchValue, onChange: handleSearchChange, placeholder: "Search by indent no., branch, or expense type", debounceDelayMs: 1000 }}
+			createAction={{ onClick: handleCreateIndent, label: "Create Indent" }}
+		>
+			{errorMessage ? (
+				<Alert severity="error" sx={{ mt: 2 }}>
+					{errorMessage}
+				</Alert>
+			) : null}
+		</IndexWrapper>
 	);
 }

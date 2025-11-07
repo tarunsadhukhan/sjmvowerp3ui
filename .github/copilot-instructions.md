@@ -5,6 +5,7 @@
 - Design tokens first: rely on `src/theme/muiTheme.ts` + `tailwind.config.ts`; no ad-hoc hex/px in feature code.
 - Composable UI: page files under `src/app/**` must compose wrappers from `src/components/ui/**`, not raw MUI imports.
 - Page templates: reuse the 4 archetypes (Index, Transaction, Report, Dashboard) that existing dashboard pages follow.
+- Index archetype pages must compose `IndexWrapper` from `src/components/ui/IndexWrapper`, not ad-hoc headers or standalone `MuiDataGrid` usage.
 - Typed data contracts: share DTOs from `src/types/**`; pagination/filter shapes must match `apiRoutes*` expectations.
 - Mode-aware forms: one schema powers create/edit/view via `muiform` and the `mode` prop.
 - Predictable side-effects: hit APIs through `fetchWithCookie` (see `src/utils/apiClient2.ts`) using endpoints from `src/utils/api.ts`.
@@ -18,7 +19,7 @@
 - State/util logic is concentrated under `src/utils/**` and `src/hooks/**`; favour these over new ad-hoc helpers.
 
 ## Page archetypes
-- **Index (listing dashboards)** — Example: `src/app/dashboardportal/masters/itemMaster/page.tsx`. Pattern: fetch paged data, render `muiDataGrid`, use toolbar filters wired via `useState` + debounced effects.
+- **Index (listing dashboards)** — Example: `src/app/dashboardportal/masters/itemMaster/page.tsx`. Pattern: compose `IndexWrapper` (which handles layout, debounced search, permissions, and `MuiDataGrid` wiring), fetch paged data, and feed wrapper props from local state.
 - **Transaction (form with detail grid)** — Example: `dashboardportal/procurement/indent/createIndent/page.tsx`. Combine `muiform` for header info with `muiDataGrid` for line items; maintain per-row caches and enforce `mode` prop.
 - **Report (read-only filters + export)** — Example: `dashboardadmin/reporting/...` (check existing pages). Provide filter form on top, `muiDataGrid` or charts below, include CSV export via `src/utils/exportToCSV.ts`.
 - **Dashboard (cards + quick actions)** — Example: `src/app/dashboardadmin/page.tsx`. Compose KPI cards and summaries from `src/components/dashboard/**` wrapped in responsive grids.

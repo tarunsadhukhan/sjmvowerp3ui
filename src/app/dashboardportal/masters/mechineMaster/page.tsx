@@ -27,7 +27,6 @@ export default function MechineMasterPage() {
   const [paginationModel, setPaginationModel] = useState<GridPaginationModel>({ pageSize: 10, page: 0 });
   const [totalRows, setTotalRows] = useState<number>(0);
   const [searchQuery, setSearchQuery] = useState<string>("");
-  const [searchTimeout, setSearchTimeout] = useState<NodeJS.Timeout | null>(null);
 
   const [snackbar, setSnackbar] = useState<{ open: boolean; message: string; severity: "success" | "error" }>({ open: false, message: "", severity: "success" });
   const [createOpen, setCreateOpen] = useState<boolean>(false);
@@ -103,12 +102,8 @@ export default function MechineMasterPage() {
 
   const handleSearchChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const v = e.target.value;
-    if (searchTimeout) clearTimeout(searchTimeout);
-    const t = setTimeout(() => {
-      setSearchQuery(v);
-      setPaginationModel(prev => ({ ...prev, page: 0 }));
-    }, 500);
-    setSearchTimeout(t);
+    setSearchQuery(v);
+    setPaginationModel(prev => ({ ...prev, page: 0 }));
   };
 
   const openCreate = () => setCreateOpen(true);
@@ -152,7 +147,7 @@ export default function MechineMasterPage() {
       onPaginationModelChange={handlePaginationModelChange}
       loading={loading}
       showLoadingUntilLoaded
-      search={{ value: searchQuery, onChange: handleSearchChange, placeholder: "Search machines" }}
+  search={{ value: searchQuery, onChange: handleSearchChange, placeholder: "Search machines", debounceDelayMs: 1000 }}
       createAction={{ onClick: openCreate, label: "Create Machine" }}
       onView={handleView}
       onEdit={handleEdit}

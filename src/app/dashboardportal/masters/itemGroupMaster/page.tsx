@@ -34,7 +34,6 @@ export default function CompanyManagement() {
   });
   const [totalRows, setTotalRows] = useState(0);
   const [searchQuery, setSearchQuery] = useState('');
-  const [searchTimeout, setSearchTimeout] = useState<NodeJS.Timeout | null>(null);
   const [snackbar, setSnackbar] = useState<{ open: boolean; message: string; severity: 'success' | 'error' }>({ open: false, message: '', severity: 'success' });
   const [detailsDialogOpen, setDetailsDialogOpen] = useState(false);
   const [detailsLoading, setDetailsLoading] = useState(false);
@@ -99,22 +98,11 @@ export default function CompanyManagement() {
   // Handle search with debounce
   const handleSearchChange = (event: React.ChangeEvent<HTMLInputElement>) => {
     const newSearchValue = event.target.value;
-    
-    // Clear previous timeout
-    if (searchTimeout) {
-      clearTimeout(searchTimeout);
-    }
-    
-    // Set new timeout for debouncing
-    const timeout = setTimeout(() => {
-      setSearchQuery(newSearchValue);
-      setPaginationModel(prev => ({
-        ...prev,
-        page: 0 // Reset to first page on new search
-      }));
-    }, 500); // 500ms debounce
-    
-    setSearchTimeout(timeout);
+    setSearchQuery(newSearchValue);
+    setPaginationModel(prev => ({
+      ...prev,
+      page: 0,
+    }));
   };
 
   // Open dialog for create
@@ -239,7 +227,7 @@ export default function CompanyManagement() {
         onPaginationModelChange={handlePaginationModelChange}
         loading={loading}
         showLoadingUntilLoaded
-        search={{ value: searchQuery, onChange: handleSearchChange, placeholder: "Search item groups" }}
+  search={{ value: searchQuery, onChange: handleSearchChange, placeholder: "Search item groups", debounceDelayMs: 1000 }}
         createAction={{ onClick: handleOpenCreate }}
         onView={viewRowHandler}
         onEdit={editRowHandler}

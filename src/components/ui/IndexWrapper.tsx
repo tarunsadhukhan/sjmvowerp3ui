@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useMemo } from "react";
+import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Box, TextField, Tooltip, IconButton, Typography } from "@mui/material";
 import { GridColDef, GridPaginationModel, GridRenderCellParams, GridValidRowModel } from "@mui/x-data-grid";
 import { usePathname } from "next/navigation";
@@ -13,6 +13,7 @@ export type IndexWrapperSearchConfig = {
   value: string;
   onChange: React.ChangeEventHandler<HTMLInputElement>;
   placeholder?: string;
+  debounceDelayMs?: number;
 };
 
 type CreateActionConfig = {
@@ -68,9 +69,85 @@ function IndexWrapper<RowType extends GridValidRowModel & { id?: string | number
   const { hasMenuAccess } = useSidebarContext();
   const pathname = usePathname();
 
+  const [searchInput, setSearchInput] = useState<string>(search?.value ?? "");
+  const searchDebounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const latestSearchConfigRef = useRef<typeof search>(search);
+
+  const externalSearchValue = search?.value ?? "";
+
   const canView = useMemo(() => hasMenuAccess(pathname, "view"), [hasMenuAccess, pathname]);
   const canEdit = useMemo(() => hasMenuAccess(pathname, "edit"), [hasMenuAccess, pathname]);
   const canCreate = useMemo(() => hasMenuAccess(pathname, "create"), [hasMenuAccess, pathname]);
+
+  useEffect(() => {
+    latestSearchConfigRef.current = search;
+  }, [search]);
+
+  useEffect(() => {
+    if (!search) {
+      setSearchInput(prev => {
+        if (prev === "") {
+          return prev;
+        }
+        return "";
+      });
+      if (searchDebounceRef.current) {
+        clearTimeout(searchDebounceRef.current);
+        searchDebounceRef.current = null;
+      }
+      return;
+    }
+
+    setSearchInput(prev => {
+      if (prev === externalSearchValue) {
+        return prev;
+      }
+      return externalSearchValue;
+    });
+  }, [externalSearchValue, search]);
+
+  useEffect(() => () => {
+    if (searchDebounceRef.current) {
+      clearTimeout(searchDebounceRef.current);
+    }
+  }, []);
+
+  const triggerSearchChange = useCallback((value: string) => {
+    const config = latestSearchConfigRef.current;
+    if (!config?.onChange) return;
+
+    const syntheticEvent = {
+      target: { value } as EventTarget & HTMLInputElement,
+      currentTarget: { value } as EventTarget & HTMLInputElement,
+    } as React.ChangeEvent<HTMLInputElement>;
+
+    config.onChange(syntheticEvent);
+  }, []);
+
+  const handleSearchInputChange = useCallback((event: React.ChangeEvent<HTMLInputElement>) => {
+    const nextValue = event.target.value;
+    setSearchInput(nextValue);
+
+    const config = latestSearchConfigRef.current;
+    if (!config?.onChange) {
+      return;
+    }
+
+    if (searchDebounceRef.current) {
+      clearTimeout(searchDebounceRef.current);
+    }
+
+    const delay = typeof config.debounceDelayMs === "number" ? Math.max(config.debounceDelayMs, 0) : 1000;
+
+    if (delay === 0) {
+      triggerSearchChange(nextValue);
+      return;
+    }
+
+    searchDebounceRef.current = setTimeout(() => {
+      triggerSearchChange(nextValue);
+    }, delay);
+  }, [triggerSearchChange]);
 
   const actionColumn = useMemo<BaseColumn<RowType> | undefined>(() => {
     const showEdit = Boolean(onEdit) && canEdit;
@@ -143,8 +220,8 @@ function IndexWrapper<RowType extends GridValidRowModel & { id?: string | number
               {search ? (
                 <TextField
                   size="small"
-                  value={search.value}
-                  onChange={search.onChange}
+                  value={searchInput}
+                  onChange={handleSearchInputChange}
                   placeholder={search.placeholder ?? "Search"}
                 />
               ) : null}

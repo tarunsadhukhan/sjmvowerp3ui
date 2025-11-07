@@ -24,7 +24,6 @@ export default function ItemMasterPage() {
   const [paginationModel, setPaginationModel] = useState<GridPaginationModel>({ pageSize: 10, page: 0 });
   const [totalRows, setTotalRows] = useState(0);
   const [searchQuery, setSearchQuery] = useState("");
-  const [searchTimeout, setSearchTimeout] = useState<NodeJS.Timeout | null>(null);
   const [snackbar, setSnackbar] = useState<{ open: boolean; message: string; severity: "success" | "error" }>({ open: false, message: "", severity: "success" });
   const [createDialogOpen, setCreateDialogOpen] = useState(false);
   const [viewDialogOpen, setViewDialogOpen] = useState(false);
@@ -84,14 +83,8 @@ export default function ItemMasterPage() {
   // Handle search with debounce
   const handleSearchChange = (event: React.ChangeEvent<HTMLInputElement>) => {
     const newSearchValue = event.target.value;
-    if (searchTimeout) {
-      clearTimeout(searchTimeout);
-    }
-    const timeout = setTimeout(() => {
-      setSearchQuery(newSearchValue);
-      setPaginationModel(prev => ({ ...prev, page: 0 }));
-    }, 500);
-    setSearchTimeout(timeout);
+    setSearchQuery(newSearchValue);
+    setPaginationModel(prev => ({ ...prev, page: 0 }));
   };
 
   // Open dialog for create (handled by CreateItem component)
@@ -166,7 +159,7 @@ export default function ItemMasterPage() {
       onPaginationModelChange={handlePaginationModelChange}
       loading={loading}
       showLoadingUntilLoaded
-      search={{ value: searchQuery, onChange: handleSearchChange, placeholder: "Search items" }}
+  search={{ value: searchQuery, onChange: handleSearchChange, placeholder: "Search items", debounceDelayMs: 1000 }}
       createAction={{ onClick: openCreateDialog }}
       onView={handleView}
       onEdit={handleEdit}

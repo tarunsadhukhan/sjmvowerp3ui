@@ -24,7 +24,6 @@ export default function ItemMakePage() {
   const [paginationModel, setPaginationModel] = useState<GridPaginationModel>({ pageSize: 10, page: 0 });
   const [totalRows, setTotalRows] = useState(0);
   const [searchQuery, setSearchQuery] = useState("");
-  const [searchTimeout, setSearchTimeout] = useState<NodeJS.Timeout | null>(null);
   const [snackbar, setSnackbar] = useState<{ open: boolean; message: string; severity: "success" | "error" }>({ open: false, message: "", severity: "success" });
   const [openCreate, setOpenCreate] = useState(false);
   const [viewRow, setViewRow] = useState<ItemMakeRow | null>(null);
@@ -72,12 +71,8 @@ export default function ItemMakePage() {
 
   const handleSearchChange = (event: React.ChangeEvent<HTMLInputElement>) => {
     const newSearchValue = event.target.value;
-    if (searchTimeout) clearTimeout(searchTimeout);
-    const timeout = setTimeout(() => {
-      setSearchQuery(newSearchValue);
-      setPaginationModel(prev => ({ ...prev, page: 0 }));
-    }, 500);
-    setSearchTimeout(timeout);
+    setSearchQuery(newSearchValue);
+    setPaginationModel(prev => ({ ...prev, page: 0 }));
   };
 
   const handleView = (row: ItemMakeRow) => setViewRow(row);
@@ -114,7 +109,7 @@ export default function ItemMakePage() {
       onPaginationModelChange={handlePaginationModelChange}
       loading={loading}
       showLoadingUntilLoaded
-      search={{ value: searchQuery, onChange: handleSearchChange, placeholder: "Search item makes" }}
+  search={{ value: searchQuery, onChange: handleSearchChange, placeholder: "Search item makes", debounceDelayMs: 1000 }}
       createAction={{ onClick: () => setOpenCreate(true) }}
       onView={handleView}
     >

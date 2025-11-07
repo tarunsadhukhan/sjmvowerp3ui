@@ -25,7 +25,6 @@ export default function CostFactorPage() {
   const [paginationModel, setPaginationModel] = useState<GridPaginationModel>({ pageSize: 10, page: 0 });
   const [totalRows, setTotalRows] = useState(0);
   const [searchQuery, setSearchQuery] = useState("");
-  const [searchTimeout, setSearchTimeout] = useState<NodeJS.Timeout | null>(null);
   const [snackbar, setSnackbar] = useState<{ open: boolean; message: string; severity: "success" | "error" }>({ open: false, message: "", severity: "success" });
   const [formOpen, setFormOpen] = useState(false);
   const [formMode, setFormMode] = useState<"create" | "edit">("create");
@@ -97,12 +96,8 @@ export default function CostFactorPage() {
 
   const handleSearchChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const v = e.target.value;
-    if (searchTimeout) clearTimeout(searchTimeout);
-    const t = setTimeout(() => {
-      setSearchQuery(v);
-      setPaginationModel(prev => ({ ...prev, page: 0 }));
-    }, 500);
-    setSearchTimeout(t);
+    setSearchQuery(v);
+    setPaginationModel(prev => ({ ...prev, page: 0 }));
   };
 
   const openCreate = () => {
@@ -138,7 +133,7 @@ export default function CostFactorPage() {
       onPaginationModelChange={handlePaginationModelChange}
       loading={loading}
       showLoadingUntilLoaded
-      search={{ value: searchQuery, onChange: handleSearchChange, placeholder: "Search cost factors" }}
+  search={{ value: searchQuery, onChange: handleSearchChange, placeholder: "Search cost factors", debounceDelayMs: 1000 }}
       createAction={{ onClick: openCreate }}
       onEdit={handleEdit}
       onView={handleView}

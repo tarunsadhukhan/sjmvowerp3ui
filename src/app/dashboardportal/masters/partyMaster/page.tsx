@@ -1,14 +1,13 @@
 "use client";
 
-import React, { useEffect, useState } from 'react';
-import MuiDataGrid from '@/components/ui/muiDataGrid';
+import React, { useEffect, useMemo, useState } from 'react';
 import { apiRoutesPortalMasters } from '@/utils/api';
 import { fetchWithCookie } from '@/utils/apiClient2';
-import { Box, TextField, InputAdornment, Snackbar, Alert, Switch, IconButton } from '@mui/material';
-import { Search, Edit } from 'lucide-react';
+import { Snackbar, Alert, Switch } from '@mui/material';
 import CreateParty from './createParty';
 import { Button } from '@/components/ui/button';
 import { GridColDef, GridPaginationModel } from '@mui/x-data-grid';
+import IndexWrapper from '@/components/ui/IndexWrapper';
 
 type PartyRow = {
   id: number | string;
@@ -24,7 +23,6 @@ export default function PartyMasterPage() {
   const [paginationModel, setPaginationModel] = useState<GridPaginationModel>({ pageSize: 10, page: 0 });
   const [totalRows, setTotalRows] = useState(0);
   const [searchQuery, setSearchQuery] = useState('');
-  const [searchTimeout, setSearchTimeout] = useState<NodeJS.Timeout | null>(null);
   const [snackbar, setSnackbar] = useState<{ open: boolean; message: string; severity: 'success' | 'error' }>({ open: false, message: '', severity: 'success' });
   const [openCreate, setOpenCreate] = useState(false);
   const [dialogMode, setDialogMode] = useState<'create' | 'edit'>('create');
@@ -95,9 +93,8 @@ export default function PartyMasterPage() {
 
   const handleSearchChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const v = e.target.value;
-    if (searchTimeout) clearTimeout(searchTimeout);
-    const t = setTimeout(() => { setSearchQuery(v); setPaginationModel(prev => ({ ...prev, page: 0 })); }, 500);
-    setSearchTimeout(t);
+    setSearchQuery(v);
+    setPaginationModel(prev => ({ ...prev, page: 0 }));
   };
 
   const handleToggleActive = (row: any) => {
@@ -106,71 +103,65 @@ export default function PartyMasterPage() {
   };
 
   const handleEdit = (row: any) => {
-  // open the CreateParty dialog in edit mode with the selected party id
-  setEditingId(row.id ?? row.party_id ?? undefined);
-  setDialogMode('edit');
-  setOpenCreate(true);
+    // open the CreateParty dialog in edit mode with the selected party id
+    setEditingId(row.id ?? row.party_id ?? undefined);
+    setDialogMode('edit');
+    setOpenCreate(true);
   };
 
-  const columns: GridColDef[] = [
-    { field: 'party_code', headerName: 'Party Code', flex: 1, minWidth: 140, headerClassName: 'bg-[#3ea6da] text-white' },
-    { field: 'party_name', headerName: 'Party Name', flex: 1, minWidth: 240, headerClassName: 'bg-[#3ea6da] text-white' },
-    { field: 'party_type_display', headerName: 'Party Type', flex: 1, minWidth: 220, headerClassName: 'bg-[#3ea6da] text-white' },
-    { field: 'contact_person', headerName: 'Contact Person', flex: 1, minWidth: 180, headerClassName: 'bg-[#3ea6da] text-white' },
-    { field: 'contact_email', headerName: 'Contact Email', flex: 1, minWidth: 220, headerClassName: 'bg-[#3ea6da] text-white' },
+  const columns = useMemo<GridColDef<PartyRow>[]>(() => ([
+    { field: 'party_code', headerName: 'Party Code', flex: 1, minWidth: 140 },
+    { field: 'party_name', headerName: 'Party Name', flex: 1, minWidth: 240 },
+    { field: 'party_type_display', headerName: 'Party Type', flex: 1, minWidth: 220 },
+    { field: 'contact_person', headerName: 'Contact Person', flex: 1, minWidth: 180 },
+    { field: 'contact_email', headerName: 'Contact Email', flex: 1, minWidth: 220 },
     {
-      field: 'active', headerName: 'Active', width: 120, headerClassName: 'bg-[#3ea6da] text-white', sortable: false, filterable: false,
+      field: 'active',
+      headerName: 'Active',
+      width: 120,
+      sortable: false,
+      filterable: false,
       renderCell: (params) => (
         <Switch size="small" checked={Boolean(params.value)} onChange={() => handleToggleActive(params.row)} />
       ),
     },
-    {
-      field: 'actions', headerName: 'Actions', width: 80, sortable: false, filterable: false, headerClassName: 'bg-[#3ea6da] text-white',
-      renderCell: (params) => (
-        <IconButton size="small" onClick={() => handleEdit(params.row)}>
-          <Edit size={14} />
-        </IconButton>
-      ),
-    },
-  ];
+  ]), []);
 
   return (
-    <div className="min-h-screen bg-gray-50 p-8">
-      <div className="mx-auto max-w-7xl">
-        <div className="mb-8 flex items-center justify-between">
-          <h1 className="text-2xl font-bold text-[#0C3C60]">Party Master</h1>
-          <div>
-              <Button size="sm" onClick={() => { setDialogMode('create'); setEditingId(undefined); setOpenCreate(true); }}>Create</Button>
-          </div>
-        </div>
+    <IndexWrapper
+      title="Party Master"
+      rows={rows}
+      columns={columns}
+      rowCount={totalRows}
+      paginationModel={paginationModel}
+      onPaginationModelChange={handlePaginationModelChange}
+      loading={loading}
+      showLoadingUntilLoaded
+      search={{ value: searchQuery, onChange: handleSearchChange, placeholder: 'Search parties', debounceDelayMs: 1000 }}
+      createAction={{ onClick: () => { setDialogMode('create'); setEditingId(undefined); setOpenCreate(true); }, label: 'Create' }}
+      onEdit={handleEdit}
+    >
+      <CreateParty
+        open={openCreate}
+        onClose={() => setOpenCreate(false)}
+        mode={dialogMode}
+        editId={editingId}
+        onSaved={() => {
+          setOpenCreate(false);
+          fetchParties();
+        }}
+      />
 
-        <Box sx={{ width: '100%', mb: 2 }}>
-          <TextField
-            placeholder="Search parties..."
-            onChange={handleSearchChange}
-            fullWidth
-            variant="outlined"
-            size="small"
-            sx={{ maxWidth: 420 }}
-            InputProps={{ startAdornment: (<InputAdornment position="start"><Search className="h-4 w-4"/></InputAdornment>) }}
-          />
-        </Box>
-
-        <MuiDataGrid
-          rows={rows}
-          columns={columns}
-          rowCount={totalRows}
-          paginationModel={paginationModel}
-          onPaginationModelChange={handlePaginationModelChange}
-          loading={loading}
-          showLoadingUntilLoaded={true}
-        />
-  <CreateParty open={openCreate} onClose={() => setOpenCreate(false)} mode={dialogMode} editId={editingId} onSaved={() => { setOpenCreate(false); fetchParties(); }} />
-      </div>
-
-      <Snackbar open={snackbar.open} autoHideDuration={4000} onClose={() => setSnackbar({ ...snackbar, open: false })} anchorOrigin={{ vertical: 'top', horizontal: 'center' }}>
-        <Alert severity={snackbar.severity} onClose={() => setSnackbar({ ...snackbar, open: false })} sx={{ width: '100%' }}>{snackbar.message}</Alert>
+      <Snackbar
+        open={snackbar.open}
+        autoHideDuration={4000}
+        onClose={() => setSnackbar({ ...snackbar, open: false })}
+        anchorOrigin={{ vertical: 'top', horizontal: 'center' }}
+      >
+        <Alert severity={snackbar.severity} onClose={() => setSnackbar({ ...snackbar, open: false })} sx={{ width: '100%' }}>
+          {snackbar.message}
+        </Alert>
       </Snackbar>
-    </div>
+    </IndexWrapper>
   );
 }

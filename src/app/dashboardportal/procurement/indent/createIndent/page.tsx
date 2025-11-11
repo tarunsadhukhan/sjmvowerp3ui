@@ -2,9 +2,17 @@
 
 import React from "react";
 import { useRouter, useSearchParams } from "next/navigation";
-import TransactionWrapper, { type TransactionAction, type TransactionMetadataItem } from "@/components/ui/TransactionWrapper";
+import TransactionWrapper, { type TransactionAction } from "@/components/ui/TransactionWrapper";
 import MuiForm, { type MuiFormMode, type Schema } from "@/components/ui/muiform";
 import IndentPreview from "../components/IndentPreview";
+import {
+  SearchableSelect,
+  useDeferredOptionCache,
+  useLineItems,
+  useTransactionPreview,
+  useTransactionSetup,
+  type TransactionLineColumn,
+} from "@/components/ui/transaction";
 import { useBranchOptions } from "@/utils/branchUtils";
 import {
   createIndent,
@@ -15,10 +23,10 @@ import {
   type IndentDetails,
   type IndentLine,
 } from "@/utils/indentService";
-import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { toast } from "@/hooks/use-toast";
+import useSelectedCompanyCoId from "@/hooks/use-selected-company-coid";
+import { buildLabelMap, createLabelResolver } from "@/utils/labelUtils";
 
 type Option = { label: string; value: string };
 
@@ -49,11 +57,180 @@ type ItemGroupCacheEntry = {
   uomLabelByItemId: Record<string, Record<string, string>>;
 };
 
+type IndentSetupData = {
+  departments: DepartmentRecord[];
+  projects: ProjectRecord[];
+  expenses: ExpenseRecord[];
+  itemGroups: ItemGroupRecord[];
+};
+
+const mapDepartmentRecords = (records: unknown[]): DepartmentRecord[] =>
+  records
+    .map((row) => {
+      const data = row as any;
+      const id = data?.dept_id ?? data?.department_id ?? data?.id;
+      if (!id) return null;
+      return {
+        id: String(id),
+        name: data?.dept_desc ?? data?.dept_name ?? data?.name ?? String(id),
+        branchId: data?.branch_id != null ? String(data.branch_id) : undefined,
+      } satisfies DepartmentRecord;
+    })
+    .filter(Boolean) as DepartmentRecord[];
+
+const mapProjectRecords = (records: unknown[]): ProjectRecord[] =>
+  records
+    .map((row) => {
+      const data = row as any;
+      const id = data?.project_id ?? data?.prj_id ?? data?.id;
+      if (!id) return null;
+      return {
+        id: String(id),
+        name: data?.prj_name ?? data?.project_name ?? data?.name ?? String(id),
+        branchId: data?.branch_id != null ? String(data.branch_id) : undefined,
+      } satisfies ProjectRecord;
+    })
+    .filter(Boolean) as ProjectRecord[];
+
+const mapExpenseRecords = (records: unknown[]): ExpenseRecord[] =>
+  records
+    .map((row) => {
+      const data = row as any;
+      const id = data?.expense_type_id ?? data?.id;
+      if (!id) return null;
+      return {
+        id: String(id),
+        name: data?.expense_type_name ?? data?.name ?? String(id),
+      } satisfies ExpenseRecord;
+    })
+    .filter(Boolean) as ExpenseRecord[];
+
+const mapItemGroupRecords = (records: unknown[]): ItemGroupRecord[] =>
+  records
+    .map((row) => {
+      const data = row as any;
+      const id = data?.item_grp_id ?? data?.id;
+      if (!id) return null;
+      const code = data?.item_grp_code_display ?? data?.code;
+      const name = data?.item_grp_name_display ?? data?.name;
+      const labelParts = [code, name].filter(Boolean);
+      return {
+        id: String(id),
+        label: labelParts.length ? labelParts.join(" — ") : String(id),
+      } satisfies ItemGroupRecord;
+    })
+    .filter(Boolean) as ItemGroupRecord[];
+
+const mapIndentSetupResponse = (response: unknown): IndentSetupData => {
+  const result = response as Record<string, unknown>;
+  return {
+    departments: mapDepartmentRecords((result?.departments as unknown[]) ?? []),
+    projects: mapProjectRecords((result?.projects as unknown[]) ?? []),
+    expenses: mapExpenseRecords((result?.expense_types as unknown[]) ?? []),
+    itemGroups: mapItemGroupRecords((result?.item_groups as unknown[]) ?? []),
+  } satisfies IndentSetupData;
+};
+
+const mapItemGroupDetailResponse = (response: unknown): ItemGroupCacheEntry => {
+  const result = response as Record<string, unknown>;
+  const itemsRaw = Array.isArray(result.items) ? result.items : [];
+  const makesRaw = Array.isArray(result.makes) ? result.makes : [];
+  const uomsRaw = Array.isArray(result.uoms) ? result.uoms : [];
+
+  const items: ItemOption[] = itemsRaw
+    .map((row) => {
+      const data = row as any;
+      const id = data?.item_id ?? data?.id;
+      if (!id) return null;
+      const value = String(id);
+      const code = data?.item_code;
+      const name = data?.item_name;
+      const labelParts = [code, name].filter(Boolean);
+      return {
+        value,
+        label: labelParts.length ? labelParts.join(" — ") : value,
+        defaultUomId: data?.uom_id != null ? String(data.uom_id) : undefined,
+        defaultUomLabel: data?.uom_name ? String(data.uom_name) : undefined,
+      } satisfies ItemOption;
+    })
+    .filter(Boolean) as ItemOption[];
+
+  const makes: Option[] = makesRaw
+    .map((row) => {
+      const data = row as any;
+      const id = data?.item_make_id ?? data?.id;
+      if (!id) return null;
+      return {
+        value: String(id),
+        label: data?.item_make_name ?? data?.name ?? String(id),
+      } satisfies Option;
+    })
+    .filter(Boolean) as Option[];
+
+  const uomsByItemId: Record<string, Option[]> = {};
+  const uomLabelByItemId: Record<string, Record<string, string>> = {};
+
+  uomsRaw.forEach((row) => {
+    const data = row as any;
+    const itemId = data?.item_id ?? data?.id;
+    const uomId = data?.map_to_id ?? data?.uom_id ?? data?.mapToId;
+    if (!itemId || !uomId) return;
+    const itemKey = String(itemId);
+    const uomKey = String(uomId);
+    const label = data?.uom_name ? String(data.uom_name) : uomKey;
+    if (!uomsByItemId[itemKey]) uomsByItemId[itemKey] = [];
+    if (!uomLabelByItemId[itemKey]) uomLabelByItemId[itemKey] = {};
+    if (!uomsByItemId[itemKey].some((opt) => opt.value === uomKey)) {
+      uomsByItemId[itemKey].push({ value: uomKey, label });
+    }
+    uomLabelByItemId[itemKey][uomKey] = label;
+  });
+
+  items.forEach((item) => {
+    if (!item.defaultUomId) return;
+    const bucket = uomsByItemId[item.value] ?? [];
+    if (!bucket.some((opt) => opt.value === item.defaultUomId)) {
+      bucket.unshift({
+        value: item.defaultUomId,
+        label: item.defaultUomLabel ?? item.defaultUomId,
+      });
+    }
+    uomsByItemId[item.value] = bucket;
+    if (!uomLabelByItemId[item.value]) uomLabelByItemId[item.value] = {};
+    uomLabelByItemId[item.value][item.defaultUomId] = item.defaultUomLabel ?? item.defaultUomId ?? item.defaultUomId;
+  });
+
+  const itemLabelById: Record<string, string> = {};
+  items.forEach((item) => {
+    itemLabelById[item.value] = item.label;
+  });
+
+  const makeLabelById: Record<string, string> = {};
+  makes.forEach((make) => {
+    makeLabelById[make.value] = make.label;
+  });
+
+  return {
+    items,
+    makes,
+    uomsByItemId,
+    itemLabelById,
+    makeLabelById,
+    uomLabelByItemId,
+  } satisfies ItemGroupCacheEntry;
+};
+
 const INDENT_TYPE_OPTIONS = [
   { label: "Regular Indent", value: "regular" },
   { label: "Open Indent", value: "open" },
   { label: "BOM", value: "bom" },
 ];
+
+const EMPTY_DEPARTMENTS: DepartmentRecord[] = [];
+const EMPTY_PROJECTS: ProjectRecord[] = [];
+const EMPTY_EXPENSES: ExpenseRecord[] = [];
+const EMPTY_ITEM_GROUPS: ItemGroupRecord[] = [];
+const EMPTY_SETUP_PARAMS: { readonly branchId?: string } = {};
 
 const buildDefaultFormValues = () => ({
   branch: "",
@@ -99,302 +276,6 @@ const lineIsComplete = (line: EditableLineItem) => {
   return Boolean(line.itemGroup && line.item && line.uom && Number.isFinite(qty) && qty > 0);
 };
 
-const readStoredCompanyCoId = () => {
-  if (typeof window === "undefined") return "";
-  try {
-    const raw = window.localStorage.getItem("sidebar_selectedCompany");
-    if (!raw) return "";
-    const parsed = JSON.parse(raw);
-    return parsed?.co_id ? String(parsed.co_id) : "";
-  } catch {
-    return "";
-  }
-};
-
-type LineItemsEditorProps = {
-  items: EditableLineItem[];
-  mode: MuiFormMode;
-  onFieldChange: (id: string, field: keyof EditableLineItem, value: string) => void;
-  onRemove: (id: string) => void;
-  departmentOptions: Option[];
-  itemGroupOptions: Option[];
-  getItemOptions: (itemGroupId: string) => ItemOption[];
-  getMakeOptions: (itemGroupId: string) => Option[];
-  getUomOptions: (itemGroupId: string, itemId: string) => Option[];
-  labelResolvers: {
-    department: (id: string) => string;
-    itemGroup: (id: string) => string;
-    item: (groupId: string, itemId: string) => string;
-    itemMake: (groupId: string, makeId: string) => string;
-    uom: (groupId: string, itemId: string, uomId: string) => string;
-  };
-  loadingGroups: Record<string, boolean>;
-};
-
-const LineItemsEditor: React.FC<LineItemsEditorProps> = ({
-  items,
-  mode,
-  onFieldChange,
-  onRemove,
-  departmentOptions,
-  itemGroupOptions,
-  getItemOptions,
-  getMakeOptions,
-  getUomOptions,
-  labelResolvers,
-  loadingGroups,
-}) => {
-  const canEdit = mode !== "view";
-  const columnTemplate =
-    "grid grid-cols-[48px_1.2fr_1.6fr_1.6fr_1.1fr_0.7fr_0.75fr_1.6fr_76px] gap-x-3";
-
-  const handleTextareaInput = React.useCallback((event: React.FormEvent<HTMLTextAreaElement>) => {
-    const el = event.currentTarget;
-    el.style.height = "auto";
-    el.style.height = `${Math.min(Math.max(el.scrollHeight, 40), 240)}px`;
-  }, []);
-
-  const placeholderText = canEdit ? "Add items to build the indent." : "No line items available.";
-
-  return (
-    <div className="space-y-3">
-      <div>
-        <p className="text-base font-semibold text-slate-800">Line Items</p>
-        <p className="text-xs text-slate-500">List the materials or services you intend to procure.</p>
-      </div>
-
-      <div className="overflow-x-auto">
-        <div className="min-w-[1120px] overflow-hidden rounded-lg border border-slate-200 bg-white">
-          <div className={`${columnTemplate} bg-slate-100 px-4 py-2 text-xs font-semibold uppercase tracking-wide text-slate-600`}>
-            <span>#</span>
-            <span>Department</span>
-            <span>Item Group</span>
-            <span>Item</span>
-            <span>Item Make</span>
-            <span>Qty</span>
-            <span>UOM</span>
-            <span>Remarks</span>
-            <span className="text-right">{canEdit ? "Actions" : ""}</span>
-          </div>
-
-          {items.length ? (
-            items.map((item, index) => {
-              const itemOptions = getItemOptions(item.itemGroup);
-              const makeOptions = getMakeOptions(item.itemGroup);
-              const uomOptions = getUomOptions(item.itemGroup, item.item);
-              const waitingForGroup = Boolean(item.itemGroup) && !itemOptions.length && loadingGroups[item.itemGroup];
-              const showRemove = canEdit && (items.length > 1 || lineHasAnyData(item));
-
-              return (
-                <div
-                  key={item.id}
-                  className={`${columnTemplate} items-start border-t border-slate-200 px-4 py-3 text-sm ${index % 2 === 0 ? "bg-white" : "bg-slate-50"}`}
-                >
-                  <span className="pt-2 text-xs font-semibold text-slate-500">{index + 1}</span>
-
-                  <div className="flex flex-col gap-1">
-                    {canEdit ? (
-                      <Select
-                        value={item.department || undefined}
-                        onValueChange={(next) => onFieldChange(item.id, "department", next)}
-                      >
-                        <SelectTrigger className="bg-white">
-                          <SelectValue placeholder="Select department" />
-                        </SelectTrigger>
-                        <SelectContent className="bg-white">
-                          {departmentOptions.length ? (
-                            departmentOptions.map((opt) => (
-                              <SelectItem key={opt.value} value={opt.value}>
-                                {opt.label}
-                              </SelectItem>
-                            ))
-                          ) : (
-                            <SelectItem disabled value="__empty__">
-                              No options
-                            </SelectItem>
-                          )}
-                        </SelectContent>
-                      </Select>
-                    ) : (
-                      <span className="block truncate text-slate-700">{labelResolvers.department(item.department)}</span>
-                    )}
-                  </div>
-
-                  <div className="flex flex-col gap-1">
-                    {canEdit ? (
-                      <Select
-                        value={item.itemGroup || undefined}
-                        onValueChange={(next) => onFieldChange(item.id, "itemGroup", next)}
-                      >
-                        <SelectTrigger className="bg-white">
-                          <SelectValue placeholder="Select item group" />
-                        </SelectTrigger>
-                        <SelectContent className="bg-white">
-                          {itemGroupOptions.length ? (
-                            itemGroupOptions.map((opt) => (
-                              <SelectItem key={opt.value} value={opt.value}>
-                                {opt.label}
-                              </SelectItem>
-                            ))
-                          ) : (
-                            <SelectItem disabled value="__empty__">
-                              No options
-                            </SelectItem>
-                          )}
-                        </SelectContent>
-                      </Select>
-                    ) : (
-                      <span className="block truncate text-slate-700">{labelResolvers.itemGroup(item.itemGroup)}</span>
-                    )}
-                  </div>
-
-                  <div className="flex flex-col gap-1">
-                    {canEdit ? (
-                      <Select
-                        value={item.item || undefined}
-                        onValueChange={(next) => onFieldChange(item.id, "item", next)}
-                        disabled={!item.itemGroup || waitingForGroup}
-                      >
-                        <SelectTrigger className="bg-white">
-                          <SelectValue placeholder={waitingForGroup ? "Loading items..." : "Select item"} />
-                        </SelectTrigger>
-                        <SelectContent className="bg-white">
-                          {itemOptions.length ? (
-                            itemOptions.map((opt) => (
-                              <SelectItem key={opt.value} value={opt.value}>
-                                {opt.label}
-                              </SelectItem>
-                            ))
-                          ) : (
-                            <SelectItem disabled value="__empty__">
-                              {waitingForGroup ? "Loading..." : "No options"}
-                            </SelectItem>
-                          )}
-                        </SelectContent>
-                      </Select>
-                    ) : (
-                      <span className="block truncate text-slate-700">{labelResolvers.item(item.itemGroup, item.item)}</span>
-                    )}
-                  </div>
-
-                  <div className="flex flex-col gap-1">
-                    {canEdit ? (
-                      <Select
-                        value={item.itemMake || undefined}
-                        onValueChange={(next) => onFieldChange(item.id, "itemMake", next)}
-                        disabled={!item.itemGroup || waitingForGroup}
-                      >
-                        <SelectTrigger className="bg-white">
-                          <SelectValue placeholder={makeOptions.length ? "Select make" : "No make options"} />
-                        </SelectTrigger>
-                        <SelectContent className="bg-white">
-                          {makeOptions.length ? (
-                            makeOptions.map((opt) => (
-                              <SelectItem key={opt.value} value={opt.value}>
-                                {opt.label}
-                              </SelectItem>
-                            ))
-                          ) : (
-                            <SelectItem disabled value="__empty__">
-                              No options
-                            </SelectItem>
-                          )}
-                        </SelectContent>
-                      </Select>
-                    ) : (
-                      <span className="block truncate text-slate-700">{labelResolvers.itemMake(item.itemGroup, item.itemMake)}</span>
-                    )}
-                  </div>
-
-                  <div className="flex flex-col gap-1">
-                    {canEdit ? (
-                      <Input
-                        type="number"
-                        inputMode="decimal"
-                        value={item.quantity}
-                        onChange={(event) => onFieldChange(item.id, "quantity", event.target.value)}
-                        placeholder="0"
-                        className="bg-white"
-                      />
-                    ) : (
-                      <span className="block truncate text-slate-700">{item.quantity || "-"}</span>
-                    )}
-                  </div>
-
-                  <div className="flex flex-col gap-1">
-                    {canEdit ? (
-                      <Select
-                        value={item.uom || undefined}
-                        onValueChange={(next) => onFieldChange(item.id, "uom", next)}
-                        disabled={!item.item || waitingForGroup}
-                      >
-                        <SelectTrigger className="bg-white">
-                          <SelectValue placeholder={waitingForGroup ? "Loading UOMs..." : "Select UOM"} />
-                        </SelectTrigger>
-                        <SelectContent className="bg-white">
-                          {uomOptions.length ? (
-                            uomOptions.map((opt) => (
-                              <SelectItem key={opt.value} value={opt.value}>
-                                {opt.label}
-                              </SelectItem>
-                            ))
-                          ) : (
-                            <SelectItem disabled value="__empty__">
-                              {waitingForGroup ? "Loading..." : "No options"}
-                            </SelectItem>
-                          )}
-                        </SelectContent>
-                      </Select>
-                    ) : (
-                      <span className="block truncate text-slate-700">{labelResolvers.uom(item.itemGroup, item.item, item.uom)}</span>
-                    )}
-                  </div>
-
-                  <div className="flex flex-col gap-1">
-                    {canEdit ? (
-                      <textarea
-                        className="h-auto min-h-[40px] w-full resize-none rounded-md border border-slate-200 bg-white px-3 py-2 text-sm shadow-sm focus:outline-none focus:ring-2 focus:ring-primary/40"
-                        rows={1}
-                        value={item.remarks}
-                        placeholder="Notes"
-                        onChange={(event) => {
-                          handleTextareaInput(event);
-                          onFieldChange(item.id, "remarks", event.target.value);
-                        }}
-                        onInput={handleTextareaInput}
-                      />
-                    ) : (
-                      <span className="block truncate text-slate-700" title={item.remarks}>
-                        {item.remarks || "-"}
-                      </span>
-                    )}
-                  </div>
-
-                  <div className="flex items-center justify-end pt-1">
-                    {showRemove ? (
-                      <Button
-                        type="button"
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => onRemove(item.id)}
-                        className="text-xs text-slate-500"
-                      >
-                        Remove
-                      </Button>
-                    ) : null}
-                  </div>
-                </div>
-              );
-            })
-          ) : (
-            <div className="px-4 py-6 text-center text-sm text-slate-500">{placeholderText}</div>
-          )}
-        </div>
-      </div>
-    </div>
-  );
-};
-
 export default function IndentTransactionPage() {
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -405,26 +286,40 @@ export default function IndentTransactionPage() {
   const mode: MuiFormMode = modeParam === "edit" ? "edit" : modeParam === "view" ? "view" : "create";
 
   const branchOptions = useBranchOptions();
-
-  const [coId, setCoId] = React.useState<string>(() => readStoredCompanyCoId());
+  const { coId } = useSelectedCompanyCoId();
   const [initialValues, setInitialValues] = React.useState<Record<string, unknown>>(buildDefaultFormValues);
   const [formValues, setFormValues] = React.useState<Record<string, unknown>>(buildDefaultFormValues);
-  const [lineItems, setLineItems] = React.useState<EditableLineItem[]>(() => (mode === "create" ? [createBlankLine()] : []));
+  const { items: lineItems, setItems: setLineItems, replaceItems, removeItems: removeLineItems } = useLineItems<EditableLineItem>({
+    createBlankItem: createBlankLine,
+    hasData: lineHasAnyData,
+    getItemId: (item) => item.id,
+    maintainTrailingBlank: mode !== "view",
+  });
   const [indentDetails, setIndentDetails] = React.useState<IndentDetails | null>(null);
   const [loading, setLoading] = React.useState<boolean>(mode !== "create");
   const [saving, setSaving] = React.useState(false);
   const [pageError, setPageError] = React.useState<string | null>(null);
-  const [setupError, setSetupError] = React.useState<string | null>(null);
-  const [setupLoading, setSetupLoading] = React.useState(false);
   const [formKey, setFormKey] = React.useState(0);
 
-  const [departments, setDepartments] = React.useState<DepartmentRecord[]>([]);
-  const [projects, setProjects] = React.useState<ProjectRecord[]>([]);
-  const [expenses, setExpenses] = React.useState<ExpenseRecord[]>([]);
-  const [itemGroups, setItemGroups] = React.useState<ItemGroupRecord[]>([]);
-
-  const [itemGroupCache, setItemGroupCache] = React.useState<Record<string, ItemGroupCacheEntry>>({});
-  const [itemGroupLoading, setItemGroupLoading] = React.useState<Record<string, boolean>>({});
+  const { cache: itemGroupCache, loading: itemGroupLoading, ensure: ensureItemGroupData, reset: resetItemGroupCache } =
+    useDeferredOptionCache<string, ItemGroupCacheEntry>({
+      fetcher: async (itemGroupId: string) => {
+        // Validate that itemGroupId is numeric (backend expects numeric ID, not code)
+        if (!itemGroupId || !/^\d+$/.test(itemGroupId)) {
+          throw new Error(`Invalid item group ID: ${itemGroupId}. Expected numeric ID.`);
+        }
+        const response = await fetchIndentSetup2(itemGroupId);
+        return mapItemGroupDetailResponse(response);
+      },
+      onError: (error) => {
+        const message = error instanceof Error ? error.message : "Unable to load item options.";
+        toast({
+          variant: "destructive",
+          title: "Item data not available",
+          description: message,
+        });
+      },
+    });
 
   const formRef = React.useRef<{ submit: () => Promise<void>; isDirty: () => boolean } | null>(null);
   const createDefaultsSeededRef = React.useRef(false);
@@ -440,17 +335,6 @@ export default function IndentTransactionPage() {
     remarks: line.remarks ?? "",
   }), []);
 
-  React.useEffect(() => {
-    const syncCoId = () => setCoId(readStoredCompanyCoId());
-    syncCoId();
-    const handler = (event: StorageEvent) => {
-      if (event.key === "sidebar_selectedCompany") {
-        syncCoId();
-      }
-    };
-    window.addEventListener("storage", handler);
-    return () => window.removeEventListener("storage", handler);
-  }, []);
 
   React.useEffect(() => {
     if (mode !== "create") {
@@ -492,7 +376,7 @@ export default function IndentTransactionPage() {
 
     if (!requestedId) {
       setIndentDetails(null);
-      setLineItems([]);
+      replaceItems([]);
       setPageError("Missing indent identifier in the URL.");
       setLoading(false);
       return;
@@ -518,14 +402,14 @@ export default function IndentTransactionPage() {
         setInitialValues(base);
         setFormValues(base);
         setFormKey((prev) => prev + 1);
-  const mappedLines = (detail.lines ?? []).map(mapLineToEditable);
-  setLineItems(mappedLines.length ? mappedLines : [createBlankLine()]);
+        const mappedLines = (detail.lines ?? []).map(mapLineToEditable);
+        replaceItems(mappedLines.length ? mappedLines : [createBlankLine()]);
         setPageError(null);
       })
       .catch((error) => {
         if (cancelled) return;
         setIndentDetails(null);
-        setLineItems([createBlankLine()]);
+        replaceItems([createBlankLine()]);
         setPageError(error instanceof Error ? error.message : "Unable to load indent details.");
       })
       .finally(() => {
@@ -539,120 +423,53 @@ export default function IndentTransactionPage() {
 
   const branchValue = React.useMemo(() => String(formValues.branch ?? ""), [formValues.branch]);
   const branchIdForSetup = React.useMemo(() => (branchValue && /^\d+$/.test(branchValue) ? branchValue : undefined), [branchValue]);
+  const setupParams = React.useMemo(
+    () => (branchIdForSetup ? { branchId: branchIdForSetup } : EMPTY_SETUP_PARAMS),
+    [branchIdForSetup]
+  );
+
+  const {
+    data: setupData,
+    loading: setupLoading,
+    error: setupError,
+  } = useTransactionSetup<{ branchId?: string }, Record<string, unknown>, IndentSetupData>({
+    coId,
+    params: setupParams,
+    fetcher: fetchIndentSetup1,
+    mapData: mapIndentSetupResponse,
+    deps: [branchIdForSetup],
+  });
+
+  const departments = setupData?.departments ?? EMPTY_DEPARTMENTS;
+  const projects = setupData?.projects ?? EMPTY_PROJECTS;
+  const expenses = setupData?.expenses ?? EMPTY_EXPENSES;
+  const itemGroups = setupData?.itemGroups ?? EMPTY_ITEM_GROUPS;
+
+
+  const expenseOptions = React.useMemo<Option[]>(() => {
+    const indentType = String(formValues.indent_type ?? "").toLowerCase();
+    return expenses
+      .filter((exp) => {
+        if (indentType !== "open") return true;
+        const id = String(exp.id);
+        return id === "3" || id === "5" || id === "6";
+      })
+      .map((exp) => ({
+        label: exp.name || String(exp.id),
+        value: String(exp.id),
+      }));
+  }, [expenses, formValues.indent_type]);
 
   React.useEffect(() => {
-    if (!coId) {
-      setSetupError("Select a company to load indent defaults.");
-      setDepartments([]);
-      setProjects([]);
-      setExpenses([]);
-      setItemGroups([]);
-      setSetupLoading(false);
-      return;
+    if (mode === "view") return;
+    const indentType = String(formValues.indent_type ?? "").toLowerCase();
+    if (indentType !== "open") return;
+    const allowed = new Set(["3", "5", "6"]);
+    const current = String(formValues.expense_type ?? "");
+    if (current && !allowed.has(current)) {
+      setFormValues((prev) => ({ ...prev, expense_type: "" }));
     }
-
-    let cancelled = false;
-    const load = async () => {
-      setSetupLoading(true);
-      try {
-        const response = await fetchIndentSetup1({ coId, branchId: branchIdForSetup });
-        if (cancelled) return;
-
-        const deptRecords = Array.isArray(response.departments) ? response.departments : [];
-        const projectRecords = Array.isArray(response.projects) ? response.projects : [];
-        const expenseRecords = Array.isArray(response.expense_types) ? response.expense_types : [];
-        const itemGroupRecords = Array.isArray(response.item_groups) ? response.item_groups : [];
-
-        setDepartments(
-          deptRecords
-            .map((row) => {
-              const data = row as any;
-              const id = data?.dept_id ?? data?.department_id ?? data?.id;
-              if (!id) return null;
-              return {
-                id: String(id),
-                name: data?.dept_desc ?? data?.dept_name ?? data?.name ?? String(id),
-                branchId: data?.branch_id != null ? String(data.branch_id) : undefined,
-              } as DepartmentRecord;
-            })
-            .filter(Boolean) as DepartmentRecord[]
-        );
-
-        setProjects(
-          projectRecords
-            .map((row) => {
-              const data = row as any;
-              const id = data?.project_id ?? data?.prj_id ?? data?.id;
-              if (!id) return null;
-              return {
-                id: String(id),
-                name: data?.prj_name ?? data?.project_name ?? data?.name ?? String(id),
-                branchId: data?.branch_id != null ? String(data.branch_id) : undefined,
-              } as ProjectRecord;
-            })
-            .filter(Boolean) as ProjectRecord[]
-        );
-
-        setExpenses(
-          expenseRecords
-            .map((row) => {
-              const data = row as any;
-              const id = data?.expense_type_id ?? data?.id;
-              if (!id) return null;
-              return {
-                id: String(id),
-                name: data?.expense_type_name ?? data?.name ?? String(id),
-              } as ExpenseRecord;
-            })
-            .filter(Boolean) as ExpenseRecord[]
-        );
-
-        setItemGroups(
-          itemGroupRecords
-            .map((row) => {
-              const data = row as any;
-              const id = data?.item_grp_id ?? data?.id;
-              if (!id) return null;
-              const code = data?.item_grp_code_display ?? data?.code;
-              const name = data?.item_grp_name_display ?? data?.name;
-              const labelParts = [code, name].filter(Boolean);
-              return {
-                id: String(id),
-                label: labelParts.length ? labelParts.join(" — ") : String(id),
-              } as ItemGroupRecord;
-            })
-            .filter(Boolean) as ItemGroupRecord[]
-        );
-
-        setSetupError(null);
-      } catch (error) {
-        if (cancelled) return;
-        const message = error instanceof Error ? error.message : "Unable to load indent defaults.";
-        setSetupError(message);
-        setDepartments([]);
-        setProjects([]);
-        setExpenses([]);
-        setItemGroups([]);
-      } finally {
-        if (!cancelled) setSetupLoading(false);
-      }
-    };
-
-    load();
-
-    return () => {
-      cancelled = true;
-    };
-  }, [coId, branchIdForSetup]);
-
-  const expenseOptions = React.useMemo<Option[]>(
-    () =>
-      expenses.map((exp) => ({
-        label: exp.name || exp.id,
-        value: exp.id,
-      })),
-    [expenses]
-  );
+  }, [formValues.indent_type, formValues.expense_type, mode]);
 
   const departmentOptions = React.useMemo<Option[]>(() => {
     if (!departments.length) return [];
@@ -675,37 +492,26 @@ export default function IndentTransactionPage() {
     [itemGroups]
   );
 
-  const departmentLabelMap = React.useMemo(() => {
-    const map = new Map<string, string>();
-    departments.forEach((dept) => {
-      map.set(dept.id, dept.name || dept.id);
-    });
-    return map;
-  }, [departments]);
+  const departmentLabelMap = React.useMemo(
+    () => buildLabelMap(departments, (dept) => dept.id, (dept) => dept.name ?? dept.id),
+    [departments]
+  );
 
-  const expenseLabelMap = React.useMemo(() => {
-    const map = new Map<string, string>();
-    expenses.forEach((exp) => {
-      map.set(exp.id, exp.name || exp.id);
-    });
-    return map;
-  }, [expenses]);
+  const expenseLabelMap = React.useMemo(
+    () => buildLabelMap(expenses, (exp) => String(exp.id), (exp) => exp.name ?? String(exp.id)),
+    [expenses]
+  );
+  const projectLabelMap = React.useMemo(
+    () => buildLabelMap(projects, (project) => project.id, (project) => project.name ?? project.id),
+    [projects]
+  );
+  const getExpenseLabel = React.useMemo(() => createLabelResolver(expenseLabelMap, ""), [expenseLabelMap]);
+  const getProjectLabel = React.useMemo(() => createLabelResolver(projectLabelMap, ""), [projectLabelMap]);
 
-  const projectLabelMap = React.useMemo(() => {
-    const map = new Map<string, string>();
-    projects.forEach((proj) => {
-      map.set(proj.id, proj.name || proj.id);
-    });
-    return map;
-  }, [projects]);
-
-  const itemGroupLabelMap = React.useMemo(() => {
-    const map = new Map<string, string>();
-    itemGroups.forEach((grp) => {
-      map.set(grp.id, grp.label || grp.id);
-    });
-    return map;
-  }, [itemGroups]);
+  const itemGroupLabelMap = React.useMemo(
+    () => buildLabelMap(itemGroups, (group) => group.id, (group) => group.label ?? group.id),
+    [itemGroups]
+  );
 
   const getItemOptions = React.useCallback(
     (itemGroupId: string) => itemGroupCache[itemGroupId]?.items ?? [],
@@ -724,131 +530,13 @@ export default function IndentTransactionPage() {
   );
 
   React.useEffect(() => {
-    setItemGroupCache({});
-    setItemGroupLoading({});
-  }, [coId]);
+    resetItemGroupCache();
+  }, [coId, resetItemGroupCache]);
 
-  const ensureItemGroupData = React.useCallback(
-    async (itemGroupId: string) => {
-      if (!itemGroupId || itemGroupCache[itemGroupId]) return;
-      setItemGroupLoading((prev) => ({ ...prev, [itemGroupId]: true }));
-      try {
-        const response = await fetchIndentSetup2(itemGroupId);
 
-        const itemsRaw = Array.isArray(response.items) ? response.items : [];
-        const makesRaw = Array.isArray(response.makes) ? response.makes : [];
-        const uomsRaw = Array.isArray(response.uoms) ? response.uoms : [];
+  const getDepartmentLabel = React.useMemo(() => createLabelResolver(departmentLabelMap), [departmentLabelMap]);
 
-        const items: ItemOption[] = itemsRaw
-          .map((row) => {
-            const data = row as any;
-            const id = data?.item_id ?? data?.id;
-            if (!id) return null;
-            const value = String(id);
-            const code = data?.item_code;
-            const name = data?.item_name;
-            const labelParts = [code, name].filter(Boolean);
-            return {
-              value,
-              label: labelParts.length ? labelParts.join(" — ") : value,
-              defaultUomId: data?.uom_id != null ? String(data.uom_id) : undefined,
-              defaultUomLabel: data?.uom_name ? String(data.uom_name) : undefined,
-            } as ItemOption;
-          })
-          .filter(Boolean) as ItemOption[];
-
-        const makes: Option[] = makesRaw
-          .map((row) => {
-            const data = row as any;
-            const id = data?.item_make_id ?? data?.id;
-            if (!id) return null;
-            return {
-              value: String(id),
-              label: data?.item_make_name ?? data?.name ?? String(id),
-            } as Option;
-          })
-          .filter(Boolean) as Option[];
-
-        const uomsByItemId: Record<string, Option[]> = {};
-        const uomLabelByItemId: Record<string, Record<string, string>> = {};
-        uomsRaw.forEach((row) => {
-          const data = row as any;
-          const itemId = data?.item_id ?? data?.id;
-          const uomId = data?.map_to_id ?? data?.uom_id ?? data?.mapToId;
-          if (!itemId || !uomId) return;
-          const itemKey = String(itemId);
-          const uomKey = String(uomId);
-          const label = data?.uom_name ? String(data.uom_name) : uomKey;
-          if (!uomsByItemId[itemKey]) uomsByItemId[itemKey] = [];
-          if (!uomLabelByItemId[itemKey]) uomLabelByItemId[itemKey] = {};
-          if (!uomsByItemId[itemKey].some((opt) => opt.value === uomKey)) {
-            uomsByItemId[itemKey].push({ value: uomKey, label });
-          }
-          uomLabelByItemId[itemKey][uomKey] = label;
-        });
-
-        items.forEach((item) => {
-          if (!item.defaultUomId) return;
-          const bucket = uomsByItemId[item.value] ?? [];
-          if (!bucket.some((opt) => opt.value === item.defaultUomId)) {
-            bucket.unshift({
-              value: item.defaultUomId,
-              label: item.defaultUomLabel ?? item.defaultUomId,
-            });
-          }
-          uomsByItemId[item.value] = bucket;
-          if (!uomLabelByItemId[item.value]) uomLabelByItemId[item.value] = {};
-          uomLabelByItemId[item.value][item.defaultUomId] = item.defaultUomLabel ?? item.defaultUomId ?? item.defaultUomId;
-        });
-
-        const itemLabelById: Record<string, string> = {};
-        items.forEach((item) => {
-          itemLabelById[item.value] = item.label;
-        });
-
-        const makeLabelById: Record<string, string> = {};
-        makes.forEach((make) => {
-          makeLabelById[make.value] = make.label;
-        });
-
-        setItemGroupCache((prev) => ({
-          ...prev,
-          [itemGroupId]: {
-            items,
-            makes,
-            uomsByItemId,
-            itemLabelById,
-            makeLabelById,
-            uomLabelByItemId,
-          },
-        }));
-      } catch (error) {
-        const message = error instanceof Error ? error.message : "Unable to load item options.";
-        toast({
-          variant: "destructive",
-          title: "Item data not available",
-          description: message,
-        });
-      } finally {
-        setItemGroupLoading((prev) => {
-          const next = { ...prev };
-          delete next[itemGroupId];
-          return next;
-        });
-      }
-    },
-    [itemGroupCache]
-  );
-
-  const getDepartmentLabel = React.useCallback(
-    (id: string) => (id ? departmentLabelMap.get(id) ?? id : "-"),
-    [departmentLabelMap]
-  );
-
-  const getItemGroupLabel = React.useCallback(
-    (id: string) => (id ? itemGroupLabelMap.get(id) ?? id : "-"),
-    [itemGroupLabelMap]
-  );
+  const getItemGroupLabel = React.useMemo(() => createLabelResolver(itemGroupLabelMap), [itemGroupLabelMap]);
 
   const getItemLabel = React.useCallback(
     (groupId: string, itemId: string) => {
@@ -891,6 +579,323 @@ export default function IndentTransactionPage() {
     [getDepartmentLabel, getItemGroupLabel, getItemLabel, getItemMakeLabel, getUomLabel]
   );
 
+  const handleLineFieldChange = React.useCallback(
+    (id: string, field: keyof EditableLineItem, rawValue: string) => {
+      if (mode === "view") return;
+
+      if (field === "itemGroup") {
+        setLineItems((prev) =>
+          prev.map((item) =>
+            item.id === id
+              ? {
+                  ...item,
+                  itemGroup: rawValue,
+                  item: "",
+                  itemMake: "",
+                  uom: "",
+                }
+              : item
+          )
+        );
+        if (rawValue && !itemGroupCache[rawValue] && !itemGroupLoading[rawValue]) {
+          void ensureItemGroupData(rawValue);
+        }
+        return;
+      }
+
+      if (field === "item") {
+        let groupToFetch: string | null = null;
+        setLineItems((prev) =>
+          prev.map((item) => {
+            if (item.id !== id) return item;
+            const currentGroup = item.itemGroup;
+            if (rawValue && currentGroup && !itemGroupCache[currentGroup]) {
+              groupToFetch = currentGroup;
+            }
+            let nextUom = item.uom;
+            if (!rawValue) {
+              nextUom = "";
+            } else {
+              const cache = itemGroupCache[currentGroup ?? ""];
+              const options = cache?.uomsByItemId[rawValue] ?? [];
+              const defaultUom = cache?.items.find((option) => option.value === rawValue)?.defaultUomId;
+              if (nextUom && options.some((option) => option.value === nextUom)) {
+                // keep existing UOM
+              } else if (options.length) {
+                nextUom = options[0].value;
+              } else if (defaultUom) {
+                nextUom = defaultUom;
+              } else {
+                nextUom = "";
+              }
+            }
+            return {
+              ...item,
+              item: rawValue,
+              uom: nextUom,
+            };
+          })
+        );
+        if (groupToFetch && !itemGroupCache[groupToFetch] && !itemGroupLoading[groupToFetch]) {
+          void ensureItemGroupData(groupToFetch);
+        }
+        return;
+      }
+
+      if (field === "quantity") {
+        const sanitized = rawValue.replace(/[^0-9.]/g, "");
+        setLineItems((prev) =>
+          prev.map((item) => (item.id === id ? { ...item, quantity: sanitized } : item))
+        );
+        return;
+      }
+
+      setLineItems((prev) =>
+        prev.map((item) =>
+          item.id === id ? { ...item, [field]: rawValue } as EditableLineItem : item
+        )
+      );
+    },
+    [mode, ensureItemGroupData, itemGroupCache, itemGroupLoading]
+  );
+
+  const canEdit = mode !== "view";
+
+  const adjustTextareaHeight = React.useCallback((event: React.FormEvent<HTMLTextAreaElement>) => {
+    const element = event.currentTarget;
+    element.style.height = "auto";
+    element.style.height = `${Math.min(Math.max(element.scrollHeight, 24), 120)}px`;
+  }, []);
+
+  const lineItemColumns = React.useMemo<TransactionLineColumn<EditableLineItem>[]>(
+    () => [
+      {
+        id: "department",
+        header: "Department",
+        width: "1.2fr",
+        renderCell: ({ item }) => {
+          if (!canEdit) {
+            return <span className="block truncate text-xs text-slate-700">{labelResolvers.department(item.department)}</span>;
+          }
+
+          const value = departmentOptions.find((option) => option.value === item.department) ?? null;
+          return (
+            <SearchableSelect<Option>
+              options={departmentOptions}
+              value={value}
+              onChange={(next) => handleLineFieldChange(item.id, "department", next?.value ?? "")}
+              getOptionLabel={(option) => option.label}
+              isOptionEqualToValue={(option, valueOption) => option.value === valueOption.value}
+              placeholder="Search department"
+              noOptionsText="No options"
+            />
+          );
+        },
+        getTooltip: ({ item }) => {
+          const label = labelResolvers.department(item.department);
+          return label && label !== "-" ? label : undefined;
+        },
+      },
+      {
+        id: "itemGroup",
+        header: "Item Group",
+        width: "1.6fr",
+        renderCell: ({ item }) => {
+          if (!canEdit) {
+            return <span className="block truncate text-xs text-slate-700">{labelResolvers.itemGroup(item.itemGroup)}</span>;
+          }
+
+          const value = itemGroupOptions.find((option) => option.value === item.itemGroup) ?? null;
+          return (
+            <SearchableSelect<Option>
+              options={itemGroupOptions}
+              value={value}
+              onChange={(next) => handleLineFieldChange(item.id, "itemGroup", next?.value ?? "")}
+              getOptionLabel={(option) => option.label}
+              isOptionEqualToValue={(option, valueOption) => option.value === valueOption.value}
+              placeholder="Search item group"
+              noOptionsText="No options"
+            />
+          );
+        },
+        getTooltip: ({ item }) => {
+          const label = labelResolvers.itemGroup(item.itemGroup);
+          return label && label !== "-" ? label : undefined;
+        },
+      },
+      {
+        id: "item",
+        header: "Item",
+        width: "1.6fr",
+        renderCell: ({ item }) => {
+          if (!canEdit) {
+            return <span className="block truncate text-xs text-slate-700">{labelResolvers.item(item.itemGroup, item.item)}</span>;
+          }
+
+          const options = getItemOptions(item.itemGroup);
+          const value = options.find((option) => option.value === item.item) ?? null;
+          const waitingForGroup = Boolean(item.itemGroup) && !options.length && itemGroupLoading[item.itemGroup];
+
+          return (
+            <SearchableSelect<ItemOption>
+              options={options}
+              value={value}
+              onChange={(next) => handleLineFieldChange(item.id, "item", next?.value ?? "")}
+              getOptionLabel={(option) => option.label}
+              isOptionEqualToValue={(option, valueOption) => option.value === valueOption.value}
+              placeholder={waitingForGroup ? "Loading items..." : "Search item"}
+              disabled={!item.itemGroup || waitingForGroup}
+              loading={waitingForGroup}
+              noOptionsText={waitingForGroup ? "Loading..." : "No options"}
+            />
+          );
+        },
+        getTooltip: ({ item }) => {
+          const label = labelResolvers.item(item.itemGroup, item.item);
+          return label && label !== "-" ? label : undefined;
+        },
+      },
+      {
+        id: "itemMake",
+        header: "Item Make",
+        width: "1.1fr",
+        renderCell: ({ item }) => {
+          if (!canEdit) {
+            return <span className="block truncate text-xs text-slate-700">{labelResolvers.itemMake(item.itemGroup, item.itemMake)}</span>;
+          }
+
+          const options = getMakeOptions(item.itemGroup);
+          const value = options.find((option) => option.value === item.itemMake) ?? null;
+          const waitingForGroup = Boolean(item.itemGroup) && itemGroupLoading[item.itemGroup];
+
+          return (
+            <SearchableSelect<Option>
+              options={options}
+              value={value}
+              onChange={(next) => handleLineFieldChange(item.id, "itemMake", next?.value ?? "")}
+              getOptionLabel={(option) => option.label}
+              isOptionEqualToValue={(option, valueOption) => option.value === valueOption.value}
+              placeholder={options.length ? "Search make" : "No make options"}
+              disabled={!item.itemGroup || waitingForGroup}
+              noOptionsText={options.length ? "No matches" : "No options"}
+            />
+          );
+        },
+        getTooltip: ({ item }) => {
+          const label = labelResolvers.itemMake(item.itemGroup, item.itemMake);
+          return label && label !== "-" ? label : undefined;
+        },
+      },
+      {
+        id: "quantity",
+        header: "Qty",
+        width: "0.7fr",
+        className: "flex flex-col gap-1",
+        renderCell: ({ item }) => {
+          if (!canEdit) {
+            return <span className="block truncate text-xs text-slate-700">{item.quantity || "-"}</span>;
+          }
+
+          return (
+            <Input
+              type="number"
+              inputMode="decimal"
+              value={item.quantity}
+              onChange={(event) => handleLineFieldChange(item.id, "quantity", event.target.value)}
+              placeholder="0"
+              className="h-7 px-1.5 py-0.5 text-xs border-0 bg-transparent focus-visible:ring-1 focus-visible:ring-blue-500 focus-visible:outline-none"
+            />
+          );
+        },
+        getTooltip: ({ item }) => {
+          const qty = item.quantity.trim();
+          return qty ? qty : undefined;
+        },
+      },
+      {
+        id: "uom",
+        header: "UOM",
+        width: "0.75fr",
+        renderCell: ({ item }) => {
+          if (!canEdit) {
+            return <span className="block truncate text-xs text-slate-700">{labelResolvers.uom(item.itemGroup, item.item, item.uom)}</span>;
+          }
+
+          const options = getUomOptions(item.itemGroup, item.item);
+          const value = options.find((option) => option.value === item.uom) ?? null;
+          const waitingForGroup = Boolean(item.itemGroup) && itemGroupLoading[item.itemGroup];
+
+          return (
+            <SearchableSelect<Option>
+              options={options}
+              value={value}
+              onChange={(next) => handleLineFieldChange(item.id, "uom", next?.value ?? "")}
+              getOptionLabel={(option) => option.label}
+              isOptionEqualToValue={(option, valueOption) => option.value === valueOption.value}
+              placeholder={waitingForGroup ? "Loading UOMs..." : "Search UOM"}
+              disabled={!item.item || waitingForGroup}
+              loading={waitingForGroup}
+              noOptionsText={waitingForGroup ? "Loading..." : "No options"}
+            />
+          );
+        },
+        getTooltip: ({ item }) => {
+          const label = labelResolvers.uom(item.itemGroup, item.item, item.uom);
+          return label && label !== "-" ? label : undefined;
+        },
+      },
+      {
+        id: "remarks",
+        header: "Remarks",
+        width: "1.6fr",
+        renderCell: ({ item }) => {
+          if (!canEdit) {
+            return (
+              <span className="block truncate text-xs text-slate-700" title={item.remarks}>
+                {item.remarks || "-"}
+              </span>
+            );
+          }
+
+          return (
+            <textarea
+              className="h-auto min-h-[24px] w-full resize-none border-0 bg-transparent px-1 py-0.5 text-xs focus:outline-none focus:ring-1 focus:ring-blue-500"
+              rows={1}
+              value={item.remarks}
+              placeholder="Notes"
+              onChange={(event) => {
+                adjustTextareaHeight(event);
+                handleLineFieldChange(item.id, "remarks", event.target.value);
+              }}
+              onInput={adjustTextareaHeight}
+            />
+          );
+        },
+        getTooltip: ({ item }) => {
+          const remarks = item.remarks?.trim();
+          return remarks ? remarks : undefined;
+        },
+      },
+    ],
+    [
+      adjustTextareaHeight,
+      canEdit,
+      departmentOptions,
+      getItemOptions,
+      getMakeOptions,
+      getUomOptions,
+      handleLineFieldChange,
+      itemGroupOptions,
+      labelResolvers,
+      itemGroupLoading,
+    ]
+  );
+
+  const lineItemsPlaceholder = canEdit ? "Add items to build the indent." : "No line items available.";
+  const lineItemsSubtitle = "List the materials or services you intend to procure.";
+
+  const getLineItemId = React.useCallback((item: EditableLineItem) => item.id, []);
+
   React.useEffect(() => {
     if (!Object.keys(itemGroupCache).length) return;
     setLineItems((prev) => {
@@ -908,15 +913,16 @@ export default function IndentTransactionPage() {
       });
       return changed ? next : prev;
     });
-  }, [itemGroupCache]);
+  }, [itemGroupCache, setLineItems]);
 
   React.useEffect(() => {
     lineItems.forEach((item) => {
-      if (item.itemGroup && !itemGroupCache[item.itemGroup]) {
-        void ensureItemGroupData(item.itemGroup);
-      }
+      const groupId = item.itemGroup;
+      if (!groupId) return;
+      if (itemGroupCache[groupId] || itemGroupLoading[groupId]) return;
+      void ensureItemGroupData(groupId);
     });
-  }, [lineItems, itemGroupCache, ensureItemGroupData]);
+  }, [lineItems, itemGroupCache, itemGroupLoading, ensureItemGroupData]);
 
   const schema: Schema = React.useMemo(() => ({
     fields: [
@@ -943,6 +949,15 @@ export default function IndentTransactionPage() {
         type: "select",
         required: true,
         options: expenseOptions,
+        customValidate: (value, values) => {
+          const indentType = String(values.indent_type ?? "").toLowerCase();
+          if (indentType !== "open") return null;
+          const expense = String(value ?? "");
+          if (!expense) return "Required";
+          return expense === "3" || expense === "5" || expense === "6"
+            ? null
+            : "Select expense type 3, 5, or 6 for Open indents";
+        },
         grid: { xs: 12, md: 4 },
       },
       { name: "date", label: "Indent Date", type: "date", required: true, grid: { xs: 12, md: 6 } },
@@ -961,7 +976,7 @@ export default function IndentTransactionPage() {
         options: projectOptions,
         grid: { xs: 12, md: 6 },
       },
-  { name: "requester", label: "Indent Name", type: "text", grid: { xs: 12, md: 6 } },
+      { name: "requester", label: "Indent Name", type: "text", grid: { xs: 12, md: 6 } },
       { name: "remarks", label: "Remarks", type: "textarea", grid: { xs: 12 }, minRows: 1, maxRows: 4 },
     ],
   }), [branchOptions, mode, expenseOptions, projectOptions]);
@@ -987,138 +1002,13 @@ export default function IndentTransactionPage() {
     return filledLineItems.every(lineIsComplete);
   }, [mode, filledLineItems, pageError, setupError]);
 
-  const handleLineFieldChange = React.useCallback(
-    (id: string, field: keyof EditableLineItem, rawValue: string) => {
-      if (mode === "view") return;
-
-      if (field === "itemGroup") {
-        setLineItems((prev) =>
-          prev.map((item) =>
-            item.id === id
-              ? {
-                  ...item,
-                  itemGroup: rawValue,
-                  item: "",
-                  itemMake: "",
-                  uom: "",
-                }
-              : item
-          )
-        );
-        if (rawValue) {
-          void ensureItemGroupData(rawValue);
-        }
-        return;
-      }
-
-      if (field === "item") {
-        let groupToFetch: string | null = null;
-        setLineItems((prev) =>
-          prev.map((item) => {
-            if (item.id !== id) return item;
-            const currentGroup = item.itemGroup;
-            if (rawValue && currentGroup && !itemGroupCache[currentGroup]) {
-              groupToFetch = currentGroup;
-            }
-            let nextUom = item.uom;
-            if (!rawValue) {
-              nextUom = "";
-            } else {
-              const cache = itemGroupCache[currentGroup ?? ""];
-              const options = cache?.uomsByItemId[rawValue] ?? [];
-              const defaultUom = cache?.items.find((opt) => opt.value === rawValue)?.defaultUomId;
-              if (nextUom && options.some((opt) => opt.value === nextUom)) {
-                // keep existing UOM
-              } else if (options.length) {
-                nextUom = options[0].value;
-              } else if (defaultUom) {
-                nextUom = defaultUom;
-              } else {
-                nextUom = "";
-              }
-            }
-            return {
-              ...item,
-              item: rawValue,
-              uom: nextUom,
-            };
-          })
-        );
-        if (groupToFetch) {
-          void ensureItemGroupData(groupToFetch);
-        }
-        return;
-      }
-
-      if (field === "quantity") {
-        const sanitized = rawValue.replace(/[^0-9.]/g, "");
-        setLineItems((prev) =>
-          prev.map((item) => (item.id === id ? { ...item, quantity: sanitized } : item))
-        );
-        return;
-      }
-
-      setLineItems((prev) =>
-        prev.map((item) =>
-          item.id === id ? { ...item, [field]: rawValue } as EditableLineItem : item
-        )
-      );
+  const handleBulkRemoveLines = React.useCallback(
+    (ids: string[]) => {
+      if (mode === "view" || !ids.length) return;
+      removeLineItems(ids);
     },
-    [mode, ensureItemGroupData, itemGroupCache]
+    [mode, removeLineItems]
   );
-
-  const handleRemoveLine = React.useCallback(
-    (id: string) => {
-      if (mode === "view") return;
-      setLineItems((prev) => {
-        const next = prev.filter((item) => item.id !== id);
-        if (!next.length) {
-          return [createBlankLine()];
-        }
-        return next;
-      });
-    },
-    [mode]
-  );
-
-  // Keep a single trailing blank row so the next line appears automatically during entry.
-  React.useEffect(() => {
-    if (mode === "view") return;
-
-    if (!lineItems.length) {
-      setLineItems([createBlankLine()]);
-      return;
-    }
-
-    const last = lineItems[lineItems.length - 1];
-    if (lineHasAnyData(last)) {
-      setLineItems((prev) => {
-        if (!prev.length) return [createBlankLine()];
-        const currentLast = prev[prev.length - 1];
-        if (!lineHasAnyData(currentLast)) return prev;
-        return [...prev, createBlankLine()];
-      });
-      return;
-    }
-
-    let trailingBlanks = 0;
-    for (let index = lineItems.length - 1; index >= 0; index -= 1) {
-      if (!lineHasAnyData(lineItems[index])) trailingBlanks += 1;
-      else break;
-    }
-
-    if (trailingBlanks > 1) {
-      setLineItems((prev) => {
-        let blanks = 0;
-        for (let index = prev.length - 1; index >= 0; index -= 1) {
-          if (!lineHasAnyData(prev[index])) blanks += 1;
-          else break;
-        }
-        if (blanks <= 1) return prev;
-        return prev.slice(0, prev.length - (blanks - 1));
-      });
-    }
-  }, [mode, lineItems, setLineItems]);
 
   const handleFormSubmit = React.useCallback(
     async (values: Record<string, unknown>) => {
@@ -1129,6 +1019,23 @@ export default function IndentTransactionPage() {
           variant: "destructive",
           title: "Line items incomplete",
           description: "Add at least one item and make sure quantity is greater than zero.",
+        });
+        return;
+      }
+
+      const indentType = String(values.indent_type ?? "").toLowerCase();
+      const expenseType = String(values.expense_type ?? "");
+      if (
+        indentType === "open" &&
+        expenseType &&
+        expenseType !== "3" &&
+        expenseType !== "5" &&
+        expenseType !== "6"
+      ) {
+        toast({
+          variant: "destructive",
+          title: "Select allowed expense type",
+          description: "Open indents only support expense types 3, 5, or 6.",
         });
         return;
       }
@@ -1227,28 +1134,81 @@ export default function IndentTransactionPage() {
 
   const expenseTypeLabel = React.useMemo(() => {
     const value = String(formValues.expense_type ?? "");
-    return expenseLabelMap.get(value) || indentDetails?.expenseType || "";
-  }, [formValues.expense_type, indentDetails?.expenseType, expenseLabelMap]);
+    const label = getExpenseLabel(value);
+    return label || indentDetails?.expenseType || "";
+  }, [formValues.expense_type, indentDetails?.expenseType, getExpenseLabel]);
 
   const projectLabel = React.useMemo(() => {
     const value = String(formValues.project ?? "");
-    return projectLabelMap.get(value) || indentDetails?.project || "";
-  }, [formValues.project, indentDetails?.project, projectLabelMap]);
+    const label = getProjectLabel(value);
+    return label || indentDetails?.project || "";
+  }, [formValues.project, indentDetails?.project, getProjectLabel]);
 
   const previewItems = React.useMemo(
     () =>
-      filledLineItems.map((item, index) => ({
-        srNo: index + 1,
-        department: labelResolvers.department(item.department),
-        itemGroup: labelResolvers.itemGroup(item.itemGroup),
-        item: labelResolvers.item(item.itemGroup, item.item),
-        itemMake: labelResolvers.itemMake(item.itemGroup, item.itemMake),
-        quantity: item.quantity || "-",
-        uom: labelResolvers.uom(item.itemGroup, item.item, item.uom),
-        remarks: item.remarks || "-",
-      })),
-    [filledLineItems, labelResolvers]
+      filledLineItems.map((item, index) => {
+        const groupId = item.itemGroup;
+        const itemId = item.item;
+        const cache = groupId ? itemGroupCache[groupId] : undefined;
+        
+        // Helper to extract code and name from a label
+        const extractCodeAndName = (label: string | undefined) => {
+          if (!label) return { code: undefined, name: undefined };
+          const separator = label.includes(" — ") ? " — " : label.includes(" - ") ? " - " : null;
+          if (separator) {
+            const parts = label.split(separator);
+            return {
+              code: parts[0]?.trim(),
+              name: parts[1]?.trim(),
+            };
+          }
+          return { code: label.trim(), name: undefined };
+        };
+
+        // Get item group code and name
+        const groupLabel = groupId ? labelResolvers.itemGroup(groupId) : undefined;
+        const groupData = extractCodeAndName(groupLabel);
+        const itemGroupCode = groupData.code;
+        const itemGroupName = groupData.name;
+
+        // Get item code and name
+        const itemLabel = groupId && itemId ? labelResolvers.item(groupId, itemId) : undefined;
+        const itemData = extractCodeAndName(itemLabel);
+        const itemCode = itemData.code;
+        const itemName = itemData.name;
+
+        return {
+          srNo: index + 1,
+          department: labelResolvers.department(item.department),
+          itemGroup: labelResolvers.itemGroup(item.itemGroup),
+          itemGroupCode: itemGroupCode,
+          itemGroupName: itemGroupName,
+          item: labelResolvers.item(item.itemGroup, item.item),
+          itemCode: itemCode,
+          itemName: itemName,
+          itemMake: labelResolvers.itemMake(item.itemGroup, item.itemMake),
+          quantity: item.quantity || "-",
+          uom: labelResolvers.uom(item.itemGroup, item.item, item.uom),
+          remarks: item.remarks || "-",
+        };
+      }),
+    [filledLineItems, labelResolvers, itemGroupCache]
   );
+
+  // Get company name from localStorage
+  const companyName = React.useMemo(() => {
+    if (typeof window === "undefined") return undefined;
+    try {
+      const storedCompany = localStorage.getItem("sidebar_selectedCompany");
+      if (storedCompany) {
+        const parsed = JSON.parse(storedCompany) as { co_name?: string; name?: string; company_name?: string } | null;
+        return parsed?.co_name || parsed?.name || parsed?.company_name || undefined;
+      }
+    } catch {
+      // Ignore errors
+    }
+    return undefined;
+  }, []);
 
   const previewHeader = {
     indentNo: (formValues.indent_no as string) || indentDetails?.indentNo,
@@ -1261,23 +1221,31 @@ export default function IndentTransactionPage() {
     status: indentDetails?.status,
     updatedBy: indentDetails?.updatedBy,
     updatedAt: indentDetails?.updatedAt,
+    companyName: companyName,
   };
 
-  const metadata = React.useMemo<TransactionMetadataItem[]>(() => {
-    const items: TransactionMetadataItem[] = [
-      { label: "Indent No", value: previewHeader.indentNo || "Pending" },
-      { label: "Indent Date", value: previewHeader.indentDate || "-" },
-    ];
-    if (previewHeader.status) items.push({ label: "Status", value: previewHeader.status });
-    if (previewHeader.updatedBy) items.push({ label: "Updated By", value: previewHeader.updatedBy });
-    if (previewHeader.updatedAt) {
-      items.push({
+  const { metadata } = useTransactionPreview({
+    header: previewHeader,
+    fields: [
+      { label: "Indent No", accessor: (header) => header.indentNo || "Pending" },
+      { label: "Indent Date", accessor: (header) => header.indentDate || "-" },
+      {
+        label: "Status",
+        accessor: (header) => header.status,
+        includeWhen: (header) => Boolean(header.status),
+      },
+      {
+        label: "Updated By",
+        accessor: (header) => header.updatedBy,
+        includeWhen: (header) => Boolean(header.updatedBy),
+      },
+      {
         label: "Updated At",
-        value: new Date(previewHeader.updatedAt).toLocaleString(),
-      });
-    }
-    return items;
-  }, [previewHeader.indentNo, previewHeader.indentDate, previewHeader.status, previewHeader.updatedBy, previewHeader.updatedAt]);
+        accessor: (header) => (header.updatedAt ? new Date(header.updatedAt).toLocaleString() : "-"),
+        includeWhen: (header) => Boolean(header.updatedAt),
+      },
+    ],
+  });
 
   const statusChip = React.useMemo(() => {
     if (!indentDetails?.status) return undefined;
@@ -1340,18 +1308,26 @@ export default function IndentTransactionPage() {
       statusChip={statusChip}
       primaryActions={primaryActions}
       secondaryActions={secondaryActions}
-  loading={loading || setupLoading}
+      loading={loading || setupLoading}
       alerts={alerts}
       preview={
         <IndentPreview
           header={previewHeader}
           items={previewItems}
           remarks={(formValues.remarks as string) || indentDetails?.remarks}
-          onPrint={() => toast({ title: "Print coming soon", description: "The printable version will be wired shortly." })}
-          onDownload={() => toast({ title: "Download coming soon" })}
-          onEmail={() => toast({ title: "Email coming soon" })}
         />
       }
+      lineItems={{
+        title: "Line Items",
+        subtitle: lineItemsSubtitle,
+        items: lineItems,
+        getItemId: getLineItemId,
+        canEdit,
+        columns: lineItemColumns,
+        onRemoveSelected: handleBulkRemoveLines,
+        placeholder: lineItemsPlaceholder,
+        selectionColumnWidth: "28px",
+      }}
     >
       <div className="space-y-6">
         <MuiForm
@@ -1364,20 +1340,6 @@ export default function IndentTransactionPage() {
           hideSubmit
           onSubmit={handleFormSubmit}
           onValuesChange={setFormValues}
-        />
-
-        <LineItemsEditor
-          items={lineItems}
-          mode={mode}
-          onFieldChange={handleLineFieldChange}
-          onRemove={handleRemoveLine}
-          departmentOptions={departmentOptions}
-          itemGroupOptions={itemGroupOptions}
-          getItemOptions={getItemOptions}
-          getMakeOptions={getMakeOptions}
-          getUomOptions={getUomOptions}
-          labelResolvers={labelResolvers}
-          loadingGroups={itemGroupLoading}
         />
 
         {mode !== "view" ? (

@@ -4,6 +4,7 @@ import React from "react";
 import { Box, Typography, Stack, Chip, LinearProgress, Divider, Paper } from "@mui/material";
 import { ArrowLeft } from "lucide-react";
 import { Button } from "./button";
+import { TransactionLineItems, type TransactionLineItemsProps } from "./transaction";
 
 export type TransactionAction = {
   label: string;
@@ -20,7 +21,7 @@ export type TransactionMetadataItem = {
   value?: React.ReactNode;
 };
 
-type TransactionWrapperProps = {
+type TransactionWrapperProps<TLineItem = unknown> = {
   title: string;
   subtitle?: string;
   statusChip?: { label: string; color?: "default" | "primary" | "secondary" | "success" | "error" | "warning" | "info" };
@@ -35,6 +36,7 @@ type TransactionWrapperProps = {
   footer?: React.ReactNode;
   className?: string;
   contentClassName?: string;
+  lineItems?: TransactionLineItemsProps<TLineItem>;
 };
 
 const renderActionButton = (action: TransactionAction, key: string, defaultVariant: TransactionAction["variant"]) => {
@@ -56,7 +58,7 @@ const renderActionButton = (action: TransactionAction, key: string, defaultVaria
   );
 };
 
-function TransactionWrapper({
+function TransactionWrapper<TLineItem = unknown>({
   title,
   subtitle,
   statusChip,
@@ -71,7 +73,8 @@ function TransactionWrapper({
   footer,
   className,
   contentClassName,
-}: TransactionWrapperProps) {
+  lineItems,
+}: TransactionWrapperProps<TLineItem>) {
   return (
     <Box className={`min-h-screen bg-gray-50 p-6 md:p-8 ${className ?? ""}`}>
       <Box className={`mx-auto ${contentClassName ?? "max-w-7xl"}`}>
@@ -102,7 +105,6 @@ function TransactionWrapper({
             </Stack>
             <Stack direction="row" spacing={1.5} flexWrap="wrap" justifyContent="flex-end">
               {secondaryActions?.map((action, index) => renderActionButton(action, `secondary-${index}`, action.variant ?? "ghost"))}
-              {primaryActions?.map((action, index) => renderActionButton(action, `primary-${index}`, action.variant ?? "default"))}
             </Stack>
           </Stack>
           {metadata && metadata.length ? (
@@ -129,6 +131,12 @@ function TransactionWrapper({
           <Box>
             {children}
           </Box>
+          {lineItems ? <TransactionLineItems {...lineItems} /> : null}
+          {primaryActions && primaryActions.length > 0 ? (
+            <Stack direction="row" spacing={1.5} flexWrap="wrap" justifyContent="flex-end" sx={{ pt: 2 }}>
+              {primaryActions.map((action, index) => renderActionButton(action, `primary-${index}`, action.variant ?? "default"))}
+            </Stack>
+          ) : null}
           {preview ? (
             <Paper variant="outlined" sx={{ p: 3, position: "relative" }}>
               <Typography variant="subtitle1" sx={{ fontWeight: 600, mb: 2 }}>

@@ -164,14 +164,90 @@ export async function createIndent(payload: CreateIndentRequest): Promise<Create
   return data ?? { message: "Indent created successfully." };
 }
 
-export async function getIndentById(id: string): Promise<IndentDetails> {
-  const data = { ...mockIndent, id, indentNo: mockIndent.indentNo.replace("123", id.padStart(3, "0")) };
-  return delay(data);
+export async function getIndentById(id: string, coId?: string): Promise<IndentDetails> {
+  // Get co_id from localStorage if not provided
+  let companyId = coId;
+  if (!companyId && typeof window !== "undefined") {
+    try {
+      const storedCompany = localStorage.getItem("sidebar_selectedCompany");
+      if (storedCompany) {
+        const parsed = JSON.parse(storedCompany) as { co_id?: string | number } | null;
+        if (parsed?.co_id) {
+          companyId = typeof parsed.co_id === "string" ? parsed.co_id : String(parsed.co_id);
+        }
+      }
+    } catch {
+      // Ignore errors
+    }
+  }
+
+  if (!companyId) {
+    throw new Error("Company ID (co_id) is required to fetch indent details");
+  }
+
+  const query = new URLSearchParams({
+    indent_id: id,
+    co_id: companyId,
+  });
+
+  const { data, error } = await fetchWithCookie<IndentDetails>(
+    `${apiRoutesPortalMasters.GET_INDENT_BY_ID}?${query.toString()}`,
+    "GET"
+  );
+
+  if (error) {
+    throw new Error(error);
+  }
+
+  if (!data) {
+    throw new Error("Empty response from indent API");
+  }
+
+  return data;
 }
 
-export async function updateIndent(payload: Partial<IndentDetails>): Promise<{ message: string }> {
-  console.info("updateIndent payload", payload);
-  return delay({ message: "Indent updated (stub)." });
+export async function updateIndent(payload: Partial<IndentDetails>): Promise<{ message: string; indent_id?: number }> {
+  if (!payload.id) {
+    throw new Error("Indent ID is required for update");
+  }
+
+  // Map frontend payload to backend format
+  const items = (payload.lines ?? []).map((line) => ({
+    item: line.item ?? "",
+    quantity: line.quantity ?? 0,
+    uom: line.uom ?? "",
+    item_make: line.itemMake ?? undefined,
+    department: line.department ?? undefined,
+    remarks: line.remarks ?? undefined,
+  }));
+
+  const updatePayload = {
+    id: payload.id,
+    branch: payload.branch ?? "",
+    indent_type: payload.indentType ?? "",
+    expense_type: payload.expenseType ?? "",
+    date: payload.indentDate ?? "",
+    project: payload.project ?? undefined,
+    name: payload.requester ?? undefined,
+    remarks: payload.remarks ?? undefined,
+    items: items,
+  };
+
+  const { data, error } = await fetchWithCookie<{ message: string; indent_id?: number }>(
+    apiRoutesPortalMasters.INDENT_UPDATE,
+    "PUT",
+    updatePayload
+  );
+
+  if (error) {
+    throw new Error(error);
+  }
+
+  if (!data) {
+    throw new Error("Empty response from update API");
+  }
+
+  return data;
 }
 
 export async function getIndentPrintable(id: string): Promise<IndentDetails> {

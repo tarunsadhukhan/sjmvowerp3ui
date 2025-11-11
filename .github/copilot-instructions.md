@@ -5,6 +5,7 @@
 - Design tokens first: rely on `src/theme/muiTheme.ts` + `tailwind.config.ts`; no ad-hoc hex/px in feature code.
 - Composable UI: page files under `src/app/**` must compose wrappers from `src/components/ui/**`, not raw MUI imports.
 - Page templates: reuse the 4 archetypes (Index, Transaction, Report, Dashboard) that existing dashboard pages follow.
+- Transaction flows must compose `TransactionWrapper` plus the shared transaction hooks (`useLineItems`, `useTransactionSetup`, etc.) from `src/components/ui/transaction`; never hand-roll layout or tables in page files.
 - Index archetype pages must compose `IndexWrapper` from `src/components/ui/IndexWrapper`, not ad-hoc headers or standalone `MuiDataGrid` usage.
 - Typed data contracts: share DTOs from `src/types/**`; pagination/filter shapes must match `apiRoutes*` expectations.
 - Mode-aware forms: one schema powers create/edit/view via `muiform` and the `mode` prop.
@@ -24,7 +25,7 @@
 
 ## Page archetypes
 - **Index (listing dashboards)** — Example: `src/app/dashboardportal/masters/itemMaster/page.tsx`. Pattern: compose `IndexWrapper` (which handles layout, debounced search, permissions, and `MuiDataGrid` wiring), fetch paged data, and feed wrapper props from local state.
-- **Transaction (form with detail grid)** — Example: `dashboardportal/procurement/indent/createIndent/page.tsx`. Combine `muiform` for header info with `muiDataGrid` for line items; maintain per-row caches and enforce `mode` prop.
+- **Transaction (form with detail grid)** — Example: `dashboardportal/procurement/indent/createIndent/page.tsx`. Wrap the page in `TransactionWrapper`, drive header fields through `MuiForm`, feed line items via the shared `TransactionLineItems` + `useLineItems`, and hydrate lookups with the transaction hooks (`useTransactionSetup`, `useDeferredOptionCache`, `SearchableSelect`). Keep `mode` logic centralized so view/edit/create remain in sync.
 - **Report (read-only filters + export)** — Example: `dashboardadmin/reporting/...` (check existing pages). Provide filter form on top, `muiDataGrid` or charts below, include CSV export via `src/utils/exportToCSV.ts`.
 - **Dashboard (cards + quick actions)** — Example: `src/app/dashboardadmin/page.tsx`. Compose KPI cards and summaries from `src/components/dashboard/**` wrapped in responsive grids.
 - When creating new pages, clone the closest archetype directory, retain layout/wrapper imports, and only adjust schema/columns/services.
@@ -35,6 +36,13 @@
 - Props should be typed with generics or interfaces in `src/types/ui` (create if missing) so the same component can serve admin/portal contexts.
 - Keep components stateless when possible; lift async/data logic into hooks in `src/hooks/**`.
 - When wrapping third-party widgets (charts, editors), centralise config defaults inside the wrapper and document usage with a Storybook story in `src/stories/**`.
+
+## Transaction wrapper checklist
+- Always render transaction pages inside `TransactionWrapper`; pass metadata, alerts, preview, and actions through its props instead of duplicating layout.
+- Feed line items via the `lineItems` prop using `TransactionLineItemsProps` from `src/components/ui/transaction`; rely on `useLineItems` to manage blank rows, selection, and removals.
+- Source tenant-aware IDs with `useSelectedCompanyCoId`, load header dropdowns through `useTransactionSetup`, and cache dependent options via `useDeferredOptionCache`.
+- Build label maps with `buildLabelMap`/`createLabelResolver` (`src/utils/labelUtils.ts`) so printable previews and tooltips stay consistent across modules.
+- Derive metadata for the wrapper preview using `useTransactionPreview`; keep date formatting and optional fields in the accessor callbacks.
 ## Forms & grids
 - `src/components/ui/muiform.tsx` renders schema-driven forms: fields accept `{ name, label, type, options, grid, required, disabled }`. Keep options as `{ label, value }` strings.
 - Setup endpoints often return multiple option arrays (see `dashboardportal/masters/itemMaster/createItem.tsx`); map them immediately to label/value pairs and memoise results.

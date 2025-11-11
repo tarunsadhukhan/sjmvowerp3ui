@@ -177,7 +177,9 @@ const apiRoutesPortalMasters = {
     GET_INDENT_SETUP_1: `${API_URL}/procurementIndent/get_indent_setup_1`,
     GET_INDENT_SETUP_2: `${API_URL}/procurementIndent/get_indent_setup_2`,
     INDENT_CREATE: `${API_URL}/procurementIndent/create_indent`,
-    INDENT_TABLE: `${API_URL}/procurementIndent/get_indent_table`
+    INDENT_UPDATE: `${API_URL}/procurementIndent/update_indent`,
+    INDENT_TABLE: `${API_URL}/procurementIndent/get_indent_table`,
+    GET_INDENT_BY_ID: `${API_URL}/procurementIndent/get_indent_by_id`
 
 
 };

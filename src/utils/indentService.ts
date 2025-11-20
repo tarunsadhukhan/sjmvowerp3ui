@@ -12,6 +12,18 @@ export type IndentLine = {
   remarks?: string;
 };
 
+export type ApprovalActionPermissions = {
+  canApprove?: boolean;
+  canReject?: boolean;
+  canOpen?: boolean;
+  canSendForApproval?: boolean;
+  canCancelDraft?: boolean;
+  canReopen?: boolean;
+  canViewApprovalLog?: boolean;
+  canClone?: boolean;
+  canSave?: boolean;
+};
+
 export type IndentDetails = {
   id: string;
   indentNo: string;
@@ -22,9 +34,13 @@ export type IndentDetails = {
   project?: string;
   requester?: string;
   status?: string;
+  statusId?: 1 | 3 | 4 | 5 | 6 | 20 | 21;
+  approvalLevel?: number | null;
+  maxApprovalLevel?: number | null;
   updatedBy?: string;
   updatedAt?: string;
   remarks?: string;
+  permissions?: ApprovalActionPermissions;
   lines: IndentLine[];
 };
 
@@ -164,7 +180,7 @@ export async function createIndent(payload: CreateIndentRequest): Promise<Create
   return data ?? { message: "Indent created successfully." };
 }
 
-export async function getIndentById(id: string, coId?: string): Promise<IndentDetails> {
+export async function getIndentById(id: string, coId?: string, menuId?: string): Promise<IndentDetails> {
   // Get co_id from localStorage if not provided
   let companyId = coId;
   if (!companyId && typeof window !== "undefined") {
@@ -189,6 +205,11 @@ export async function getIndentById(id: string, coId?: string): Promise<IndentDe
     indent_id: id,
     co_id: companyId,
   });
+  
+  // Add menu_id if provided (needed for permission calculation)
+  if (menuId) {
+    query.set("menu_id", menuId);
+  }
 
   const { data, error } = await fetchWithCookie<IndentDetails>(
     `${apiRoutesPortalMasters.GET_INDENT_BY_ID}?${query.toString()}`,
@@ -252,4 +273,238 @@ export async function updateIndent(payload: Partial<IndentDetails>): Promise<{ m
 
 export async function getIndentPrintable(id: string): Promise<IndentDetails> {
   return getIndentById(id);
+}
+
+export type ApprovalFlowResponse = {
+  menu_id: number;
+  branch_id: number;
+  approval_flow: Array<{
+    approval_mst_id: number;
+    menu_id: number;
+    user_id: number;
+    branch_id: number;
+    approval_level: number;
+    max_amount_single?: number | null;
+    day_max_amount?: number | null;
+    month_max_amount?: number | null;
+    user_name?: string;
+    menu_name?: string;
+  }>;
+};
+
+export type ApproveIndentResponse = {
+  status: string;
+  new_status_id: number;
+  new_approval_level: number;
+  message: string;
+};
+
+export async function getApprovalFlow(menuId: string, branchId: string): Promise<ApprovalFlowResponse> {
+  const query = new URLSearchParams({
+    menu_id: menuId,
+    branch_id: branchId,
+  });
+
+  const { data, error } = await fetchWithCookie<ApprovalFlowResponse>(
+    `${apiRoutesPortalMasters.GET_APPROVAL_FLOW}?${query.toString()}`,
+    "GET"
+  );
+
+  if (error) {
+    throw new Error(error);
+  }
+
+  if (!data) {
+    throw new Error("Empty approval flow response");
+  }
+
+  return data;
+}
+
+export async function approveIndent(
+  indentId: string,
+  branchId: string,
+  menuId: string,
+  approvalLevel?: number | null
+): Promise<ApproveIndentResponse> {
+  const payload = {
+    indent_id: indentId,
+    branch_id: branchId,
+    menu_id: menuId,
+    ...(approvalLevel != null && { approval_level: approvalLevel }),
+  };
+
+  const { data, error } = await fetchWithCookie<ApproveIndentResponse>(
+    apiRoutesPortalMasters.INDENT_APPROVE,
+    "POST",
+    payload
+  );
+
+  if (error) {
+    throw new Error(error);
+  }
+
+  if (!data) {
+    throw new Error("Empty response from approve API");
+  }
+
+  return data;
+}
+
+export async function approveIndentWithValue(
+  indentId: string,
+  branchId: string,
+  menuId: string,
+  amount: number
+): Promise<ApproveIndentResponse> {
+  const payload = {
+    indent_id: indentId,
+    branch_id: branchId,
+    menu_id: menuId,
+    amount: amount,
+  };
+
+  const { data, error } = await fetchWithCookie<ApproveIndentResponse>(
+    apiRoutesPortalMasters.INDENT_APPROVE_WITH_VALUE,
+    "POST",
+    payload
+  );
+
+  if (error) {
+    throw new Error(error);
+  }
+
+  if (!data) {
+    throw new Error("Empty response from approve with value API");
+  }
+
+  return data;
+}
+
+export type StatusChangeResponse = {
+  status: string;
+  new_status_id: number;
+  new_approval_level?: number;
+  message: string;
+};
+
+export async function openIndent(indentId: string, branchId: string, menuId: string): Promise<StatusChangeResponse> {
+  const payload = {
+    indent_id: indentId,
+    branch_id: branchId,
+    menu_id: menuId,
+  };
+
+  const { data, error } = await fetchWithCookie<StatusChangeResponse>(
+    apiRoutesPortalMasters.INDENT_OPEN,
+    "POST",
+    payload
+  );
+
+  if (error) {
+    throw new Error(error);
+  }
+
+  if (!data) {
+    throw new Error("Empty response from open API");
+  }
+
+  return data;
+}
+
+export async function cancelDraftIndent(indentId: string, branchId: string, menuId: string): Promise<StatusChangeResponse> {
+  const payload = {
+    indent_id: indentId,
+    branch_id: branchId,
+    menu_id: menuId,
+  };
+
+  const { data, error } = await fetchWithCookie<StatusChangeResponse>(
+    apiRoutesPortalMasters.INDENT_CANCEL_DRAFT,
+    "POST",
+    payload
+  );
+
+  if (error) {
+    throw new Error(error);
+  }
+
+  if (!data) {
+    throw new Error("Empty response from cancel draft API");
+  }
+
+  return data;
+}
+
+export async function reopenIndent(indentId: string, branchId: string, menuId: string): Promise<StatusChangeResponse> {
+  const payload = {
+    indent_id: indentId,
+    branch_id: branchId,
+    menu_id: menuId,
+  };
+
+  const { data, error } = await fetchWithCookie<StatusChangeResponse>(
+    apiRoutesPortalMasters.INDENT_REOPEN,
+    "POST",
+    payload
+  );
+
+  if (error) {
+    throw new Error(error);
+  }
+
+  if (!data) {
+    throw new Error("Empty response from reopen API");
+  }
+
+  return data;
+}
+
+export async function sendIndentForApproval(indentId: string, branchId: string, menuId: string): Promise<StatusChangeResponse> {
+  const payload = {
+    indent_id: indentId,
+    branch_id: branchId,
+    menu_id: menuId,
+  };
+
+  const { data, error } = await fetchWithCookie<StatusChangeResponse>(
+    apiRoutesPortalMasters.INDENT_SEND_FOR_APPROVAL,
+    "POST",
+    payload
+  );
+
+  if (error) {
+    throw new Error(error);
+  }
+
+  if (!data) {
+    throw new Error("Empty response from send for approval API");
+  }
+
+  return data;
+}
+
+export async function rejectIndent(indentId: string, branchId: string, menuId: string, reason: string): Promise<StatusChangeResponse> {
+  const payload = {
+    indent_id: indentId,
+    branch_id: branchId,
+    menu_id: menuId,
+    reason: reason,
+  };
+
+  const { data, error } = await fetchWithCookie<StatusChangeResponse>(
+    apiRoutesPortalMasters.INDENT_REJECT,
+    "POST",
+    payload
+  );
+
+  if (error) {
+    throw new Error(error);
+  }
+
+  if (!data) {
+    throw new Error("Empty response from reject API");
+  }
+
+  return data;
 }

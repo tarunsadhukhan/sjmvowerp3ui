@@ -179,7 +179,15 @@ const apiRoutesPortalMasters = {
     INDENT_CREATE: `${API_URL}/procurementIndent/create_indent`,
     INDENT_UPDATE: `${API_URL}/procurementIndent/update_indent`,
     INDENT_TABLE: `${API_URL}/procurementIndent/get_indent_table`,
-    GET_INDENT_BY_ID: `${API_URL}/procurementIndent/get_indent_by_id`
+    GET_INDENT_BY_ID: `${API_URL}/procurementIndent/get_indent_by_id`,
+    GET_APPROVAL_FLOW: `${API_URL}/procurementIndent/get_approval_flow`,
+    INDENT_APPROVE: `${API_URL}/procurementIndent/approve_indent`,
+    INDENT_APPROVE_WITH_VALUE: `${API_URL}/procurementIndent/approve_indent_with_value`,
+    INDENT_OPEN: `${API_URL}/procurementIndent/open_indent`,
+    INDENT_CANCEL_DRAFT: `${API_URL}/procurementIndent/cancel_draft_indent`,
+    INDENT_REOPEN: `${API_URL}/procurementIndent/reopen_indent`,
+    INDENT_SEND_FOR_APPROVAL: `${API_URL}/procurementIndent/send_indent_for_approval`,
+    INDENT_REJECT: `${API_URL}/procurementIndent/reject_indent`
 
 
 };

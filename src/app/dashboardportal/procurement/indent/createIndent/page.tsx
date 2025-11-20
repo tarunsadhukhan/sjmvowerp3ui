@@ -1,7 +1,7 @@
 "use client";
 
 import React from "react";
-import { useRouter, useSearchParams } from "next/navigation";
+import { useRouter, useSearchParams, usePathname } from "next/navigation";
 import TransactionWrapper, { type TransactionAction } from "@/components/ui/TransactionWrapper";
 import MuiForm, { type MuiFormMode, type Schema } from "@/components/ui/muiform";
 import IndentPreview from "../components/IndentPreview";
@@ -12,6 +12,10 @@ import {
   useTransactionPreview,
   useTransactionSetup,
   type TransactionLineColumn,
+  ApprovalActionsBar,
+  type ApprovalInfo,
+  type ApprovalActionPermissions,
+  type ApprovalStatusId,
 } from "@/components/ui/transaction";
 import { useBranchOptions } from "@/utils/branchUtils";
 import {
@@ -20,13 +24,20 @@ import {
   fetchIndentSetup2,
   getIndentById,
   updateIndent,
-  type IndentDetails,
+  approveIndent,
+  openIndent,
+  cancelDraftIndent,
+  reopenIndent,
+  sendIndentForApproval,
+  rejectIndent,
   type IndentLine,
 } from "@/utils/indentService";
+import type { IndentDetails } from "@/utils/indentService";
 import { Input } from "@/components/ui/input";
 import { toast } from "@/hooks/use-toast";
 import useSelectedCompanyCoId from "@/hooks/use-selected-company-coid";
 import { buildLabelMap, createLabelResolver } from "@/utils/labelUtils";
+import { useSidebarContext } from "@/components/dashboard/sidebarContext";
 
 type Option = { label: string; value: string };
 
@@ -279,14 +290,113 @@ const lineIsComplete = (line: EditableLineItem) => {
 export default function IndentTransactionPage() {
   const router = useRouter();
   const searchParams = useSearchParams();
+  const pathname = usePathname();
 
   const modeParam = (searchParams?.get("mode") || "create").toLowerCase();
   const requestedId = searchParams?.get("id") || "";
+  const menuIdFromUrl = searchParams?.get("menu_id") || "";
 
   const mode: MuiFormMode = modeParam === "edit" ? "edit" : modeParam === "view" ? "view" : "create";
-
+  
   const branchOptions = useBranchOptions();
   const { coId } = useSelectedCompanyCoId();
+  const { availableMenus, menuItems: sidebarMenuItems } = useSidebarContext();
+  
+  // Get menu_id from URL, or lookup from menuItems based on current path
+  const getMenuId = React.useCallback((): string => {
+    if (menuIdFromUrl) {
+      console.log("[getMenuId] Found in URL", menuIdFromUrl);
+      return menuIdFromUrl;
+    }
+    
+    // Try to get from sidebar context first (most reliable)
+    if (availableMenus && availableMenus.length > 0) {
+      const currentPath = pathname?.toLowerCase() || "";
+      console.log("[getMenuId] Checking availableMenus from context", { count: availableMenus.length, currentPath });
+      
+      // First, try exact path match
+      const matchingMenu = availableMenus.find(
+        (item) => {
+          if (!item.menu_path) return false;
+          const menuPath = item.menu_path.toLowerCase();
+          return currentPath === menuPath || currentPath.startsWith(menuPath + "/");
+        }
+      );
+      
+      if (matchingMenu?.menu_id) {
+        console.log("[getMenuId] Found by path match in context", { menu_id: matchingMenu.menu_id, menu_path: matchingMenu.menu_path });
+        return String(matchingMenu.menu_id);
+      }
+      
+      // Second, try to find by "indent" in path or name
+      const indentMenu = availableMenus.find(
+        (item) => {
+          const path = (item.menu_path || "").toLowerCase();
+          const name = (item.menu_name || "").toLowerCase();
+          return path.includes("indent") || path.includes("/procurement/indent") || name.includes("indent");
+        }
+      );
+      
+      if (indentMenu?.menu_id) {
+        console.log("[getMenuId] Found by indent keyword in context", { menu_id: indentMenu.menu_id, menu_path: indentMenu.menu_path, menu_name: indentMenu.menu_name });
+        return String(indentMenu.menu_id);
+      }
+    }
+    
+    // Fallback to sidebarMenuItems from context
+    if (sidebarMenuItems && sidebarMenuItems.length > 0) {
+      console.log("[getMenuId] Checking sidebarMenuItems from context", { count: sidebarMenuItems.length });
+      
+      const currentPath = pathname?.toLowerCase() || "";
+      const indentMenu = sidebarMenuItems.find(
+        (item) => {
+          const path = (item.menu_path || "").toLowerCase();
+          const name = (item.menu_name || "").toLowerCase();
+          return path.includes("indent") || path.includes("/procurement/indent") || name.includes("indent");
+        }
+      );
+      
+      if (indentMenu?.menu_id) {
+        console.log("[getMenuId] Found in sidebarMenuItems", { menu_id: indentMenu.menu_id });
+        return String(indentMenu.menu_id);
+      }
+    }
+    
+    // Try to get from localStorage menuItems by matching path
+    if (typeof window !== "undefined" && pathname) {
+      try {
+        const storedMenuItems = localStorage.getItem("sidebar_menuItems");
+        console.log("[getMenuId] Checking localStorage", { storedMenuItems: !!storedMenuItems, pathname });
+        
+        if (storedMenuItems) {
+          const menuItems = JSON.parse(storedMenuItems) as Array<{ menu_id?: number; menu_path?: string; menu_name?: string }> | null;
+          console.log("[getMenuId] Parsed menuItems", { count: Array.isArray(menuItems) ? menuItems.length : 0 });
+          
+          if (Array.isArray(menuItems) && menuItems.length > 0) {
+            const currentPath = pathname.toLowerCase();
+            const indentMenu = menuItems.find(
+              (item) => {
+                const path = (item.menu_path || "").toLowerCase();
+                const name = (item.menu_name || "").toLowerCase();
+                return path.includes("indent") || path.includes("/procurement/indent") || name.includes("indent");
+              }
+            );
+            
+            if (indentMenu?.menu_id) {
+              console.log("[getMenuId] Found in localStorage menuItems", { menu_id: indentMenu.menu_id });
+              return String(indentMenu.menu_id);
+            }
+          }
+        }
+      } catch (error) {
+        console.error("[getMenuId] Error parsing menuItems", error);
+      }
+    }
+    
+    // Final fallback: return empty string (will show error if needed)
+    console.warn("[getMenuId] Returning empty string - menu_id not found. Please add menu_id to URL or ensure menuItems are available.");
+    return "";
+  }, [menuIdFromUrl, pathname, availableMenus, sidebarMenuItems]);
   const [initialValues, setInitialValues] = React.useState<Record<string, unknown>>(buildDefaultFormValues);
   const [formValues, setFormValues] = React.useState<Record<string, unknown>>(buildDefaultFormValues);
   const { items: lineItems, setItems: setLineItems, replaceItems, removeItems: removeLineItems } = useLineItems<EditableLineItem>({
@@ -300,6 +410,104 @@ export default function IndentTransactionPage() {
   const [saving, setSaving] = React.useState(false);
   const [pageError, setPageError] = React.useState<string | null>(null);
   const [formKey, setFormKey] = React.useState(0);
+  const [approvalLoading, setApprovalLoading] = React.useState(false);
+
+  // Helper to map status name/label to status ID
+  const mapStatusToId = React.useCallback((status?: string | null): ApprovalStatusId | null => {
+    if (!status) return null;
+    const normalized = String(status).toLowerCase().trim();
+    // Map common status names to IDs
+    if (normalized.includes("draft") || normalized === "21") return 21;
+    if (normalized === "open" || normalized === "1") return 1;
+    if (normalized.includes("pending") || normalized.includes("approval") || normalized === "20") {
+      return 20;
+    }
+    if (normalized === "approved" || normalized === "3") return 3;
+    if (normalized === "rejected" || normalized === "4") return 4;
+    if (normalized === "closed" || normalized === "5") return 5;
+    if (normalized === "cancelled" || normalized === "6") return 6;
+    return null;
+  }, []);
+
+  // Helper to get approval permissions - use API permissions if available, otherwise fallback to status-based logic
+  const getApprovalPermissions = React.useCallback(
+    (statusId: ApprovalStatusId | null, mode: MuiFormMode, apiPermissions?: ApprovalActionPermissions): ApprovalActionPermissions => {
+      // If API provided permissions, use them (they already include all checks)
+      if (apiPermissions) {
+        return apiPermissions;
+      }
+      
+      // Fallback to status-based logic if API permissions not available
+      if (!statusId || mode === "view") {
+        // In view mode, allow read-only actions
+        return {
+          canViewApprovalLog: true,
+          canClone: true,
+        };
+      }
+
+      // Drafted (21)
+      if (statusId === 21) {
+        return {
+          canSave: true,
+          canOpen: true,
+          canCancelDraft: true,
+        };
+      }
+
+      // Cancelled (6)
+      if (statusId === 6) {
+        return {
+          canReopen: true,
+          canClone: true,
+          canViewApprovalLog: true,
+        };
+      }
+
+      // Open (1) - Show Approve button (backend will handle transition to Pending Approval first)
+      if (statusId === 1) {
+        return {
+          canSave: true,
+          canApprove: true,  // Changed from canSendForApproval to canApprove
+        };
+      }
+
+      // Pending Approval (20) - without API permissions, don't show approve/reject
+      // (they will be calculated by backend when menu_id is provided)
+      if (statusId === 20) {
+        return {
+          canViewApprovalLog: true,
+        };
+      }
+
+      // Approved (3)
+      if (statusId === 3) {
+        return {
+          canViewApprovalLog: true,
+          canClone: true,
+        };
+      }
+
+      // Rejected (4)
+      if (statusId === 4) {
+        return {
+          canReopen: true,
+          canClone: true,
+          canViewApprovalLog: true,
+        };
+      }
+
+      // Closed (5)
+      if (statusId === 5) {
+        return {
+          canViewApprovalLog: true,
+        };
+      }
+
+      return {};
+    },
+    []
+  );
 
   const { cache: itemGroupCache, loading: itemGroupLoading, ensure: ensureItemGroupData, reset: resetItemGroupCache } =
     useDeferredOptionCache<string, ItemGroupCacheEntry>({
@@ -384,8 +592,10 @@ export default function IndentTransactionPage() {
 
     let cancelled = false;
     setLoading(true);
+    
+    const menuId = getMenuId();
 
-    getIndentById(requestedId)
+    getIndentById(requestedId, coId, menuId || undefined)
       .then((detail) => {
         if (cancelled) return;
         setIndentDetails(detail);
@@ -1247,6 +1457,29 @@ export default function IndentTransactionPage() {
     ],
   });
 
+  // Approval info and permissions
+  const approvalStatusId = React.useMemo(() => {
+    return indentDetails?.statusId ?? mapStatusToId(indentDetails?.status) ?? 21;
+  }, [indentDetails?.statusId, indentDetails?.status, mapStatusToId]);
+
+  const approvalInfo: ApprovalInfo = React.useMemo(
+    () => ({
+      statusId: approvalStatusId,
+      statusLabel: indentDetails?.status ?? "Drafted",
+      approvalLevel: indentDetails?.approvalLevel ?? null,
+      maxApprovalLevel: indentDetails?.maxApprovalLevel ?? null,
+      isFinalLevel: indentDetails?.approvalLevel != null && indentDetails?.maxApprovalLevel != null
+        ? indentDetails.approvalLevel >= indentDetails.maxApprovalLevel
+        : false,
+    }),
+    [approvalStatusId, indentDetails]
+  );
+
+  const approvalPermissions = React.useMemo(
+    () => getApprovalPermissions(approvalStatusId, mode, indentDetails?.permissions),
+    [approvalStatusId, mode, indentDetails?.permissions, getApprovalPermissions]
+  );
+
   const statusChip = React.useMemo(() => {
     if (!indentDetails?.status) return undefined;
     const normalized = indentDetails.status.toLowerCase();
@@ -1267,6 +1500,379 @@ export default function IndentTransactionPage() {
       },
     ];
   }, [mode, pageError, setupError, saving, lineItemsValid, setupLoading]);
+
+  // Approval action handlers (placeholders - will call actual APIs)
+  const handleSave = React.useCallback(async () => {
+    if (!formRef.current?.submit) return;
+    await formRef.current.submit();
+  }, []);
+
+  const handleOpen = React.useCallback(async () => {
+    console.log("[handleOpen] Called", { requestedId, formValues, indentDetails });
+    
+    if (!requestedId) {
+      // For new indents, save first then open
+      if (formRef.current?.submit) {
+        await formRef.current.submit();
+      }
+      return;
+    }
+    
+    const branchId = String(formValues.branch ?? indentDetails?.branch ?? "");
+    const menuId = getMenuId();
+    
+    console.log("[handleOpen] Extracted values", { branchId, menuId, requestedId });
+    
+    if (!branchId) {
+      toast({
+        variant: "destructive",
+        title: "Branch required",
+        description: "Branch is required to open indent.",
+      });
+      return;
+    }
+    if (!menuId) {
+      toast({
+        variant: "destructive",
+        title: "Menu ID required",
+        description: "Menu ID is required. Please ensure menu_id is provided in the URL or configuration.",
+      });
+      return;
+    }
+    
+    console.log("[handleOpen] Calling API", { indentId: requestedId, branchId, menuId });
+    setApprovalLoading(true);
+    try {
+      const result = await openIndent(requestedId, branchId, menuId);
+      console.log("[handleOpen] API Response", result);
+      
+      toast({ 
+        title: result.message || "Indent opened successfully",
+        description: "Document number will be generated."
+      });
+      
+      // Refresh data to get updated status
+      const refreshMenuId = getMenuId();
+      const detail = await getIndentById(requestedId, coId, refreshMenuId || undefined);
+      setIndentDetails(detail);
+      
+      // Update form values if status changed
+      if (detail.status) {
+        setFormValues((prev) => ({ ...prev, status: detail.status }));
+      }
+    } catch (error) {
+      toast({
+        variant: "destructive",
+        title: "Unable to open indent",
+        description: error instanceof Error ? error.message : "Please try again.",
+      });
+    } finally {
+      setApprovalLoading(false);
+    }
+  }, [requestedId, formValues.branch, indentDetails?.branch, getMenuId, coId]);
+
+  const handleCancelDraft = React.useCallback(async () => {
+    if (!requestedId) return;
+    
+    const branchId = String(formValues.branch ?? indentDetails?.branch ?? "");
+    const menuId = getMenuId();
+    
+    if (!branchId) {
+      toast({
+        variant: "destructive",
+        title: "Branch required",
+        description: "Branch is required to cancel draft.",
+      });
+      return;
+    }
+    if (!menuId) {
+      toast({
+        variant: "destructive",
+        title: "Menu ID required",
+        description: "Menu ID is required. Please ensure menu_id is provided in the URL or configuration.",
+      });
+      return;
+    }
+    
+    setApprovalLoading(true);
+    try {
+      const result = await cancelDraftIndent(requestedId, branchId, menuId);
+      
+      toast({ 
+        title: result.message || "Draft cancelled successfully"
+      });
+      
+      // Refresh data to get updated status
+      const refreshMenuId = getMenuId();
+      const detail = await getIndentById(requestedId, coId, refreshMenuId || undefined);
+      setIndentDetails(detail);
+      
+      // Update form values if status changed
+      if (detail.status) {
+        setFormValues((prev) => ({ ...prev, status: detail.status }));
+      }
+    } catch (error) {
+      toast({
+        variant: "destructive",
+        title: "Unable to cancel draft",
+        description: error instanceof Error ? error.message : "Please try again.",
+      });
+    } finally {
+      setApprovalLoading(false);
+    }
+  }, [requestedId, formValues.branch, indentDetails?.branch, getMenuId, coId]);
+
+  const handleReopen = React.useCallback(async () => {
+    if (!requestedId) return;
+    
+    const branchId = String(formValues.branch ?? indentDetails?.branch ?? "");
+    const menuId = getMenuId();
+    
+    if (!branchId) {
+      toast({
+        variant: "destructive",
+        title: "Branch required",
+        description: "Branch is required to reopen indent.",
+      });
+      return;
+    }
+    if (!menuId) {
+      toast({
+        variant: "destructive",
+        title: "Menu ID required",
+        description: "Menu ID is required. Please ensure menu_id is provided in the URL or configuration.",
+      });
+      return;
+    }
+    
+    setApprovalLoading(true);
+    try {
+      const result = await reopenIndent(requestedId, branchId, menuId);
+      
+      toast({ 
+        title: result.message || "Indent reopened successfully"
+      });
+      
+      // Refresh data to get updated status
+      const refreshMenuId = getMenuId();
+      const detail = await getIndentById(requestedId, coId, refreshMenuId || undefined);
+      setIndentDetails(detail);
+      
+      // Update form values if status changed
+      if (detail.status) {
+        setFormValues((prev) => ({ ...prev, status: detail.status }));
+      }
+    } catch (error) {
+      toast({
+        variant: "destructive",
+        title: "Unable to reopen indent",
+        description: error instanceof Error ? error.message : "Please try again.",
+      });
+    } finally {
+      setApprovalLoading(false);
+    }
+  }, [requestedId, formValues.branch, indentDetails?.branch, getMenuId, coId]);
+
+  const handleSendForApproval = React.useCallback(async () => {
+    if (!requestedId) return;
+    
+    const branchId = String(formValues.branch ?? indentDetails?.branch ?? "");
+    const menuId = getMenuId();
+    
+    if (!branchId) {
+      toast({
+        variant: "destructive",
+        title: "Branch required",
+        description: "Branch is required to send for approval.",
+      });
+      return;
+    }
+    if (!menuId) {
+      toast({
+        variant: "destructive",
+        title: "Menu ID required",
+        description: "Menu ID is required. Please ensure menu_id is provided in the URL or configuration.",
+      });
+      return;
+    }
+    
+    setApprovalLoading(true);
+    try {
+      const result = await sendIndentForApproval(requestedId, branchId, menuId);
+      
+      toast({ 
+        title: result.message || "Sent for approval successfully",
+        description: result.new_approval_level 
+          ? `Approval level: ${result.new_approval_level}`
+          : undefined
+      });
+      
+      // Refresh data to get updated status and approval level
+      const refreshMenuId = getMenuId();
+      const detail = await getIndentById(requestedId, coId, refreshMenuId || undefined);
+      setIndentDetails(detail);
+      
+      // Update form values if status changed
+      if (detail.status) {
+        setFormValues((prev) => ({ ...prev, status: detail.status }));
+      }
+    } catch (error) {
+      toast({
+        variant: "destructive",
+        title: "Unable to send for approval",
+        description: error instanceof Error ? error.message : "Please try again.",
+      });
+    } finally {
+      setApprovalLoading(false);
+    }
+  }, [requestedId, formValues.branch, indentDetails?.branch, getMenuId, coId]);
+
+  const handleApprove = React.useCallback(async () => {
+    console.log("[handleApprove] Called", { requestedId, indentDetails, formValues });
+    
+    if (!requestedId || !indentDetails) {
+      console.log("[handleApprove] Early return - missing requestedId or indentDetails");
+      return;
+    }
+    
+    const branchId = String(formValues.branch ?? indentDetails?.branch ?? "");
+    const menuId = getMenuId();
+    
+    console.log("[handleApprove] Extracted values", { branchId, menuId, requestedId, approvalLevel: approvalInfo.approvalLevel });
+    
+    if (!branchId) {
+      toast({
+        variant: "destructive",
+        title: "Branch required",
+        description: "Branch is required for approval.",
+      });
+      return;
+    }
+    if (!menuId) {
+      toast({
+        variant: "destructive",
+        title: "Menu ID required",
+        description: "Menu ID is required for approval. Please ensure menu_id is provided in the URL or configuration.",
+      });
+      return;
+    }
+    
+    console.log("[handleApprove] Calling API", { indentId: requestedId, branchId, menuId, approvalLevel: approvalInfo.approvalLevel });
+    setApprovalLoading(true);
+    try {
+      const result = await approveIndent(
+        requestedId,
+        branchId,
+        menuId,
+        approvalInfo.approvalLevel ?? null
+      );
+      console.log("[handleApprove] API Response", result);
+      
+      toast({ 
+        title: result.message || "Indent approved successfully",
+        description: result.new_status_id === 3 
+          ? "Indent has been fully approved." 
+          : `Moved to approval level ${result.new_approval_level}.`
+      });
+      
+      // Refresh data to get updated status and approval level
+      const refreshMenuId = getMenuId();
+      const detail = await getIndentById(requestedId, coId, refreshMenuId || undefined);
+      setIndentDetails(detail);
+      
+      // Update form values if status changed
+      if (detail.status) {
+        setFormValues((prev) => ({ ...prev, status: detail.status }));
+      }
+    } catch (error) {
+      toast({
+        variant: "destructive",
+        title: "Unable to approve indent",
+        description: error instanceof Error ? error.message : "Please try again.",
+      });
+    } finally {
+      setApprovalLoading(false);
+    }
+  }, [requestedId, formValues.branch, indentDetails, approvalInfo.approvalLevel, getMenuId, coId]);
+
+  const handleReject = React.useCallback(async (reason: string) => {
+    if (!requestedId) return;
+    
+    const branchId = String(formValues.branch ?? indentDetails?.branch ?? "");
+    const menuId = getMenuId();
+    
+    if (!branchId) {
+      toast({
+        variant: "destructive",
+        title: "Branch required",
+        description: "Branch is required to reject indent.",
+      });
+      return;
+    }
+    if (!menuId) {
+      toast({
+        variant: "destructive",
+        title: "Menu ID required",
+        description: "Menu ID is required. Please ensure menu_id is provided in the URL or configuration.",
+      });
+      return;
+    }
+    
+    setApprovalLoading(true);
+    try {
+      const result = await rejectIndent(requestedId, branchId, menuId, reason);
+      
+      toast({ 
+        title: result.message || "Indent rejected successfully"
+      });
+      
+      // Refresh data to get updated status
+      const refreshMenuId = getMenuId();
+      const detail = await getIndentById(requestedId, coId, refreshMenuId || undefined);
+      setIndentDetails(detail);
+      
+      // Update form values if status changed
+      if (detail.status) {
+        setFormValues((prev) => ({ ...prev, status: detail.status }));
+      }
+    } catch (error) {
+      toast({
+        variant: "destructive",
+        title: "Unable to reject indent",
+        description: error instanceof Error ? error.message : "Please try again.",
+      });
+    } finally {
+      setApprovalLoading(false);
+    }
+  }, [requestedId, formValues.branch, indentDetails?.branch, getMenuId, coId]);
+
+  const handleViewApprovalLog = React.useCallback(() => {
+    if (!requestedId) return;
+    // API Query params that would be sent
+    const queryParams = {
+      indent_id: requestedId,
+      co_id: coId,
+    };
+    console.log("[View Approval Log] Query Params:", JSON.stringify(queryParams, null, 2));
+    console.log("[View Approval Log] Endpoint: GET /api/indent/approval-log");
+    
+    // TODO: Open approval log modal/page
+    toast({ title: "Opening approval log...", description: "Feature coming soon" });
+  }, [requestedId, coId]);
+
+  const handleClone = React.useCallback(() => {
+    if (!requestedId) return;
+    // API Payload that would be sent
+    const payload = {
+      indent_id: requestedId,
+      co_id: coId,
+    };
+    console.log("[Clone Indent] API Payload:", JSON.stringify(payload, null, 2));
+    console.log("[Clone Indent] Endpoint: POST /api/indent/clone");
+    
+    // TODO: Clone indent
+    toast({ title: "Cloning indent...", description: "Feature coming soon" });
+  }, [requestedId, coId]);
 
   const secondaryActions = React.useMemo<TransactionAction[] | undefined>(() => {
     if (!requestedId || pageError) return undefined;
@@ -1311,11 +1917,32 @@ export default function IndentTransactionPage() {
       loading={loading || setupLoading}
       alerts={alerts}
       preview={
-        <IndentPreview
-          header={previewHeader}
-          items={previewItems}
-          remarks={(formValues.remarks as string) || indentDetails?.remarks}
-        />
+        <div className="space-y-4">
+          {/* Approval Actions Bar */}
+          {mode !== "create" && indentDetails ? (
+            <ApprovalActionsBar
+              approvalInfo={approvalInfo}
+              permissions={approvalPermissions}
+              menuCode="INDENT"
+              onSave={approvalPermissions.canSave ? handleSave : undefined}
+              onOpen={approvalPermissions.canOpen ? handleOpen : undefined}
+              onCancelDraft={approvalPermissions.canCancelDraft ? handleCancelDraft : undefined}
+              onReopen={approvalPermissions.canReopen ? handleReopen : undefined}
+              onSendForApproval={approvalPermissions.canSendForApproval ? handleSendForApproval : undefined}
+              onApprove={approvalPermissions.canApprove ? handleApprove : undefined}
+              onReject={approvalPermissions.canReject ? handleReject : undefined}
+              onViewApprovalLog={approvalPermissions.canViewApprovalLog ? handleViewApprovalLog : undefined}
+              onClone={approvalPermissions.canClone ? handleClone : undefined}
+              loading={approvalLoading}
+              disabled={saving || loading || setupLoading}
+            />
+          ) : null}
+          <IndentPreview
+            header={previewHeader}
+            items={previewItems}
+            remarks={(formValues.remarks as string) || indentDetails?.remarks}
+          />
+        </div>
       }
       lineItems={{
         title: "Line Items",

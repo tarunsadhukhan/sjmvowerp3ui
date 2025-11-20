@@ -11,3 +11,4 @@ export * from "./useStatusChip";
 export * from "./useBranchFilteredOptions";
 export * from "./useConditionalOptions";
 export * from "./transactionFormHelpers";
+export * from "./ApprovalActionsBar";

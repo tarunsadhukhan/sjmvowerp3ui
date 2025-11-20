@@ -22,6 +22,7 @@ import {
 
 interface BranchFormData {
   branch_name: string;
+  branch_prefix: string;
   branch_address1: string;
   branch_address2: string;
   branch_zipcode: string;
@@ -59,6 +60,7 @@ const BranchForm: React.FC<BranchFormProps> = ({
   const methods = useForm<BranchFormData>({
     defaultValues: {
       branch_name: "",
+      branch_prefix: "",
       branch_address1: "",
       branch_address2: "",
       branch_zipcode: "",
@@ -322,6 +324,22 @@ const BranchForm: React.FC<BranchFormProps> = ({
                       console.log("No company selected yet");
                     }
                   }}
+                />
+              )}
+            />
+            
+            <Controller
+              name="branch_prefix"
+              control={control}
+              render={({ field, fieldState: { error } }) => (
+                <TextField
+                  {...field}
+                  label="Branch Prefix"
+                  fullWidth
+                  margin="normal"
+                  placeholder="Enter branch prefix"
+                  error={!!error}
+                  helperText={error?.message}
                 />
               )}
             />

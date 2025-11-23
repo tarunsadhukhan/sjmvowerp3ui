@@ -180,6 +180,7 @@ const apiRoutesPortalMasters = {
     INDENT_UPDATE: `${API_URL}/procurementIndent/update_indent`,
     INDENT_TABLE: `${API_URL}/procurementIndent/get_indent_table`,
     GET_INDENT_BY_ID: `${API_URL}/procurementIndent/get_indent_by_id`,
+    GET_ALL_APPROVED_INDENTS: `${API_URL}/procurementIndent/get_all_approved_indents`,
     GET_APPROVAL_FLOW: `${API_URL}/procurementIndent/get_approval_flow`,
     INDENT_APPROVE: `${API_URL}/procurementIndent/approve_indent`,
     INDENT_APPROVE_WITH_VALUE: `${API_URL}/procurementIndent/approve_indent_with_value`,
@@ -187,7 +188,21 @@ const apiRoutesPortalMasters = {
     INDENT_CANCEL_DRAFT: `${API_URL}/procurementIndent/cancel_draft_indent`,
     INDENT_REOPEN: `${API_URL}/procurementIndent/reopen_indent`,
     INDENT_SEND_FOR_APPROVAL: `${API_URL}/procurementIndent/send_indent_for_approval`,
-    INDENT_REJECT: `${API_URL}/procurementIndent/reject_indent`
+    INDENT_REJECT: `${API_URL}/procurementIndent/reject_indent`,
+    PO_TABLE: `${API_URL}/procurementPO/get_po_table`,
+    GET_PO_SETUP_1: `${API_URL}/procurementPO/get_po_setup_1`,
+    GET_PO_SETUP_2: `${API_URL}/procurementPO/get_po_setup_2`,
+    GET_INDENT_LINE_ITEMS: `${API_URL}/procurementPO/get_indent_line_items`,
+    GET_SUPPLIER_BRANCHES: `${API_URL}/procurementPO/get_supplier_branches`,
+    PO_CREATE: `${API_URL}/procurementPO/create_po`,
+    PO_UPDATE: `${API_URL}/procurementPO/update_po`,
+    GET_PO_BY_ID: `${API_URL}/procurementPO/get_po_by_id`,
+    PO_APPROVE: `${API_URL}/procurementPO/approve_po`,
+    PO_OPEN: `${API_URL}/procurementPO/open_po`,
+    PO_CANCEL_DRAFT: `${API_URL}/procurementPO/cancel_draft_po`,
+    PO_REOPEN: `${API_URL}/procurementPO/reopen_po`,
+    PO_SEND_FOR_APPROVAL: `${API_URL}/procurementPO/send_po_for_approval`,
+    PO_REJECT: `${API_URL}/procurementPO/reject_po`
 
 
 };

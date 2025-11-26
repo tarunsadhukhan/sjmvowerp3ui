@@ -38,7 +38,7 @@ export default function DashboardLayout({
 }: {
   children: ReactNode
 }) {
-  const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false)
+  const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(true)
 
   return (
     // <ProtectedRoute>
@@ -47,7 +47,9 @@ export default function DashboardLayout({
         <div className="flex h-screen bg-gray-100">
           <Sidebar 
             isCollapsed={isSidebarCollapsed} 
-            onToggle={() => setIsSidebarCollapsed(!isSidebarCollapsed)} 
+            onToggle={() => setIsSidebarCollapsed(!isSidebarCollapsed)}
+            onMouseEnter={() => setIsSidebarCollapsed(false)}
+            onMouseLeave={() => setIsSidebarCollapsed(true)}
           />
           <div className="flex-1 flex flex-col overflow-hidden">
             <main className="flex-1 overflow-x-hidden overflow-y-auto bg-white">

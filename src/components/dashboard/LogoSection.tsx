@@ -20,22 +20,22 @@ const LogoSection = ({ isCollapsed, onToggle }: LogoSectionProps) => {
 
   return (
         <div className="flex items-center justify-between p-4 border-b border-[#005580]">
-        <div className="logoBlock">
+        {!isCollapsed && (
+          <div className="logoBlock">
                 <Image src="/logo.png" 
                 height={60}
                 width={150}
                 alt="Logo"  onClick={handleChangeDashboard} />
               </div>
-         <button 
-            onClick={onToggle}
-            className="p-1 rounded-full hover:bg-[#005580] transition-colors"
-            aria-label={isCollapsed ? "Expand sidebar" : "Collapse sidebar"}
-          >
-            <ChevronLeft
-              size={20}
-              className={`transition-transform ${isCollapsed ? "transform rotate-180" : ""}`}
-            />
-          </button>
+        )}
+        {isCollapsed && (
+          <div className="logoBlock mx-auto">
+                <Image src="/logo.png" 
+                height={40}
+                width={40}
+                alt="Logo"  onClick={handleChangeDashboard} />
+              </div>
+        )}
         </div>
   );
 };

@@ -13,9 +13,11 @@ import { normalisePortalPath } from "@/utils/portalPermissions";
 interface SidebarProps {
   isCollapsed: boolean;
   onToggle: () => void;
+  onMouseEnter?: () => void;
+  onMouseLeave?: () => void;
 }
 
-export default function Sidebar({ isCollapsed, onToggle }: SidebarProps) {
+export default function Sidebar({ isCollapsed, onToggle, onMouseEnter, onMouseLeave }: SidebarProps) {
   const { compshow } = urlcheck();
   const {
     companies, setCompanies,
@@ -144,7 +146,11 @@ export default function Sidebar({ isCollapsed, onToggle }: SidebarProps) {
   };
 
   return (
-    <div className={`bg-[#006699] text-white transition-all duration-300 h-screen flex flex-col ${isCollapsed ? "w-20" : "w-56"}`}>
+    <div 
+      className={`bg-[#006699] text-white transition-all duration-300 h-screen flex flex-col ${isCollapsed ? "w-20" : "w-56"}`}
+      onMouseEnter={onMouseEnter}
+      onMouseLeave={onMouseLeave}
+    >
       <div className={`bg-[#006699] text-white transition-all duration-300 h-screen flex flex-col ${isCollapsed ? 'collapsed-class' : ''}`}>
         <LogoSection isCollapsed={isCollapsed} onToggle={onToggle} logoSrc="path/to/logo.png" title="Your Title" />
         <div className="px-4 py-3 border-b border-[#005580]">

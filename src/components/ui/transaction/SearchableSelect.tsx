@@ -50,6 +50,23 @@ export function SearchableSelect<TOption>({
       clearOnEscape={clearOnEscape}
       className={className}
       fullWidth={fullWidth}
+      disablePortal={false}
+      openOnFocus
+      blurOnSelect={false}
+      ListboxProps={{
+        onMouseDown: (e) => {
+          // Prevent the dropdown from closing when clicking inside (including scrollbar)
+          e.stopPropagation();
+        },
+      }}
+      slotProps={{
+        paper: {
+          onMouseDown: (e: React.MouseEvent<HTMLDivElement>) => {
+            // Prevent clicks on the paper (dropdown container) from closing
+            e.stopPropagation();
+          },
+        },
+      }}
       renderInput={(params) => (
         <TextField
           {...params}

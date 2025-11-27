@@ -137,7 +137,17 @@ function TransactionWrapper<TLineItem = unknown>({
               {primaryActions.map((action, index) => renderActionButton(action, `primary-${index}`, action.variant ?? "default"))}
             </Stack>
           ) : null}
-          {preview ? (
+        </Stack>
+
+        {footer ? (
+          <Box sx={{ mt: 4 }}>
+            <Divider sx={{ mb: 2 }} />
+            {footer}
+          </Box>
+        ) : null}
+
+        {preview ? (
+          <Box sx={{ mt: 4 }}>
             <Paper variant="outlined" sx={{ p: 3, position: "relative" }}>
               <Typography variant="subtitle1" sx={{ fontWeight: 600, mb: 2 }}>
                 Printable Preview
@@ -145,13 +155,6 @@ function TransactionWrapper<TLineItem = unknown>({
               <Divider sx={{ mb: 2 }} />
               {preview}
             </Paper>
-          ) : null}
-        </Stack>
-
-        {footer ? (
-          <Box sx={{ mt: 4 }}>
-            <Divider sx={{ mb: 2 }} />
-            {footer}
           </Box>
         ) : null}
       </Box>

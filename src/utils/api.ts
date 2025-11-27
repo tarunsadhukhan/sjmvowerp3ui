@@ -195,6 +195,7 @@ const apiRoutesPortalMasters = {
     GET_INDENT_LINE_ITEMS: `${API_URL}/procurementPO/get_indent_line_items`,
     GET_SUPPLIER_BRANCHES: `${API_URL}/procurementPO/get_supplier_branches`,
     PO_CREATE: `${API_URL}/procurementPO/create_po`,
+    PO_SAVE: `${API_URL}/procurementPO/save_po`,
     PO_UPDATE: `${API_URL}/procurementPO/update_po`,
     GET_PO_BY_ID: `${API_URL}/procurementPO/get_po_by_id`,
     PO_APPROVE: `${API_URL}/procurementPO/approve_po`,

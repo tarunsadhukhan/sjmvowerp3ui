@@ -1,4 +1,5 @@
 import React from "react";
+import type { MuiFormMode } from "@/components/ui/muiform";
 import { SearchableSelect } from "@/components/ui/transaction";
 import { Input } from "@/components/ui/input";
 import type { TransactionLineColumn } from "@/components/ui/transaction";
@@ -135,5 +136,15 @@ export const usePOLineItemColumns = ({
     ],
     [canEdit, itemGroupOptions, getItemOptions, getItemLabel, getUomOptions, onFieldChange],
   );
+
+/**
+ * Determines whether users should see the extra blank line that enables manual entry.
+ * Indent-mandatory configurations (`indent_required = 1`) hide the blank line entirely.
+ */
+export const shouldAllowManualLineEntry = (mode: MuiFormMode, indentRequired?: number | string | null): boolean => {
+  if (mode === "view") return false;
+  if (indentRequired == null) return true;
+  return Number(indentRequired) !== 1;
+};
 
 export default usePOLineItemColumns;

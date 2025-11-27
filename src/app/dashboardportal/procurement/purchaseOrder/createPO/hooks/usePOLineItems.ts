@@ -19,13 +19,14 @@ export const lineIsComplete = (line: EditableLineItem) => {
 
 type UsePOLineItemsParams = {
 	mode: MuiFormMode;
-	coConfig?: { india_gst?: number };
+	coConfig?: { india_gst?: number; indent_required?: number | string | null };
 	supplierBranchState?: string;
 	shippingState?: string;
 	itemGroupCache: Partial<Record<string, ItemGroupCacheEntry>>;
 	itemGroupLoading: Partial<Record<string, boolean>>;
 	ensureItemGroupData: (groupId: string) => void;
 	itemGroups: ReadonlyArray<ItemGroupRecord>;
+	allowManualEntry: boolean;
 };
 
 /**
@@ -40,6 +41,7 @@ export const usePOLineItems = ({
 	itemGroupLoading,
 	ensureItemGroupData,
 	itemGroups,
+	allowManualEntry,
 }: UsePOLineItemsParams) => {
 	const {
 		items: lineItems,
@@ -50,7 +52,7 @@ export const usePOLineItems = ({
 		createBlankItem: createBlankLine,
 		hasData: lineHasAnyData,
 		getItemId: (item) => item.id,
-		maintainTrailingBlank: mode !== "view",
+		maintainTrailingBlank: allowManualEntry,
 	});
 
 	const indentItemGroupInfoRef = React.useRef<Map<string, { code?: string; name?: string }>>(new Map());

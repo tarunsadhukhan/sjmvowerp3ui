@@ -61,6 +61,7 @@ export type PODetails = {
   shippingAddress: string;
   shippingState?: string;
   project?: string;
+  expenseType?: string;
   creditTerm?: number;
   deliveryTimeline?: number;
   contactPerson?: string;
@@ -68,6 +69,7 @@ export type PODetails = {
   footerNote?: string;
   internalNote?: string;
   termsConditions?: string;
+  taxType?: string;
   netAmount?: number;
   totalAmount?: number;
   advancePercentage?: number;
@@ -88,6 +90,7 @@ export type POSetup1Response = {
   suppliers?: Array<Record<string, unknown>>;
   projects?: Array<Record<string, unknown>>;
   expense_types?: Array<Record<string, unknown>>;
+  item_groups?: Array<Record<string, unknown>>;
   co_config?: Record<string, unknown>;
   branch_addresses?: Array<Record<string, unknown>>;
 };
@@ -144,6 +147,8 @@ export type CreatePORequest = {
     remarks?: string;
   }>;
 };
+
+export type SavePORequest = CreatePORequest & { id?: string };
 
 export type CreatePOResponse = {
   message?: string;
@@ -283,6 +288,20 @@ export async function createPO(payload: CreatePORequest): Promise<CreatePORespon
   }
 
   return data ?? { message: "PO created successfully." };
+}
+
+export async function savePO(payload: SavePORequest): Promise<CreatePOResponse> {
+  const { data, error } = await fetchWithCookie<CreatePOResponse>(
+    apiRoutesPortalMasters.PO_SAVE,
+    "POST",
+    payload
+  );
+
+  if (error) {
+    throw new Error(error);
+  }
+
+  return data ?? { message: "PO saved successfully." };
 }
 
 export async function getPOById(id: string, coId?: string, menuId?: string): Promise<PODetails> {

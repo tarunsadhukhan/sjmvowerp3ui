@@ -1,7 +1,7 @@
 import React from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "@/hooks/use-toast";
-import { createPO, updatePO, type PODetails } from "@/utils/poService";
+import { savePO, type SavePORequest } from "@/utils/poService";
 import type { BranchAddressRecord, EditableLineItem } from "../types/poTypes";
 
  type UsePOFormSubmissionParams = {
@@ -64,7 +64,7 @@ export const usePOFormSubmission = ({
         tax_amount: item.taxAmount,
       }));
 
-      const createPayload = {
+      const createPayload: SavePORequest = {
         branch: String(values.branch ?? ""),
         date: String(values.date ?? ""),
         supplier: String(values.supplier ?? ""),
@@ -88,50 +88,15 @@ export const usePOFormSubmission = ({
       setSaving(true);
       try {
         if (mode === "edit" && requestedId) {
-          const updatePayload: Partial<PODetails> = {
-            id: requestedId,
-            branch: createPayload.branch,
-            poDate: createPayload.date,
-            supplier: createPayload.supplier,
-            supplierBranch: createPayload.supplier_branch,
-            billingAddress: createPayload.billing_address,
-            shippingAddress: createPayload.shipping_address,
-            project: createPayload.project,
-            creditTerm: createPayload.credit_term,
-            deliveryTimeline: createPayload.delivery_timeline,
-            contactPerson: createPayload.contact_person,
-            contactNo: createPayload.contact_no,
-            footerNote: createPayload.footer_note,
-            internalNote: createPayload.internal_note,
-            termsConditions: createPayload.terms_conditions,
-            advancePercentage: createPayload.advance_percentage,
-            lines: filledLineItems.map((item) => ({
-              id: item.id,
-              item: item.item || undefined,
-              quantity: item.quantity ? Number(item.quantity) : undefined,
-              rate: item.rate ? Number(item.rate) : undefined,
-              uom: item.uom || undefined,
-              itemMake: item.itemMake || undefined,
-              discountMode: item.discountMode,
-              discountValue: item.discountValue || undefined,
-              remarks: item.remarks || undefined,
-              igstAmount: item.igstAmount,
-              cgstAmount: item.cgstAmount,
-              sgstAmount: item.sgstAmount,
-              taxAmount: item.taxAmount,
-            })),
-          };
+          createPayload.id = requestedId;
+        }
 
-          await updatePO(updatePayload);
-          toast({ title: "PO updated" });
-          router.replace(`/dashboardportal/procurement/purchaseOrder/createPO?mode=view&id=${encodeURIComponent(requestedId)}`);
-        } else {
-          const result = await createPO(createPayload);
-          toast({ title: result?.message ?? "PO created" });
-          const poId = result?.po_id ?? result?.poId;
-          if (poId) {
-            router.replace(`/dashboardportal/procurement/purchaseOrder/createPO?mode=view&id=${encodeURIComponent(String(poId))}`);
-          }
+        const result = await savePO(createPayload);
+        const poId = result?.po_id ?? result?.poId ?? requestedId;
+        toast({ title: result?.message ?? (mode === "edit" ? "PO updated" : "PO created") });
+
+        if (poId) {
+          router.replace(`/dashboardportal/procurement/purchaseOrder/createPO?mode=view&id=${encodeURIComponent(String(poId))}`);
         }
       } catch (error) {
         toast({ variant: "destructive", title: "Unable to save PO", description: error instanceof Error ? error.message : "Please try again." });

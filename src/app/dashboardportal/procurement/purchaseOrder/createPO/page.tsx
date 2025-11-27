@@ -2,11 +2,13 @@
 
 import React from "react";
 import { useRouter, useSearchParams, usePathname } from "next/navigation";
-import TransactionWrapper, { type TransactionAction } from "@/components/ui/TransactionWrapper";
+import TransactionWrapper from "@/components/ui/TransactionWrapper";
+import { Button } from "@/components/ui/button";
 import type { MuiFormMode } from "@/components/ui/muiform";
 import {
   useDeferredOptionCache,
   useTransactionSetup,
+  useTransactionPreview,
   type ApprovalInfo,
   type ApprovalActionPermissions,
   type ApprovalStatusId,
@@ -26,7 +28,8 @@ import { POHeaderForm } from "./components/POHeaderForm";
 import { POFooterForm } from "./components/POFooterForm";
 import { POTotalsDisplay } from "./components/POTotalsDisplay";
 import { POApprovalBar } from "./components/POApprovalBar";
-import { usePOLineItemColumns } from "./components/POLineItemsTable";
+import POPreview from "./components/POPreview";
+import { usePOLineItemColumns, shouldAllowManualLineEntry } from "./components/POLineItemsTable";
 import { usePOFormState } from "./hooks/usePOFormState";
 import { usePOAddresses } from "./hooks/usePOAddresses";
 import { usePOTaxCalculations } from "./hooks/usePOTaxCalculations";
@@ -202,6 +205,10 @@ export default function POTransactionPage() {
   const expenses = setupData?.expenses ?? EMPTY_EXPENSES;
   const itemGroups = setupData?.itemGroups ?? EMPTY_ITEM_GROUPS;
   const coConfig = setupData?.coConfig;
+  const manualEntryAllowed = React.useMemo(
+    () => shouldAllowManualLineEntry(mode, coConfig?.indent_required),
+    [mode, coConfig?.indent_required],
+  );
   const branchAddresses = setupData?.branchAddresses ?? EMPTY_BRANCH_ADDRESSES;
 
   const fetchItemGroupDetail = React.useCallback(async (itemGroupId: string) => {
@@ -255,11 +262,12 @@ export default function POTransactionPage() {
     itemGroupLoading,
     ensureItemGroupData,
     itemGroups,
+    allowManualEntry: manualEntryAllowed,
   });
 
   const initialLineSeededRef = React.useRef(false);
   React.useEffect(() => {
-    if (mode !== "create") {
+    if (!manualEntryAllowed || mode !== "create") {
       initialLineSeededRef.current = false;
       return;
     }
@@ -269,7 +277,7 @@ export default function POTransactionPage() {
       initialLineSeededRef.current = true;
       return [createBlankLine()];
     });
-  }, [mode, setLineItems, createBlankLine]);
+  }, [manualEntryAllowed, mode, setLineItems, createBlankLine]);
 
   const { taxType } = usePOTaxCalculations({
     mode,
@@ -283,6 +291,7 @@ export default function POTransactionPage() {
     const advancePercentage = Number(formValues.advance_percentage) || 0;
     return calculateTotals(filledLineItems, advancePercentage);
   }, [filledLineItems, formValues.advance_percentage]);
+
 
   const isLineItemsReady = React.useMemo(() => {
     if (mode === "view" || pageError || setupError) return true;
@@ -431,6 +440,171 @@ export default function POTransactionPage() {
     setPODetails,
   });
 
+  const companyName = React.useMemo(() => {
+    if (typeof window === "undefined") return undefined;
+    try {
+      const storedCompany = localStorage.getItem("sidebar_selectedCompany");
+      if (storedCompany) {
+        const parsed = JSON.parse(storedCompany) as { co_name?: string; name?: string; company_name?: string } | null;
+        return parsed?.co_name || parsed?.name || parsed?.company_name || undefined;
+      }
+    } catch {
+      // Ignore errors
+    }
+    return undefined;
+  }, []);
+
+  const getOptionLabel = React.useCallback(
+    (options: Array<{ label: string; value: string }>, value?: unknown) => {
+      if (value === null || typeof value === "undefined") return undefined;
+      const target = String(value);
+      return options.find((opt) => opt.value === target)?.label;
+    },
+    [],
+  );
+
+  const branchLabel = React.useMemo(() => {
+    const value = formValues.branch ?? poDetails?.branch;
+    return getOptionLabel(branchOptions, value) ?? (typeof value === "string" ? value : undefined);
+  }, [branchOptions, formValues.branch, poDetails?.branch, getOptionLabel]);
+
+  const supplierLabel = React.useMemo(() => {
+    const value = formValues.supplier ?? poDetails?.supplier;
+    return getOptionLabel(supplierOptions, value) ?? (typeof value === "string" ? value : undefined);
+  }, [formValues.supplier, poDetails?.supplier, supplierOptions, getOptionLabel]);
+
+  const supplierBranchLabel = React.useMemo(() => {
+    const value = formValues.supplier_branch ?? poDetails?.supplierBranch;
+    return getOptionLabel(supplierBranchOptions, value) ?? (typeof value === "string" ? value : undefined);
+  }, [formValues.supplier_branch, poDetails?.supplierBranch, supplierBranchOptions, getOptionLabel]);
+
+  const billingAddressLabel = React.useMemo(() => {
+    const value = formValues.billing_address ?? poDetails?.billingAddress;
+    return getOptionLabel(branchAddressOptions, value) ?? (typeof value === "string" ? value : undefined);
+  }, [formValues.billing_address, poDetails?.billingAddress, branchAddressOptions, getOptionLabel]);
+
+  const shippingAddressLabel = React.useMemo(() => {
+    const value = formValues.shipping_address ?? poDetails?.shippingAddress;
+    return getOptionLabel(branchAddressOptions, value) ?? (typeof value === "string" ? value : undefined);
+  }, [formValues.shipping_address, poDetails?.shippingAddress, branchAddressOptions, getOptionLabel]);
+
+  const projectLabel = React.useMemo(() => {
+    const value = formValues.project ?? poDetails?.project;
+    return getOptionLabel(projectOptions, value) ?? (typeof value === "string" ? value : undefined);
+  }, [formValues.project, poDetails?.project, projectOptions, getOptionLabel]);
+
+  const expenseLabel = React.useMemo(() => {
+    const value = formValues.expense_type ?? poDetails?.expenseType;
+    return getOptionLabel(expenseOptions, value) ?? (typeof value === "string" ? value : undefined);
+  }, [formValues.expense_type, poDetails?.expenseType, expenseOptions, getOptionLabel]);
+
+  const statusLabel = React.useMemo(() => statusChipProps?.label ?? poDetails?.status, [statusChipProps?.label, poDetails?.status]);
+
+  const previewHeader = React.useMemo(
+    () => ({
+      poNo: poDetails?.poNo,
+      poDate: (formValues.date as string) || poDetails?.poDate,
+      expectedDate,
+      branch: branchLabel,
+      supplier: supplierLabel,
+      supplierBranch: supplierBranchLabel,
+      billingAddress: billingAddressLabel,
+      shippingAddress: shippingAddressLabel,
+      project: projectLabel,
+      expenseType: expenseLabel,
+      companyName,
+      contactPerson: (formValues.contact_person as string) || poDetails?.contactPerson,
+      contactNo: (formValues.contact_no as string) || poDetails?.contactNo,
+      status: statusLabel,
+      updatedBy: poDetails?.updatedBy,
+      updatedAt: poDetails?.updatedAt,
+      taxType: (formValues.tax_type as string) || poDetails?.taxType,
+    }),
+    [
+      poDetails?.poNo,
+      poDetails?.poDate,
+      poDetails?.contactPerson,
+      poDetails?.contactNo,
+      poDetails?.updatedBy,
+      poDetails?.updatedAt,
+      poDetails?.taxType,
+      formValues.date,
+      formValues.contact_person,
+      formValues.contact_no,
+      formValues.tax_type,
+      branchLabel,
+      supplierLabel,
+      supplierBranchLabel,
+      billingAddressLabel,
+      shippingAddressLabel,
+      projectLabel,
+      expenseLabel,
+      companyName,
+      expectedDate,
+      statusLabel,
+    ],
+  );
+
+  const previewItems = React.useMemo(() => {
+    return filledLineItems.map((line, index) => {
+      const groupLabel = itemGroups.find((grp) => grp.id === line.itemGroup)?.label ?? line.itemGroup ?? "";
+      const itemLabel = getItemLabel(line.itemGroup, line.item, line.itemCode);
+      const uomOptions = getUomOptions(line.itemGroup, line.item);
+      const uomLabel = uomOptions.find((opt) => opt.value === line.uom)?.label ?? line.uom ?? "-";
+      const displayItem = (() => {
+        const parts = [groupLabel, itemLabel].filter(Boolean);
+        if (parts.length > 0) return parts.join(" — ");
+        return line.item || "-";
+      })();
+      return {
+        srNo: index + 1,
+        itemGroup: groupLabel || undefined,
+        item: displayItem,
+        quantity: line.quantity || "-",
+        uom: uomLabel,
+        rate: line.rate,
+        amount: typeof line.amount === "number" ? line.amount : line.amount ?? "",
+        remarks: line.remarks || "-",
+      };
+    });
+  }, [filledLineItems, getItemLabel, getUomOptions, itemGroups]);
+
+  const previewTotals = React.useMemo(
+    () => ({
+      netAmount: totals.netAmount,
+      totalIGST: totals.totalIGST,
+      totalCGST: totals.totalCGST,
+      totalSGST: totals.totalSGST,
+      totalAmount: totals.totalAmount,
+      advanceAmount: totals.advanceAmount,
+      advancePercentage:
+        formValues.advance_percentage != null && formValues.advance_percentage !== ""
+          ? Number(formValues.advance_percentage)
+          : poDetails?.advancePercentage,
+    }),
+    [totals, formValues.advance_percentage, poDetails?.advancePercentage],
+  );
+
+  const previewRemarks = React.useMemo(() => {
+    return (
+      (formValues.internal_note as string) ||
+      poDetails?.internalNote ||
+      (formValues.footer_note as string) ||
+      poDetails?.footerNote ||
+      ""
+    );
+  }, [formValues.internal_note, formValues.footer_note, poDetails?.internalNote, poDetails?.footerNote]);
+
+  const { metadata } = useTransactionPreview({
+    header: previewHeader,
+    fields: [
+      { label: "PO No", accessor: (header) => header.poNo || "Pending" },
+      { label: "PO Date", accessor: (header) => header.poDate || "-" },
+      { label: "Supplier", accessor: (header) => header.supplier || "-" },
+      { label: "Status", accessor: (header) => header.status || "-", includeWhen: (header) => Boolean(header.status) },
+    ],
+  });
+
   const {
     saving,
     handleFormSubmit,
@@ -444,23 +618,11 @@ export default function POTransactionPage() {
     requestedId,
   });
 
-  const handleSave = React.useCallback(async () => {
+  const primaryActionLabel = mode === "create" ? "Create" : "Save";
+  const handleSaveClick = React.useCallback(() => {
     if (!formRef.current?.submit) return;
-    await formRef.current.submit();
+    void formRef.current.submit();
   }, [formRef]);
-
-  const primaryActions: TransactionAction[] = React.useMemo(
-    () => [
-      {
-        label: "Save",
-        onClick: handleSave,
-        disabled: saving || setupLoading || !isLineItemsReady,
-        loading: saving,
-        hidden: mode === "view" || !approvalPermissions.canSave,
-      },
-    ],
-    [handleSave, saving, setupLoading, isLineItemsReady, mode, approvalPermissions.canSave]
-  );
 
   const pageTitle = React.useMemo(() => {
     if (mode === "create") return "Create Purchase Order";
@@ -474,17 +636,27 @@ export default function POTransactionPage() {
     <TransactionWrapper
       title={pageTitle}
       subtitle={mode === "create" ? "Create a new purchase order" : mode === "edit" ? "Edit purchase order" : "View purchase order details"}
+      metadata={metadata}
       statusChip={statusChipProps}
       backAction={{ onClick: () => router.push("/dashboardportal/procurement/purchaseOrder") }}
-      primaryActions={primaryActions}
       loading={loading || setupLoading}
       alerts={pageError ? <div role="alert" aria-live="assertive" className="text-red-600">{pageError}</div> : undefined}
+      preview={
+        <POPreview
+          header={previewHeader}
+          items={previewItems}
+          totals={previewTotals}
+          remarks={previewRemarks}
+        />
+      }
       lineItems={{
         items: lineItems,
         getItemId: (item) => item.id,
         canEdit,
         columns: lineItemColumns,
-        placeholder: "Add line items by selecting from indent or manually entering items",
+        placeholder: manualEntryAllowed
+          ? "Add line items by selecting from indent or manually entering items"
+          : "Select items from an indent to populate the PO line items",
         selectionColumnWidth: "28px",
       }}
       footer={
@@ -509,6 +681,13 @@ export default function POTransactionPage() {
             onReopen={handleReopen}
             onSendForApproval={handleSendForApproval}
           />
+          {mode !== "view" ? (
+            <div className="flex justify-end pt-2">
+              <Button type="button" onClick={handleSaveClick} disabled={saving || setupLoading || !isLineItemsReady}>
+                {saving ? "Processing..." : primaryActionLabel}
+              </Button>
+            </div>
+          ) : null}
         </div>
       }
     >

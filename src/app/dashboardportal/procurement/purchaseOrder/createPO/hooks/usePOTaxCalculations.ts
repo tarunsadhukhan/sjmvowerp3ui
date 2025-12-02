@@ -32,6 +32,12 @@ export const usePOTaxCalculations = ({
 	React.useEffect(() => {
 		if (mode === "view") return;
 
+		// Only recalculate when GST is enabled and both states are known.
+		// This prevents wiping out existing tax amounts (e.g. immediately
+		// after loading an existing PO in edit mode) before address/state
+		// information has been resolved from setup APIs.
+		if (!coConfig?.india_gst || !supplierBranchState || !shippingState) return;
+
 		setLineItems((prev) =>
 			prev.map((item) => {
 				const qty = Number(item.quantity) || 0;
@@ -39,7 +45,13 @@ export const usePOTaxCalculations = ({
 				const discountAmount = item.discountAmount || 0;
 				const amount = Math.max(0, qty * rate - discountAmount);
 
-				const tax = calculateLineTax(amount, item.taxPercentage || 0, supplierBranchState, shippingState, !!coConfig?.india_gst);
+				const tax = calculateLineTax(
+					amount,
+					item.taxPercentage || 0,
+					supplierBranchState,
+					shippingState,
+					!!coConfig?.india_gst,
+				);
 
 				if (
 					item.igstAmount === tax.igst &&

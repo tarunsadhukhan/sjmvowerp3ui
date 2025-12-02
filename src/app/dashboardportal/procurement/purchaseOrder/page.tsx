@@ -11,6 +11,7 @@ import { useRouter } from "next/navigation";
 type PORow = {
 	id: string | number;
 	po_no: string;
+	branch_id?: string | number;
 	po_date: string;
 	po_date_raw?: string;
 	supplier_name: string;
@@ -166,6 +167,7 @@ export default function PurchaseOrderIndexPage() {
 				return {
 					id: row.po_id ?? row.id ?? row.poId ?? `${row.po_no ?? "po"}-${Math.random().toString(36).slice(2, 8)}`,
 					po_no: row.po_no ?? row.poNo ?? "",
+					branch_id: row.branch_id ?? row.branchId ?? row.branch ?? undefined,
 					po_date_raw: normalizedRaw,
 					po_date: formatDate(normalizedRaw),
 					supplier_name: row.supplier_name ?? row.supplierName ?? row.supp_name ?? "",
@@ -211,7 +213,8 @@ export default function PurchaseOrderIndexPage() {
 		(row: PORow) => {
 			const id = row.id ?? row.po_no;
 			if (!id) return;
-			router.push(`/dashboardportal/procurement/purchaseOrder/createPO?mode=view&id=${encodeURIComponent(String(id))}`);
+			const branchId = row.branch_id ? `&branch_id=${encodeURIComponent(String(row.branch_id))}` : "";
+			router.push(`/dashboardportal/procurement/purchaseOrder/createPO?mode=view&id=${encodeURIComponent(String(id))}${branchId}`);
 		},
 		[router]
 	);
@@ -220,7 +223,8 @@ export default function PurchaseOrderIndexPage() {
 		(row: PORow) => {
 			const id = row.id ?? row.po_no;
 			if (!id) return;
-			router.push(`/dashboardportal/procurement/purchaseOrder/createPO?mode=edit&id=${encodeURIComponent(String(id))}`);
+			const branchId = row.branch_id ? `&branch_id=${encodeURIComponent(String(row.branch_id))}` : "";
+			router.push(`/dashboardportal/procurement/purchaseOrder/createPO?mode=edit&id=${encodeURIComponent(String(id))}${branchId}`);
 		},
 		[router]
 	);

@@ -61,7 +61,7 @@ export const usePOLineItems = ({
 		id: line.id ? String(line.id) : generateLineId(),
 		indentDtlId: line.indentDtlId,
 		indentNo: line.indentNo,
-		itemGroup: "",
+		itemGroup: line.itemGroup ? String(line.itemGroup) : "",
 		item: line.item ?? "",
 		itemCode: line.itemCode,
 		itemMake: line.itemMake ?? "",

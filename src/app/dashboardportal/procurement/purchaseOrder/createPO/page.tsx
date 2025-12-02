@@ -17,6 +17,7 @@ import { useBranchOptions } from "@/utils/branchUtils";
 import {
   fetchPOSetup1,
   fetchPOSetup2,
+  getPOById,
   type POLine,
   type PODetails,
 } from "@/utils/poService";
@@ -79,6 +80,7 @@ export default function POTransactionPage() {
 
   const modeParam = (searchParams?.get("mode") || "create").toLowerCase();
   const requestedId = searchParams?.get("id") || "";
+  const branchIdFromUrl = searchParams?.get("branch_id") || "";
   const menuIdFromUrl = searchParams?.get("menu_id") || "";
 
   const mode: MuiFormMode = modeParam === "edit" ? "edit" : modeParam === "view" ? "view" : "create";
@@ -139,8 +141,17 @@ export default function POTransactionPage() {
   const [pageError, setPageError] = React.useState<string | null>(null);
   const [indentDialogOpen, setIndentDialogOpen] = React.useState(false);
 
-  // Memoize branch value to prevent unnecessary recalculations
-  const branchValue = React.useMemo(() => String(formValues.branch ?? ""), [formValues.branch]);
+  // Memoize branch value to prevent unnecessary recalculations.
+  // In edit/view mode, we prefer the branch id passed from the index page
+  // (branch_id query param) when the form has not yet been populated.
+  const branchValue = React.useMemo(
+    () => {
+      const fromForm = formValues.branch != null ? String(formValues.branch) : "";
+      if (fromForm) return fromForm;
+      return branchIdFromUrl ? String(branchIdFromUrl) : "";
+    },
+    [formValues.branch, branchIdFromUrl],
+  );
 
   // Memoize branch ID for setup - only changes when branch value actually changes
   const branchIdForSetup = React.useMemo(() => {
@@ -174,8 +185,6 @@ export default function POTransactionPage() {
   const memoizedMapPOSetupResponse = React.useCallback(mapPOSetupResponse, []);
   const memoizedFetchPOSetup1 = React.useCallback(fetchPOSetup1, []);
 
-  // Only enable the hook when BOTH coId AND branchIdForSetup are available
-  // This ensures the API is only called once branch is selected, not on page load
   const setupEnabled = React.useMemo(() => {
     return Boolean(coId && branchIdForSetup);
   }, [coId, branchIdForSetup]);
@@ -212,17 +221,17 @@ export default function POTransactionPage() {
   const branchAddresses = setupData?.branchAddresses ?? EMPTY_BRANCH_ADDRESSES;
 
   const fetchItemGroupDetail = React.useCallback(async (itemGroupId: string) => {
-    if (!itemGroupId || !/^\d+$/.test(itemGroupId)) {
+        if (!itemGroupId || !/^\d+$/.test(itemGroupId)) {
       throw new Error(`Invalid item group identifier: ${itemGroupId}`);
-    }
-    const response = await fetchPOSetup2(itemGroupId);
-    return mapItemGroupDetailResponse(response);
+        }
+        const response = await fetchPOSetup2(itemGroupId);
+        return mapItemGroupDetailResponse(response);
   }, []);
 
   const handleItemGroupError = React.useCallback((error: unknown) => {
     const description = error instanceof Error ? error.message : "Please try again.";
-    toast({
-      variant: "destructive",
+        toast({
+          variant: "destructive",
       title: "Unable to load item options",
       description,
     });
@@ -293,6 +302,124 @@ export default function POTransactionPage() {
   }, [filledLineItems, formValues.advance_percentage]);
 
 
+  const mapDetailsToFormValues = React.useCallback(
+    (details: PODetails): Record<string, unknown> => {
+      const base = buildDefaultFormValues();
+      const toStringValue = (value: unknown) => {
+        if (value === null || value === undefined) return "";
+        return typeof value === "string" ? value : String(value);
+      };
+      const normalizeDate = (raw?: string) => {
+        if (!raw) return "";
+        return raw.split("T")[0] || raw;
+      };
+
+      return {
+        ...base,
+        branch: toStringValue(details.branch ?? base.branch),
+        date: normalizeDate(details.poDate) || toStringValue(base.date),
+        supplier: toStringValue(details.supplier ?? base.supplier),
+        supplier_branch: toStringValue(details.supplierBranch ?? base.supplier_branch),
+        billing_address: toStringValue(details.billingAddress ?? base.billing_address),
+        shipping_address: toStringValue(details.shippingAddress ?? base.shipping_address),
+        credit_term:
+          details.creditTerm !== undefined && details.creditTerm !== null
+            ? String(details.creditTerm)
+            : toStringValue(base.credit_term),
+        delivery_timeline:
+          details.deliveryTimeline !== undefined && details.deliveryTimeline !== null
+            ? String(details.deliveryTimeline)
+            : toStringValue(base.delivery_timeline),
+        project: toStringValue(details.project ?? base.project),
+        expense_type: toStringValue(details.expenseType ?? base.expense_type),
+        contact_person: toStringValue(details.contactPerson ?? base.contact_person),
+        contact_no: toStringValue(details.contactNo ?? base.contact_no),
+        footer_note: toStringValue(details.footerNote ?? base.footer_note),
+        internal_note: toStringValue(details.internalNote ?? base.internal_note),
+        terms_conditions: toStringValue(details.termsConditions ?? base.terms_conditions),
+        advance_percentage:
+          details.advancePercentage !== undefined && details.advancePercentage !== null
+            ? String(details.advancePercentage)
+            : toStringValue(base.advance_percentage),
+        billing_state: toStringValue(details.billingState ?? base.billing_state),
+        shipping_state: toStringValue(details.shippingState ?? base.shipping_state),
+        tax_type: toStringValue(details.taxType ?? base.tax_type),
+      };
+    },
+    [buildDefaultFormValues],
+  );
+
+  React.useEffect(() => {
+    if (mode === "create") {
+      setPODetails(null);
+      setLoading(false);
+      return;
+    }
+
+    if (!requestedId) {
+      setPageError("Purchase order id is required to load details.");
+      setLoading(false);
+      return;
+    }
+
+    let cancelled = false;
+    const fetchDetails = async () => {
+    setLoading(true);
+      try {
+        const details = await getPOById(requestedId, coId || undefined, getMenuId() || undefined);
+        if (cancelled) return;
+
+        setPODetails(details);
+        const nextValues = mapDetailsToFormValues(details);
+        setInitialValues(nextValues);
+        setFormValues(nextValues);
+        bumpFormKey();
+
+        const normalizedLines = (details.lines ?? []).map((line) => mapLineToEditable(line));
+        replaceItems(normalizedLines);
+
+        const uniqueGroups = new Set(
+          (details.lines ?? [])
+            .map((line) => (line.itemGroup ? String(line.itemGroup) : ""))
+            .filter((groupId) => groupId && /^\d+$/.test(groupId)),
+        );
+        uniqueGroups.forEach((groupId) => ensureItemGroupData(groupId));
+        setPageError(null);
+      } catch (error) {
+        if (cancelled) return;
+        const description = error instanceof Error ? error.message : "Unable to load purchase order.";
+        setPageError(description);
+        toast({
+          variant: "destructive",
+          title: "Unable to load purchase order",
+          description,
+        });
+      } finally {
+        if (!cancelled) {
+          setLoading(false);
+        }
+      }
+    };
+
+    void fetchDetails();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [
+    mode,
+    requestedId,
+    coId,
+    getMenuId,
+    mapDetailsToFormValues,
+    setInitialValues,
+    setFormValues,
+    bumpFormKey,
+    replaceItems,
+    mapLineToEditable,
+    ensureItemGroupData,
+  ]);
+
   const isLineItemsReady = React.useMemo(() => {
     if (mode === "view" || pageError || setupError) return true;
     return lineItemsValid;
@@ -335,7 +462,7 @@ export default function POTransactionPage() {
   const handleIndentItemsConfirm = React.useCallback(
     (selectedItems: IndentLineItem[]) => {
       handleIndentItemsFromHook(selectedItems);
-      setIndentDialogOpen(false);
+    setIndentDialogOpen(false);
     },
     [handleIndentItemsFromHook, setIndentDialogOpen],
   );
@@ -366,7 +493,7 @@ export default function POTransactionPage() {
     expenseOptions,
     coConfig,
     billingState,
-    shippingState,
+              shippingState,
     taxType,
     expectedDate,
     mode,
@@ -376,7 +503,7 @@ export default function POTransactionPage() {
   const footerSchema = usePOFooterSchema({
     coConfig,
     billingState,
-    shippingState,
+              shippingState,
     taxType,
   });
 
@@ -671,15 +798,15 @@ export default function POTransactionPage() {
           />
           <POTotalsDisplay totals={totals} showGSTBreakdown={Boolean(coConfig?.india_gst)} />
           <POApprovalBar
-            approvalInfo={approvalInfo}
-            permissions={approvalPermissions}
+              approvalInfo={approvalInfo}
+              permissions={approvalPermissions}
             loading={approvalLoading}
-            onApprove={handleApprove}
-            onReject={handleReject}
-            onOpen={handleOpen}
-            onCancelDraft={handleCancelDraft}
-            onReopen={handleReopen}
-            onSendForApproval={handleSendForApproval}
+              onApprove={handleApprove}
+              onReject={handleReject}
+              onOpen={handleOpen}
+              onCancelDraft={handleCancelDraft}
+              onReopen={handleReopen}
+              onSendForApproval={handleSendForApproval}
           />
           {mode !== "view" ? (
             <div className="flex justify-end pt-2">
@@ -694,11 +821,11 @@ export default function POTransactionPage() {
       <POHeaderForm
         schema={headerSchema}
         formKey={formKey}
-        initialValues={initialValues}
-        mode={mode}
+          initialValues={initialValues}
+          mode={mode}
         formRef={formRef}
-        onSubmit={handleFormSubmit}
-        onValuesChange={handleMainFormValuesChange}
+          onSubmit={handleFormSubmit}
+          onValuesChange={handleMainFormValuesChange}
         showIndentButton={mode !== "view"}
         onIndentSelect={handleIndentSelect}
         indentButtonDisabled={!isMounted || !selectedBranches || selectedBranches.length === 0}

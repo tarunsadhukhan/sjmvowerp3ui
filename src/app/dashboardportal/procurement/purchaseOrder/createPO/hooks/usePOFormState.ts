@@ -4,6 +4,8 @@ import type { MuiFormMode } from "@/components/ui/muiform";
 type UsePOFormStateParams = {
 	mode: MuiFormMode;
 	buildDefaultFormValues: () => Record<string, unknown>;
+	/** Branch ID from URL, used to prefill in edit/view mode */
+	branchIdFromUrl?: string;
 };
 
 type UsePOFormStateReturn = {
@@ -27,10 +29,23 @@ type UsePOFormStateReturn = {
  */
 export function usePOFormState({
 	mode,
-	buildDefaultFormValues
+	buildDefaultFormValues,
+	branchIdFromUrl,
 }: UsePOFormStateParams): UsePOFormStateReturn {
-	const [initialValues, setInitialValues] = React.useState<Record<string, unknown>>(buildDefaultFormValues);
-	const [formValues, setFormValues] = React.useState<Record<string, unknown>>(buildDefaultFormValues);
+	const [initialValues, setInitialValues] = React.useState<Record<string, unknown>>(() => {
+		const base = buildDefaultFormValues();
+		if (mode !== "create" && branchIdFromUrl) {
+			base.branch = branchIdFromUrl;
+		}
+		return base;
+	});
+	const [formValues, setFormValues] = React.useState<Record<string, unknown>>(() => {
+		const base = buildDefaultFormValues();
+		if (mode !== "create" && branchIdFromUrl) {
+			base.branch = branchIdFromUrl;
+		}
+		return base;
+	});
 	const [formKey, setFormKey] = React.useState(0);
 	const formRef = React.useRef<{ submit: () => Promise<void>; isDirty: () => boolean } | null>(null);
 	const createDefaultsSeededRef = React.useRef(false);
@@ -38,6 +53,58 @@ export function usePOFormState({
 	const bumpFormKey = React.useCallback(() => {
 		setFormKey((prev) => prev + 1);
 	}, []);
+
+	// Sync branch from URL when it becomes available (handles SSR -> hydration transition)
+	const branchSyncedRef = React.useRef(false);
+	React.useEffect(() => {
+		console.log('[usePOFormState] sync effect running', {
+			mode,
+			branchIdFromUrl,
+			branchSynced: branchSyncedRef.current,
+		});
+
+		if (mode === "create") {
+			console.log('[usePOFormState] skipping - create mode');
+			return;
+		}
+		if (!branchIdFromUrl) {
+			console.log('[usePOFormState] skipping - no branchIdFromUrl');
+			return;
+		}
+		if (branchSyncedRef.current) {
+			console.log('[usePOFormState] skipping - already synced');
+			return;
+		}
+
+		// Mark as synced BEFORE updating to prevent re-runs
+		branchSyncedRef.current = true;
+		console.log('[usePOFormState] syncing branch to:', branchIdFromUrl);
+		
+		// Update form values
+		setFormValues((prev) => {
+			if (prev.branch === branchIdFromUrl) {
+				console.log('[usePOFormState] formValues.branch already matches:', prev.branch);
+				return prev;
+			}
+			console.log('[usePOFormState] updating formValues.branch:', prev.branch, '->', branchIdFromUrl);
+			return { ...prev, branch: branchIdFromUrl };
+		});
+		
+		// Update initial values
+		setInitialValues((prev) => {
+			if (prev.branch === branchIdFromUrl) {
+				console.log('[usePOFormState] initialValues.branch already matches');
+				return prev;
+			}
+			console.log('[usePOFormState] updating initialValues.branch');
+			return { ...prev, branch: branchIdFromUrl };
+		});
+		
+		// Always bump form key when syncing to force MuiForm to reinitialize
+		// This is critical for the Autocomplete to pick up the new value
+		console.log('[usePOFormState] bumping formKey to force remount');
+		bumpFormKey();
+	}, [mode, branchIdFromUrl, bumpFormKey]);
 
 	React.useEffect(() => {
 		if (mode !== "create") {

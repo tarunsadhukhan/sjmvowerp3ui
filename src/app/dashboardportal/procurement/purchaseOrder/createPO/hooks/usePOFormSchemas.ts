@@ -56,7 +56,7 @@ export const usePOHeaderSchema = ({
         type: "select",
         options: branchOptions,
         required: true,
-        disabled: mode === "view",
+        disabled: mode !== "create",
         grid: { xs: 12, md: 4 },
       },
       { name: "date", label: "PO Date", type: "date", required: true, disabled: mode === "view", grid: { xs: 12, md: 4 } },

@@ -65,6 +65,30 @@ const FieldRow = ({ label, value }: { label: string; value?: React.ReactNode }) 
   </Stack>
 );
 
+const TotalsRow = ({ label, value, isBold = false }: { label: string; value?: React.ReactNode; isBold?: boolean }) => (
+  <Stack direction="row" justifyContent="space-between" alignItems="center" spacing={2} sx={{ minWidth: 280 }}>
+    <Typography
+      variant="body2"
+      color="text.secondary"
+      sx={{ fontSize: "0.8125rem", fontWeight: isBold ? 600 : 400 }}
+    >
+      {label}:
+    </Typography>
+    <Typography
+      variant="body2"
+      sx={{
+        fontWeight: isBold ? 600 : 400,
+        fontSize: "0.875rem",
+        textAlign: "right",
+        minWidth: 120,
+        fontVariantNumeric: "tabular-nums",
+      }}
+    >
+      {value ?? "-"}
+    </Typography>
+  </Stack>
+);
+
 const formatDate = (dateStr?: string) => {
   if (!dateStr) return "-";
   try {
@@ -297,16 +321,17 @@ const POPreview: React.FC<POPreviewProps> = ({ header, items, totals, remarks, o
         {totals ? (
           <>
             <Divider sx={{ my: 2 }} />
-            <Stack direction={{ xs: "column", md: "row" }} spacing={2} justifyContent="flex-end">
-              <Box sx={{ minWidth: 240 }}>
+            <Stack direction={{ xs: "column", md: "row" }} spacing={2} justifyContent="flex-end" sx={{ pr: 2 }}>
+              <Box sx={{ minWidth: 280 }}>
                 <Stack spacing={0.75}>
-                  <FieldRow label="Net Amount" value={formatAmount(totals.netAmount)} />
-                  <FieldRow label="IGST" value={formatAmount(totals.totalIGST)} />
-                  <FieldRow label="CGST" value={formatAmount(totals.totalCGST)} />
-                  <FieldRow label="SGST" value={formatAmount(totals.totalSGST)} />
-                  <FieldRow label="Total Amount" value={formatAmount(totals.totalAmount)} />
+                  <TotalsRow label="Net Amount" value={formatAmount(totals.netAmount)} />
+                  <TotalsRow label="IGST" value={formatAmount(totals.totalIGST)} />
+                  <TotalsRow label="CGST" value={formatAmount(totals.totalCGST)} />
+                  <TotalsRow label="SGST" value={formatAmount(totals.totalSGST)} />
+                  <Divider sx={{ my: 0.5 }} />
+                  <TotalsRow label="Total Amount" value={formatAmount(totals.totalAmount)} isBold />
                   {totals.advancePercentage != null || totals.advanceAmount != null ? (
-                    <FieldRow
+                    <TotalsRow
                       label="Advance"
                       value={`${totals.advancePercentage ?? 0}% (${formatAmount(totals.advanceAmount)})`}
                     />

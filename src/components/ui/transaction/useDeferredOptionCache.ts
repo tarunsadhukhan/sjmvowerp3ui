@@ -27,11 +27,24 @@ export function useDeferredOptionCache<TKey extends string, TValue>(
   const [cache, setCache] = React.useState<CacheState<TKey, TValue>>(initialCache ?? {});
   const [loading, setLoading] = React.useState<LoadingState<TKey>>({});
 
+  const cacheRef = React.useRef(cache);
+  const loadingRef = React.useRef(loading);
+  const pendingKeysRef = React.useRef<Set<TKey>>(new Set());
+
+  React.useEffect(() => {
+    cacheRef.current = cache;
+  }, [cache]);
+
+  React.useEffect(() => {
+    loadingRef.current = loading;
+  }, [loading]);
+
   const ensure = React.useCallback(
     async (key: TKey) => {
       if (!key) return;
-      if (cache[key] || loading[key]) return;
+      if (cacheRef.current[key] || loadingRef.current[key] || pendingKeysRef.current.has(key)) return;
 
+      pendingKeysRef.current.add(key);
       setLoading((prev) => ({ ...prev, [key]: true }));
       try {
         const value = await fetcher(key);
@@ -39,6 +52,7 @@ export function useDeferredOptionCache<TKey extends string, TValue>(
       } catch (error) {
         if (onError) onError(error, key);
       } finally {
+        pendingKeysRef.current.delete(key);
         setLoading((prev) => {
           const next = { ...prev };
           delete next[key];
@@ -46,7 +60,7 @@ export function useDeferredOptionCache<TKey extends string, TValue>(
         });
       }
     },
-    [cache, fetcher, loading, onError]
+    [fetcher, onError]
   );
 
   const get = React.useCallback((key: TKey) => cache[key], [cache]);

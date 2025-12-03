@@ -89,6 +89,8 @@ export default function POTransactionPage() {
   const { coId } = useSelectedCompanyCoId();
   const { availableMenus, menuItems: sidebarMenuItems, selectedBranches } = useSidebarContext();
   const [isMounted, setIsMounted] = React.useState(false);
+  const branchPrefillAppliedRef = React.useRef(false);
+  const [lockedBranchId, setLockedBranchId] = React.useState<string | null>(() => (mode !== "create" && branchIdFromUrl ? String(branchIdFromUrl) : null));
 
   // Prevent hydration mismatch by only enabling after mount
   React.useEffect(() => {
@@ -135,23 +137,48 @@ export default function POTransactionPage() {
   } = usePOFormState({
     mode,
     buildDefaultFormValues,
+    branchIdFromUrl,
   });
   const [poDetails, setPODetails] = React.useState<PODetails | null>(null);
   const [loading, setLoading] = React.useState<boolean>(mode !== "create");
   const [pageError, setPageError] = React.useState<string | null>(null);
   const [indentDialogOpen, setIndentDialogOpen] = React.useState(false);
 
+  // DEBUG: Log branch state on each render
+  React.useEffect(() => {
+    console.log('[PO Page Debug]', {
+      mode,
+      branchIdFromUrl,
+      lockedBranchId,
+      'formValues.branch': formValues.branch,
+      'initialValues.branch': initialValues.branch,
+      formKey,
+      branchOptionsCount: branchOptions.length,
+    });
+  });
+
   // Memoize branch value to prevent unnecessary recalculations.
   // In edit/view mode, we prefer the branch id passed from the index page
   // (branch_id query param) when the form has not yet been populated.
   const branchValue = React.useMemo(
     () => {
+      if (lockedBranchId) return lockedBranchId;
       const fromForm = formValues.branch != null ? String(formValues.branch) : "";
       if (fromForm) return fromForm;
       return branchIdFromUrl ? String(branchIdFromUrl) : "";
     },
-    [formValues.branch, branchIdFromUrl],
+    [formValues.branch, branchIdFromUrl, lockedBranchId],
   );
+
+  const resolvedBranchOptions = React.useMemo(() => {
+    if (!branchValue) return branchOptions;
+    const exists = branchOptions.some((opt) => String(opt.value) === String(branchValue));
+    if (exists) return branchOptions;
+    const fallbackLabel =
+      (poDetails?.branch && typeof poDetails.branch === "string" ? poDetails.branch : undefined) ||
+      branchValue;
+    return [...branchOptions, { label: fallbackLabel, value: branchValue }];
+  }, [branchOptions, branchValue, poDetails?.branch]);
 
   // Memoize branch ID for setup - only changes when branch value actually changes
   const branchIdForSetup = React.useMemo(() => {
@@ -227,6 +254,16 @@ export default function POTransactionPage() {
         const response = await fetchPOSetup2(itemGroupId);
         return mapItemGroupDetailResponse(response);
   }, []);
+
+  // Sync lockedBranchId when branch becomes available from URL (SSR -> hydration)
+  React.useEffect(() => {
+    if (mode === "create") return;
+    if (branchPrefillAppliedRef.current) return;
+    if (!branchIdFromUrl) return;
+
+    branchPrefillAppliedRef.current = true;
+    setLockedBranchId(String(branchIdFromUrl));
+  }, [branchIdFromUrl, mode]);
 
   const handleItemGroupError = React.useCallback((error: unknown) => {
     const description = error instanceof Error ? error.message : "Please try again.";
@@ -349,45 +386,79 @@ export default function POTransactionPage() {
     [buildDefaultFormValues],
   );
 
+  const detailsFetchKey = React.useMemo(
+    () => [mode, requestedId || "", branchIdForSetup || branchIdFromUrl || "", coId || ""].join("|"),
+    [mode, requestedId, branchIdForSetup, branchIdFromUrl, coId],
+  );
+
+  const lastDetailsKeyRef = React.useRef<string | null>(null);
+  const detailsFetchedRef = React.useRef(false);
+
+  React.useEffect(() => {
+    if (lastDetailsKeyRef.current !== detailsFetchKey) {
+      lastDetailsKeyRef.current = detailsFetchKey;
+      detailsFetchedRef.current = false;
+    }
+  }, [detailsFetchKey]);
+
   React.useEffect(() => {
     if (mode === "create") {
       setPODetails(null);
+      setPageError(null);
       setLoading(false);
       return;
     }
 
     if (!requestedId) {
+      setPODetails(null);
       setPageError("Purchase order id is required to load details.");
       setLoading(false);
       return;
     }
 
+    if (!setupEnabled) return;
+    if (setupLoading) return;
+    if (!setupData) return;
+    if (detailsFetchedRef.current) return;
+
+    detailsFetchedRef.current = true;
+
     let cancelled = false;
     const fetchDetails = async () => {
-    setLoading(true);
+      setLoading(true);
       try {
         const details = await getPOById(requestedId, coId || undefined, getMenuId() || undefined);
         if (cancelled) return;
 
         setPODetails(details);
         const nextValues = mapDetailsToFormValues(details);
+
+        const detailsWithBranchId = details as unknown as { branch_id?: unknown; branchId?: unknown };
+        const branchIdFromDetails = detailsWithBranchId?.branch_id ?? detailsWithBranchId?.branchId;
+        const resolvedBranchValue = (() => {
+          if (branchIdFromDetails != null && branchIdFromDetails !== "") return String(branchIdFromDetails);
+          if (branchIdFromUrl) return String(branchIdFromUrl);
+          if (branchValue && /^\d+$/.test(branchValue)) return branchValue;
+          const mappedValue = nextValues.branch != null ? String(nextValues.branch) : "";
+          return /^\d+$/.test(mappedValue) ? mappedValue : "";
+        })();
+
+        if (resolvedBranchValue) {
+          nextValues.branch = resolvedBranchValue;
+          setLockedBranchId(resolvedBranchValue);
+        }
+
         setInitialValues(nextValues);
         setFormValues(nextValues);
         bumpFormKey();
 
         const normalizedLines = (details.lines ?? []).map((line) => mapLineToEditable(line));
         replaceItems(normalizedLines);
-
-        const uniqueGroups = new Set(
-          (details.lines ?? [])
-            .map((line) => (line.itemGroup ? String(line.itemGroup) : ""))
-            .filter((groupId) => groupId && /^\d+$/.test(groupId)),
-        );
-        uniqueGroups.forEach((groupId) => ensureItemGroupData(groupId));
         setPageError(null);
       } catch (error) {
         if (cancelled) return;
         const description = error instanceof Error ? error.message : "Unable to load purchase order.";
+        setPODetails(null);
         setPageError(description);
         toast({
           variant: "destructive",
@@ -417,8 +488,24 @@ export default function POTransactionPage() {
     bumpFormKey,
     replaceItems,
     mapLineToEditable,
-    ensureItemGroupData,
+    setupEnabled,
+    setupLoading,
+    setupData,
+    branchIdFromUrl,
+    branchValue,
   ]);
+
+  React.useEffect(() => {
+    if (!poDetails?.lines?.length) return;
+    const uniqueGroups = new Set(
+      poDetails.lines
+        .map((line) => (line.itemGroup ? String(line.itemGroup) : ""))
+        .filter((groupId) => groupId && /^\d+$/.test(groupId)),
+    );
+    uniqueGroups.forEach((groupId) => {
+      ensureItemGroupData(groupId);
+    });
+  }, [poDetails, ensureItemGroupData]);
 
   const isLineItemsReady = React.useMemo(() => {
     if (mode === "view" || pageError || setupError) return true;
@@ -485,7 +572,7 @@ export default function POTransactionPage() {
   });
 
   const headerSchema = usePOHeaderSchema({
-    branchOptions,
+    branchOptions: resolvedBranchOptions,
     supplierOptions,
     supplierBranchOptions,
     branchAddressOptions,
@@ -592,8 +679,8 @@ export default function POTransactionPage() {
 
   const branchLabel = React.useMemo(() => {
     const value = formValues.branch ?? poDetails?.branch;
-    return getOptionLabel(branchOptions, value) ?? (typeof value === "string" ? value : undefined);
-  }, [branchOptions, formValues.branch, poDetails?.branch, getOptionLabel]);
+    return getOptionLabel(resolvedBranchOptions, value) ?? (typeof value === "string" ? value : undefined);
+  }, [resolvedBranchOptions, formValues.branch, poDetails?.branch, getOptionLabel]);
 
   const supplierLabel = React.useMemo(() => {
     const value = formValues.supplier ?? poDetails?.supplier;

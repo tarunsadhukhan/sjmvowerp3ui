@@ -35,6 +35,7 @@ export type IndentLineItem = {
   dept_name?: string;
   tax_percentage?: number;
   remarks?: string;
+  expense_type_id?: number;
 };
 
 type IndentLineItemsDialogProps = {
@@ -108,7 +109,11 @@ export function IndentLineItemsDialog({
     setSelectedItems(new Set()); // Reset selection when new indent is selected
     try {
       const response = await getIndentLineItems(indentId);
-      setLineItems((response.line_items || []) as IndentLineItem[]);
+      const itemsWithExpense = (response.line_items || []).map((item: any) => ({
+        ...item,
+        expense_type_id: response.expenseType ? Number(response.expenseType) : undefined,
+      }));
+      setLineItems(itemsWithExpense as IndentLineItem[]);
     } catch (error) {
       console.error("Error loading indent line items:", error);
       setLineItems([]);
@@ -201,7 +206,11 @@ export function IndentLineItemsDialog({
                   setSelectedItems(new Set());
                   getIndentLineItems(indentId)
                     .then((response) => {
-                      setLineItems((response.line_items || []) as IndentLineItem[]);
+                      const itemsWithExpense = (response.line_items || []).map((item: any) => ({
+                        ...item,
+                        expense_type_id: response.expenseType ? Number(response.expenseType) : undefined,
+                      }));
+                      setLineItems(itemsWithExpense as IndentLineItem[]);
                     })
                     .catch((error) => {
                       console.error("Error loading indent line items:", error);
@@ -244,7 +253,11 @@ export function IndentLineItemsDialog({
                         setSelectedItems(new Set());
                         getIndentLineItems(indentId)
                           .then((response) => {
-                            setLineItems((response.line_items || []) as IndentLineItem[]);
+                            const itemsWithExpense = (response.line_items || []).map((item: any) => ({
+                              ...item,
+                              expense_type_id: response.expenseType ? Number(response.expenseType) : undefined,
+                            }));
+                            setLineItems(itemsWithExpense as IndentLineItem[]);
                           })
                           .catch((error) => {
                             console.error("Error loading indent line items:", error);

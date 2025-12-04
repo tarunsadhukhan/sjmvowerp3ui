@@ -248,11 +248,11 @@ export default function POTransactionPage() {
   const branchAddresses = setupData?.branchAddresses ?? EMPTY_BRANCH_ADDRESSES;
 
   const fetchItemGroupDetail = React.useCallback(async (itemGroupId: string) => {
-        if (!itemGroupId || !/^\d+$/.test(itemGroupId)) {
+    if (!itemGroupId || !/^\d+$/.test(itemGroupId)) {
       throw new Error(`Invalid item group identifier: ${itemGroupId}`);
-        }
-        const response = await fetchPOSetup2(itemGroupId);
-        return mapItemGroupDetailResponse(response);
+    }
+    const response = await fetchPOSetup2(itemGroupId);
+    return mapItemGroupDetailResponse(response);
   }, []);
 
   // Sync lockedBranchId when branch becomes available from URL (SSR -> hydration)
@@ -267,8 +267,8 @@ export default function POTransactionPage() {
 
   const handleItemGroupError = React.useCallback((error: unknown) => {
     const description = error instanceof Error ? error.message : "Please try again.";
-        toast({
-          variant: "destructive",
+    toast({
+      variant: "destructive",
       title: "Unable to load item options",
       description,
     });
@@ -549,7 +549,15 @@ export default function POTransactionPage() {
   const handleIndentItemsConfirm = React.useCallback(
     (selectedItems: IndentLineItem[]) => {
       handleIndentItemsFromHook(selectedItems);
-    setIndentDialogOpen(false);
+
+      if (selectedItems.length > 0 && selectedItems[0].expense_type_id) {
+        setFormValues((prev) => ({
+          ...prev,
+          expense_type: String(selectedItems[0].expense_type_id),
+        }));
+      }
+
+      setIndentDialogOpen(false);
     },
     [handleIndentItemsFromHook, setIndentDialogOpen],
   );
@@ -580,7 +588,7 @@ export default function POTransactionPage() {
     expenseOptions,
     coConfig,
     billingState,
-              shippingState,
+    shippingState,
     taxType,
     expectedDate,
     mode,
@@ -590,7 +598,7 @@ export default function POTransactionPage() {
   const footerSchema = usePOFooterSchema({
     coConfig,
     billingState,
-              shippingState,
+    shippingState,
     taxType,
   });
 
@@ -885,15 +893,15 @@ export default function POTransactionPage() {
           />
           <POTotalsDisplay totals={totals} showGSTBreakdown={Boolean(coConfig?.india_gst)} />
           <POApprovalBar
-              approvalInfo={approvalInfo}
-              permissions={approvalPermissions}
+            approvalInfo={approvalInfo}
+            permissions={approvalPermissions}
             loading={approvalLoading}
-              onApprove={handleApprove}
-              onReject={handleReject}
-              onOpen={handleOpen}
-              onCancelDraft={handleCancelDraft}
-              onReopen={handleReopen}
-              onSendForApproval={handleSendForApproval}
+            onApprove={handleApprove}
+            onReject={handleReject}
+            onOpen={handleOpen}
+            onCancelDraft={handleCancelDraft}
+            onReopen={handleReopen}
+            onSendForApproval={handleSendForApproval}
           />
           {mode !== "view" ? (
             <div className="flex justify-end pt-2">
@@ -908,11 +916,11 @@ export default function POTransactionPage() {
       <POHeaderForm
         schema={headerSchema}
         formKey={formKey}
-          initialValues={initialValues}
-          mode={mode}
+        initialValues={initialValues}
+        mode={mode}
         formRef={formRef}
-          onSubmit={handleFormSubmit}
-          onValuesChange={handleMainFormValuesChange}
+        onSubmit={handleFormSubmit}
+        onValuesChange={handleMainFormValuesChange}
         showIndentButton={mode !== "view"}
         onIndentSelect={handleIndentSelect}
         indentButtonDisabled={!isMounted || !selectedBranches || selectedBranches.length === 0}

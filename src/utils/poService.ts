@@ -103,6 +103,7 @@ export type POSetup2Response = {
 
 export type IndentLineItemsResponse = {
   indent_id: number;
+  expenseType?: string;
   line_items: Array<Record<string, unknown>>;
 };
 
@@ -329,7 +330,7 @@ export async function getPOById(id: string, coId?: string, menuId?: string): Pro
     po_id: id,
     co_id: companyId,
   });
-  
+
   // Add menu_id if provided (needed for permission calculation)
   if (menuId) {
     query.set("menu_id", menuId);

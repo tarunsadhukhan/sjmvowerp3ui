@@ -1,6 +1,7 @@
 import React from "react";
 
 import type { Schema, Field } from "@/components/ui/muiform";
+import { TextField } from "@mui/material";
 
 import type { Option } from "../types/poTypes";
 
@@ -69,11 +70,21 @@ export const usePOHeaderSchema = ({
       { name: "delivery_timeline", label: "Delivery Timeline (days)", type: "text", placeholder: "days", required: true, disabled: headerFieldsDisabled, grid: { xs: 12, md: 4 } },
       {
         name: "expected_date",
-        label: "Expected Date",
-        type: "text",
-        disabled: true,
-        placeholder: "Auto-calculated",
-        helperText: expectedDate ? undefined : "Set a delivery timeline to calculate expected date",
+        label: "Expected Date", // Handled by custom render but required by type
+        type: "custom",
+        render: () => (
+          <TextField
+            label="Expected Date"
+            value={expectedDate || ""}
+            disabled
+            fullWidth
+            size="small"
+            placeholder="Auto-calculated"
+            helperText={expectedDate ? undefined : "Set a delivery timeline to calculate expected date"}
+            InputLabelProps={{ shrink: true }}
+            sx={{ "& .MuiInputBase-root": { backgroundColor: "background.paper" } }}
+          />
+        ),
         grid: { xs: 12, md: 4 },
       },
       { name: "expense_type", label: "Expense Type", type: "select", options: expenseOptions, required: true, disabled: headerFieldsDisabled, grid: { xs: 12, md: 4 } },

@@ -1,4 +1,5 @@
 import React from "react";
+import { useRouter } from "next/navigation";
 import { toast } from "@/hooks/use-toast";
 import type { MuiFormMode } from "@/components/ui/muiform";
 import type { ApprovalInfo, ApprovalActionPermissions, ApprovalStatusId } from "@/components/ui/transaction";
@@ -6,6 +7,7 @@ import { PO_STATUS_IDS, PO_STATUS_LABELS } from "../utils/poConstants";
 import {
   approvePO,
   cancelDraftPO,
+  clonePO,
   getPOById,
   openPO,
   rejectPO,
@@ -30,32 +32,50 @@ import {
 export const usePOApproval = ({ mode, requestedId, formValues, poDetails, coId, getMenuId, setPODetails }: UsePOApprovalParams) => {
   const [approvalLoading, setApprovalLoading] = React.useState(false);
 
-  const statusId = React.useMemo<ApprovalStatusId | null>(() => {
-    if (poDetails?.statusId) return poDetails.statusId as ApprovalStatusId;
-    if (poDetails?.status) {
-      const normalized = poDetails.status.toLowerCase();
-      if (normalized.includes("draft")) return PO_STATUS_IDS.DRAFT;
-      if (normalized === "open") return PO_STATUS_IDS.OPEN;
-      if (normalized.includes("pending") || normalized.includes("approval")) return PO_STATUS_IDS.PENDING_APPROVAL;
-      if (normalized === "approved") return PO_STATUS_IDS.APPROVED;
-      if (normalized === "rejected" || normalized === "reject" ) return PO_STATUS_IDS.REJECTED;
-      if (normalized === "closed") return PO_STATUS_IDS.CLOSED;
-      if (normalized === "cancelled") return PO_STATUS_IDS.CANCELLED;
-    }
+  /**
+   * Maps status string to status ID. Used when statusId is not directly available.
+   */
+  const mapStatusToId = React.useCallback((status?: string): ApprovalStatusId | null => {
+    if (!status) return null;
+    const normalized = status.toLowerCase();
+    if (normalized.includes("draft")) return PO_STATUS_IDS.DRAFT;
+    if (normalized === "open") return PO_STATUS_IDS.OPEN;
+    if (normalized.includes("pending") || normalized.includes("approval")) return PO_STATUS_IDS.PENDING_APPROVAL;
+    if (normalized === "approved") return PO_STATUS_IDS.APPROVED;
+    if (normalized === "rejected" || normalized === "reject") return PO_STATUS_IDS.REJECTED;
+    if (normalized === "closed") return PO_STATUS_IDS.CLOSED;
+    if (normalized === "cancelled") return PO_STATUS_IDS.CANCELLED;
     return null;
-  }, [poDetails]);
+  }, []);
+
+  /**
+   * Derive statusId from poDetails, falling back to DRAFT (21) when not available.
+   * This ensures approval bar always shows, similar to Indent implementation.
+   */
+  const statusId = React.useMemo<ApprovalStatusId>(() => {
+    if (poDetails?.statusId) return poDetails.statusId as ApprovalStatusId;
+    return mapStatusToId(poDetails?.status) ?? PO_STATUS_IDS.DRAFT;
+  }, [poDetails, mapStatusToId]);
 
   const getApprovalPermissions = React.useCallback(
-    (status: ApprovalStatusId | null, currentMode: MuiFormMode, apiPermissions?: ApprovalActionPermissions): ApprovalActionPermissions => {
+    (status: ApprovalStatusId, currentMode: MuiFormMode, apiPermissions?: ApprovalActionPermissions): ApprovalActionPermissions => {
+      // If backend provides permissions, use them directly
       if (apiPermissions) return apiPermissions;
-      if (!status || currentMode === "view") {
+      
+      // View mode only allows viewing log and cloning
+      if (currentMode === "view") {
         return { canViewApprovalLog: true, canClone: true };
       }
+      
+      // Default permissions without backend-provided approval access
+      // Note: canApprove/canReject are NOT granted by default - they require backend permission check
       if (status === PO_STATUS_IDS.DRAFT) return { canSave: true, canOpen: true, canCancelDraft: true };
       if (status === PO_STATUS_IDS.CANCELLED) return { canReopen: true, canClone: true, canViewApprovalLog: true };
-      if (status === PO_STATUS_IDS.OPEN) return { canSave: true, canApprove: true };
+      // Open status: allow save but NOT approve without backend permission
+      if (status === PO_STATUS_IDS.OPEN) return { canSave: true, canViewApprovalLog: true };
       if (status === PO_STATUS_IDS.PENDING_APPROVAL) return { canViewApprovalLog: true };
       if (status === PO_STATUS_IDS.APPROVED) return { canViewApprovalLog: true, canClone: true };
+      if (status === PO_STATUS_IDS.REJECTED) return { canReopen: true, canClone: true, canViewApprovalLog: true };
       return {};
     },
     [],
@@ -66,18 +86,23 @@ export const usePOApproval = ({ mode, requestedId, formValues, poDetails, coId, 
     [statusId, mode, poDetails?.permissions, getApprovalPermissions],
   );
 
-  const approvalInfo: ApprovalInfo | null = React.useMemo(() => {
-    if (!statusId) return null;
+  /**
+   * Approval info is always defined (never null) to ensure the approval bar renders.
+   * Falls back to Draft status when no status is available.
+   */
+  const approvalInfo: ApprovalInfo = React.useMemo(() => {
     return {
       statusId,
-      statusLabel: PO_STATUS_LABELS[statusId] ?? poDetails?.status ?? "Unknown",
-      approvalLevel: poDetails?.approvalLevel ?? undefined,
-      maxApprovalLevel: poDetails?.maxApprovalLevel ?? undefined,
+      statusLabel: PO_STATUS_LABELS[statusId] ?? poDetails?.status ?? "Draft",
+      approvalLevel: poDetails?.approvalLevel ?? null,
+      maxApprovalLevel: poDetails?.maxApprovalLevel ?? null,
+      isFinalLevel: poDetails?.approvalLevel != null && poDetails?.maxApprovalLevel != null
+        ? poDetails.approvalLevel >= poDetails.maxApprovalLevel
+        : false,
     };
   }, [statusId, poDetails]);
 
   const statusChipProps = React.useMemo(() => {
-    if (!statusId) return undefined;
     type StatusChipColor = "default" | "primary" | "secondary" | "success" | "error" | "warning" | "info";
     const color: StatusChipColor =
       statusId === PO_STATUS_IDS.APPROVED
@@ -88,7 +113,7 @@ export const usePOApproval = ({ mode, requestedId, formValues, poDetails, coId, 
             ? "warning"
             : "default";
     return {
-      label: PO_STATUS_LABELS[statusId] ?? poDetails?.status ?? "Unknown",
+      label: PO_STATUS_LABELS[statusId] ?? poDetails?.status ?? "Draft",
       color,
     };
   }, [statusId, poDetails?.status]);
@@ -230,6 +255,48 @@ export const usePOApproval = ({ mode, requestedId, formValues, poDetails, coId, 
     [requestedId, branchIdFromForm, getMenuId, refreshDetails],
   );
 
+  const handleViewApprovalLog = React.useCallback(() => {
+    if (!requestedId) return;
+    // Log the query params that would be sent
+    const queryParams = {
+      po_id: requestedId,
+      co_id: coId,
+    };
+    console.log("[View Approval Log] Query Params:", JSON.stringify(queryParams, null, 2));
+    console.log("[View Approval Log] Endpoint: GET /api/procurement/po/approval-log");
+    
+    // TODO: Open approval log modal/page
+    toast({ title: "Opening approval log...", description: "Feature coming soon" });
+  }, [requestedId, coId]);
+
+  const handleClone = React.useCallback(async () => {
+    if (!requestedId) return;
+    const branchId = branchIdFromForm();
+    const menuId = getMenuId();
+    if (!branchId || !menuId) {
+      toast({ variant: "destructive", title: "Branch and Menu ID required" });
+      return;
+    }
+    setApprovalLoading(true);
+    try {
+      const result = await clonePO(requestedId, branchId, menuId);
+      toast({ title: "PO cloned successfully" });
+      // Navigate to the new PO in edit mode
+      if (result?.id) {
+        // Use router to navigate - this will be handled by the page
+        window.location.href = `/dashboardportal/procurement/purchaseOrder/createPO?mode=edit&id=${result.id}&branch_id=${branchId}`;
+      }
+    } catch (error) {
+      toast({
+        variant: "destructive",
+        title: "Unable to clone PO",
+        description: error instanceof Error ? error.message : "Please try again.",
+      });
+    } finally {
+      setApprovalLoading(false);
+    }
+  }, [requestedId, branchIdFromForm, getMenuId]);
+
   return {
     approvalLoading,
     approvalInfo,
@@ -241,5 +308,7 @@ export const usePOApproval = ({ mode, requestedId, formValues, poDetails, coId, 
     handleCancelDraft,
     handleReopen,
     handleSendForApproval,
+    handleViewApprovalLog,
+    handleClone,
   };
 };

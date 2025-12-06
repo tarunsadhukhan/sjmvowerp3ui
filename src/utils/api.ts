@@ -203,7 +203,8 @@ const apiRoutesPortalMasters = {
     PO_CANCEL_DRAFT: `${API_URL}/procurementPO/cancel_draft_po`,
     PO_REOPEN: `${API_URL}/procurementPO/reopen_po`,
     PO_SEND_FOR_APPROVAL: `${API_URL}/procurementPO/send_po_for_approval`,
-    PO_REJECT: `${API_URL}/procurementPO/reject_po`
+    PO_REJECT: `${API_URL}/procurementPO/reject_po`,
+    PO_CLONE: `${API_URL}/procurementPO/clone_po`
 
 
 };

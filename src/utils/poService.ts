@@ -560,3 +560,33 @@ export async function rejectPO(poId: string, branchId: string, menuId: string, r
   return data;
 }
 
+export type ClonePOResponse = {
+  id: string;
+  poNo?: string;
+  message?: string;
+};
+
+export async function clonePO(poId: string, branchId: string, menuId: string): Promise<ClonePOResponse> {
+  const payload = {
+    po_id: poId,
+    branch_id: branchId,
+    menu_id: menuId,
+  };
+
+  const { data, error } = await fetchWithCookie<ClonePOResponse>(
+    apiRoutesPortalMasters.PO_CLONE,
+    "POST",
+    payload
+  );
+
+  if (error) {
+    throw new Error(error);
+  }
+
+  if (!data) {
+    throw new Error("Empty response from clone API");
+  }
+
+  return data;
+}
+

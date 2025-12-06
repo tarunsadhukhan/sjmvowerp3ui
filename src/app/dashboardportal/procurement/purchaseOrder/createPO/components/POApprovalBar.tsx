@@ -2,7 +2,7 @@ import React from "react";
 import { ApprovalActionsBar, type ApprovalInfo, type ApprovalActionPermissions } from "@/components/ui/transaction";
 
 type POApprovalBarProps = {
-  approvalInfo: ApprovalInfo | null;
+  approvalInfo: ApprovalInfo;
   permissions: ApprovalActionPermissions;
   loading: boolean;
   onApprove: () => Promise<void>;
@@ -11,6 +11,8 @@ type POApprovalBarProps = {
   onCancelDraft: () => Promise<void>;
   onReopen: () => Promise<void>;
   onSendForApproval: () => Promise<void>;
+  onViewApprovalLog?: () => void;
+  onClone?: () => Promise<void>;
 };
 
 /** Wraps ApprovalActionsBar so page.tsx stays focused on orchestration logic. */
@@ -24,9 +26,9 @@ export function POApprovalBar({
   onCancelDraft,
   onReopen,
   onSendForApproval,
+  onViewApprovalLog,
+  onClone,
 }: POApprovalBarProps) {
-  if (!approvalInfo) return null;
-
   return (
     <ApprovalActionsBar
       approvalInfo={approvalInfo}
@@ -37,6 +39,8 @@ export function POApprovalBar({
       onCancelDraft={onCancelDraft}
       onReopen={onReopen}
       onSendForApproval={onSendForApproval}
+      onViewApprovalLog={onViewApprovalLog}
+      onClone={onClone}
       loading={loading}
     />
   );

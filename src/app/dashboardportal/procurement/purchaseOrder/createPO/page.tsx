@@ -102,6 +102,8 @@ export default function POTransactionPage() {
 
     if (availableMenus && availableMenus.length > 0) {
       const currentPath = pathname?.toLowerCase() || "";
+      
+      // First, try exact path match
       const matchingMenu = availableMenus.find(
         (item) => {
           if (!item.menu_path) return false;
@@ -109,16 +111,47 @@ export default function POTransactionPage() {
           return currentPath === menuPath || currentPath.startsWith(menuPath + "/");
         }
       );
-      if (matchingMenu?.menu_id) return String(matchingMenu.menu_id);
+      if (matchingMenu?.menu_id) {
+        console.log("[getMenuId] Matched by path:", matchingMenu.menu_id, matchingMenu.menu_path);
+        return String(matchingMenu.menu_id);
+      }
 
+      // Second: Try matching based on route segments in current path
+      // Current path is like /dashboardportal/procurement/purchaseOrder/createPO
+      // Look for menu whose path contains "procurement/purchaseorder" (not jute_procurement)
+      const poMenuByRoute = availableMenus.find(
+        (item) => {
+          const path = (item.menu_path || "").toLowerCase();
+          // Match menus that have procurement/purchaseorder but NOT jute_procurement
+          return (path.includes("procurement/purchaseorder") || path.includes("procurement/po")) &&
+                 !path.includes("jute");
+        }
+      );
+      if (poMenuByRoute?.menu_id) {
+        console.log("[getMenuId] Matched by route segment:", poMenuByRoute.menu_id, poMenuByRoute.menu_path);
+        return String(poMenuByRoute.menu_id);
+      }
+
+      // Fallback: look for Purchase Order menu specifically (exclude Jute)
       const poMenu = availableMenus.find(
         (item) => {
           const path = (item.menu_path || "").toLowerCase();
           const name = (item.menu_name || "").toLowerCase();
-          return path.includes("po") || path.includes("/procurement/po") || name.includes("po") || name.includes("purchase order");
+          // Match "purchase order" but exclude "jute"
+          const isPO = path.includes("purchaseorder") || 
+                       path.includes("purchase-order") ||
+                       name === "po" ||
+                       name === "purchase order";
+          const isJute = path.includes("jute") || name.includes("jute");
+          return isPO && !isJute;
         }
       );
-      if (poMenu?.menu_id) return String(poMenu.menu_id);
+      if (poMenu?.menu_id) {
+        console.log("[getMenuId] Matched by fallback (non-jute):", poMenu.menu_id, poMenu.menu_name, poMenu.menu_path);
+        return String(poMenu.menu_id);
+      }
+      
+      console.log("[getMenuId] No match found. Current path:", currentPath, "Available menus:", availableMenus.map(m => ({ id: m.menu_id, path: m.menu_path, name: m.menu_name })));
     }
 
     return "";
@@ -652,6 +685,8 @@ export default function POTransactionPage() {
     handleCancelDraft,
     handleReopen,
     handleSendForApproval,
+    handleViewApprovalLog,
+    handleClone,
   } = usePOApproval({
     mode,
     requestedId,
@@ -902,6 +937,8 @@ export default function POTransactionPage() {
             onCancelDraft={handleCancelDraft}
             onReopen={handleReopen}
             onSendForApproval={handleSendForApproval}
+            onViewApprovalLog={handleViewApprovalLog}
+            onClone={handleClone}
           />
           {mode !== "view" ? (
             <div className="flex justify-end pt-2">

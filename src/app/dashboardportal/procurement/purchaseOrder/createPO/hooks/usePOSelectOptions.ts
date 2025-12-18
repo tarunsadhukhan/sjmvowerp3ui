@@ -2,6 +2,7 @@ import React from "react";
 import type {
   BranchAddressRecord,
   ExpenseRecord,
+  ItemGroupCacheEntry,
   ItemGroupRecord,
   Option,
   ProjectRecord,
@@ -16,10 +17,12 @@ type UsePOSelectOptionsParams = {
   projects: ReadonlyArray<ProjectRecord>;
   expenses: ReadonlyArray<ExpenseRecord>;
   itemGroupsFromLineItems: ReadonlyArray<ItemGroupRecord>;
+  itemGroupCache?: Partial<Record<string, ItemGroupCacheEntry>>;
 };
 
 /**
  * Normalises frequently used select options so memoised arrays live outside page.tsx.
+ * Also provides label resolvers for use in previews and tooltips.
  */
 export const usePOSelectOptions = ({
   suppliers,
@@ -28,6 +31,7 @@ export const usePOSelectOptions = ({
   projects,
   expenses,
   itemGroupsFromLineItems,
+  itemGroupCache = {},
 }: UsePOSelectOptionsParams) => {
   const supplierOptions = React.useMemo<Option[]>(() => {
     if (!suppliers?.length) return [];
@@ -55,6 +59,59 @@ export const usePOSelectOptions = ({
 
   const itemGroupOptions = React.useMemo<Option[]>(() => itemGroupsFromLineItems.map((grp) => ({ label: grp.label || grp.id, value: grp.id })), [itemGroupsFromLineItems]);
 
+  // Item group cache dependent getters
+  const getItemOptions = React.useCallback(
+    (itemGroupId: string) => itemGroupCache[itemGroupId]?.items ?? [],
+    [itemGroupCache],
+  );
+
+  const getMakeOptions = React.useCallback(
+    (itemGroupId: string) => itemGroupCache[itemGroupId]?.makes ?? [],
+    [itemGroupCache],
+  );
+
+  const getUomOptions = React.useCallback(
+    (itemGroupId: string, itemId: string) =>
+      itemGroupCache[itemGroupId]?.uomsByItemId[itemId] ?? [],
+    [itemGroupCache],
+  );
+
+  const getItemLabel = React.useCallback(
+    (groupId: string, itemId: string, itemCode?: string): string => {
+      if (!groupId || !itemId) return itemCode || "-";
+      const cachedLabel = itemGroupCache[groupId]?.itemLabelById[itemId];
+      if (cachedLabel) return cachedLabel;
+      return itemCode || itemId;
+    },
+    [itemGroupCache],
+  );
+
+  const getMakeLabel = React.useCallback(
+    (groupId: string, makeId: string): string => {
+      if (!groupId || !makeId) return "-";
+      return itemGroupCache[groupId]?.makeLabelById[makeId] ?? makeId;
+    },
+    [itemGroupCache],
+  );
+
+  const getUomLabel = React.useCallback(
+    (groupId: string, itemId: string, uomId: string): string => {
+      if (!groupId || !itemId || !uomId) return "-";
+      return itemGroupCache[groupId]?.uomLabelByItemId[itemId]?.[uomId] ?? uomId;
+    },
+    [itemGroupCache],
+  );
+
+  // Generic option label getter
+  const getOptionLabel = React.useCallback(
+    (options: ReadonlyArray<{ label: string; value: string }>, value?: unknown): string | undefined => {
+      if (value === null || typeof value === "undefined") return undefined;
+      const target = String(value);
+      return options.find((opt) => opt.value === target)?.label;
+    },
+    [],
+  );
+
   return {
     supplierOptions,
     supplierBranchOptions,
@@ -62,6 +119,13 @@ export const usePOSelectOptions = ({
     projectOptions,
     expenseOptions,
     itemGroupOptions,
+    getItemOptions,
+    getMakeOptions,
+    getUomOptions,
+    getItemLabel,
+    getMakeLabel,
+    getUomLabel,
+    getOptionLabel,
   };
 };
 

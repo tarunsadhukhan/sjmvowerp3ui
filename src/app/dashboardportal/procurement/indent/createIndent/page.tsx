@@ -181,15 +181,24 @@ export default function IndentTransactionPage() {
 		resetItemGroupCache();
 	}, [coId, resetItemGroupCache]);
 
+	// Initialize blank line for create mode (separate effect to avoid re-running on length change)
+	const initialLineSeededRef = React.useRef(false);
+	React.useEffect(() => {
+		if (mode !== "create") {
+			initialLineSeededRef.current = false;
+			return;
+		}
+		if (initialLineSeededRef.current) return;
+		initialLineSeededRef.current = true;
+		setLineItems((prev) => (prev.length ? prev : [createBlankLine()]));
+	}, [mode, setLineItems]);
+
 	// Load indent data for edit/view mode
 	React.useEffect(() => {
 		if (mode === "create") {
 			setIndentDetails(null);
 			setPageError(null);
 			setLoading(false);
-			if (!lineItems.length) {
-				setLineItems([createBlankLine()]);
-			}
 			return;
 		}
 
@@ -240,7 +249,7 @@ export default function IndentTransactionPage() {
 		return () => {
 			cancelled = true;
 		};
-	}, [mode, requestedId, mapLineToEditable, coId, getMenuId, setInitialValues, setFormValues, bumpFormKey, replaceItems, setLineItems, lineItems.length]);
+	}, [mode, requestedId, mapLineToEditable, coId, getMenuId, setInitialValues, setFormValues, bumpFormKey, replaceItems]);
 
 	// Setup data
 	const branchValue = React.useMemo(() => String(formValues.branch ?? ""), [formValues.branch]);

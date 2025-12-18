@@ -272,3 +272,90 @@ export const mapItemGroupDetailResponse = (response: unknown): ItemGroupCacheEnt
 	};
 };
 
+/**
+ * Helper to safely convert a value to string, returning empty string for null/undefined.
+ */
+const toStringValue = (value: unknown): string => {
+	if (value === null || value === undefined) return "";
+	return typeof value === "string" ? value : String(value);
+};
+
+/**
+ * Normalize a date string by removing the time portion.
+ */
+const normalizeDate = (raw?: string): string => {
+	if (!raw) return "";
+	return raw.split("T")[0] || raw;
+};
+
+/**
+ * Maps PO details from API response to form values.
+ */
+export const mapPODetailsToFormValues = (
+	details: {
+		branch?: unknown;
+		poDate?: string;
+		supplier?: unknown;
+		supplierBranch?: unknown;
+		billingAddress?: unknown;
+		shippingAddress?: unknown;
+		creditTerm?: number | null;
+		deliveryTimeline?: number | null;
+		project?: unknown;
+		expenseType?: unknown;
+		contactPerson?: string;
+		contactNo?: string;
+		footerNote?: string;
+		internalNote?: string;
+		termsConditions?: string;
+		advancePercentage?: number | null;
+		billingState?: string;
+		shippingState?: string;
+		taxType?: string;
+	},
+	defaultValues: Record<string, unknown>,
+): Record<string, unknown> => {
+	return {
+		...defaultValues,
+		branch: toStringValue(details.branch ?? defaultValues.branch),
+		date: normalizeDate(details.poDate) || toStringValue(defaultValues.date),
+		supplier: toStringValue(details.supplier ?? defaultValues.supplier),
+		supplier_branch: toStringValue(details.supplierBranch ?? defaultValues.supplier_branch),
+		billing_address: toStringValue(details.billingAddress ?? defaultValues.billing_address),
+		shipping_address: toStringValue(details.shippingAddress ?? defaultValues.shipping_address),
+		credit_term:
+			details.creditTerm !== undefined && details.creditTerm !== null
+				? String(details.creditTerm)
+				: toStringValue(defaultValues.credit_term),
+		delivery_timeline:
+			details.deliveryTimeline !== undefined && details.deliveryTimeline !== null
+				? String(details.deliveryTimeline)
+				: toStringValue(defaultValues.delivery_timeline),
+		project: toStringValue(details.project ?? defaultValues.project),
+		expense_type: toStringValue(details.expenseType ?? defaultValues.expense_type),
+		contact_person: toStringValue(details.contactPerson ?? defaultValues.contact_person),
+		contact_no: toStringValue(details.contactNo ?? defaultValues.contact_no),
+		footer_note: toStringValue(details.footerNote ?? defaultValues.footer_note),
+		internal_note: toStringValue(details.internalNote ?? defaultValues.internal_note),
+		terms_conditions: toStringValue(details.termsConditions ?? defaultValues.terms_conditions),
+		advance_percentage:
+			details.advancePercentage !== undefined && details.advancePercentage !== null
+				? String(details.advancePercentage)
+				: toStringValue(defaultValues.advance_percentage),
+		billing_state: toStringValue(details.billingState ?? defaultValues.billing_state),
+		shipping_state: toStringValue(details.shippingState ?? defaultValues.shipping_state),
+		tax_type: toStringValue(details.taxType ?? defaultValues.tax_type),
+	};
+};
+
+/**
+ * Finds the label for a given value in an array of options.
+ */
+export const getOptionLabelFromList = (
+	options: ReadonlyArray<{ label: string; value: string }>,
+	value?: unknown,
+): string | undefined => {
+	if (value === null || typeof value === "undefined") return undefined;
+	const target = String(value);
+	return options.find((opt) => opt.value === target)?.label;
+};

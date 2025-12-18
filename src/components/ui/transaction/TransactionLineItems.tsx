@@ -147,12 +147,20 @@ export function TransactionLineItems<TItem>({
                     const content = column.renderCell({ item, index, canEdit });
                     const tooltipContent = column.getTooltip?.({ item, index, canEdit })?.trim();
                     const node = React.isValidElement(content) ? content : <span>{content}</span>;
-                    const wrapped = tooltipContent ? (
-                      <Tooltip title={tooltipContent} arrow placement="top" enterDelay={400}>
+                    
+                    // Always wrap in the same structure to prevent focus loss when tooltip content changes
+                    const wrapped = (
+                      <Tooltip 
+                        title={tooltipContent || ""} 
+                        arrow 
+                        placement="top" 
+                        enterDelay={400}
+                        disableHoverListener={!tooltipContent}
+                        disableFocusListener={!tooltipContent}
+                        disableTouchListener={!tooltipContent}
+                      >
                         <div className="w-full">{node}</div>
                       </Tooltip>
-                    ) : (
-                      node
                     );
 
                     return (

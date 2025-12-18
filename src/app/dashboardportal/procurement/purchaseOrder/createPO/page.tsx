@@ -9,21 +9,19 @@ import {
   useDeferredOptionCache,
   useTransactionSetup,
   useTransactionPreview,
-  type ApprovalInfo,
-  type ApprovalActionPermissions,
-  type ApprovalStatusId,
 } from "@/components/ui/transaction";
 import { useBranchOptions } from "@/utils/branchUtils";
 import {
   fetchPOSetup1,
   fetchPOSetup2,
   getPOById,
-  type POLine,
   type PODetails,
 } from "@/utils/poService";
 import useSelectedCompanyCoId from "@/hooks/use-selected-company-coid";
 import { toast } from "@/hooks/use-toast";
 import { useSidebarContext } from "@/components/dashboard/sidebarContext";
+import { useMenuId } from "@/hooks/useMenuId";
+import { useCompanyName } from "@/hooks/useCompanyName";
 import { IndentLineItemsDialog, type IndentLineItem } from "../components/IndentLineItemsDialog";
 import { POHeaderForm } from "./components/POHeaderForm";
 import { POFooterForm } from "./components/POFooterForm";
@@ -39,25 +37,10 @@ import { usePOHeaderSchema, usePOFooterSchema } from "./hooks/usePOFormSchemas";
 import { usePOFormSubmission } from "./hooks/usePOFormSubmission";
 import { usePOApproval } from "./hooks/usePOApproval";
 import { usePOLineItems } from "./hooks/usePOLineItems";
-import {
-  type BranchAddressRecord,
-  type EditableLineItem,
-  type ExpenseRecord,
-  type ItemGroupCacheEntry,
-  type ItemGroupRecord,
-  type Option,
-  type POSetupData,
-  type ProjectRecord,
-  type SupplierBranchRecord,
-  type SupplierRecord,
-} from "./types/poTypes";
+import type { ItemGroupCacheEntry, POSetupData } from "./types/poTypes";
 
-import { mapItemGroupDetailResponse, mapPOSetupResponse } from "./utils/poMappers";
-import {
-  calculateExpectedDate,
-  calculateLineAmount as calculateLineAmountUtil,
-  calculateTotals,
-} from "./utils/poCalculations";
+import { mapItemGroupDetailResponse, mapPOSetupResponse, mapPODetailsToFormValues } from "./utils/poMappers";
+import { calculateExpectedDate, calculateTotals } from "./utils/poCalculations";
 import { buildDefaultFormValues, createBlankLine } from "./utils/poFactories";
 import {
   EMPTY_BRANCH_ADDRESSES,
@@ -67,10 +50,6 @@ import {
   EMPTY_SETUP_PARAMS,
   EMPTY_SUPPLIERS,
   EMPTY_SUPPLIER_BRANCHES,
-  PO_STATUS_IDS,
-  PO_STATUS_LABELS,
-  isAmountDiscountMode,
-  isPercentageDiscountMode,
 } from "./utils/poConstants";
 
 export default function POTransactionPage() {
@@ -87,7 +66,7 @@ export default function POTransactionPage() {
 
   const branchOptions = useBranchOptions();
   const { coId } = useSelectedCompanyCoId();
-  const { availableMenus, menuItems: sidebarMenuItems, selectedBranches } = useSidebarContext();
+  const { selectedBranches } = useSidebarContext();
   const [isMounted, setIsMounted] = React.useState(false);
   const branchPrefillAppliedRef = React.useRef(false);
   const [lockedBranchId, setLockedBranchId] = React.useState<string | null>(() => (mode !== "create" && branchIdFromUrl ? String(branchIdFromUrl) : null));
@@ -97,65 +76,11 @@ export default function POTransactionPage() {
     setIsMounted(true);
   }, []);
 
-  const getMenuId = React.useCallback((): string => {
-    if (menuIdFromUrl) return menuIdFromUrl;
+  // Use shared menu ID hook
+  const { getMenuId } = useMenuId({ transactionType: "po", menuIdFromUrl });
 
-    if (availableMenus && availableMenus.length > 0) {
-      const currentPath = pathname?.toLowerCase() || "";
-      
-      // First, try exact path match
-      const matchingMenu = availableMenus.find(
-        (item) => {
-          if (!item.menu_path) return false;
-          const menuPath = item.menu_path.toLowerCase();
-          return currentPath === menuPath || currentPath.startsWith(menuPath + "/");
-        }
-      );
-      if (matchingMenu?.menu_id) {
-        console.log("[getMenuId] Matched by path:", matchingMenu.menu_id, matchingMenu.menu_path);
-        return String(matchingMenu.menu_id);
-      }
-
-      // Second: Try matching based on route segments in current path
-      // Current path is like /dashboardportal/procurement/purchaseOrder/createPO
-      // Look for menu whose path contains "procurement/purchaseorder" (not jute_procurement)
-      const poMenuByRoute = availableMenus.find(
-        (item) => {
-          const path = (item.menu_path || "").toLowerCase();
-          // Match menus that have procurement/purchaseorder but NOT jute_procurement
-          return (path.includes("procurement/purchaseorder") || path.includes("procurement/po")) &&
-                 !path.includes("jute");
-        }
-      );
-      if (poMenuByRoute?.menu_id) {
-        console.log("[getMenuId] Matched by route segment:", poMenuByRoute.menu_id, poMenuByRoute.menu_path);
-        return String(poMenuByRoute.menu_id);
-      }
-
-      // Fallback: look for Purchase Order menu specifically (exclude Jute)
-      const poMenu = availableMenus.find(
-        (item) => {
-          const path = (item.menu_path || "").toLowerCase();
-          const name = (item.menu_name || "").toLowerCase();
-          // Match "purchase order" but exclude "jute"
-          const isPO = path.includes("purchaseorder") || 
-                       path.includes("purchase-order") ||
-                       name === "po" ||
-                       name === "purchase order";
-          const isJute = path.includes("jute") || name.includes("jute");
-          return isPO && !isJute;
-        }
-      );
-      if (poMenu?.menu_id) {
-        console.log("[getMenuId] Matched by fallback (non-jute):", poMenu.menu_id, poMenu.menu_name, poMenu.menu_path);
-        return String(poMenu.menu_id);
-      }
-      
-      console.log("[getMenuId] No match found. Current path:", currentPath, "Available menus:", availableMenus.map(m => ({ id: m.menu_id, path: m.menu_path, name: m.menu_name })));
-    }
-
-    return "";
-  }, [menuIdFromUrl, pathname, availableMenus]);
+  // Use shared company name hook
+  const companyName = useCompanyName();
 
   const {
     initialValues,
@@ -372,53 +297,6 @@ export default function POTransactionPage() {
   }, [filledLineItems, formValues.advance_percentage]);
 
 
-  const mapDetailsToFormValues = React.useCallback(
-    (details: PODetails): Record<string, unknown> => {
-      const base = buildDefaultFormValues();
-      const toStringValue = (value: unknown) => {
-        if (value === null || value === undefined) return "";
-        return typeof value === "string" ? value : String(value);
-      };
-      const normalizeDate = (raw?: string) => {
-        if (!raw) return "";
-        return raw.split("T")[0] || raw;
-      };
-
-      return {
-        ...base,
-        branch: toStringValue(details.branch ?? base.branch),
-        date: normalizeDate(details.poDate) || toStringValue(base.date),
-        supplier: toStringValue(details.supplier ?? base.supplier),
-        supplier_branch: toStringValue(details.supplierBranch ?? base.supplier_branch),
-        billing_address: toStringValue(details.billingAddress ?? base.billing_address),
-        shipping_address: toStringValue(details.shippingAddress ?? base.shipping_address),
-        credit_term:
-          details.creditTerm !== undefined && details.creditTerm !== null
-            ? String(details.creditTerm)
-            : toStringValue(base.credit_term),
-        delivery_timeline:
-          details.deliveryTimeline !== undefined && details.deliveryTimeline !== null
-            ? String(details.deliveryTimeline)
-            : toStringValue(base.delivery_timeline),
-        project: toStringValue(details.project ?? base.project),
-        expense_type: toStringValue(details.expenseType ?? base.expense_type),
-        contact_person: toStringValue(details.contactPerson ?? base.contact_person),
-        contact_no: toStringValue(details.contactNo ?? base.contact_no),
-        footer_note: toStringValue(details.footerNote ?? base.footer_note),
-        internal_note: toStringValue(details.internalNote ?? base.internal_note),
-        terms_conditions: toStringValue(details.termsConditions ?? base.terms_conditions),
-        advance_percentage:
-          details.advancePercentage !== undefined && details.advancePercentage !== null
-            ? String(details.advancePercentage)
-            : toStringValue(base.advance_percentage),
-        billing_state: toStringValue(details.billingState ?? base.billing_state),
-        shipping_state: toStringValue(details.shippingState ?? base.shipping_state),
-        tax_type: toStringValue(details.taxType ?? base.tax_type),
-      };
-    },
-    [buildDefaultFormValues],
-  );
-
   const detailsFetchKey = React.useMemo(
     () => [mode, requestedId || "", branchIdForSetup || branchIdFromUrl || "", coId || ""].join("|"),
     [mode, requestedId, branchIdForSetup, branchIdFromUrl, coId],
@@ -464,7 +342,8 @@ export default function POTransactionPage() {
         if (cancelled) return;
 
         setPODetails(details);
-        const nextValues = mapDetailsToFormValues(details);
+        const defaultFormValues = buildDefaultFormValues();
+        const nextValues = mapPODetailsToFormValues(details, defaultFormValues);
 
         const detailsWithBranchId = details as unknown as { branch_id?: unknown; branchId?: unknown };
         const branchIdFromDetails = detailsWithBranchId?.branch_id ?? detailsWithBranchId?.branchId;
@@ -515,7 +394,6 @@ export default function POTransactionPage() {
     requestedId,
     coId,
     getMenuId,
-    mapDetailsToFormValues,
     setInitialValues,
     setFormValues,
     bumpFormKey,
@@ -603,6 +481,13 @@ export default function POTransactionPage() {
     projectOptions,
     expenseOptions,
     itemGroupOptions,
+    getItemOptions,
+    getMakeOptions,
+    getUomOptions,
+    getItemLabel,
+    getMakeLabel,
+    getUomLabel,
+    getOptionLabel,
   } = usePOSelectOptions({
     suppliers,
     supplierBranches,
@@ -610,6 +495,7 @@ export default function POTransactionPage() {
     projects,
     expenses,
     itemGroupsFromLineItems,
+    itemGroupCache,
   });
 
   const headerSchema = usePOHeaderSchema({
@@ -634,34 +520,6 @@ export default function POTransactionPage() {
     shippingState,
     taxType,
   });
-
-  const getItemOptions = React.useCallback(
-    (itemGroupId: string) => itemGroupCache[itemGroupId]?.items ?? [],
-    [itemGroupCache]
-  );
-
-  const getMakeOptions = React.useCallback(
-    (itemGroupId: string) => itemGroupCache[itemGroupId]?.makes ?? [],
-    [itemGroupCache]
-  );
-
-  const getUomOptions = React.useCallback(
-    (itemGroupId: string, itemId: string) =>
-      itemGroupCache[itemGroupId]?.uomsByItemId[itemId] ?? [],
-    [itemGroupCache]
-  );
-
-  const getItemLabel = React.useCallback(
-    (groupId: string, itemId: string, itemCode?: string) => {
-      if (!groupId || !itemId) return itemCode || "-";
-      // Try to get from cache first
-      const cachedLabel = itemGroupCache[groupId]?.itemLabelById[itemId];
-      if (cachedLabel) return cachedLabel;
-      // Fallback to itemCode if available, otherwise itemId
-      return itemCode || itemId;
-    },
-    [itemGroupCache]
-  );
 
   const canEdit = mode !== "view";
 
@@ -696,29 +554,6 @@ export default function POTransactionPage() {
     getMenuId,
     setPODetails,
   });
-
-  const companyName = React.useMemo(() => {
-    if (typeof window === "undefined") return undefined;
-    try {
-      const storedCompany = localStorage.getItem("sidebar_selectedCompany");
-      if (storedCompany) {
-        const parsed = JSON.parse(storedCompany) as { co_name?: string; name?: string; company_name?: string } | null;
-        return parsed?.co_name || parsed?.name || parsed?.company_name || undefined;
-      }
-    } catch {
-      // Ignore errors
-    }
-    return undefined;
-  }, []);
-
-  const getOptionLabel = React.useCallback(
-    (options: Array<{ label: string; value: string }>, value?: unknown) => {
-      if (value === null || typeof value === "undefined") return undefined;
-      const target = String(value);
-      return options.find((opt) => opt.value === target)?.label;
-    },
-    [],
-  );
 
   const branchLabel = React.useMemo(() => {
     const value = formValues.branch ?? poDetails?.branch;

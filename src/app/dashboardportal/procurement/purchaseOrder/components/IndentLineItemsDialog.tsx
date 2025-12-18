@@ -165,6 +165,9 @@ export function IndentLineItemsDialog({
     ? { label: `${selectedIndent.indent_no} - ${selectedIndent.branch_name} (${selectedIndent.indent_date})`, value: String(selectedIndent.indent_id) }
     : null;
 
+  // Ref to control the Autocomplete open state
+  const [autocompleteOpen, setAutocompleteOpen] = React.useState(false);
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent
@@ -188,9 +191,15 @@ export function IndentLineItemsDialog({
           <div>
             <label className="text-sm font-medium mb-2 block">Select Approved Indent</label>
             <Autocomplete<Option, false, false, false>
+              open={autocompleteOpen}
+              onOpen={() => setAutocompleteOpen(true)}
+              onClose={() => setAutocompleteOpen(false)}
               options={indentOptions}
               value={selectedIndentOption}
               onChange={(_, newOpt) => {
+                // Close the dropdown immediately on selection
+                setAutocompleteOpen(false);
+                
                 if (!newOpt) {
                   handleIndentSelect(null);
                   return;
@@ -228,7 +237,7 @@ export function IndentLineItemsDialog({
               noOptionsText="No indents available"
               disablePortal={true}
               openOnFocus
-              blurOnSelect={false}
+              blurOnSelect
               selectOnFocus
               handleHomeEndKeys
               renderOption={(props, option) => {
@@ -237,59 +246,10 @@ export function IndentLineItemsDialog({
                   <li
                     key={key}
                     {...otherProps}
-                    onMouseDown={(e) => {
-                      e.preventDefault();
-                      e.stopPropagation();
-                    }}
-                    onClick={(e) => {
-                      e.preventDefault();
-                      e.stopPropagation();
-                      // Manually trigger the selection
-                      const indentId = String(option.value);
-                      const indent = approvedIndents.find((i) => String(i.indent_id) === indentId);
-                      if (indent) {
-                        setSelectedIndent(indent);
-                        setLoadingLineItems(true);
-                        setSelectedItems(new Set());
-                        getIndentLineItems(indentId)
-                          .then((response) => {
-                            const itemsWithExpense = (response.line_items || []).map((item: any) => ({
-                              ...item,
-                              expense_type_id: response.expenseType ? Number(response.expenseType) : undefined,
-                            }));
-                            setLineItems(itemsWithExpense as IndentLineItem[]);
-                          })
-                          .catch((error) => {
-                            console.error("Error loading indent line items:", error);
-                            setLineItems([]);
-                          })
-                          .finally(() => {
-                            setLoadingLineItems(false);
-                          });
-                      }
-                    }}
                   >
                     {option.label}
                   </li>
                 );
-              }}
-              ListboxProps={{
-                onMouseDown: (e: React.MouseEvent) => {
-                  e.stopPropagation();
-                },
-                onClick: (e: React.MouseEvent) => {
-                  e.stopPropagation();
-                },
-              }}
-              slotProps={{
-                paper: {
-                  onMouseDown: (e: React.MouseEvent) => {
-                    e.stopPropagation();
-                  },
-                  onClick: (e: React.MouseEvent) => {
-                    e.stopPropagation();
-                  },
-                },
               }}
               renderInput={(params) => (
                 <TextField

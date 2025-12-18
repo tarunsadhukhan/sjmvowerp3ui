@@ -4,6 +4,14 @@ import { SearchableSelect } from "@/components/ui/transaction";
 import { Input } from "@/components/ui/input";
 import type { TransactionLineColumn } from "@/components/ui/transaction";
 import type { EditableLineItem, Option } from "../types/poTypes";
+import { DISCOUNT_MODE } from "../utils/poConstants";
+
+/** Discount mode dropdown options */
+const DISCOUNT_MODE_OPTIONS: Option[] = [
+  { label: "None", value: "" },
+  { label: "%", value: String(DISCOUNT_MODE.PERCENTAGE) },
+  { label: "Amount", value: String(DISCOUNT_MODE.AMOUNT) },
+];
 
 type UsePOLineItemColumnsParams = {
   canEdit: boolean;
@@ -126,6 +134,58 @@ export const usePOLineItemColumns = ({
             />
           );
         },
+      },
+      {
+        id: "discountMode",
+        header: "Disc. Type",
+        width: "0.7fr",
+        renderCell: ({ item }) => {
+          const currentVal = item.discountMode != null ? String(item.discountMode) : "";
+          if (!canEdit) {
+            const label = DISCOUNT_MODE_OPTIONS.find((o) => o.value === currentVal)?.label || "-";
+            return <span className="block truncate text-xs">{label}</span>;
+          }
+          const value = DISCOUNT_MODE_OPTIONS.find((o) => o.value === currentVal) ?? DISCOUNT_MODE_OPTIONS[0];
+          return (
+            <SearchableSelect<Option>
+              options={DISCOUNT_MODE_OPTIONS}
+              value={value}
+              onChange={(next) => onFieldChange(item.id, "discountMode", next?.value ?? "")}
+              getOptionLabel={(o) => o.label}
+              isOptionEqualToValue={(a, b) => a.value === b.value}
+              placeholder="Type"
+            />
+          );
+        },
+      },
+      {
+        id: "discountValue",
+        header: "Disc. Value",
+        width: "0.7fr",
+        renderCell: ({ item }) => {
+          const hasDiscountMode = item.discountMode != null && item.discountMode !== 0;
+          if (!canEdit) {
+            return <span className="block truncate text-xs">{item.discountValue || "-"}</span>;
+          }
+          return (
+            <Input
+              type="text"
+              value={item.discountValue}
+              onChange={(e) => onFieldChange(item.id, "discountValue", e.target.value)}
+              placeholder="0"
+              className="h-8 text-xs"
+              disabled={!hasDiscountMode}
+            />
+          );
+        },
+      },
+      {
+        id: "discountAmount",
+        header: "Disc. Amt",
+        width: "0.7fr",
+        renderCell: ({ item }) => (
+          <span className="block truncate text-xs">{item.discountAmount?.toFixed(2) || "0.00"}</span>
+        ),
       },
       {
         id: "amount",

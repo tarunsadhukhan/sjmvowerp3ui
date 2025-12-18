@@ -31,6 +31,9 @@ export type POPreviewItem = {
   quantity?: string | number;
   uom?: string;
   rate?: string | number;
+  discountType?: string;
+  discountValue?: string | number;
+  discountAmount?: string | number;
   amount?: string | number;
   remarks?: string;
 };
@@ -269,7 +272,7 @@ const POPreview: React.FC<POPreviewProps> = ({ header, items, totals, remarks, o
           <Box component="table" sx={{ width: "100%", borderCollapse: "collapse" }}>
             <Box component="thead" sx={{ backgroundColor: "rgba(12,60,96,0.08)" }}>
               <Box component="tr">
-                {["Sr No", "Item", "Qty", "UOM", "Rate", "Amount", "Remarks"].map((col) => (
+                {["Sr No", "Item", "Qty", "UOM", "Rate", "Disc.", "Disc. Amt", "Amount", "Remarks"].map((col) => (
                   <Box
                     key={col}
                     component="th"
@@ -299,6 +302,12 @@ const POPreview: React.FC<POPreviewProps> = ({ header, items, totals, remarks, o
                     <Box component="td" sx={{ border: "1px solid", borderColor: "divider", p: 1, fontSize: 12, textAlign: "right" }}>
                       {formatAmount(item.rate)}
                     </Box>
+                    <Box component="td" sx={{ border: "1px solid", borderColor: "divider", p: 1, fontSize: 12, textAlign: "center" }}>
+                      {item.discountType && item.discountValue ? `${item.discountValue}${item.discountType === "%" ? "%" : ""}` : "-"}
+                    </Box>
+                    <Box component="td" sx={{ border: "1px solid", borderColor: "divider", p: 1, fontSize: 12, textAlign: "right" }}>
+                      {formatAmount(item.discountAmount)}
+                    </Box>
                     <Box component="td" sx={{ border: "1px solid", borderColor: "divider", p: 1, fontSize: 12, textAlign: "right" }}>
                       {formatAmount(item.amount)}
                     </Box>
@@ -309,7 +318,7 @@ const POPreview: React.FC<POPreviewProps> = ({ header, items, totals, remarks, o
                 ))
               ) : (
                 <Box component="tr">
-                  <Box component="td" colSpan={7} sx={{ border: "1px solid", borderColor: "divider", p: 2, fontSize: 12, textAlign: "center" }}>
+                  <Box component="td" colSpan={9} sx={{ border: "1px solid", borderColor: "divider", p: 2, fontSize: 12, textAlign: "center" }}>
                     No line items captured yet.
                   </Box>
                 </Box>

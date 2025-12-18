@@ -7,6 +7,7 @@ import type { IndentLineItem } from "../../components/IndentLineItemsDialog";
 import type { EditableLineItem, ItemGroupCacheEntry, ItemGroupRecord } from "../types/poTypes";
 import { createBlankLine, generateLineId } from "../utils/poFactories";
 import { calculateLineAmount as calculateLineAmountUtil, calculateLineTax } from "../utils/poCalculations";
+import { isPercentageDiscountMode, isAmountDiscountMode, DISCOUNT_MODE } from "../utils/poConstants";
 
 export const lineHasAnyData = (line: EditableLineItem) =>
 	Boolean(line.itemGroup || line.item || line.itemMake || line.quantity || line.rate || line.uom || line.remarks);
@@ -173,16 +174,66 @@ export const usePOLineItems = ({
 				return;
 			}
 
+			if (field === "discountMode") {
+				const modeValue = value ? Number(value) : undefined;
+				setLineItems((prev) =>
+					prev.map((item) => {
+						if (item.id !== id) return item;
+						// When switching modes or clearing, reset discount value and recalculate
+						const updated = { ...item, discountMode: modeValue, discountValue: "" };
+						const qty = Number(updated.quantity) || 0;
+						const rate = Number(updated.rate) || 0;
+						// No discount value yet after mode change
+						const { amount, discountAmount } = calculateLineAmountUtil(qty, rate, modeValue, 0);
+						updated.discountAmount = discountAmount;
+						updated.amount = amount;
+
+						const tax = calculateLineTax(
+							amount,
+							updated.taxPercentage || 0,
+							supplierBranchState,
+							shippingState,
+							!!coConfig?.india_gst,
+						);
+						updated.igstAmount = tax.igst;
+						updated.cgstAmount = tax.cgst;
+						updated.sgstAmount = tax.sgst;
+						updated.taxAmount = tax.total;
+
+						return updated;
+					}),
+				);
+				return;
+			}
+
 			if (field === "discountValue") {
 				const sanitized = value.replace(/[^0-9.]/g, "");
 				setLineItems((prev) =>
 					prev.map((item) => {
 						if (item.id !== id) return item;
-						const updated = { ...item, discountValue: sanitized };
+						const rate = Number(item.rate) || 0;
+						const discountMode = item.discountMode;
+						let discountValue = Number(sanitized) || 0;
+
+						// Validation: % must be < 100, PriceDiscount must be < rate
+						if (isPercentageDiscountMode(discountMode) && discountValue >= 100) {
+							toast({
+								variant: "destructive",
+								title: "Invalid discount",
+								description: "Percentage discount must be less than 100%.",
+							});
+							discountValue = 99.99;
+						} else if (isAmountDiscountMode(discountMode) && discountValue >= rate && rate > 0) {
+							toast({
+								variant: "destructive",
+								title: "Invalid discount",
+								description: "Discount amount must be less than the rate.",
+							});
+							discountValue = rate - 0.01;
+						}
+
+						const updated = { ...item, discountValue: String(discountValue === 0 ? sanitized : discountValue) };
 						const qty = Number(updated.quantity) || 0;
-						const rate = Number(updated.rate) || 0;
-						const discountMode = updated.discountMode;
-						const discountValue = Number(sanitized) || 0;
 						const { amount, discountAmount } = calculateLineAmountUtil(qty, rate, discountMode, discountValue);
 						updated.discountAmount = discountAmount;
 						updated.amount = amount;

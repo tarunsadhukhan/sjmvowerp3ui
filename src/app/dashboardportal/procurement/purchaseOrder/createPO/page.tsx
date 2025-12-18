@@ -49,7 +49,7 @@ import {
   EMPTY_PROJECTS,
   EMPTY_SETUP_PARAMS,
   EMPTY_SUPPLIERS,
-  EMPTY_SUPPLIER_BRANCHES,
+  DISCOUNT_MODE,
 } from "./utils/poConstants";
 
 export default function POTransactionPage() {
@@ -648,6 +648,12 @@ export default function POTransactionPage() {
         if (parts.length > 0) return parts.join(" — ");
         return line.item || "-";
       })();
+      // Discount type label
+      const discountType = (() => {
+        if (line.discountMode === DISCOUNT_MODE.PERCENTAGE) return "%";
+        if (line.discountMode === DISCOUNT_MODE.AMOUNT) return "Amt";
+        return "";
+      })();
       return {
         srNo: index + 1,
         itemGroup: groupLabel || undefined,
@@ -655,6 +661,9 @@ export default function POTransactionPage() {
         quantity: line.quantity || "-",
         uom: uomLabel,
         rate: line.rate,
+        discountType,
+        discountValue: line.discountValue || "",
+        discountAmount: typeof line.discountAmount === "number" ? line.discountAmount : "",
         amount: typeof line.amount === "number" ? line.amount : line.amount ?? "",
         remarks: line.remarks || "-",
       };

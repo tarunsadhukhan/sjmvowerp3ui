@@ -371,17 +371,20 @@ export const usePOLineItems = ({
 		});
 		lineItems.forEach((line) => {
 			if (line.itemGroup && !groups.has(line.itemGroup)) {
-				const indentInfo = indentItemGroupInfoRef.current.get(line.itemGroup);
-				const labelParts = indentInfo ? [indentInfo.code, indentInfo.name].filter(Boolean) : [];
-				const label = labelParts.length ? labelParts.join(" — ") : line.itemGroup;
-				groups.set(line.itemGroup, {
-					id: line.itemGroup,
-					label,
-				});
+				// Priority: 1. cache groupLabel, 2. indentItemGroupInfoRef, 3. fall back to ID
+				const cachedLabel = itemGroupCache[line.itemGroup]?.groupLabel;
+				if (cachedLabel) {
+					groups.set(line.itemGroup, { id: line.itemGroup, label: cachedLabel });
+				} else {
+					const indentInfo = indentItemGroupInfoRef.current.get(line.itemGroup);
+					const labelParts = indentInfo ? [indentInfo.code, indentInfo.name].filter(Boolean) : [];
+					const label = labelParts.length ? labelParts.join(" — ") : line.itemGroup;
+					groups.set(line.itemGroup, { id: line.itemGroup, label });
+				}
 			}
 		});
 		return Array.from(groups.values());
-	}, [itemGroups, lineItems]);
+	}, [itemGroupCache, itemGroups, lineItems]);
 
 	return {
 		lineItems,

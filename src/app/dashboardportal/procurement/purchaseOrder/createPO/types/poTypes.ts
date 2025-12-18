@@ -111,6 +111,7 @@ export type ItemOption = Option & {
  * Cached metadata for an item group to avoid redundant network calls.
  */
 export type ItemGroupCacheEntry = {
+	groupLabel?: string;
 	items: ItemOption[];
 	makes: Option[];
 	uomsByItemId: Record<string, Option[]>;
@@ -263,6 +264,8 @@ export type POSetup1ResponseRaw = {
  * Raw response for `fetchPOSetup2`.
  */
 export type POSetup2ResponseRaw = {
+	item_grp_code?: string;
+	item_grp_name?: string;
 	items?: ItemOptionRaw[];
 	makes?: ItemMakeOptionRaw[];
 	uoms?: ItemUomOptionRaw[];

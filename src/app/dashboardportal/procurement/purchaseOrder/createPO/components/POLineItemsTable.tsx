@@ -16,9 +16,11 @@ const DISCOUNT_MODE_OPTIONS: Option[] = [
 type UsePOLineItemColumnsParams = {
   canEdit: boolean;
   itemGroupOptions: Option[];
+  getItemGroupLabel: (groupId: string) => string;
   getItemOptions: (groupId: string) => Option[];
   getItemLabel: (groupId: string, itemId: string, itemCode?: string) => string;
   getUomOptions: (groupId: string, itemId: string) => Option[];
+  getUomLabel: (groupId: string, itemId: string, uomId: string) => string;
   onFieldChange: (id: string, field: keyof EditableLineItem, value: string | number) => void;
 };
 
@@ -29,9 +31,11 @@ type UsePOLineItemColumnsParams = {
 export const usePOLineItemColumns = ({
   canEdit,
   itemGroupOptions,
+  getItemGroupLabel,
   getItemOptions,
   getItemLabel,
   getUomOptions,
+  getUomLabel,
   onFieldChange,
 }: UsePOLineItemColumnsParams): TransactionLineColumn<EditableLineItem>[] =>
   React.useMemo(
@@ -41,8 +45,9 @@ export const usePOLineItemColumns = ({
         header: "Item Group",
         width: "1.2fr",
         renderCell: ({ item }) => {
+          const label = getItemGroupLabel(item.itemGroup);
           if (!canEdit) {
-            return <span className="block truncate text-xs">{itemGroupOptions.find((o) => o.value === item.itemGroup)?.label || "-"}</span>;
+            return <span className="block truncate text-xs">{label || "-"}</span>;
           }
           const value = itemGroupOptions.find((o) => o.value === item.itemGroup) ?? null;
           return (
@@ -56,14 +61,16 @@ export const usePOLineItemColumns = ({
             />
           );
         },
+        getTooltip: ({ item }) => getItemGroupLabel(item.itemGroup) || undefined,
       },
       {
         id: "item",
         header: "Item",
         width: "1.5fr",
         renderCell: ({ item }) => {
+          const label = getItemLabel(item.itemGroup, item.item, item.itemCode);
           if (!canEdit) {
-            return <span className="block truncate text-xs">{getItemLabel(item.itemGroup, item.item, item.itemCode)}</span>;
+            return <span className="block truncate text-xs">{label}</span>;
           }
           const options = getItemOptions(item.itemGroup);
           const value = options.find((o) => o.value === item.item) ?? null;
@@ -78,6 +85,7 @@ export const usePOLineItemColumns = ({
             />
           );
         },
+        getTooltip: ({ item }) => getItemLabel(item.itemGroup, item.item, item.itemCode) || undefined,
       },
       {
         id: "rate",
@@ -95,6 +103,7 @@ export const usePOLineItemColumns = ({
           ) : (
             <span className="block truncate text-xs">{item.rate || "-"}</span>
           ),
+        getTooltip: ({ item }) => (item.rate ? `Rate: ${item.rate}` : undefined),
       },
       {
         id: "quantity",
@@ -112,6 +121,7 @@ export const usePOLineItemColumns = ({
           ) : (
             <span className="block truncate text-xs">{item.quantity || "-"}</span>
           ),
+        getTooltip: ({ item }) => (item.quantity ? `Quantity: ${item.quantity}` : undefined),
       },
       {
         id: "uom",
@@ -119,8 +129,9 @@ export const usePOLineItemColumns = ({
         width: "0.6fr",
         renderCell: ({ item }) => {
           const options = getUomOptions(item.itemGroup, item.item);
+          const label = getUomLabel(item.itemGroup, item.item, item.uom);
           if (!canEdit) {
-            return <span className="block truncate text-xs">{options.find((o) => o.value === item.uom)?.label || "-"}</span>;
+            return <span className="block truncate text-xs">{label || "-"}</span>;
           }
           const value = options.find((o) => o.value === item.uom) ?? null;
           return (
@@ -134,6 +145,7 @@ export const usePOLineItemColumns = ({
             />
           );
         },
+        getTooltip: ({ item }) => getUomLabel(item.itemGroup, item.item, item.uom) || undefined,
       },
       {
         id: "discountMode",
@@ -141,8 +153,8 @@ export const usePOLineItemColumns = ({
         width: "0.7fr",
         renderCell: ({ item }) => {
           const currentVal = item.discountMode != null ? String(item.discountMode) : "";
+          const label = DISCOUNT_MODE_OPTIONS.find((o) => o.value === currentVal)?.label || "-";
           if (!canEdit) {
-            const label = DISCOUNT_MODE_OPTIONS.find((o) => o.value === currentVal)?.label || "-";
             return <span className="block truncate text-xs">{label}</span>;
           }
           const value = DISCOUNT_MODE_OPTIONS.find((o) => o.value === currentVal) ?? DISCOUNT_MODE_OPTIONS[0];
@@ -156,6 +168,11 @@ export const usePOLineItemColumns = ({
               placeholder="Type"
             />
           );
+        },
+        getTooltip: ({ item }) => {
+          const currentVal = item.discountMode != null ? String(item.discountMode) : "";
+          const label = DISCOUNT_MODE_OPTIONS.find((o) => o.value === currentVal)?.label;
+          return label && label !== "None" ? `Discount Type: ${label}` : undefined;
         },
       },
       {
@@ -178,6 +195,7 @@ export const usePOLineItemColumns = ({
             />
           );
         },
+        getTooltip: ({ item }) => (item.discountValue ? `Discount Value: ${item.discountValue}` : undefined),
       },
       {
         id: "discountAmount",
@@ -186,15 +204,17 @@ export const usePOLineItemColumns = ({
         renderCell: ({ item }) => (
           <span className="block truncate text-xs">{item.discountAmount?.toFixed(2) || "0.00"}</span>
         ),
+        getTooltip: ({ item }) => (item.discountAmount ? `Discount Amount: ${item.discountAmount.toFixed(2)}` : undefined),
       },
       {
         id: "amount",
         header: "Amount",
         width: "0.8fr",
         renderCell: ({ item }) => <span className="block truncate text-xs font-medium">{item.amount?.toFixed(2) || "0.00"}</span>,
+        getTooltip: ({ item }) => (item.amount ? `Amount: ${item.amount.toFixed(2)}` : undefined),
       },
     ],
-    [canEdit, itemGroupOptions, getItemOptions, getItemLabel, getUomOptions, onFieldChange],
+    [canEdit, itemGroupOptions, getItemGroupLabel, getItemOptions, getItemLabel, getUomOptions, getUomLabel, onFieldChange],
   );
 
 /**

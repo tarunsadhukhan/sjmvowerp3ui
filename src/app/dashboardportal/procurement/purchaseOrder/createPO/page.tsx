@@ -484,6 +484,7 @@ export default function POTransactionPage() {
     getItemOptions,
     getMakeOptions,
     getUomOptions,
+    getItemGroupLabel,
     getItemLabel,
     getMakeLabel,
     getUomLabel,
@@ -526,9 +527,11 @@ export default function POTransactionPage() {
   const lineItemColumns = usePOLineItemColumns({
     canEdit,
     itemGroupOptions,
+    getItemGroupLabel,
     getItemOptions,
     getItemLabel,
     getUomOptions,
+    getUomLabel,
     onFieldChange: handleLineFieldChange,
   });
 

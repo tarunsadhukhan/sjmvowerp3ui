@@ -59,6 +59,21 @@ export const usePOSelectOptions = ({
 
   const itemGroupOptions = React.useMemo<Option[]>(() => itemGroupsFromLineItems.map((grp) => ({ label: grp.label || grp.id, value: grp.id })), [itemGroupsFromLineItems]);
 
+  // Item group label getter - checks cache first, then itemGroupsFromLineItems
+  const getItemGroupLabel = React.useCallback(
+    (groupId: string): string => {
+      if (!groupId) return "-";
+      // First check if the cache has a groupLabel
+      const cached = itemGroupCache[groupId];
+      if (cached?.groupLabel) return cached.groupLabel;
+      // Fall back to the itemGroupsFromLineItems list
+      const option = itemGroupsFromLineItems.find((grp) => grp.id === groupId);
+      if (option?.label && option.label !== option.id) return option.label;
+      return groupId;
+    },
+    [itemGroupCache, itemGroupsFromLineItems],
+  );
+
   // Item group cache dependent getters
   const getItemOptions = React.useCallback(
     (itemGroupId: string) => itemGroupCache[itemGroupId]?.items ?? [],
@@ -119,6 +134,7 @@ export const usePOSelectOptions = ({
     projectOptions,
     expenseOptions,
     itemGroupOptions,
+    getItemGroupLabel,
     getItemOptions,
     getMakeOptions,
     getUomOptions,

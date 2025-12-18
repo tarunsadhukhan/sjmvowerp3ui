@@ -70,7 +70,7 @@ export const usePOHeaderSchema = ({
       { name: "delivery_timeline", label: "Delivery Timeline (days)", type: "text", placeholder: "days", required: true, disabled: headerFieldsDisabled, grid: { xs: 12, md: 4 } },
       {
         name: "expected_date",
-        label: "Expected Date", // Handled by custom render but required by type
+        label: "",
         type: "custom",
         render: () => (
           <TextField
@@ -80,9 +80,8 @@ export const usePOHeaderSchema = ({
             fullWidth
             size="small"
             placeholder="Auto-calculated"
-            helperText={expectedDate ? undefined : "Set a delivery timeline to calculate expected date"}
+            helperText={expectedDate ? undefined : "Set delivery timeline"}
             InputLabelProps={{ shrink: true }}
-            sx={{ "& .MuiInputBase-root": { backgroundColor: "background.paper" } }}
           />
         ),
         grid: { xs: 12, md: 4 },

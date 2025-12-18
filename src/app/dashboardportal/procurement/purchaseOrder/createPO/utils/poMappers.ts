@@ -178,6 +178,13 @@ export const mapPOSetupResponse = (response: unknown): POSetupData => {
  */
 export const mapItemGroupDetailResponse = (response: unknown): ItemGroupCacheEntry => {
 	const result = response as POSetup2ResponseRaw;
+	
+	// Extract group label from response if available
+	const groupCode = result?.item_grp_code;
+	const groupName = result?.item_grp_name;
+	const groupLabelParts = [groupCode, groupName].filter(Boolean);
+	const groupLabel = groupLabelParts.length ? groupLabelParts.join(" — ") : undefined;
+	
 	const itemsRaw = Array.isArray(result.items) ? result.items : [];
 	const makesRaw = Array.isArray(result.makes) ? result.makes : [];
 	const uomsRaw = Array.isArray(result.uoms) ? result.uoms : [];
@@ -261,6 +268,7 @@ export const mapItemGroupDetailResponse = (response: unknown): ItemGroupCacheEnt
 	});
 
 	return {
+		groupLabel,
 		items,
 		makes,
 		uomsByItemId,

@@ -3,7 +3,7 @@
 import { useState } from "react"
 //import { usePathname } from "next/navigation"
 import SidebarConsole from "@/components/dashboard/sidebarCompanyConsole"
-import Header from "@/components/dashboard/header"
+// import Header from "@/components/dashboard/header"
 // import ProtectedRoute from '@/components/auth/protected-route'
 
 export default function DashboardLayout({

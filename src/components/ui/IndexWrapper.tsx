@@ -7,7 +7,7 @@ import { usePathname } from "next/navigation";
 import { Eye, Edit } from "lucide-react";
 import MuiDataGrid from "./muiDataGrid";
 import { Button } from "./button";
-import { useSidebarContext } from "@/components/dashboard/sidebarContext";
+import { useSidebarContextSafe } from "@/components/dashboard/sidebarContext";
 
 export type IndexWrapperSearchConfig = {
   value: string;
@@ -45,6 +45,8 @@ type IndexWrapperProps<RowType extends GridValidRowModel & { id?: string | numbe
   children?: React.ReactNode;
   className?: string;
   contentClassName?: string;
+  /** Show MUI DataGrid toolbar with filters, column selector, density, and export */
+  showToolbar?: boolean;
 };
 
 function IndexWrapper<RowType extends GridValidRowModel & { id?: string | number }>({
@@ -65,8 +67,10 @@ function IndexWrapper<RowType extends GridValidRowModel & { id?: string | number
   children,
   className,
   contentClassName,
+  showToolbar = false,
 }: IndexWrapperProps<RowType>) {
-  const { hasMenuAccess } = useSidebarContext();
+  const sidebarContext = useSidebarContextSafe();
+  const hasMenuAccess = sidebarContext?.hasMenuAccess ?? (() => true);
   const pathname = usePathname();
 
   const [searchInput, setSearchInput] = useState<string>(search?.value ?? "");
@@ -242,6 +246,7 @@ function IndexWrapper<RowType extends GridValidRowModel & { id?: string | number
           onPaginationModelChange={onPaginationModelChange}
           loading={loading}
           showLoadingUntilLoaded={showLoadingUntilLoaded}
+          showToolbar={showToolbar}
         />
 
         {children}

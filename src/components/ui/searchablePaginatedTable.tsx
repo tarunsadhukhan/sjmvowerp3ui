@@ -3,7 +3,6 @@ import { Button } from "@/components/ui/button";
 import { Share } from "lucide-react";
 import { Column, DataTable } from "./datatablewithedit";
 import { usePaginatedSearch } from "./paginatedSearch";
-import { useState } from "react";
 import { exportToCSV } from "@/utils/exportToCSV"; // Adjust import path as necessary
 
 export type SearchableTableProps<T> = {
@@ -13,17 +12,6 @@ export type SearchableTableProps<T> = {
 
 export function SearchablePaginatedTable<T>({ columns, fetchFn }: SearchableTableProps<T>) {
   const { data, total , isLoading, searchQuery, setSearchQuery, loadMoreRef } = usePaginatedSearch(fetchFn);
-
-  const [visibleCols, setVisibleCols] = useState(
-    columns.reduce((acc, col) => {
-      acc[col.key as string] = col.visible !== false;
-      return acc;
-    }, {} as Record<string, boolean>)
-  );
-
-  const toggleCol = (key: string) => {
-    setVisibleCols(prev => ({ ...prev, [key]: !prev[key] }));
-  };
 
   return (
     <>
@@ -40,22 +28,8 @@ export function SearchablePaginatedTable<T>({ columns, fetchFn }: SearchableTabl
         </Button>
       </div>
 
-      <div className="mb-4 flex flex-wrap gap-4 items-center">
-        <span className="text-sm font-medium text-gray-700">Toggle Columns:</span>
-        {columns.map((col) => (
-          <label key={col.key as string} className="flex items-center space-x-2 text-sm">
-            <input
-              type="checkbox"
-              checked={visibleCols[col.key as string]}
-              onChange={() => toggleCol(col.key as string)}
-            />
-            <span>{col.label}</span>
-          </label>
-        ))}
-      </div>
-
       <DataTable
-        columns={columns.filter(col => visibleCols[col.key as string])}
+        columns={columns}
         data={data}
         totalCount={total}
         isLoading={isLoading}

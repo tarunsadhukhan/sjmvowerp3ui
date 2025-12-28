@@ -14,10 +14,6 @@ export const fetchWithCookie = async <T = any>(
     body?: unknown,
 ): Promise<FetchResult<T>> => {
     try {
-        const cookies = typeof document !== "undefined" ? document.cookie : "";
-        // Keep a small debug log but avoid logging bodies in production
-        console.debug(`Making ${method} request to ${url} with cookies length: ${cookies.length}`);
-
         const response: AxiosResponse<T> = await axios({
             url,
             method,

@@ -229,3 +229,11 @@ export const useSidebarContext = () => {
   if (!ctx) throw new Error('useSidebarContext must be used within SidebarProvider');
   return ctx;
 };
+
+/**
+ * Safe version of useSidebarContext that returns null if not within SidebarProvider.
+ * Use this in components that may be used both inside and outside of SidebarProvider.
+ */
+export const useSidebarContextSafe = () => {
+  return useContext(SidebarContext);
+};

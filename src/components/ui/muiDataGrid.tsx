@@ -1,4 +1,11 @@
-import { DataGrid, GridColDef, GridPaginationModel, GridRowsProp } from '@mui/x-data-grid';
+import {
+  DataGrid,
+  GridColDef,
+  GridPaginationModel,
+  GridRowsProp,
+  GridFilterModel,
+  GridSortModel,
+} from '@mui/x-data-grid';
 import { Box } from '@mui/material';
 import React from 'react';
 
@@ -12,7 +19,20 @@ interface MuiDataGridProps {
   pageSizeOptions?: number[];
   paginationMode?: 'client' | 'server';
   disableRowSelectionOnClick?: boolean;
-  showLoadingUntilLoaded?: boolean; // NEW: force loading until explicitly set to false
+  showLoadingUntilLoaded?: boolean;
+  // Toolbar and filtering props
+  showToolbar?: boolean;
+  filterMode?: 'client' | 'server';
+  sortingMode?: 'client' | 'server';
+  filterModel?: GridFilterModel;
+  onFilterModelChange?: (model: GridFilterModel) => void;
+  sortModel?: GridSortModel;
+  onSortModelChange?: (model: GridSortModel) => void;
+  // Column features
+  disableColumnFilter?: boolean;
+  disableColumnSelector?: boolean;
+  disableDensitySelector?: boolean;
+  disableExport?: boolean;
 }
 
 const MuiDataGrid: React.FC<MuiDataGridProps> = ({
@@ -26,9 +46,20 @@ const MuiDataGrid: React.FC<MuiDataGridProps> = ({
   paginationMode = 'server',
   disableRowSelectionOnClick = true,
   showLoadingUntilLoaded = false,
+  // Toolbar and filtering props
+  showToolbar = false,
+  filterMode = 'client',
+  sortingMode = 'client',
+  filterModel,
+  onFilterModelChange,
+  sortModel,
+  onSortModelChange,
+  // Column features
+  disableColumnFilter = false,
+  disableColumnSelector = false,
+  disableDensitySelector = false,
+  disableExport = false,
 }) => {
-  // If showLoadingUntilLoaded is true, use the loading prop from parent; otherwise, fallback to default behavior
-  const effectiveLoading = showLoadingUntilLoaded ? loading : false;
   return (
     <Box sx={{
       height: 500,
@@ -54,6 +85,20 @@ const MuiDataGrid: React.FC<MuiDataGridProps> = ({
         rowCount={rowCount}
         disableRowSelectionOnClick={disableRowSelectionOnClick}
         pagination
+        // Use the new showToolbar prop instead of deprecated GridToolbar
+        showToolbar={showToolbar}
+        // Filtering
+        filterMode={filterMode}
+        filterModel={filterModel}
+        onFilterModelChange={onFilterModelChange}
+        // Sorting
+        sortingMode={sortingMode}
+        sortModel={sortModel}
+        onSortModelChange={onSortModelChange}
+        // Column features
+        disableColumnFilter={disableColumnFilter}
+        disableColumnSelector={disableColumnSelector}
+        disableDensitySelector={disableDensitySelector}
         sx={{
           '& .MuiDataGrid-columnHeader': {
             backgroundColor: '#3ea6da',
@@ -62,7 +107,11 @@ const MuiDataGrid: React.FC<MuiDataGridProps> = ({
           },
           '& .MuiDataGrid-columnHeaderTitle': {
             fontWeight: 'bold',
-          }
+          },
+          '& .MuiDataGrid-toolbarContainer': {
+            padding: '8px 16px',
+            gap: '8px',
+          },
         }}
       />
     </Box>

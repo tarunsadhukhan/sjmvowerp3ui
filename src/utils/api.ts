@@ -206,7 +206,17 @@ const apiRoutesPortalMasters = {
     PO_CLONE: `${API_URL}/procurementPO/clone_po`,
 
     INWARD_TABLE: `${API_URL}/procurementInward/get_inward_table`,
-
+    GET_INWARD_SETUP_1: `${API_URL}/procurementInward/get_inward_setup_1`,
+    GET_INWARD_SETUP_2: `${API_URL}/procurementInward/get_inward_setup_2`,
+    GET_APPROVED_POS_BY_SUPPLIER: `${API_URL}/procurementInward/get_approved_pos_by_supplier`,
+    GET_PO_LINE_ITEMS_FOR_INWARD: `${API_URL}/procurementInward/get_po_line_items`,
+    INWARD_CREATE: `${API_URL}/procurementInward/create_inward`,
+    INWARD_UPDATE: `${API_URL}/procurementInward/update_inward`,
+    GET_INWARD_BY_ID: `${API_URL}/procurementInward/get_inward_by_id`,
+    INWARD_OPEN: `${API_URL}/procurementInward/open_inward`,
+    INWARD_CANCEL_DRAFT: `${API_URL}/procurementInward/cancel_draft_inward`,
+    INWARD_APPROVE: `${API_URL}/procurementInward/approve_inward`,
+    INWARD_REJECT: `${API_URL}/procurementInward/reject_inward`,
 
 };
 

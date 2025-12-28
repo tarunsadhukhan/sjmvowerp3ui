@@ -1,5 +1,6 @@
 import { fetchWithCookie } from "@/utils/apiClient2";
 import { apiRoutesPortalMasters } from "@/utils/api";
+import type { ApprovalStatusId } from "@/components/ui/transaction";
 
 export type InwardLine = {
 	id: string;
@@ -43,7 +44,7 @@ export type InwardDetails = {
 	transporterName?: string;
 	remarks?: string;
 	status?: string;
-	statusId?: 1 | 3 | 4 | 5 | 6 | 20 | 21;
+	statusId?: ApprovalStatusId;
 	approvalLevel?: number | null;
 	maxApprovalLevel?: number | null;
 	updatedBy?: string;

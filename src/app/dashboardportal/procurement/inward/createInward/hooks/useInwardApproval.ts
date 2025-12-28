@@ -29,19 +29,24 @@ export const useInwardApproval = ({
 	const router = useRouter();
 	const [approvalLoading, setApprovalLoading] = React.useState(false);
 
-	// Map string status to ApprovalStatusId
+	// Map from status name to ID
+	const STATUS_NAME_MAP: Record<string, ApprovalStatusId> = React.useMemo(() => ({
+		"draft": INWARD_STATUS_IDS.DRAFT,
+		"open": INWARD_STATUS_IDS.OPEN,
+		"pending approval": INWARD_STATUS_IDS.PENDING_APPROVAL,
+		"pending_approval": INWARD_STATUS_IDS.PENDING_APPROVAL,
+		"approved": INWARD_STATUS_IDS.APPROVED,
+		"rejected": INWARD_STATUS_IDS.REJECTED,
+		"closed": INWARD_STATUS_IDS.CLOSED,
+		"cancelled": INWARD_STATUS_IDS.CANCELLED,
+	}), []);
+
+	// Map string status to ApprovalStatusId using exact matching
 	const mapStatusToId = React.useCallback((status?: string): ApprovalStatusId | null => {
 		if (!status) return null;
-		const normalized = status.toLowerCase();
-		if (normalized.includes("draft")) return INWARD_STATUS_IDS.DRAFT;
-		if (normalized.includes("pending")) return INWARD_STATUS_IDS.PENDING_APPROVAL;
-		if (normalized.includes("approved")) return INWARD_STATUS_IDS.APPROVED;
-		if (normalized.includes("rejected")) return INWARD_STATUS_IDS.REJECTED;
-		if (normalized.includes("closed")) return INWARD_STATUS_IDS.CLOSED;
-		if (normalized.includes("cancelled")) return INWARD_STATUS_IDS.CANCELLED;
-		if (normalized.includes("open")) return INWARD_STATUS_IDS.OPEN;
-		return null;
-	}, []);
+		const normalized = status.toLowerCase().trim();
+		return STATUS_NAME_MAP[normalized] ?? null;
+	}, [STATUS_NAME_MAP]);
 
 	// Derive current status
 	const statusId = React.useMemo<ApprovalStatusId>(() => {

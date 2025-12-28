@@ -1,5 +1,4 @@
 const API_URL=process.env.NEXT_PUBLIC_API_BASE_URL || '/apix';
-console.log('API_URL for all', API_URL);
 
 
 

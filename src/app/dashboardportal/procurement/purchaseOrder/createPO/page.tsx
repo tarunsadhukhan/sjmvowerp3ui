@@ -1,6 +1,6 @@
 "use client";
 
-import React from "react";
+import React, { Suspense } from "react";
 import { useRouter, useSearchParams, usePathname } from "next/navigation";
 import TransactionWrapper from "@/components/ui/TransactionWrapper";
 import { Button } from "@/components/ui/button";
@@ -52,7 +52,24 @@ import {
   DISCOUNT_MODE,
 } from "./utils/poConstants";
 
+// Loading fallback for Suspense
+function POPageLoading() {
+  return (
+    <div className="flex items-center justify-center min-h-[400px]">
+      <div className="animate-spin h-8 w-8 border-4 border-primary border-t-transparent rounded-full" />
+    </div>
+  );
+}
+
 export default function POTransactionPage() {
+  return (
+    <Suspense fallback={<POPageLoading />}>
+      <POTransactionPageContent />
+    </Suspense>
+  );
+}
+
+function POTransactionPageContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const pathname = usePathname();

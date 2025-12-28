@@ -1,6 +1,5 @@
-@tailwind base;
-@tailwind components;
-@tailwind utilities;
+@import "tailwindcss";
+@config "../../tailwind.config.ts";
 
 :root {
   --foreground-rgb: 17, 24, 39;
@@ -109,15 +108,15 @@
   }
   
   .form-group-left {
-    @apply form-group mr-2;
+    @apply w-1/3 mr-2;
   }
   
   .form-group-middle {
-    @apply form-group mx-2;
+    @apply w-1/3 mx-2;
   }
   
   .form-group-right {
-    @apply form-group ml-2;
+    @apply w-1/3 ml-2;
   }
   
   .form-label {

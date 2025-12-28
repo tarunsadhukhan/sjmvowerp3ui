@@ -1,6 +1,6 @@
 "use client";
 
-import React from "react";
+import React, { Suspense } from "react";
 import { useRouter, useSearchParams, usePathname } from "next/navigation";
 import TransactionWrapper, { type TransactionAction } from "@/components/ui/TransactionWrapper";
 import IndentPreview from "../components/IndentPreview";
@@ -43,7 +43,24 @@ import { IndentHeaderForm } from "./components/IndentHeaderForm";
 import { IndentApprovalBar } from "./components/IndentApprovalBar";
 import { useIndentLineItemColumns } from "./components/IndentLineItemsTable";
 
+// Loading fallback for Suspense
+function IndentPageLoading() {
+	return (
+		<div className="flex items-center justify-center min-h-[400px]">
+			<div className="animate-spin h-8 w-8 border-4 border-primary border-t-transparent rounded-full" />
+		</div>
+	);
+}
+
 export default function IndentTransactionPage() {
+	return (
+		<Suspense fallback={<IndentPageLoading />}>
+			<IndentTransactionPageContent />
+		</Suspense>
+	);
+}
+
+function IndentTransactionPageContent() {
 	const router = useRouter();
 	const searchParams = useSearchParams();
 	const pathname = usePathname();

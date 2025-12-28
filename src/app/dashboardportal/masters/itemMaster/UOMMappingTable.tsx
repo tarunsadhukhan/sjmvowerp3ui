@@ -61,6 +61,23 @@ const normalizeRow = (row: any, options: UOMOption[]): UOMRow => {
   const mapToUom = mapToUomRaw != null ? String(mapToUomRaw) : null;
   const mapFromName = row?.mapFromName ?? row?.map_from_name ?? options.find(o => String(o.value) === String(mapFromUom))?.label ?? null;
   const mapToName = row?.mapToName ?? row?.map_to_name ?? options.find(o => String(o.value) === String(mapToUom))?.label ?? null;
+  
+  // Parse relationValue - handle both number and string from API
+  const rawRelation = row?.relationValue ?? row?.relation_value;
+  let relationValue: number | null = null;
+  if (rawRelation != null && rawRelation !== "") {
+    const parsed = Number(rawRelation);
+    if (!Number.isNaN(parsed)) relationValue = parsed;
+  }
+  
+  // Parse rounding - handle both number and string from API
+  const rawRounding = row?.rounding;
+  let rounding: number | null = null;
+  if (rawRounding != null && rawRounding !== "") {
+    const parsed = parseInt(String(rawRounding), 10);
+    if (!Number.isNaN(parsed)) rounding = parsed;
+  }
+  
   return {
     id: row?.id ?? makeId(),
     mapFromUom,
@@ -68,8 +85,8 @@ const normalizeRow = (row: any, options: UOMOption[]): UOMRow => {
     mapToUom,
     mapToName,
     isFixed: Boolean(row?.isFixed ?? row?.is_fixed ?? false),
-    relationValue: typeof row?.relationValue === "number" ? row.relationValue : (typeof row?.relation_value === "number" ? row.relation_value : row?.relationValue ?? row?.relation_value ?? null),
-    rounding: typeof row?.rounding === "number" ? row.rounding : row?.rounding ?? null,
+    relationValue,
+    rounding,
   };
 };
 
@@ -281,9 +298,11 @@ const UOMMappingTable: React.FC<UOMMappingTableProps> = ({ value = [], uomOption
                 </TableCell>
                 <TableCell>
                   <Tooltip title="Remove row">
-                    <IconButton size="small" onClick={() => removeRow(idx)} disabled={disabledAll}>
-                      <Trash size={14} />
-                    </IconButton>
+                    <span style={{ display: 'inline-block' }}>
+                      <IconButton size="small" onClick={() => removeRow(idx)} disabled={disabledAll}>
+                        <Trash size={14} />
+                      </IconButton>
+                    </span>
                   </Tooltip>
                 </TableCell>
               </TableRow>

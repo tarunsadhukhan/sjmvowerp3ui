@@ -396,22 +396,40 @@ const CreateItem: React.FC<CreateItemProps> = ({ open, onClose, mode = 'create',
             : Array.isArray(data.uom_mappings)
               ? data.uom_mappings
               : [])
-          .map((m: any) => ({
-            id: `${m.map_from_id ?? m.map_from ?? m.mapFromId ?? ""}-${m.map_to_id ?? m.map_to ?? m.mapToId ?? Math.random()}`,
-            mapFromUom: (() => {
-              const from = m.map_from_id ?? m.map_from ?? m.mapFromId ?? null;
-              return from != null ? String(from) : null;
-            })(),
-            mapFromName: m.map_from_name ?? m.mapFromName ?? null,
-            mapToUom: (() => {
-              const to = m.map_to_id ?? m.map_to ?? m.mapToId ?? null;
-              return to != null ? String(to) : null;
-            })(),
-            mapToName: m.map_to_name ?? m.mapToName ?? null,
-            isFixed: Boolean(Number(m.is_fixed ?? m.isFixed ?? 0)),
-            relationValue: typeof m.relation_value !== "undefined" ? Number(m.relation_value) : (typeof m.relationValue !== "undefined" ? Number(m.relationValue) : null),
-            rounding: typeof m.rounding !== "undefined" ? Number(m.rounding) : null,
-          }));
+          .map((m: any) => {
+            // Parse relation_value safely - handle string, number, null
+            const rawRelation = m.relation_value ?? m.relationValue;
+            let relationValue: number | null = null;
+            if (rawRelation != null && rawRelation !== "") {
+              const parsed = Number(rawRelation);
+              if (!Number.isNaN(parsed)) relationValue = parsed;
+            }
+            
+            // Parse rounding safely
+            const rawRounding = m.rounding;
+            let rounding: number | null = null;
+            if (rawRounding != null && rawRounding !== "") {
+              const parsed = parseInt(String(rawRounding), 10);
+              if (!Number.isNaN(parsed)) rounding = parsed;
+            }
+            
+            return {
+              id: `${m.map_from_id ?? m.map_from ?? m.mapFromId ?? ""}-${m.map_to_id ?? m.map_to ?? m.mapToId ?? Math.random()}`,
+              mapFromUom: (() => {
+                const from = m.map_from_id ?? m.map_from ?? m.mapFromId ?? null;
+                return from != null ? String(from) : null;
+              })(),
+              mapFromName: m.map_from_name ?? m.mapFromName ?? null,
+              mapToUom: (() => {
+                const to = m.map_to_id ?? m.map_to ?? m.mapToId ?? null;
+                return to != null ? String(to) : null;
+              })(),
+              mapToName: m.map_to_name ?? m.mapToName ?? null,
+              isFixed: Boolean(Number(m.is_fixed ?? m.isFixed ?? 0)),
+              relationValue,
+              rounding,
+            };
+          });
 
         const mappedMM: MinMaxRow[] = (Array.isArray((data as any)?.minmax_mapping)
           ? (data as any).minmax_mapping

@@ -1,6 +1,6 @@
 import React from "react";
 import { useRouter } from "next/navigation";
-import { useStatusChip, type ApprovalStatusId } from "@/components/ui/transaction";
+import type { ApprovalStatusId } from "@/components/ui/transaction";
 import { toast } from "@/hooks/use-toast";
 import type { MuiFormMode } from "@/components/ui/muiform";
 import type { InwardDetails, ApprovalActionPermissions } from "@/utils/inwardService";
@@ -104,11 +104,22 @@ export const useInwardApproval = ({
 		[statusId, inwardDetails]
 	);
 
-	// Status chip
-	const { statusChipProps } = useStatusChip({
-		statusId,
-		statusLabels: INWARD_STATUS_LABELS,
-	});
+	// Status chip - created manually like in usePOApproval
+	const statusChipProps = React.useMemo(() => {
+		type StatusChipColor = "default" | "primary" | "secondary" | "success" | "error" | "warning" | "info";
+		const color: StatusChipColor =
+			statusId === INWARD_STATUS_IDS.APPROVED
+				? "success"
+				: statusId === INWARD_STATUS_IDS.REJECTED || statusId === INWARD_STATUS_IDS.CANCELLED
+					? "error"
+					: statusId === INWARD_STATUS_IDS.PENDING_APPROVAL
+						? "warning"
+						: "default";
+		return {
+			label: INWARD_STATUS_LABELS[statusId] ?? inwardDetails?.status ?? "Draft",
+			color,
+		};
+	}, [statusId, inwardDetails?.status]);
 
 	// Get branch ID from form values
 	const getBranchId = React.useCallback(() => {

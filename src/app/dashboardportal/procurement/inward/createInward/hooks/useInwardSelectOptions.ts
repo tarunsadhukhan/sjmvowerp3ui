@@ -4,14 +4,14 @@ import type {
 	Option,
 	SupplierRecord,
 	ItemGroupRecord,
-	ItemGroupCacheEntry,
+	ItemGroupCacheMap,
 	InwardLabelResolvers,
 } from "../types/inwardTypes";
 
 type UseInwardSelectOptionsParams = {
 	suppliers: readonly SupplierRecord[];
 	itemGroups: readonly ItemGroupRecord[];
-	itemGroupCache: Record<string, ItemGroupCacheEntry>;
+	itemGroupCache: ItemGroupCacheMap;
 };
 
 /**

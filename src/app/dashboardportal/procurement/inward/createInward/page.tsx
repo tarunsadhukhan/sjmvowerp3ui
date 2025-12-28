@@ -286,6 +286,20 @@ function InwardTransactionPageContent() {
 		itemGroupCache,
 	});
 
+	// Determine if branch and supplier are both selected (for progressive disclosure in create mode)
+	const supplierValue = React.useMemo(() => String(formValues.supplier ?? ""), [formValues.supplier]);
+	const hasBranchAndSupplier = React.useMemo(
+		() => Boolean(branchValue && supplierValue),
+		[branchValue, supplierValue]
+	);
+
+	// In create mode, show full form only after branch and supplier are selected
+	// In edit/view mode, always show full form
+	const showFullForm = React.useMemo(
+		() => mode !== "create" || hasBranchAndSupplier,
+		[mode, hasBranchAndSupplier]
+	);
+
 	// Form schema
 	const headerFieldsDisabled = React.useMemo(() => {
 		if (mode === "view") return true;
@@ -298,6 +312,7 @@ function InwardTransactionPageContent() {
 		branchOptions,
 		supplierOptions,
 		headerFieldsDisabled,
+		showFullForm,
 	});
 
 	// Approval hook
@@ -469,13 +484,23 @@ function InwardTransactionPageContent() {
 	);
 
 	// Page metadata
-	const pageTitle = mode === "create" ? "Create Inward" : mode === "edit" ? "Edit Inward" : "Inward Details";
-	const subtitle =
-		mode === "create"
-			? "Record goods received against a purchase order."
-			: mode === "edit"
-				? "Update the inward before finalizing."
-				: "Review the inward details.";
+	const pageTitle = React.useMemo(() => {
+		if (mode === "create") {
+			return showFullForm ? "Create Inward" : "New Inward";
+		}
+		return mode === "edit" ? "Edit Inward" : "Inward Details";
+	}, [mode, showFullForm]);
+
+	const subtitle = React.useMemo(() => {
+		if (mode === "create") {
+			return showFullForm
+				? "Record goods received against a purchase order."
+				: "Select branch and supplier to begin.";
+		}
+		return mode === "edit"
+			? "Update the inward before finalizing."
+			: "Review the inward details.";
+	}, [mode, showFullForm]);
 
 	// Preview data
 	const branchLabel = React.useMemo(() => {
@@ -571,26 +596,10 @@ function InwardTransactionPageContent() {
 		];
 	}, [mode, pageError, setupError, saving, lineItemsValid, setupLoading, formRef]);
 
-	// Secondary actions
+	// Secondary actions - Edit/View mode switching handled by approval bar
 	const secondaryActions = React.useMemo<TransactionAction[] | undefined>(() => {
-		if (!requestedId || pageError) return undefined;
-		const actions: TransactionAction[] = [];
-		if (mode === "view") {
-			actions.push({
-				label: "Edit",
-				variant: "secondary",
-				onClick: () => router.replace(`/dashboardportal/procurement/inward/createInward?mode=edit&id=${encodeURIComponent(requestedId)}`),
-			});
-		}
-		if (mode === "edit") {
-			actions.push({
-				label: "Cancel",
-				variant: "ghost",
-				onClick: () => router.replace(`/dashboardportal/procurement/inward/createInward?mode=view&id=${encodeURIComponent(requestedId)}`),
-			});
-		}
-		return actions.length ? actions : undefined;
-	}, [mode, requestedId, router, pageError]);
+		return undefined;
+	}, []);
 
 	// Alerts
 	const alerts = pageError || setupError ? (
@@ -615,6 +624,22 @@ function InwardTransactionPageContent() {
 
 	const getLineItemId = React.useCallback((item: typeof lineItems[0]) => item.id, []);
 
+	// Line items config - only show after branch/supplier selected in create mode
+	const lineItemsConfig = React.useMemo(() => {
+		if (!showFullForm) return undefined;
+		return {
+			title: "Line Items",
+			subtitle: "Items received against the purchase order.",
+			items: lineItems,
+			getItemId: getLineItemId,
+			canEdit,
+			columns: lineItemColumns,
+			onRemoveSelected: handleBulkRemoveLines,
+			placeholder: canEdit ? "Select items from a PO to add to this inward." : "No line items available.",
+			selectionColumnWidth: "28px",
+		};
+	}, [showFullForm, lineItems, getLineItemId, canEdit, lineItemColumns, handleBulkRemoveLines]);
+
 	return (
 		<TransactionWrapper
 			title={pageTitle}
@@ -622,11 +647,11 @@ function InwardTransactionPageContent() {
 			backAction={{ label: "Back", onClick: () => router.push("/dashboardportal/procurement/inward") }}
 			metadata={metadata}
 			statusChip={statusChip}
-			primaryActions={primaryActions}
+			primaryActions={showFullForm ? primaryActions : undefined}
 			secondaryActions={secondaryActions}
 			loading={loading || setupLoading}
 			alerts={alerts}
-			preview={
+			preview={showFullForm ? (
 				<div className="space-y-4">
 					{/* Approval Actions Bar */}
 					{mode !== "create" && inwardDetails ? (
@@ -648,18 +673,8 @@ function InwardTransactionPageContent() {
 						remarks={(formValues.remarks as string) || inwardDetails?.remarks}
 					/>
 				</div>
-			}
-			lineItems={{
-				title: "Line Items",
-				subtitle: "Items received against the purchase order.",
-				items: lineItems,
-				getItemId: getLineItemId,
-				canEdit,
-				columns: lineItemColumns,
-				onRemoveSelected: handleBulkRemoveLines,
-				placeholder: canEdit ? "Select items from a PO to add to this inward." : "No line items available.",
-				selectionColumnWidth: "28px",
-			}}
+			) : undefined}
+			lineItems={lineItemsConfig}
 		>
 			<InwardHeaderForm
 				schema={schema}
@@ -669,10 +684,17 @@ function InwardTransactionPageContent() {
 				formRef={formRef}
 				onSubmit={handleFormSubmit}
 				onValuesChange={setFormValues}
-				showPOButton={mode !== "view"}
+				showPOButton={showFullForm && mode !== "view"}
 				onPOSelect={handlePOSelect}
 				poButtonDisabled={!formValues.supplier || setupLoading}
 			/>
+
+			{/* Prompt to select branch and supplier in create mode */}
+			{mode === "create" && !showFullForm && (
+				<div className="mt-6 rounded-md border border-blue-200 bg-blue-50 px-4 py-3 text-sm text-blue-700">
+					Please select a <strong>Branch</strong> and <strong>Supplier</strong> to continue with the inward entry.
+				</div>
+			)}
 
 			<POLineItemsDialog
 				open={poDialogOpen}

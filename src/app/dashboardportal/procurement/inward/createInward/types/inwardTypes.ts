@@ -77,6 +77,12 @@ export type ItemGroupCacheEntry = {
 };
 
 /**
+ * Item group cache map type - values may be undefined if not yet loaded.
+ * Used when consuming the cache from `useDeferredOptionCache`.
+ */
+export type ItemGroupCacheMap = Partial<Record<string, ItemGroupCacheEntry>>;
+
+/**
  * Normalized setup data returned by `fetchInwardSetup1`.
  */
 export type InwardSetupData = {

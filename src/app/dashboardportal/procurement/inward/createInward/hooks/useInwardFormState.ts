@@ -7,11 +7,16 @@ type UseInwardFormStateParams = {
 };
 
 /**
+ * Form values type for the Inward transaction.
+ */
+export type InwardFormValues = Record<string, unknown>;
+
+/**
  * Hook to manage form state for the Inward transaction page.
  */
 export function useInwardFormState({ mode }: UseInwardFormStateParams) {
-	const [initialValues, setInitialValues] = React.useState(buildDefaultFormValues);
-	const [formValues, setFormValues] = React.useState(buildDefaultFormValues);
+	const [initialValues, setInitialValues] = React.useState<InwardFormValues>(buildDefaultFormValues);
+	const [formValues, setFormValues] = React.useState<InwardFormValues>(buildDefaultFormValues);
 	const [formKey, setFormKey] = React.useState(0);
 	const formRef = React.useRef<{ submit: () => Promise<void>; isDirty: () => boolean } | null>(null);
 	const createDefaultsSeededRef = React.useRef(false);

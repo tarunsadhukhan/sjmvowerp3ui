@@ -8,12 +8,12 @@ import type { EditableLineItem, Option, InwardLabelResolvers } from "../types/in
 
 type UseInwardLineItemColumnsParams = {
 	canEdit: boolean;
-	itemGroupOptions: Option[];
-	itemGroupLoading: Record<string, boolean>;
+	itemGroupOptions: readonly Option[];
+	itemGroupLoading: Partial<Record<string, boolean>>;
 	labelResolvers: InwardLabelResolvers;
-	getItemOptions: (groupId: string) => Option[];
-	getMakeOptions: (groupId: string) => Option[];
-	getUomOptions: (groupId: string, itemId: string) => Option[];
+	getItemOptions: (groupId: string) => readonly Option[];
+	getMakeOptions: (groupId: string) => readonly Option[];
+	getUomOptions: (groupId: string, itemId: string) => readonly Option[];
 	handleLineFieldChange: (id: string, field: keyof EditableLineItem, value: string) => void;
 };
 

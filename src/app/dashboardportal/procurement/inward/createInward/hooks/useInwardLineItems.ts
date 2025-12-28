@@ -1,13 +1,13 @@
 import React from "react";
 import { useLineItems } from "@/components/ui/transaction";
 import type { MuiFormMode } from "@/components/ui/muiform";
-import type { EditableLineItem, ItemGroupCacheEntry, POLineItem } from "../types/inwardTypes";
+import type { EditableLineItem, ItemGroupCacheMap, POLineItem } from "../types/inwardTypes";
 import { createBlankLine, lineHasAnyData, generateLineId } from "../utils/inwardFactories";
 
 type UseInwardLineItemsParams = {
 	mode: MuiFormMode;
-	itemGroupCache: Record<string, ItemGroupCacheEntry>;
-	itemGroupLoading: Record<string, boolean>;
+	itemGroupCache: ItemGroupCacheMap;
+	itemGroupLoading: Partial<Record<string, boolean>>;
 	ensureItemGroupData: (groupId: string) => void;
 };
 

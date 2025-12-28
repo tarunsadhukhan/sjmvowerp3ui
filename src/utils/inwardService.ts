@@ -54,6 +54,7 @@ export type InwardDetails = {
 };
 
 export type InwardSetup1Response = {
+	branches?: Array<Record<string, unknown>>;
 	suppliers?: Array<Record<string, unknown>>;
 	item_groups?: Array<Record<string, unknown>>;
 	co_config?: Record<string, unknown>;

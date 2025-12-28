@@ -127,6 +127,43 @@
   .dropdown-btn {
     @apply w-full justify-between;
   }
+
+  /* Sidebar styles - shared across all sidebar variants */
+  .sidebar-container {
+    @apply bg-[#006699] text-white transition-all duration-300 h-screen flex flex-col;
+  }
+
+  .sidebar-menu-link {
+    @apply flex items-center px-4 py-2 text-sm text-white! hover:bg-[#005580] transition-colors;
+  }
+
+  .sidebar-menu-icon {
+    @apply mr-3 text-white;
+  }
+
+  .sidebar-menu-title {
+    @apply flex-1 text-white;
+  }
+
+  .sidebar-menu-chevron {
+    @apply text-white;
+  }
+
+  .sidebar-submenu {
+    @apply ml-4 border-l border-[#005580];
+  }
+
+  .sidebar-section-border {
+    @apply border-t border-[#005580] mt-2;
+  }
+
+  .sidebar-user-settings {
+    @apply flex items-center px-4 py-2 text-sm text-white hover:bg-[#005580] transition-colors cursor-pointer;
+  }
+
+  .sidebar-submenu-link {
+    @apply block px-4 py-2 text-white hover:bg-[#005580];
+  }
 }
 
 

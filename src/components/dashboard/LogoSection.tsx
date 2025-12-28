@@ -25,7 +25,12 @@ const LogoSection = ({ isCollapsed, onToggle }: LogoSectionProps) => {
                 <Image src="/logo.png" 
                 height={60}
                 width={150}
-                alt="Logo"  onClick={handleChangeDashboard} />
+                alt="Logo"
+                className="w-auto h-auto"
+                unoptimized
+                loading="eager"
+                priority
+                onClick={handleChangeDashboard} />
               </div>
         )}
         {isCollapsed && (
@@ -33,7 +38,12 @@ const LogoSection = ({ isCollapsed, onToggle }: LogoSectionProps) => {
                 <Image src="/logo.png" 
                 height={40}
                 width={40}
-                alt="Logo"  onClick={handleChangeDashboard} />
+                alt="Logo"
+                className="w-auto h-auto"
+                unoptimized
+                loading="eager"
+                priority
+                onClick={handleChangeDashboard} />
               </div>
         )}
         </div>

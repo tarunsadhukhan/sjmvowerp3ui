@@ -129,12 +129,12 @@ export default function Sidebar({ isCollapsed, onToggle, onMouseEnter, onMouseLe
         <div className={`flex items-center py-2 px-2 hover:bg-[#00557a] rounded-md transition-colors ${level > 0 ? 'ml-6' : ''}`}
           style={{ paddingLeft: `${level * 8}px` }}>
           {isParent && (
-            <div className="flex items-center cursor-pointer mr-2 text-muted-foreground hover:text-foreground transition-colors"
+            <div className="flex items-center cursor-pointer mr-2 sidebar-menu-chevron hover:text-gray-200 transition-colors"
               onClick={() => toggleMenu(menu.menu_id)}>
               {isExpanded ? <ChevronDown className="h-4 w-4 transition-transform duration-200" /> : <ChevronRight className="h-4 w-4 transition-transform duration-200" />}
             </div>
           )}
-          <a href={`/dashboardportal/${menu.menu_path}`} className="text-sm flex-1 text-white hover:text-gray-200">{menu.menu_name}</a>
+          <a href={`/dashboardportal/${menu.menu_path}`} className="text-sm flex-1 sidebar-menu-title hover:text-gray-200">{menu.menu_name}</a>
         </div>
         {isParent && isExpanded && (
           <div className="overflow-hidden transition-all duration-300 ease-in-out">
@@ -147,13 +147,13 @@ export default function Sidebar({ isCollapsed, onToggle, onMouseEnter, onMouseLe
 
   return (
     <div 
-      className={`bg-[#006699] text-white transition-all duration-300 h-screen flex flex-col ${isCollapsed ? "w-20" : "w-56"}`}
+      className={`sidebar-container ${isCollapsed ? "w-20" : "w-56"}`}
       onMouseEnter={onMouseEnter}
       onMouseLeave={onMouseLeave}
     >
-      <div className={`bg-[#006699] text-white transition-all duration-300 h-screen flex flex-col ${isCollapsed ? 'collapsed-class' : ''}`}>
+      <div className="sidebar-container">
         <LogoSection isCollapsed={isCollapsed} onToggle={onToggle} logoSrc="path/to/logo.png" title="Your Title" />
-        <div className="px-4 py-3 border-b border-[#005580]">
+        <div className="px-4 py-3 sidebar-section-border">
           {isClient && compshow === 2 && !isCollapsed ? (
             <>
               <div className="mb-2">

@@ -133,8 +133,13 @@
     @apply bg-[#006699] text-white transition-all duration-300 h-screen flex flex-col;
   }
 
+  /* Reset link styles inside sidebar */
+  .sidebar-container a {
+    @apply text-white no-underline;
+  }
+
   .sidebar-menu-link {
-    @apply flex items-center px-4 py-2 text-sm text-white! hover:bg-[#005580] transition-colors;
+    @apply flex items-center px-4 py-2 text-sm text-white hover:bg-[#005580] transition-colors;
   }
 
   .sidebar-menu-icon {
@@ -166,6 +171,15 @@
   }
 }
 
+/* High-specificity sidebar link color override */
+.sidebar-container a,
+.sidebar-container a:visited,
+.sidebar-container a:link,
+.sidebar-menu-link,
+.sidebar-menu-title,
+.sidebar-submenu-link {
+  color: white !important;
+}
 
 .border-blue {
   border: 1.5px solid hsl(var(--border-accent));

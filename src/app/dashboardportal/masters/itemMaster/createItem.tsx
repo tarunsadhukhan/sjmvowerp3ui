@@ -118,12 +118,22 @@ const CreateItem: React.FC<CreateItemProps> = ({ open, onClose, mode = 'create',
 
   const itemGroupOptions = React.useMemo(() => {
     if (!Array.isArray(setupData?.item_groups)) return [];
-    return setupData.item_groups.map((g:any) => ({ label: `${g.item_grp_name_display} (${g.item_grp_code_display})`, value: String(g.item_grp_id) }));
+    return setupData.item_groups
+      .filter((g: any) => g.item_grp_id != null)
+      .map((g: any) => ({ 
+        label: `${g.item_grp_name_display ?? 'Unknown'} (${g.item_grp_code_display ?? g.item_grp_id})`, 
+        value: String(g.item_grp_id) 
+      }));
   }, [setupData]);
 
   const uomOptions = React.useMemo(() => {
     if (!Array.isArray(setupData?.uom_groups)) return [];
-    return setupData.uom_groups.map((u:any) => ({ label: u.uom_name, value: String(u.uom_id) }));
+    return setupData.uom_groups
+      .filter((u: any) => u.uom_id != null)
+      .map((u: any) => ({ 
+        label: u.uom_name ?? `UOM ${u.uom_id}`, 
+        value: String(u.uom_id) 
+      }));
   }, [setupData]);
   const schema: Schema = React.useMemo(() => {
     return {

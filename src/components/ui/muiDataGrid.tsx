@@ -7,7 +7,7 @@ import {
   GridSortModel,
 } from '@mui/x-data-grid';
 import { Box } from '@mui/material';
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 
 interface MuiDataGridProps {
   rows: GridRowsProp;
@@ -60,6 +60,31 @@ const MuiDataGrid: React.FC<MuiDataGridProps> = ({
   disableDensitySelector = false,
   disableExport = false,
 }) => {
+  // Ensure component is mounted before rendering DataGrid to avoid
+  // "Can't perform a React state update on a component that hasn't mounted yet"
+  const [isMounted, setIsMounted] = useState(false);
+
+  useEffect(() => {
+    setIsMounted(true);
+  }, []);
+
+  // Render empty placeholder with same dimensions to avoid hydration mismatch
+  // The placeholder must be identical on server and client for initial render
+  if (!isMounted) {
+    return (
+      <Box 
+        sx={{ 
+          height: 500, 
+          width: '100%',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+        }}
+        suppressHydrationWarning
+      />
+    );
+  }
+
   return (
     <Box sx={{
       height: 500,

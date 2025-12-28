@@ -343,7 +343,7 @@ export const MuiForm = React.forwardRef(function MuiForm(
 					// single-select rendered as Autocomplete for autofill/filtering
 					<Autocomplete<Option, false, boolean, false>
 						options={(field.options ?? []) as Option[]}
-						getOptionLabel={(opt: Option) => opt.label}
+						getOptionLabel={(opt: Option) => opt?.label ?? String(opt?.value ?? "")}
 						isOptionEqualToValue={(o: Option, v: Option) => String(o.value) === String(v.value)}
 						value={((field.options ?? []) as Option[]).find((o) => String(o.value) === String(value)) ?? null}
 						onChange={(_, newOpt) => handleChange(field.name, (newOpt as Option | null)?.value ?? "")}
@@ -367,7 +367,7 @@ export const MuiForm = React.forwardRef(function MuiForm(
 						sx={{ width: '100%' }}
 						multiple
 						options={(field.options ?? []) as Option[]}
-						getOptionLabel={(opt: Option) => opt.label}
+						getOptionLabel={(opt: Option) => opt?.label ?? String(opt?.value ?? "")}
 						isOptionEqualToValue={(o: Option, v: Option) => String(o.value) === String(v.value)}
 						value={((field.options ?? []) as Option[]).filter((o) => Array.isArray(value) && (value as Array<unknown>).some((v) => String(v) === String(o.value)))}
 						onChange={(_, newOpts) => handleChange(field.name, (newOpts as Option[]).map((o) => o.value))}

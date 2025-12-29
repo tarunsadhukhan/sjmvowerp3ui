@@ -71,6 +71,8 @@ function SRTransactionPageContent() {
 		try {
 			const query = new URLSearchParams();
 			if (coId) query.set("co_id", String(coId));
+			// branch_id can be added here if available from header or context
+			// if (branchId) query.set("branch_id", String(branchId));
 
 			const url = `${apiRoutesPortalMasters.SR_GET_BY_INWARD_ID}/${inwardId}?${query.toString()}`;
 			const { data, error } = await fetchWithCookie(url, "GET");

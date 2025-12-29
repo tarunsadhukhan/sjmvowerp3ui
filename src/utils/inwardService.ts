@@ -29,8 +29,17 @@ export type InwardDetails = {
 	challanDate?: string;
 	invoiceNo?: string;
 	invoiceDate?: string;
+	invoiceRecvdDate?: string;
 	vehicleNo?: string;
+	driverName?: string;
+	driverContactNo?: string;
 	transporterName?: string;
+	consignmentNo?: string;
+	consignmentDate?: string;
+	ewaybillno?: string;
+	ewaybillDate?: string;
+	despatchRemarks?: string;
+	receiptsRemarks?: string;
 	remarks?: string;
 	updatedBy?: string;
 	updatedAt?: string;
@@ -264,9 +273,16 @@ export async function updateInward(payload: Partial<InwardDetails>): Promise<{ m
 		challan_date: payload.challanDate ?? undefined,
 		invoice_no: payload.invoiceNo ?? undefined,
 		invoice_date: payload.invoiceDate ?? undefined,
+		invoice_recvd_date: payload.invoiceRecvdDate ?? undefined,
 		vehicle_no: payload.vehicleNo ?? undefined,
-		transporter_name: payload.transporterName ?? undefined,
-		remarks: payload.remarks ?? undefined,
+		driver_name: payload.driverName ?? undefined,
+		driver_contact_no: payload.driverContactNo ?? undefined,
+		consignment_no: payload.consignmentNo ?? undefined,
+		consignment_date: payload.consignmentDate ?? undefined,
+		ewaybillno: payload.ewaybillno ?? undefined,
+		ewaybill_date: payload.ewaybillDate ?? undefined,
+		despatch_remarks: payload.despatchRemarks ?? undefined,
+		receipts_remarks: payload.receiptsRemarks ?? undefined,
 		items: items,
 	};
 

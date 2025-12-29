@@ -108,26 +108,86 @@ export function useInwardFormSchema({
 					grid: { xs: 12, md: 3 },
 				},
 
-				// Row 3: Transporter details
+				// Row 3: Vehicle and Driver details
 				{
 					name: "vehicle_no",
-					label: "Vehicle No.",
+					label: "Vehicle Number",
 					type: "text" as const,
 					required: false,
 					disabled: isView,
 					grid: { xs: 12, md: 3 },
 				},
 				{
-					name: "transporter_name",
-					label: "Transporter Name",
+					name: "driver_name",
+					label: "Driver Name",
 					type: "text" as const,
 					required: false,
 					disabled: isView,
 					grid: { xs: 12, md: 3 },
 				},
 				{
-					name: "remarks",
-					label: "Remarks",
+					name: "driver_contact_no",
+					label: "Driver Contact",
+					type: "text" as const,
+					required: false,
+					disabled: isView,
+					grid: { xs: 12, md: 3 },
+				},
+				{
+					name: "invoice_recvd_date",
+					label: "Invoice Received Date",
+					type: "date" as const,
+					required: false,
+					disabled: isView,
+					grid: { xs: 12, md: 3 },
+				},
+
+				// Row 4: Consignment and E-Way Bill details
+				{
+					name: "consignment_no",
+					label: "Consignment No.",
+					type: "text" as const,
+					required: false,
+					disabled: isView,
+					grid: { xs: 12, md: 3 },
+				},
+				{
+					name: "consignment_date",
+					label: "Consignment Date",
+					type: "date" as const,
+					required: false,
+					disabled: isView,
+					grid: { xs: 12, md: 3 },
+				},
+				{
+					name: "ewaybillno",
+					label: "E-Way Bill No.",
+					type: "text" as const,
+					required: false,
+					disabled: isView,
+					grid: { xs: 12, md: 3 },
+				},
+				{
+					name: "ewaybill_date",
+					label: "E-Way Bill Date",
+					type: "date" as const,
+					required: false,
+					disabled: isView,
+					grid: { xs: 12, md: 3 },
+				},
+
+				// Row 5: Remarks
+				{
+					name: "despatch_remarks",
+					label: "Despatch Remarks",
+					type: "textarea" as const,
+					required: false,
+					disabled: isView,
+					grid: { xs: 12, md: 6 },
+				},
+				{
+					name: "receipts_remarks",
+					label: "Receipt Remarks",
 					type: "textarea" as const,
 					required: false,
 					disabled: isView,

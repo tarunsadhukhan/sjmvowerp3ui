@@ -36,8 +36,15 @@ export const buildDefaultFormValues = () => ({
 	inward_no: "",
 	inward_date: new Date().toISOString().slice(0, 10),
 	vehicle_no: "",
-	transporter_name: "",
-	remarks: "",
+	driver_name: "",
+	driver_contact_no: "",
+	invoice_recvd_date: "",
+	consignment_no: "",
+	consignment_date: "",
+	ewaybillno: "",
+	ewaybill_date: "",
+	despatch_remarks: "",
+	receipts_remarks: "",
 });
 
 /**

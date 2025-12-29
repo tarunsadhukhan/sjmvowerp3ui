@@ -77,49 +77,56 @@ export const useSRLineItemColumns = ({
 			{
 				id: "item_grp_name",
 				header: "Item Group",
-				width: "1fr",
+				width: "minmax(120px, 1fr)",
 				renderCell: ({ item }) => (
-					<Typography variant="body2" className="truncate">
-						{item.item_grp_name || "-"}
-					</Typography>
+					<Box sx={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+						<Typography variant="body2" noWrap>
+							{item.item_grp_name || "-"}
+						</Typography>
+					</Box>
 				),
 				getTooltip: ({ item }) => item.item_grp_name || undefined,
 			},
 			{
 				id: "item_name",
 				header: "Item",
-				width: "1.5fr",
+				width: "minmax(150px, 1.5fr)",
 				renderCell: ({ item }) => (
-					<Typography variant="body2" className="truncate">
-						{item.item_name || "-"}
-					</Typography>
+					<Box sx={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+						<Typography variant="body2" noWrap>
+							{item.item_name || "-"}
+						</Typography>
+					</Box>
 				),
 				getTooltip: ({ item }) => item.item_name || undefined,
 			},
 			{
 				id: "accepted_item_make_name",
 				header: "Make",
-				width: "0.8fr",
+				width: "100px",
 				renderCell: ({ item }) => (
-					<Typography variant="body2" className="truncate">
-						{item.accepted_item_make_name || "-"}
-					</Typography>
+					<Box sx={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+						<Typography variant="body2" noWrap>
+							{item.accepted_item_make_name || "-"}
+						</Typography>
+					</Box>
 				),
+				getTooltip: ({ item }) => item.accepted_item_make_name || undefined,
 			},
 			{
 				id: "uom_name",
 				header: "UOM",
-				width: "0.5fr",
+				width: "70px",
 				renderCell: ({ item }) => (
-					<Typography variant="body2">{item.uom_name || "-"}</Typography>
+					<Typography variant="body2" noWrap>{item.uom_name || "-"}</Typography>
 				),
 			},
 			{
 				id: "approved_qty",
 				header: "Qty",
-				width: "0.5fr",
+				width: "70px",
 				renderCell: ({ item }) => (
-					<Typography variant="body2" className="text-right">
+					<Typography variant="body2" noWrap sx={{ textAlign: "right", width: "100%" }}>
 						{item.approved_qty}
 					</Typography>
 				),
@@ -127,9 +134,9 @@ export const useSRLineItemColumns = ({
 			{
 				id: "po_rate",
 				header: "PO Rate",
-				width: "0.8fr",
+				width: "100px",
 				renderCell: ({ item }) => (
-					<Typography variant="body2" color="text.secondary" className="text-right">
+					<Typography variant="body2" color="text.secondary" noWrap sx={{ textAlign: "right", width: "100%" }}>
 						{formatCurrency(item.po_rate)}
 					</Typography>
 				),
@@ -137,7 +144,7 @@ export const useSRLineItemColumns = ({
 			{
 				id: "accepted_rate",
 				header: "Accept Rate",
-				width: "1fr",
+				width: "120px",
 				renderCell: ({ item }) => (
 					<EditableNumberCell
 						initialValue={item.accepted_rate}
@@ -149,9 +156,9 @@ export const useSRLineItemColumns = ({
 			{
 				id: "amount",
 				header: "Amount",
-				width: "0.9fr",
+				width: "110px",
 				renderCell: ({ item }) => (
-					<Typography variant="body2" className="text-right">
+					<Typography variant="body2" noWrap sx={{ textAlign: "right", width: "100%" }}>
 						{formatCurrency(item.amount)}
 					</Typography>
 				),
@@ -159,9 +166,9 @@ export const useSRLineItemColumns = ({
 			{
 				id: "tax_percentage",
 				header: "Tax %",
-				width: "0.5fr",
+				width: "70px",
 				renderCell: ({ item }) => (
-					<Typography variant="body2" className="text-right">
+					<Typography variant="body2" noWrap sx={{ textAlign: "right", width: "100%" }}>
 						{item.tax_percentage}%
 					</Typography>
 				),
@@ -169,9 +176,9 @@ export const useSRLineItemColumns = ({
 			{
 				id: "tax_amount",
 				header: "Tax Amt",
-				width: "0.8fr",
+				width: "100px",
 				renderCell: ({ item }) => (
-					<Typography variant="body2" className="text-right">
+					<Typography variant="body2" noWrap sx={{ textAlign: "right", width: "100%" }}>
 						{formatCurrency(item.tax_amount)}
 					</Typography>
 				),
@@ -179,9 +186,9 @@ export const useSRLineItemColumns = ({
 			{
 				id: "total_amount",
 				header: "Total",
-				width: "0.9fr",
+				width: "110px",
 				renderCell: ({ item }) => (
-					<Typography variant="body2" fontWeight={600} color="primary" className="text-right">
+					<Typography variant="body2" fontWeight={600} color="primary" noWrap sx={{ textAlign: "right", width: "100%" }}>
 						{formatCurrency(item.total_amount)}
 					</Typography>
 				),

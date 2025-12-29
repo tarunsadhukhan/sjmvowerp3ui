@@ -181,6 +181,12 @@ function InwardTransactionPageContent() {
 		ensureItemGroupData,
 	});
 
+	// Ref for mapLineToEditable to avoid re-triggering the fetch effect
+	const mapLineToEditableRef = React.useRef(mapLineToEditable);
+	React.useEffect(() => {
+		mapLineToEditableRef.current = mapLineToEditable;
+	}, [mapLineToEditable]);
+
 	// Branch options prefill for create mode
 	React.useEffect(() => {
 		if (mode !== "create") return;
@@ -232,7 +238,8 @@ function InwardTransactionPageContent() {
 				setInitialValues(nextValues);
 				setFormValues(nextValues);
 				bumpFormKey();
-				const mappedLines = (detail.lines ?? []).map((line) => mapLineToEditable(line as unknown as Record<string, unknown>));
+				// Use ref to avoid dependency on mapLineToEditable which changes with itemGroupCache
+				const mappedLines = (detail.lines ?? []).map((line) => mapLineToEditableRef.current(line as unknown as Record<string, unknown>));
 				replaceItems(mappedLines.length ? mappedLines : []);
 				setPageError(null);
 			})
@@ -249,7 +256,8 @@ function InwardTransactionPageContent() {
 		return () => {
 			cancelled = true;
 		};
-	}, [mode, requestedId, mapLineToEditable, coId, getMenuId, setInitialValues, setFormValues, bumpFormKey, replaceItems]);
+	// eslint-disable-next-line react-hooks/exhaustive-deps -- mapLineToEditableRef is stable, getMenuId uses refs internally
+	}, [mode, requestedId, coId, setInitialValues, setFormValues, bumpFormKey, replaceItems]);
 
 	// Setup data
 	const branchValue = React.useMemo(() => String(formValues.branch ?? ""), [formValues.branch]);

@@ -37,10 +37,11 @@ export const InwardHeaderForm: React.FC<InwardHeaderFormProps> = ({
 				schema={schema}
 				initialValues={initialValues}
 				mode={mode}
-				formRef={formRef}
+				ref={formRef}
 				onSubmit={onSubmit}
 				onValuesChange={onValuesChange}
 				hideModeToggle
+				hideSubmit
 			/>
 			{showPOButton && onPOSelect && (
 				<div className="flex justify-end">

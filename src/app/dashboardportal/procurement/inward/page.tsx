@@ -1,8 +1,9 @@
 "use client";
 
 import * as React from "react";
-import { Alert, Chip, Typography } from "@mui/material";
+import { Alert, Chip, IconButton, Stack, Tooltip, Typography } from "@mui/material";
 import type { GridColDef, GridPaginationModel, GridRenderCellParams } from "@mui/x-data-grid";
+import { Edit, Eye } from "lucide-react";
 import { fetchWithCookie } from "@/utils/apiClient2";
 import { apiRoutesPortalMasters } from "@/utils/api";
 import IndexWrapper from "@/components/ui/IndexWrapper";
@@ -14,8 +15,8 @@ type InwardRow = {
 	inward_no: string;
 	inward_date: string;
 	inward_date_raw?: string;
-	po_no: string;
 	supplier_name: string;
+	inspection_check: boolean;
 	status: string;
 };
 
@@ -52,7 +53,57 @@ export default function InwardIndexPage() {
 	const [searchValue, setSearchValue] = React.useState("");
 	const [errorMessage, setErrorMessage] = React.useState<string | null>(null);
 
+	const handleEdit = React.useCallback(
+		(row: InwardRow) => {
+			const id = row.id ?? row.inward_no;
+			if (!id) return;
+			router.push(`/dashboardportal/procurement/inward/createInward?mode=edit&id=${encodeURIComponent(String(id))}`);
+		},
+		[router]
+	);
+
+	const handleView = React.useCallback(
+		(row: InwardRow) => {
+			const id = row.id ?? row.inward_no;
+			if (!id) return;
+			router.push(`/dashboardportal/procurement/inward/createInward?mode=view&id=${encodeURIComponent(String(id))}`);
+		},
+		[router]
+	);
+
 	const columns = React.useMemo<GridColDef[]>(() => [
+		{
+			field: "__actions",
+			headerName: "Actions",
+			width: 90,
+			sortable: false,
+			filterable: false,
+			align: "center",
+			headerAlign: "center",
+			renderCell: (params: GridRenderCellParams<InwardRow>) => {
+				const row = params.row;
+				// If inspection_check is true, only allow viewing (no edit)
+				const canOnlyView = Boolean(row.inspection_check);
+
+				return (
+					<Stack direction="row" spacing={0.5} justifyContent="center" alignItems="center">
+						{canOnlyView ? (
+							<Tooltip title="View">
+								<IconButton size="small" onClick={() => handleView(row)}>
+									<Eye size={16} />
+								</IconButton>
+							</Tooltip>
+						) : (
+							<Tooltip title="Edit">
+								<IconButton size="small" onClick={() => handleEdit(row)}>
+									<Edit size={16} />
+								</IconButton>
+							</Tooltip>
+						)}
+					</Stack>
+				);
+			},
+		},
 		{
 			field: "branch_name",
 			headerName: "Branch",
@@ -81,31 +132,41 @@ export default function InwardIndexPage() {
 			),
 		},
 		{
-			field: "po_no",
-			headerName: "Purchase Order No.",
-			flex: 1,
-			minWidth: 160,
-			renderCell: (params: GridRenderCellParams<InwardRow, string>) => (
-				<Typography component="span" variant="body2">
-					{params.value || "-"}
-				</Typography>
-			),
-		},
-		{
 			field: "supplier_name",
 			headerName: "Supplier",
 			flex: 1,
 			minWidth: 160,
 		},
 		{
-			field: "status",
-			headerName: "Status",
-			minWidth: 130,
-			renderCell: (params: GridRenderCellParams<InwardRow, string>) => (
-				<Chip size="small" color={params.value === "Approved" ? "success" : params.value === "Rejected" ? "error" : "default"} label={params.value || "Pending"} />
+			field: "inspection_check",
+			headerName: "Inspection",
+			minWidth: 120,
+			renderCell: (params: GridRenderCellParams<InwardRow, boolean>) => (
+				<Chip
+					size="small"
+					color={params.value ? "success" : "warning"}
+					label={params.value ? "Checked" : "Pending"}
+				/>
 			),
 		},
-	], []);
+		{
+			field: "status",
+			headerName: "GRN Status",
+			minWidth: 130,
+			renderCell: (params: GridRenderCellParams<InwardRow, string>) => (
+				<Chip
+					size="small"
+					color={
+						params.value === "Approved" ? "success" :
+						params.value === "Rejected" ? "error" :
+						params.value === "Open" ? "info" :
+						"default"
+					}
+					label={params.value || "Draft"}
+				/>
+			),
+		},
+	], [handleEdit, handleView]);
 
 	const fetchInwards = React.useCallback(async () => {
 		setLoading(true);
@@ -148,9 +209,9 @@ export default function InwardIndexPage() {
 					inward_no: row.inward_no ?? row.inwardNo ?? "",
 					inward_date_raw: normalizedRaw,
 					inward_date: formatDate(normalizedRaw),
-					po_no: row.po_no ?? row.poNo ?? row.purchase_order_no ?? "",
 					supplier_name: row.supplier_name ?? row.supplierName ?? row.supp_name ?? "",
-					status: row.status ?? row.status_name ?? row.current_status ?? "Pending",
+					inspection_check: Boolean(row.inspection_check ?? row.inspectionCheck ?? false),
+					status: row.status ?? row.status_name ?? row.current_status ?? "Draft",
 				};
 			});
 
@@ -185,24 +246,6 @@ export default function InwardIndexPage() {
 		router.push("/dashboardportal/procurement/inward/createInward");
 	}, [router]);
 
-	const handleView = React.useCallback(
-		(row: InwardRow) => {
-			const id = row.id ?? row.inward_no;
-			if (!id) return;
-			router.push(`/dashboardportal/procurement/inward/createInward?mode=view&id=${encodeURIComponent(String(id))}`);
-		},
-		[router]
-	);
-
-	const handleEdit = React.useCallback(
-		(row: InwardRow) => {
-			const id = row.id ?? row.inward_no;
-			if (!id) return;
-			router.push(`/dashboardportal/procurement/inward/createInward?mode=edit&id=${encodeURIComponent(String(id))}`);
-		},
-		[router]
-	);
-
 	return (
 		<IndexWrapper
 			title="Inwards"
@@ -216,8 +259,6 @@ export default function InwardIndexPage() {
 			showLoadingUntilLoaded
 			search={{ value: searchValue, onChange: handleSearchChange, placeholder: "Search by inward no., PO no., supplier, or branch", debounceDelayMs: 1000 }}
 			createAction={{ onClick: handleCreateInward, label: "Create Inward" }}
-			onView={handleView}
-			onEdit={handleEdit}
 		>
 			{errorMessage ? (
 				<Alert severity="error" sx={{ mt: 2 }}>

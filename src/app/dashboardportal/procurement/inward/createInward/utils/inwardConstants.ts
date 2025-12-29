@@ -1,36 +1,9 @@
-import type { ApprovalStatusId } from "@/components/ui/transaction";
 import type {
 	EditableLineItem,
 	ItemGroupRecord,
 	Option,
 	SupplierRecord,
 } from "../types/inwardTypes";
-
-/**
- * Standard Inward status identifiers used throughout the workflow.
- */
-export const INWARD_STATUS_IDS = {
-	DRAFT: 21,
-	OPEN: 1,
-	PENDING_APPROVAL: 20,
-	APPROVED: 3,
-	REJECTED: 4,
-	CLOSED: 5,
-	CANCELLED: 6,
-} as const satisfies Record<string, ApprovalStatusId>;
-
-/**
- * Friendly labels for each Inward status identifier.
- */
-export const INWARD_STATUS_LABELS: Record<ApprovalStatusId, string> = {
-	[INWARD_STATUS_IDS.DRAFT]: "Draft",
-	[INWARD_STATUS_IDS.OPEN]: "Open",
-	[INWARD_STATUS_IDS.PENDING_APPROVAL]: "Pending Approval",
-	[INWARD_STATUS_IDS.APPROVED]: "Approved",
-	[INWARD_STATUS_IDS.REJECTED]: "Rejected",
-	[INWARD_STATUS_IDS.CLOSED]: "Closed",
-	[INWARD_STATUS_IDS.CANCELLED]: "Cancelled",
-};
 
 /**
  * Immutable fallbacks to avoid recreating empty arrays on every render.

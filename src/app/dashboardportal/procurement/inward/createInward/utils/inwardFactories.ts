@@ -19,7 +19,6 @@ export const createBlankLine = (): EditableLineItem => ({
 	item: "",
 	itemMake: "",
 	quantity: "",
-	rate: "",
 	uom: "",
 	remarks: "",
 });

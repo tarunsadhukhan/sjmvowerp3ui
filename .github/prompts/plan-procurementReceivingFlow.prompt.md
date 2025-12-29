@@ -1,6 +1,6 @@
-# Plan: Procurement Module Flow - Inward → Material Inspection → SR → DRCR Note
+# Plan: Procurement Module Flow - Inward → Material Inspection → SR → DRCR Note → Bill Pass
 
-This plan documents the complete flow for the procurement receiving workflow, covering four interconnected pages: **Inward (GRN)**, **Material Inspection**, **Stores Receipt (SR)**, and **Debit/Credit Note**. Each page represents a stage in the goods receiving process, with data flowing from one stage to the next via the `proc_inward` and related tables.
+This plan documents the complete flow for the procurement receiving workflow, covering five interconnected pages: **Inward (GRN)**, **Material Inspection**, **Stores Receipt (SR)**, **Debit/Credit Note**, and **Bill Pass**. Each page represents a stage in the goods receiving process, with data flowing from one stage to the next via the `proc_inward` and related tables.
 
 ---
 
@@ -25,8 +25,13 @@ PO (Approved)
     │   - Updates sr_no, sr_date, sr_status
     ↓
 [4] DRCR NOTE (if needed)
-        - Raises debit note for rejected qty, rate difference
-        - Links to inward line items via inward_dtl_id
+    │   - Raises debit note for rejected qty, rate difference
+    │   - Links to inward line items via inward_dtl_id
+    ↓
+[5] BILL PASS
+        - Consolidates SR + DR/CR Notes for final payment
+        - Shows net payable after adjustments
+        - Final step before payment processing
 ```
 
 ---
@@ -38,11 +43,13 @@ PO (Approved)
 ### Index Page (inward/page.tsx)
 | Column | Source |
 |--------|--------|
+| Branch | `branch_id` → `branch_mst.branch_name` |
 | Inward Entry No | `inward_no` |
 | Inward Date | `inward_date` |
 | Supplier | `party_id` → `party_mst.party_name` |
-| Inspection Check | `inspection_check` (Boolean: true/false) |
-| SR Status | `sr_status` (from `status_mst`) |
+| Status | `status_id` → `status_mst.status_desc` |
+
+**Note**: PO number is NOT shown in the index page. It is displayed at the line item level in the create/edit pages since one inward can have items from multiple POs.
 
 **Filter**: Show all inwards in descending `inward_date`, paginated.
 
@@ -71,6 +78,7 @@ PO (Approved)
 **Line Items** (simplified for entry stage):
 | Column | Source | Notes |
 |--------|--------|-------|
+| **PO Number** | `po_dtl_id` → lookup | Display formatted PO number (e.g., "PO-000123") |
 | Item Group | (from PO) | Read-only |
 | Item | `item_id` | Read-only from PO |
 | Item Make | `item_make_id` | Read-only from PO |
@@ -270,6 +278,212 @@ amount = adjustment_qty × adjustment_rate;
 
 ---
 
+## [5] Bill Pass
+
+**Purpose**: Consolidate SR and DRCR Notes into a single view for final payment processing. Shows the net amount payable to supplier after all adjustments.
+
+### Concept
+
+Bill Pass acts as a **summary document** that aggregates:
+- **SR Total**: Amount owed to supplier for accepted goods (from approved SR)
+- **Debit Note Total**: Amount supplier owes us (rejected qty, lower rates)
+- **Credit Note Total**: Additional amount we owe supplier (higher rates)
+- **Net Payable**: `SR Total - Debit Notes + Credit Notes`
+
+All linked via the same `invoice_no` on the Inward.
+
+### Database Considerations
+
+Option A: **Virtual/Computed View** (Recommended for MVP)
+- No new table; Bill Pass is a computed view joining SR + DRCR data
+- Bill Pass No. = SR No. (since SR is the primary document)
+- Pros: No data duplication, always in sync
+- Cons: Cannot add Bill Pass-specific fields
+
+Option B: **Dedicated `proc_bill_pass` Table** (For future flexibility)
+```sql
+CREATE TABLE proc_bill_pass (
+    bill_pass_id INT PRIMARY KEY AUTO_INCREMENT,
+    bill_pass_no VARCHAR(50),
+    bill_pass_date DATE,
+    inward_id INT,              -- FK to proc_inward
+    sr_id INT,                  -- FK to proc_inward (via sr fields) or separate sr table
+    invoice_no VARCHAR(50),
+    invoice_date DATE,
+    sr_total DECIMAL(15,2),
+    dr_total DECIMAL(15,2),
+    cr_total DECIMAL(15,2),
+    net_payable DECIMAL(15,2),
+    status_id INT,              -- Draft → Approved
+    remarks TEXT,
+    created_by INT,
+    created_at DATETIME,
+    updated_by INT,
+    updated_at DATETIME
+);
+```
+
+### Index Page (billPass/page.tsx - **CREATE**)
+| Column | Source |
+|--------|--------|
+| Bill Pass No | `bill_pass_no` or SR No |
+| Bill Pass Date | `bill_pass_date` or SR Date |
+| Inward No | `inward_id` → `proc_inward.inward_no` |
+| Inward Date | `proc_inward.inward_date` |
+| Supplier | `proc_inward.supplier_id` → `party_mst.party_name` |
+| Invoice No | `proc_inward.invoice_no` |
+| Invoice Date | `proc_inward.invoice_date` |
+| SR Total | Sum of SR line amounts |
+| DR Total | Sum of linked Debit Note amounts |
+| CR Total | Sum of linked Credit Note amounts |
+| Net Payable | `SR Total - DR Total + CR Total` |
+| Status | `status_id` → status label |
+
+**Filter**: Show only where SR is approved (`sr_status = 3`) and all linked DRCR Notes are approved.
+
+**No Create Button**: Bill Pass is auto-generated when SR is approved. User clicks row to view/print.
+
+### View/Detail Page (billPass/[id]/page.tsx - **CREATE**)
+
+**Header Section**:
+| Field | Source |
+|-------|--------|
+| Bill Pass No | Generated or SR No |
+| Bill Pass Date | Current date or SR approval date |
+| Inward No | From linked inward |
+| Inward Date | From linked inward |
+| Supplier | From linked inward |
+| Invoice No | From linked inward |
+| Invoice Date | From linked inward |
+
+**Summary Cards**:
+```
+┌─────────────────┐  ┌─────────────────┐  ┌─────────────────┐  ┌─────────────────┐
+│   SR TOTAL      │  │  DEBIT NOTES    │  │  CREDIT NOTES   │  │  NET PAYABLE    │
+│   ₹ 1,50,000    │  │  ₹ 5,000        │  │  ₹ 2,000        │  │  ₹ 1,47,000     │
+│   (14 items)    │  │  (2 items)      │  │  (1 item)       │  │                 │
+└─────────────────┘  └─────────────────┘  └─────────────────┘  └─────────────────┘
+```
+
+**SR Line Items Section**:
+| Column | Notes |
+|--------|-------|
+| Item | Item name |
+| Accepted Make | From inspection |
+| Approved Qty | From inspection |
+| Accepted Rate | From SR |
+| Amount | Qty × Rate |
+| Tax | GST amounts |
+| Total | Amount + Tax |
+
+**Debit Note Adjustments Section** (if any):
+| Column | Notes |
+|--------|-------|
+| DR Note No | Debit note reference |
+| Reason | Qty rejection / Rate difference |
+| Item | Affected item |
+| Adjustment Qty | Rejected quantity |
+| Adjustment Rate | Rate difference |
+| Amount | Deduction amount |
+
+**Credit Note Adjustments Section** (if any):
+| Column | Notes |
+|--------|-------|
+| CR Note No | Credit note reference |
+| Reason | Rate difference (supplier charged more) |
+| Item | Affected item |
+| Adjustment Qty | Applicable quantity |
+| Adjustment Rate | Rate increase |
+| Amount | Additional payable |
+
+**Footer Totals**:
+```
+SR Subtotal:           ₹ 1,27,118.64
+SR Tax (CGST):         ₹   11,440.68
+SR Tax (SGST):         ₹   11,440.68
+─────────────────────────────────────
+SR Total:              ₹ 1,50,000.00
+
+Less: Debit Notes:     ₹   5,000.00
+Add: Credit Notes:     ₹   2,000.00
+─────────────────────────────────────
+NET PAYABLE:           ₹ 1,47,000.00
+```
+
+**Actions**:
+- Print Bill Pass
+- Export to PDF
+- Mark as Paid (optional future feature)
+
+### Linking Logic
+
+```typescript
+// All documents linked via invoice_no on proc_inward
+const billPassData = {
+  inward: getInwardByInvoiceNo(invoiceNo),
+  sr: getSRByInwardId(inwardId), // approved only
+  debitNotes: getDRCRNotesByInwardId(inwardId, type: 'debit', approved: true),
+  creditNotes: getDRCRNotesByInwardId(inwardId, type: 'credit', approved: true),
+  
+  // Computed
+  srTotal: sumLineAmounts(sr.lines),
+  drTotal: sumNoteAmounts(debitNotes),
+  crTotal: sumNoteAmounts(creditNotes),
+  netPayable: srTotal - drTotal + crTotal,
+};
+```
+
+### Backend Query (Computed View Approach)
+
+```python
+def get_bill_pass_list_query():
+    sql = """
+    SELECT
+        pi.inward_id,
+        pi.inward_no,
+        pi.inward_date,
+        pi.sr_no AS bill_pass_no,
+        pi.sr_date AS bill_pass_date,
+        pi.invoice_no,
+        pi.invoice_date,
+        pm.party_id AS supplier_id,
+        pm.supp_name AS supplier_name,
+        -- SR Total (sum from proc_inward_dtl)
+        COALESCE(sr_totals.sr_total, 0) AS sr_total,
+        -- Debit Note Total
+        COALESCE(dr_totals.dr_total, 0) AS dr_total,
+        -- Credit Note Total  
+        COALESCE(cr_totals.cr_total, 0) AS cr_total,
+        -- Net Payable
+        (COALESCE(sr_totals.sr_total, 0) - COALESCE(dr_totals.dr_total, 0) + COALESCE(cr_totals.cr_total, 0)) AS net_payable
+    FROM proc_inward pi
+    LEFT JOIN party_mst pm ON pm.party_id = pi.supplier_id
+    LEFT JOIN (
+        SELECT inward_id, SUM(total_amount) AS sr_total
+        FROM proc_inward_dtl
+        GROUP BY inward_id
+    ) sr_totals ON sr_totals.inward_id = pi.inward_id
+    LEFT JOIN (
+        SELECT inward_id, SUM(total_amount) AS dr_total
+        FROM proc_drcr_note
+        WHERE drcr_type = 1 AND status_id = 3  -- Debit, Approved
+        GROUP BY inward_id
+    ) dr_totals ON dr_totals.inward_id = pi.inward_id
+    LEFT JOIN (
+        SELECT inward_id, SUM(total_amount) AS cr_total
+        FROM proc_drcr_note
+        WHERE drcr_type = 2 AND status_id = 3  -- Credit, Approved
+        GROUP BY inward_id
+    ) cr_totals ON cr_totals.inward_id = pi.inward_id
+    WHERE pi.sr_status = 3  -- Only approved SRs
+    ORDER BY pi.sr_date DESC, pi.inward_id DESC
+    LIMIT :limit OFFSET :offset;
+    """
+    return text(sql)
+```
+
+---
+
 ## Steps to Implement
 
 1. **Backend: Extend inward router** in `src/procurement/inward.py` to include update endpoint with all header fields (vehicle, driver, consignment, etc.)
@@ -280,7 +494,12 @@ amount = adjustment_qty × adjustment_rate;
 
 4. **Backend: Create DRCR Note endpoints** - Full CRUD with `drcr_note` and `drcr_note_dtl` tables
 
-5. **Backend: Create PO number lookup utility** - Function to get formatted PO number from `po_dtl_id`:
+5. **Backend: Create Bill Pass endpoints** in `src/procurement/billpass.py`:
+   - `get_bill_pass_list` - Paginated list of approved SRs with computed totals
+   - `get_bill_pass_by_id` - Full detail view with SR lines, DR/CR adjustments
+   - Query joins proc_inward with DRCR notes to compute net payable
+
+6. **Backend: Create PO number lookup utility** - Function to get formatted PO number from `po_dtl_id`:
    ```python
    def get_po_number_by_dtl_id(db: Session, po_dtl_id: int) -> Optional[str]:
        """
@@ -300,13 +519,15 @@ amount = adjustment_qty × adjustment_rate;
    ```
    This utility is used when displaying inward line items to show which PO the item came from.
 
-6. **Frontend: Extend createInward** - Add missing header fields to `useInwardFormSchemas.ts` and update `InwardHeaderForm.tsx`
+7. **Frontend: Extend createInward** - Add missing header fields to `useInwardFormSchemas.ts` and update `InwardHeaderForm.tsx`
 
-7. **Frontend: Create Material Inspection pages** - Index (filter `inspection_check = false`) + Edit form following createInward pattern
+8. **Frontend: Create Material Inspection pages** - Index (filter `inspection_check = false`) + Edit form following createInward pattern
 
-8. **Frontend: Create SR transaction pages** - Follow createPO pattern for rates/taxes
+9. **Frontend: Create SR transaction pages** - Follow createPO pattern for rates/taxes
 
-9. **Frontend: Create DRCR Note pages** - Index + Create with line item calculations
+10. **Frontend: Create DRCR Note pages** - Index + Create with line item calculations
+
+11. **Frontend: Create Bill Pass pages** - Index (read-only list) + Detail view with summary cards and line breakdowns
 
 ---
 
@@ -320,3 +541,14 @@ amount = adjustment_qty × adjustment_rate;
    - If `accepted_rate > rate` (supplier invoiced higher): Create **Credit Note** (we owe supplier more)
    - If `accepted_rate < rate` (supplier invoiced lower): Create **Debit Note** (supplier owes us refund)
    - Both note types are managed in the same DRCR Note menu with `drcr_type` distinguishing them
+
+3. **Bill Pass generation**: 
+   - Bill Pass is a **read-only computed view** (no separate creation workflow)
+   - Appears automatically when SR is approved
+   - Shows in Bill Pass index only after all linked DRCR Notes are also approved
+   - Serves as the final document for payment authorization
+   - Can be printed/exported for accounts payable processing
+
+4. **Invoice linkage**: All documents (Inward, SR, DRCR Notes, Bill Pass) are linked via `invoice_no` on `proc_inward`. This ensures:
+   - One invoice = One Inward = One SR = Multiple possible DRCR Notes = One Bill Pass
+   - Easy audit trail from payment back to original PO

@@ -33,13 +33,11 @@ import { mapInwardSetupResponse, mapItemGroupDetailResponse, mapInwardDetailsToF
 // Hooks
 import { useInwardFormState } from "./hooks/useInwardFormState";
 import { useInwardLineItems } from "./hooks/useInwardLineItems";
-import { useInwardApproval } from "./hooks/useInwardApproval";
 import { useInwardFormSchema } from "./hooks/useInwardFormSchemas";
 import { useInwardSelectOptions } from "./hooks/useInwardSelectOptions";
 
 // Components
 import { InwardHeaderForm } from "./components/InwardHeaderForm";
-import { InwardApprovalBar } from "./components/InwardApprovalBar";
 import InwardPreview from "./components/InwardPreview";
 import { useInwardLineItemColumns } from "./components/InwardLineItemsTable";
 import { POLineItemsDialog } from "./components/POLineItemsDialog";
@@ -323,26 +321,6 @@ function InwardTransactionPageContent() {
 		showFullForm,
 	});
 
-	// Approval hook
-	const {
-		approvalLoading,
-		approvalInfo,
-		approvalPermissions,
-		statusChipProps,
-		handleOpen,
-		handleCancelDraft,
-		handleApprove,
-		handleReject,
-	} = useInwardApproval({
-		mode,
-		requestedId,
-		formValues,
-		inwardDetails,
-		coId,
-		getMenuId,
-		setInwardDetails,
-	});
-
 	// Line item columns
 	const canEdit = mode !== "view";
 	const lineItemColumns = useInwardLineItemColumns({
@@ -391,7 +369,6 @@ function InwardTransactionPageContent() {
 				po_dtl_id: item.poDtlId || undefined,
 				item: item.item || undefined,
 				quantity: item.quantity || undefined,
-				rate: item.rate || undefined,
 				uom: item.uom || undefined,
 				remarks: item.remarks || undefined,
 			}));
@@ -430,7 +407,6 @@ function InwardTransactionPageContent() {
 							poDtlId: item.poDtlId,
 							item: item.item || undefined,
 							quantity: item.quantity ? Number(item.quantity) : undefined,
-							rate: item.rate ? Number(item.rate) : undefined,
 							uom: item.uom || undefined,
 							remarks: item.remarks || undefined,
 						})),
@@ -462,12 +438,6 @@ function InwardTransactionPageContent() {
 		},
 		[filledLineItems, lineItemsValid, mode, pageError, setupError, requestedId, router, validateChallanInvoice]
 	);
-
-	// Save handler for approval bar
-	const handleSave = React.useCallback(async () => {
-		if (!formRef.current?.submit) return;
-		await formRef.current.submit();
-	}, [formRef]);
 
 	// Handle PO selection
 	const handlePOSelect = React.useCallback(() => {
@@ -525,10 +495,6 @@ function InwardTransactionPageContent() {
 	const previewItems = React.useMemo(
 		() =>
 			filledLineItems.map((item, index) => {
-				const qty = Number(item.quantity) || 0;
-				const rate = Number(item.rate) || 0;
-				const amount = qty * rate;
-
 				return {
 					srNo: index + 1,
 					poNo: item.poNo,
@@ -536,8 +502,6 @@ function InwardTransactionPageContent() {
 					item: labelResolvers.item(item.itemGroup, item.item) || item.itemCode || "-",
 					quantity: item.quantity || "-",
 					uom: labelResolvers.uom(item.itemGroup, item.item, item.uom),
-					rate: item.rate || "-",
-					amount: amount > 0 ? amount : "-",
 					remarks: item.remarks || "-",
 				};
 			}),
@@ -570,7 +534,6 @@ function InwardTransactionPageContent() {
 		invoiceDate: (formValues.invoice_date as string) || inwardDetails?.invoiceDate,
 		vehicleNo: (formValues.vehicle_no as string) || inwardDetails?.vehicleNo,
 		transporterName: (formValues.transporter_name as string) || inwardDetails?.transporterName,
-		status: inwardDetails?.status,
 		updatedBy: inwardDetails?.updatedBy,
 		updatedAt: inwardDetails?.updatedAt,
 		companyName: companyName,
@@ -581,15 +544,8 @@ function InwardTransactionPageContent() {
 		fields: [
 			{ label: "Inward No", accessor: (header) => header.inwardNo || "Pending" },
 			{ label: "Inward Date", accessor: (header) => header.inwardDate || "-" },
-			{ label: "Status", accessor: (header) => header.status, includeWhen: (header) => Boolean(header.status) },
 		],
 	});
-
-	// Status chip
-	const statusChip = React.useMemo(() => {
-		if (!inwardDetails?.status) return undefined;
-		return statusChipProps;
-	}, [inwardDetails?.status, statusChipProps]);
 
 	// Primary actions
 	const primaryActions = React.useMemo<TransactionAction[] | undefined>(() => {
@@ -604,7 +560,7 @@ function InwardTransactionPageContent() {
 		];
 	}, [mode, pageError, setupError, saving, lineItemsValid, setupLoading, formRef]);
 
-	// Secondary actions - Edit/View mode switching handled by approval bar
+	// Secondary actions
 	const secondaryActions = React.useMemo<TransactionAction[] | undefined>(() => {
 		return undefined;
 	}, []);
@@ -654,33 +610,16 @@ function InwardTransactionPageContent() {
 			subtitle={subtitle}
 			backAction={{ label: "Back", onClick: () => router.push("/dashboardportal/procurement/inward") }}
 			metadata={metadata}
-			statusChip={statusChip}
 			primaryActions={showFullForm ? primaryActions : undefined}
 			secondaryActions={secondaryActions}
 			loading={loading || setupLoading}
 			alerts={alerts}
 			preview={showFullForm ? (
-				<div className="space-y-4">
-					{/* Approval Actions Bar */}
-					{mode !== "create" && inwardDetails ? (
-						<InwardApprovalBar
-							approvalInfo={approvalInfo}
-							permissions={approvalPermissions}
-							loading={approvalLoading}
-							disabled={saving || loading || setupLoading}
-							onSave={handleSave}
-							onOpen={handleOpen}
-							onCancelDraft={handleCancelDraft}
-							onApprove={handleApprove}
-							onReject={handleReject}
-						/>
-					) : null}
-					<InwardPreview
-						header={previewHeader}
-						items={previewItems}
-						remarks={(formValues.remarks as string) || inwardDetails?.remarks}
-					/>
-				</div>
+				<InwardPreview
+					header={previewHeader}
+					items={previewItems}
+					remarks={(formValues.remarks as string) || inwardDetails?.remarks}
+				/>
 			) : undefined}
 			lineItems={lineItemsConfig}
 		>

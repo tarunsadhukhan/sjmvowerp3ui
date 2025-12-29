@@ -28,8 +28,6 @@ export type InwardPreviewItem = {
 	item?: string;
 	quantity?: string | number;
 	uom?: string;
-	rate?: string | number;
-	amount?: string | number;
 	remarks?: string;
 };
 
@@ -80,13 +78,6 @@ const formatDateTime = (dateStr?: string) => {
 	} catch {
 		return dateStr;
 	}
-};
-
-const formatAmount = (value?: number | string) => {
-	if (value === null || value === undefined || value === "") return "-";
-	const num = Number(value);
-	if (Number.isNaN(num)) return String(value);
-	return num.toLocaleString("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 };
 
 const InwardPreview: React.FC<InwardPreviewProps> = ({ header, items, remarks, onPrint, onDownload }) => {
@@ -149,15 +140,6 @@ const InwardPreview: React.FC<InwardPreviewProps> = ({ header, items, remarks, o
 			printWindow.print();
 		}, 300);
 	};
-
-	// Calculate totals
-	const totalAmount = React.useMemo(() => {
-		return items.reduce((sum, item) => {
-			const qty = Number(item.quantity) || 0;
-			const rate = Number(item.rate) || 0;
-			return sum + qty * rate;
-		}, 0);
-	}, [items]);
 
 	return (
 		<Box sx={{ display: "flex", flexDirection: "column", gap: 2 }}>
@@ -241,7 +223,7 @@ const InwardPreview: React.FC<InwardPreviewProps> = ({ header, items, remarks, o
 					<Box component="table" sx={{ width: "100%", borderCollapse: "collapse" }}>
 						<Box component="thead" sx={{ backgroundColor: "rgba(12,60,96,0.08)" }}>
 							<Box component="tr">
-								{["Sr No", "PO No.", "Item", "Qty", "UOM", "Rate", "Amount", "Remarks"].map((col) => (
+								{["Sr No", "PO No.", "Item", "Qty", "UOM", "Remarks"].map((col) => (
 									<Box
 										key={col}
 										component="th"
@@ -271,12 +253,6 @@ const InwardPreview: React.FC<InwardPreviewProps> = ({ header, items, remarks, o
 										<Box component="td" sx={{ border: "1px solid", borderColor: "divider", p: 1, fontSize: 12, textAlign: "center" }}>
 											{item.uom || "-"}
 										</Box>
-										<Box component="td" sx={{ border: "1px solid", borderColor: "divider", p: 1, fontSize: 12, textAlign: "right" }}>
-											{formatAmount(item.rate)}
-										</Box>
-										<Box component="td" sx={{ border: "1px solid", borderColor: "divider", p: 1, fontSize: 12, textAlign: "right" }}>
-											{formatAmount(item.amount)}
-										</Box>
 										<Box component="td" sx={{ border: "1px solid", borderColor: "divider", p: 1, fontSize: 12 }}>
 											{item.remarks || "-"}
 										</Box>
@@ -284,7 +260,7 @@ const InwardPreview: React.FC<InwardPreviewProps> = ({ header, items, remarks, o
 								))
 							) : (
 								<Box component="tr">
-									<Box component="td" colSpan={8} sx={{ border: "1px solid", borderColor: "divider", p: 2, fontSize: 12, textAlign: "center" }}>
+									<Box component="td" colSpan={6} sx={{ border: "1px solid", borderColor: "divider", p: 2, fontSize: 12, textAlign: "center" }}>
 										No line items captured yet.
 									</Box>
 								</Box>
@@ -292,23 +268,6 @@ const InwardPreview: React.FC<InwardPreviewProps> = ({ header, items, remarks, o
 						</Box>
 					</Box>
 				</Box>
-
-				{/* Totals */}
-				{items.length > 0 && (
-					<>
-						<Divider sx={{ my: 2 }} />
-						<Stack direction="row" justifyContent="flex-end" sx={{ pr: 2 }}>
-							<Stack direction="row" spacing={2} alignItems="center">
-								<Typography variant="body2" sx={{ fontWeight: 600 }}>
-									Total Amount:
-								</Typography>
-								<Typography variant="body2" sx={{ fontWeight: 600, minWidth: 100, textAlign: "right" }}>
-									{formatAmount(totalAmount)}
-								</Typography>
-							</Stack>
-						</Stack>
-					</>
-				)}
 
 				<Divider sx={{ my: 2 }} />
 

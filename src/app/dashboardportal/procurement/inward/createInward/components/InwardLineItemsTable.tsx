@@ -57,7 +57,7 @@ export const useInwardLineItemColumns = ({
 					const value = itemGroupOptions.find((opt) => opt.value === item.itemGroup) ?? null;
 					return (
 						<SearchableSelect
-							options={itemGroupOptions}
+							options={[...itemGroupOptions]}
 							value={value}
 							onChange={(next) => handleLineFieldChange(item.id, "itemGroup", next?.value ?? "")}
 							getOptionLabel={(opt) => opt.label}
@@ -83,7 +83,7 @@ export const useInwardLineItemColumns = ({
 					const value = options.find((opt) => opt.value === item.item) ?? null;
 					return (
 						<SearchableSelect
-							options={options}
+							options={[...options]}
 							value={value}
 							onChange={(next) => handleLineFieldChange(item.id, "item", next?.value ?? "")}
 							getOptionLabel={(opt) => opt.label}
@@ -142,7 +142,7 @@ export const useInwardLineItemColumns = ({
 					const value = options.find((opt) => opt.value === item.uom) ?? null;
 					return (
 						<SearchableSelect
-							options={options}
+							options={[...options]}
 							value={value}
 							onChange={(next) => handleLineFieldChange(item.id, "uom", next?.value ?? "")}
 							getOptionLabel={(opt) => opt.label}
@@ -154,44 +154,6 @@ export const useInwardLineItemColumns = ({
 				},
 				getTooltip: ({ item }) =>
 					labelResolvers.uom(item.itemGroup, item.item, item.uom) || undefined,
-			},
-			// Rate column
-			{
-				id: "rate",
-				header: "Rate",
-				width: "0.8fr",
-				renderCell: ({ item }) => {
-					if (!canEdit) {
-						return <span className="text-xs text-right w-full block">{item.rate || "-"}</span>;
-					}
-					return (
-						<TextField
-							size="small"
-							type="number"
-							value={item.rate}
-							onChange={(e) => handleLineFieldChange(item.id, "rate", e.target.value)}
-							inputProps={{ min: 0, step: 0.01, className: "text-right text-xs" }}
-							sx={{ "& .MuiInputBase-input": { padding: "4px 8px" } }}
-							fullWidth
-						/>
-					);
-				},
-			},
-			// Amount column (calculated, read-only)
-			{
-				id: "amount",
-				header: "Amount",
-				width: "0.8fr",
-				renderCell: ({ item }) => {
-					const qty = Number(item.quantity) || 0;
-					const rate = Number(item.rate) || 0;
-					const amount = qty * rate;
-					return (
-						<span className="text-xs text-right w-full block">
-							{amount > 0 ? amount.toLocaleString("en-IN", { minimumFractionDigits: 2 }) : "-"}
-						</span>
-					);
-				},
 			},
 			// Remarks column
 			{

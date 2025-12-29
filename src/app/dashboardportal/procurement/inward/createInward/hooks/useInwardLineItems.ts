@@ -53,9 +53,7 @@ export const useInwardLineItems = ({
 				orderedQty: typeof line.ordered_qty === "number" ? line.ordered_qty : undefined,
 				receivedQty: typeof line.received_qty === "number" ? line.received_qty : undefined,
 				quantity: String(line.quantity ?? line.qty ?? ""),
-				rate: String(line.rate ?? ""),
 				uom: String(line.uom_id ?? line.uom ?? ""),
-				amount: typeof line.amount === "number" ? line.amount : undefined,
 				remarks: String(line.remarks ?? ""),
 				taxPercentage: typeof line.tax_percentage === "number" ? line.tax_percentage : undefined,
 			};
@@ -75,7 +73,7 @@ export const useInwardLineItems = ({
 				setLineItems((prev) =>
 					prev.map((item) =>
 						item.id === id
-							? { ...item, itemGroup: rawValue, item: "", itemMake: "", uom: "", rate: "" }
+							? { ...item, itemGroup: rawValue, item: "", itemMake: "", uom: "" }
 							: item
 					)
 				);
@@ -85,7 +83,7 @@ export const useInwardLineItems = ({
 				return;
 			}
 
-			// Item change → auto-select default UOM and rate
+			// Item change → auto-select default UOM
 			if (field === "item") {
 				setLineItems((prev) =>
 					prev.map((item) => {
@@ -93,13 +91,11 @@ export const useInwardLineItems = ({
 						const cache = itemGroupCache[item.itemGroup ?? ""];
 						const itemOption = cache?.items.find((opt) => opt.value === rawValue);
 						const defaultUom = itemOption?.defaultUomId ?? "";
-						const defaultRate = itemOption?.defaultRate?.toString() ?? "";
 						const taxPct = itemOption?.taxPercentage;
 						return {
 							...item,
 							item: rawValue,
 							uom: defaultUom,
-							rate: defaultRate,
 							taxPercentage: taxPct,
 						};
 					})
@@ -137,9 +133,7 @@ export const useInwardLineItems = ({
 					orderedQty: poItem.ordered_qty,
 					receivedQty: poItem.received_qty,
 					quantity: String(poItem.pending_qty ?? poItem.ordered_qty - (poItem.received_qty ?? 0)),
-					rate: String(poItem.rate ?? ""),
 					uom: String(poItem.uom_id ?? ""),
-					amount: poItem.amount,
 					remarks: poItem.remarks ?? "",
 					taxPercentage: poItem.tax_percentage,
 				};

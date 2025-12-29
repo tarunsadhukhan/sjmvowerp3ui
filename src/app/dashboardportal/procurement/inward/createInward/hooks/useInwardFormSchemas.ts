@@ -128,11 +128,10 @@ export function useInwardFormSchema({
 				{
 					name: "remarks",
 					label: "Remarks",
-					type: "multiline" as const,
+					type: "textarea" as const,
 					required: false,
 					disabled: isView,
 					grid: { xs: 12, md: 6 },
-					rows: 2,
 				},
 			);
 		}

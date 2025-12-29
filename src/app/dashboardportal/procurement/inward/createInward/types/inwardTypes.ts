@@ -27,8 +27,8 @@ export type EditableLineItem = {
 	orderedQty?: number;
 	receivedQty?: number;
 	quantity: string;  // Quantity being received in this inward
-	rate: string;
 	uom: string;
+	rate?: string;  // PO rate (stored as string for form handling)
 	amount?: number;
 	remarks: string;
 	taxPercentage?: number;

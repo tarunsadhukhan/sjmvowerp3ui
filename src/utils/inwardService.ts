@@ -1,6 +1,5 @@
 import { fetchWithCookie } from "@/utils/apiClient2";
 import { apiRoutesPortalMasters } from "@/utils/api";
-import type { ApprovalStatusId } from "@/components/ui/transaction";
 
 export type InwardLine = {
 	id: string;
@@ -13,19 +12,9 @@ export type InwardLine = {
 	orderedQty?: number;
 	receivedQty?: number;
 	quantity?: number | string;
-	rate?: number | string;
 	uom?: string;
-	amount?: number;
 	remarks?: string;
 	taxPercentage?: number;
-};
-
-export type ApprovalActionPermissions = {
-	canApprove?: boolean;
-	canReject?: boolean;
-	canOpen?: boolean;
-	canCancelDraft?: boolean;
-	canSave?: boolean;
 };
 
 export type InwardDetails = {
@@ -43,13 +32,8 @@ export type InwardDetails = {
 	vehicleNo?: string;
 	transporterName?: string;
 	remarks?: string;
-	status?: string;
-	statusId?: ApprovalStatusId;
-	approvalLevel?: number | null;
-	maxApprovalLevel?: number | null;
 	updatedBy?: string;
 	updatedAt?: string;
-	permissions?: ApprovalActionPermissions;
 	lines: InwardLine[];
 };
 
@@ -101,7 +85,6 @@ export type CreateInwardRequest = {
 		po_dtl_id?: string;
 		item?: string;
 		quantity?: string | number;
-		rate?: string | number;
 		uom?: string;
 		remarks?: string;
 	}>;
@@ -111,14 +94,6 @@ export type CreateInwardResponse = {
 	message?: string;
 	inward_id?: number | string;
 	inwardId?: number | string;
-	inward_no?: string;
-};
-
-export type StatusChangeResponse = {
-	status: string;
-	new_status_id: number;
-	new_approval_level?: number;
-	message: string;
 	inward_no?: string;
 };
 
@@ -276,7 +251,6 @@ export async function updateInward(payload: Partial<InwardDetails>): Promise<{ m
 		po_dtl_id: line.poDtlId,
 		item: line.item ?? "",
 		quantity: line.quantity ?? 0,
-		rate: line.rate ?? 0,
 		uom: line.uom ?? "",
 		remarks: line.remarks ?? undefined,
 	}));
@@ -308,103 +282,6 @@ export async function updateInward(payload: Partial<InwardDetails>): Promise<{ m
 
 	if (!data) {
 		throw new Error("Empty response from update API");
-	}
-
-	return data;
-}
-
-export async function openInward(inwardId: string, branchId: string, menuId: string): Promise<StatusChangeResponse> {
-	const payload = {
-		inward_id: inwardId,
-		branch_id: branchId,
-		menu_id: menuId,
-	};
-
-	const { data, error } = await fetchWithCookie<StatusChangeResponse>(
-		apiRoutesPortalMasters.INWARD_OPEN,
-		"POST",
-		payload
-	);
-
-	if (error) {
-		throw new Error(error);
-	}
-
-	if (!data) {
-		throw new Error("Empty response from open API");
-	}
-
-	return data;
-}
-
-export async function cancelDraftInward(inwardId: string, branchId: string, menuId: string): Promise<StatusChangeResponse> {
-	const payload = {
-		inward_id: inwardId,
-		branch_id: branchId,
-		menu_id: menuId,
-	};
-
-	const { data, error } = await fetchWithCookie<StatusChangeResponse>(
-		apiRoutesPortalMasters.INWARD_CANCEL_DRAFT,
-		"POST",
-		payload
-	);
-
-	if (error) {
-		throw new Error(error);
-	}
-
-	if (!data) {
-		throw new Error("Empty response from cancel draft API");
-	}
-
-	return data;
-}
-
-export async function approveInward(inwardId: string, branchId: string, menuId: string): Promise<StatusChangeResponse> {
-	const payload = {
-		inward_id: inwardId,
-		branch_id: branchId,
-		menu_id: menuId,
-	};
-
-	const { data, error } = await fetchWithCookie<StatusChangeResponse>(
-		apiRoutesPortalMasters.INWARD_APPROVE,
-		"POST",
-		payload
-	);
-
-	if (error) {
-		throw new Error(error);
-	}
-
-	if (!data) {
-		throw new Error("Empty response from approve API");
-	}
-
-	return data;
-}
-
-export async function rejectInward(inwardId: string, branchId: string, menuId: string, reason: string): Promise<StatusChangeResponse> {
-	const payload = {
-		inward_id: inwardId,
-		branch_id: branchId,
-		menu_id: menuId,
-		reason: reason,
-	};
-
-	const { data, error } = await fetchWithCookie<StatusChangeResponse>(
-		apiRoutesPortalMasters.INWARD_REJECT,
-		"POST",
-		payload
-	);
-
-	if (error) {
-		throw new Error(error);
-	}
-
-	if (!data) {
-		throw new Error("Empty response from reject API");
 	}
 
 	return data;

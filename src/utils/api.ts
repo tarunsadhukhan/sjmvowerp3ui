@@ -213,10 +213,33 @@ const apiRoutesPortalMasters = {
     INWARD_CREATE: `${API_URL}/procurementInward/create_inward`,
     INWARD_UPDATE: `${API_URL}/procurementInward/update_inward`,
     GET_INWARD_BY_ID: `${API_URL}/procurementInward/get_inward_by_id`,
-    INWARD_OPEN: `${API_URL}/procurementInward/open_inward`,
-    INWARD_CANCEL_DRAFT: `${API_URL}/procurementInward/cancel_draft_inward`,
-    INWARD_APPROVE: `${API_URL}/procurementInward/approve_inward`,
-    INWARD_REJECT: `${API_URL}/procurementInward/reject_inward`,
+
+    // Material Inspection endpoints
+    INSPECTION_PENDING_LIST: `${API_URL}/materialInspection/get_pending_inspection_list`,
+    INSPECTION_GET_BY_INWARD_ID: `${API_URL}/materialInspection/get_inspection_by_inward_id`,
+    INSPECTION_COMPLETE: `${API_URL}/materialInspection/complete_inspection`,
+
+    // Stores Receipt (SR) endpoints
+    SR_PENDING_LIST: `${API_URL}/storesReceipt/get_sr_pending_list`,
+    SR_GET_BY_INWARD_ID: `${API_URL}/storesReceipt/get_sr_by_inward_id`,
+    SR_SAVE: `${API_URL}/storesReceipt/save_sr`,
+    SR_OPEN: `${API_URL}/storesReceipt/open_sr`,
+    SR_APPROVE: `${API_URL}/storesReceipt/approve_sr`,
+    SR_REJECT: `${API_URL}/storesReceipt/reject_sr`,
+
+    // DRCR Note endpoints
+    DRCR_NOTE_LIST: `${API_URL}/drcrNote/get_drcr_note_list`,
+    DRCR_NOTE_GET_BY_ID: `${API_URL}/drcrNote/get_drcr_note_by_id`,
+    DRCR_NOTE_CREATE: `${API_URL}/drcrNote/create_drcr_note`,
+    DRCR_NOTE_OPEN: `${API_URL}/drcrNote/open_drcr_note`,
+    DRCR_NOTE_APPROVE: `${API_URL}/drcrNote/approve_drcr_note`,
+    DRCR_NOTE_REJECT: `${API_URL}/drcrNote/reject_drcr_note`,
+    DRCR_NOTE_GET_INWARD_FOR_CREATE: `${API_URL}/drcrNote/get_inward_for_drcr_note`,
+
+    // Bill Pass endpoints
+    BILL_PASS_LIST: `${API_URL}/billPass/get_bill_pass_list`,
+    BILL_PASS_GET_BY_ID: `${API_URL}/billPass/get_bill_pass_by_id`,
+
 
 };
 

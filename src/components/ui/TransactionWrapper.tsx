@@ -48,7 +48,7 @@ const renderActionButton = (action: TransactionAction, key: string, defaultVaria
       variant={variant}
       onClick={action.onClick}
       disabled={action.disabled || action.loading}
-      className="min-w-[120px]"
+      className="min-w-30"
     >
       <Stack direction="row" spacing={0.75} alignItems="center" justifyContent="center">
         {action.startIcon ? <span className="inline-flex items-center justify-center">{action.startIcon}</span> : null}

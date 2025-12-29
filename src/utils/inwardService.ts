@@ -70,13 +70,15 @@ export type ApprovedPO = {
 	po_id: number;
 	po_no: string;
 	po_date: string;
+	branch_id: number;
 	branch_name: string;
+	supplier_id: number;
 	supplier_name: string;
-	pending_items_count: number;
 };
 
 export type ApprovedPOsResponse = {
 	data: ApprovedPO[];
+	total: number;
 };
 
 export type POLineItemsResponse = {
@@ -162,15 +164,11 @@ export async function fetchInwardSetup2(itemGroupId: string): Promise<InwardSetu
 
 export async function getApprovedPOsBySupplier(
 	supplierId: string | number,
-	branchId?: string | number,
-	coId?: string | number
+	branchId?: string | number
 ): Promise<ApprovedPOsResponse> {
 	const query = new URLSearchParams({ supplier_id: String(supplierId) });
 	if (branchId) {
 		query.append("branch_id", String(branchId));
-	}
-	if (coId) {
-		query.append("co_id", String(coId));
 	}
 
 	const { data, error } = await fetchWithCookie<ApprovedPOsResponse>(

@@ -23,7 +23,6 @@ type POLineItemsDialogProps = {
 	onConfirm: (selectedItems: POLineItem[]) => void;
 	supplierId?: number | string;
 	branchId?: number | string;
-	coId?: number | string;
 };
 
 export function POLineItemsDialog({
@@ -32,7 +31,6 @@ export function POLineItemsDialog({
 	onConfirm,
 	supplierId,
 	branchId,
-	coId,
 }: POLineItemsDialogProps) {
 	const [selectedPO, setSelectedPO] = React.useState<ApprovedPO | null>(null);
 	const [approvedPOs, setApprovedPOs] = React.useState<ApprovedPO[]>([]);
@@ -46,7 +44,7 @@ export function POLineItemsDialog({
 		if (!supplierId) return;
 		setLoadingPOs(true);
 		try {
-			const response = await getApprovedPOsBySupplier(supplierId, branchId, coId);
+			const response = await getApprovedPOsBySupplier(supplierId, branchId);
 			setApprovedPOs(response.data || []);
 			const options: Option[] = (response.data || []).map((po) => ({
 				label: `${po.po_no} - ${po.supplier_name} (${po.po_date})`,
@@ -60,14 +58,14 @@ export function POLineItemsDialog({
 		} finally {
 			setLoadingPOs(false);
 		}
-	}, [supplierId, branchId, coId]);
+	}, [supplierId, branchId]);
 
 	// Load approved POs when dialog opens
 	React.useEffect(() => {
 		if (open && supplierId) {
 			loadApprovedPOs();
 		}
-	}, [open, supplierId, branchId, coId, loadApprovedPOs]);
+	}, [open, supplierId, branchId, loadApprovedPOs]);
 
 	// Reset state when dialog opens
 	React.useEffect(() => {

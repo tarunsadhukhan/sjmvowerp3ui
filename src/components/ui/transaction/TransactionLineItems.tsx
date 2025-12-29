@@ -89,7 +89,7 @@ export function TransactionLineItems<TItem>({
       </div>
 
       <div className="overflow-x-auto">
-        <div className="min-w-[1120px] overflow-hidden border border-slate-300 bg-white">
+        <div className="min-w-280 overflow-hidden border border-slate-300 bg-white">
           <div
             className={`grid gap-x-1 bg-slate-100 px-2 py-1 text-[11px] font-semibold uppercase tracking-wide text-slate-700 border-b border-slate-300`}
             style={{ gridTemplateColumns }}

@@ -702,7 +702,6 @@ function InwardTransactionPageContent() {
 				onConfirm={handlePOItemsConfirmWrapper}
 				supplierId={formValues.supplier as string}
 				branchId={branchValue || undefined}
-				coId={coId ?? undefined}
 			/>
 		</TransactionWrapper>
 	);

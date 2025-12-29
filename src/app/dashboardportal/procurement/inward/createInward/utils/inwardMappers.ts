@@ -178,16 +178,34 @@ export const mapItemGroupDetailResponse = (response: unknown): ItemGroupCacheEnt
 	const uomsByItemId: Record<string, Option[]> = {};
 	const uomLabelByItemId: Record<string, Record<string, string>> = {};
 
+	// First, add the default UOM from each item
+	items.forEach((item) => {
+		if (!item.value || !item.defaultUomId) return;
+		const key = item.value;
+		if (!uomsByItemId[key]) uomsByItemId[key] = [];
+		uomsByItemId[key].push({ value: item.defaultUomId, label: item.defaultUomLabel ?? "" });
+		if (!uomLabelByItemId[key]) uomLabelByItemId[key] = {};
+		uomLabelByItemId[key][item.defaultUomId] = item.defaultUomLabel ?? "";
+	});
+
+	// Then, add additional UOMs from the uoms array
 	(raw?.uoms ?? []).forEach((uom) => {
-		const itemId = uom?.item_id ?? uom?.map_to_id ?? uom?.mapToId;
-		const uomId = uom?.uom_id ?? uom?.id;
+		const itemId = uom?.item_id;
+		const uomId = uom?.map_to_id ?? uom?.mapToId ?? uom?.uom_id ?? uom?.id;
 		const uomName = uom?.uom_name ?? "";
 		if (!itemId || !uomId) return;
 		const key = String(itemId);
+		const uomValue = String(uomId);
+		// Avoid duplicates
 		if (!uomsByItemId[key]) uomsByItemId[key] = [];
-		uomsByItemId[key].push({ value: String(uomId), label: uomName });
+		const exists = uomsByItemId[key].some((opt) => opt.value === uomValue);
+		if (!exists) {
+			uomsByItemId[key].push({ value: uomValue, label: uomName });
+		}
 		if (!uomLabelByItemId[key]) uomLabelByItemId[key] = {};
-		uomLabelByItemId[key][String(uomId)] = uomName;
+		if (!uomLabelByItemId[key][uomValue]) {
+			uomLabelByItemId[key][uomValue] = uomName;
+		}
 	});
 
 	const itemLabelById: Record<string, string> = {};

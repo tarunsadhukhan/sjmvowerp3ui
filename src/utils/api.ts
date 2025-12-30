@@ -244,6 +244,12 @@ const apiRoutesPortalMasters = {
     ISSUE_TABLE: `${API_URL}/inventoryIssue/get_issue_table`,
     ISSUE_GET_BY_ID: `${API_URL}/inventoryIssue/get_issue_by_id`,
     ISSUE_SETUP_1: `${API_URL}/inventoryIssue/get_issue_setup_1`,
+    ISSUE_CREATE: `${API_URL}/inventoryIssue/create_issue`,
+    ISSUE_UPDATE: `${API_URL}/inventoryIssue/update_issue`,
+    ISSUE_UPDATE_STATUS: `${API_URL}/inventoryIssue/update_issue_status`,
+    ISSUE_AVAILABLE_INVENTORY: `${API_URL}/inventoryIssue/get_available_inventory`,
+    ISSUE_COST_FACTORS: `${API_URL}/inventoryIssue/get_cost_factors`,
+    ISSUE_MACHINES: `${API_URL}/inventoryIssue/get_machines`,
 
 
 };

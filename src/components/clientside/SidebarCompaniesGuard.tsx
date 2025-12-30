@@ -62,7 +62,13 @@ export default function SidebarCompaniesGuard() {
       return;
     }
 
-    if (!menuPaths.includes(sub)) {
+    const allowed = menuPaths.some((p) => {
+      if (p === sub) return true;
+      if (!p) return false;
+      return sub.startsWith(`${p}/`);
+    });
+
+    if (!allowed) {
       router.replace('/dashboardportal/');
     }
   }, [ready, pathname, menuPaths, router]);

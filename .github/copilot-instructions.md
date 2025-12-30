@@ -1,99 +1,393 @@
 <!-- Copilot instructions for vowerp3ui repo -->
-# vowerp3ui — Copilot / AI assistant guide
+# vowerp3ui — AI agent quickstart
 
-This file gives focused, actionable guidance for an AI coding agent working in this repository. Keep suggestions small, make safe edits, and prefer incremental, testable changes.
+> **For detailed patterns and code examples, see [AGENTS_GUIDE.md](../AGENTS_GUIDE.md)**
 
-Key pointers (high level)
-- This is a Next.js 15 app (app router) using React 19 and MUI v7. Major UI lives under `src/app` and reusable UI under `src/components`.
-- Backend API is proxied via `NEXT_PUBLIC_API_BASE_URL` (default `/api`). Routes are declared in `src/utils/api.ts` (see `apiRoutesPortalMasters.ITEM_CREATE_SETUP`). Use `fetchWithCookie` in `src/utils/apiClient2.ts` for requests that must forward cookies.
-- Edge `middleware.ts` enforces subdomain + session validation and sets a `subdomain` cookie; edits may affect runtime redirects.
+## TL;DR principles
+| Principle | Rule |
+|-----------|------|
+| Design tokens | Use `src/theme/muiTheme.ts` + `tailwind.config.ts`; no ad-hoc hex/px |
+| Composable UI | Pages compose wrappers from `src/components/ui/**`, not raw MUI |
+| Page templates | Reuse 4 archetypes: Index, Transaction, Report, Dashboard |
+| Transaction flows | Use `TransactionWrapper` + shared hooks (`useLineItems`, `useTransactionSetup`) |
+| Index pages | Use `IndexWrapper` from `src/components/ui/IndexWrapper` |
+| Mode-aware forms | One schema powers create/edit/view via `MuiForm` and `mode` prop |
+| API calls | Use `fetchWithCookie` from `src/utils/apiClient2.ts` |
+| Clean structure | Separate: services/utils, validation (Zod), hooks, and UI components |
 
-Developer workflows & commands
-- Start dev server: `pnpm dev` (Next will try port 3000 then 3001). Proxy is enabled by env `USE_NEXT_PROXY=true`.
-- Build: `pnpm build`; Start prod: `pnpm start`.
-- Tests: `pnpm test` (Jest). Storybook available via `pnpm storybook`.
-- Type-check: `npx tsc --noEmit` (run from repo root).
+## Key directories
+| Path | Purpose |
+|------|---------|
+| `src/app/` | Next.js App Router pages and layouts |
+| `src/components/ui/` | Shared UI primitives (forms, data grid, modals) |
+| `src/hooks/` | Shared custom React hooks |
+| `src/utils/api.ts` | API route constants |
+| `src/utils/apiClient2.ts` | Axios wrappers with cookies/auth interceptors |
+| `src/types/` | Shared TypeScript type definitions |
 
-Project-specific conventions and patterns
-- API helpers
-  - Use `fetchWithCookie(url, method, body)` from `src/utils/apiClient2.ts` for API calls so cookies are forwarded and responses consistently shaped: returns `{ data, error }`.
-  - `src/utils/api.ts` centralizes all endpoints; prefer using these constants over hard-coded URLs.
+## Page archetypes
+| Type | Wrapper | Example |
+|------|---------|---------|
+| Index | `IndexWrapper` | `masters/itemMaster/page.tsx` |
+| Transaction | `TransactionWrapper` | `procurement/indent/createIndent/page.tsx` |
+| Report | Filter form + DataGrid | `dashboardadmin/reporting/...` |
+| Dashboard | KPI cards + grids | `dashboardadmin/page.tsx` |
 
-- Data/Setup endpoints
-  - Many forms use a single "setup" endpoint that returns multiple arrays (e.g., `item_groups`, `uom_groups`, `item_types`). Example consumer: `src/app/dashboardportal/masters/itemMaster/createItem.tsx`.
-  - Confirm the exact property names (e.g., `item_groups` not `itemgroups`) before mapping options — mismatches cause empty selects.
+## Cross-repo API patterns (vowerp3be ↔ vowerp3ui)
 
-- Form pattern
-  - The repo uses a schema-driven form component at `src/components/ui/muiform.tsx`. Schema fields include: `name, label, type, options, grid, required`.
-  - `select` fields expect `options: { label: string, value: string | number }[]`. Keep option `value` consistent (string preferred) to avoid mismatches in MUI Select.
-  - there are 3 modes for any form, `view`, `edit`, and `create`. the form compnent at `src/components/ui/muiform.tsx` has functionality for all 3 modes. call for the api with "_SETUP" for create mode, for edit, the specific id will be passed in and will have edit, and for view, this will also use similiar logic to edit mode, but the entry fields will be disabled 
-
-
-
-- Dialogs and Autocomplete
-  - MUI `Autocomplete` inside Dialogs may require portal adjustments; in this repo most working examples use native `Select` + `MenuItem` (see `CreateItemGroupPage.tsx`). Prefer that pattern if Autocomplete has z-index issues.
-
-- Validation logic for entry fields
-  - use zod for schema validation.
-
-Files to inspect when editing forms or dropdowns
-- `src/components/ui/muiform.tsx` — core renderer used across many pages.
-- `src/app/dashboardportal/.../*` — many dashboard pages; use these as canonical examples (e.g., `CreateItemGroupPage.tsx`).
-- `src/utils/api.ts` and `src/utils/apiClient2.ts` — endpoints and the cookie-aware fetch helper.
-
-Data grid (MuiDataGrid) pattern
-- Central component: `src/components/ui/muiDataGrid.tsx`. Prefer using this wrapper instead of dropping `DataGrid` directly — it standardizes styles, pagination props, getRowId, and loading behavior.
-- Typical parent pattern (see `src/app/dashboardportal/masters/itemMaster/page.tsx` and `itemGroupMaster/page.tsx`):
-  - Keep a local `rows` array, `loading` flag, `paginationModel` ({ page: number, pageSize: number }) and `totalRows` state in the page component.
-  - Debounce search input (500ms) with setTimeout, then call the fetch function and reset page to 0.
-  - When calling the API, convert the UI's 0-based `paginationModel.page` to the API's 1-based page parameter: `page: paginationModel.page + 1`.
-  - Use `fetchWithCookie` and `apiRoutesPortalMasters.*` constants to request data. API responses are commonly shaped like `{ data: [...], total: number }`.
-  - Map API rows to the grid's expected shape, ensuring an `id` property exists (example: `id: row.item_id ?? row.id`). Also normalize types (e.g., `active` may be a string; cast to number).
-  - Pass grid props:
-    - `rows={rows}`
-    - `columns={columns}` where `columns` is a `GridColDef[]` with any `renderCell` custom renderers (actions, links, tooltips).
-    - `rowCount={totalRows}`
-    - `paginationModel={paginationModel}` and `onPaginationModelChange={handlePaginationModelChange}`
-    - `loading={loading}` and `showLoadingUntilLoaded={true}` when you want the wrapper to honor the loading state until data arrives.
-  - Implement `handlePaginationModelChange` to update the local pagination state.
-  - Use `getRowId={(row) => row.id ?? row.co_id}` (the wrapper already does this) so rows with different id fields still work.
-- Column tips:
-  - Add clickable cells using `renderCell` to open details (see `item_code`/`item_name` in `itemMaster/page.tsx`).
-  - Add an `actions` column with small icon buttons for View/Edit. Use `lucide-react` icons (Eye/Edit) to avoid adding `@mui/icons-material`.
-- Why this pattern: it centralizes grid styling and pagination logic, ensures consistent server-side paging, and reduces repeated boilerplate across pages.
-
-Testing and verification tips for small edits
-- Add narrow console.logs close to the data source (e.g., after `fetchWithCookie(...)`) and in `useMemo` mappings to prove array/field names are correct.
-- Create a minimal local test component under `src/app/.../TestSelect.tsx` that uses `muiform` with static options to verify UI behavior before wiring API data.
-- When changing middleware or route constants, run dev and open `http://localhost:3001` (Next picks 3001 if 3000 in use).
-
-Do's and Don'ts for the assistant
-- Do: make minimal, type-safe edits; update or add console logs for troubleshooting; run `npx tsc --noEmit` and `npm run dev` to validate changes when possible.
-- Don't: change global middleware behavior without explicit confirmation — `middleware.ts` can redirect the dev server to external domains if subdomain logic fails.
-- Don't: assume API shapes — always read the consuming code (`CreateItemGroupPage.tsx`, `UOMMappingTable.tsx`) to infer expected keys.
-
-Examples (copy/paste safe snippets)
-- Map setup `item_groups` to options:
-```ts
-const itemGroupOptions = (setupData?.item_groups ?? []).map((g:any) => ({
-  label: `${g.item_grp_name_display} (${g.item_grp_code_display})`,
-  value: String(g.item_grp_id),
-}));
+### Backend endpoint naming convention
+```
+GET  /api/{module}/get_{entity}_list          → List with pagination
+GET  /api/{module}/get_{entity}_by_id/{id}    → Single record
+GET  /api/{module}/get_{entity}_setup_1       → Initial dropdown options
+GET  /api/{module}/get_{entity}_setup_2       → Secondary dependent options
+POST /api/{module}/create_{entity}            → Create new record
+PUT  /api/{module}/update_{entity}/{id}       → Update existing record
 ```
 
-- Use cookie-aware fetch:
-```ts
-const { data, error } = await fetchWithCookie(apiRoutesPortalMasters.ITEM_CREATE_SETUP, 'GET');
+### Frontend service pattern
+```typescript
+// src/utils/{module}Service.ts
+export const fetch{Entity}List = async (coId: string, params: PaginationParams) =>
+  fetchWithCookie(apiRoutes.{module}.get{Entity}List(coId, params), "GET");
+
+export const fetch{Entity}ById = async (coId: string, id: string) =>
+  fetchWithCookie(apiRoutes.{module}.get{Entity}ById(coId, id), "GET");
+
+export const fetch{Entity}Setup1 = async (coId: string) =>
+  fetchWithCookie(apiRoutes.{module}.get{Entity}Setup1(coId), "GET");
 ```
 
-If unclear or missing details
-- Ask for a small sample of the failing API response (JSON) or a screenshot of the UI console logs. That lets you verify key names (e.g., `item_groups` vs `itemgroups`).
+### Standard response shapes
+```typescript
+// List response
+{ data: T[], total: number, page: number, page_size: number }
 
-If you want changes merged automatically
-- Keep changes under 100 lines per PR, include test or manual verification steps in PR description, and avoid touching `middleware.ts` unless necessary.
+// Setup response (dropdown options)
+{ branches: [], departments: [], item_groups: [], co_config: {} }
+
+// Detail response
+{ ...entityFields, status_id: number, created_by: string, ... }
+```
+
+### Multi-tenant context
+- Frontend sends `co_id` as query param: `?co_id=123`
+- Backend extracts tenant from subdomain/headers via `get_tenant_db`
+- Always source `coId` from `useSelectedCompanyCoId()` hook
+
+## Transaction page quick reference
+For full patterns, see AGENTS_GUIDE.md § Transaction Page Architecture.
+
+```
+create{Transaction}/
+├── page.tsx              # Main orchestrator
+├── components/           # UI components
+├── hooks/                # State and logic hooks
+├── types/                # TypeScript types
+└── utils/                # Constants, factories, mappers
+```
+
+Key hooks to use:
+- `useLineItems` — Manage line item CRUD with trailing blank
+- `useTransactionSetup` — Fetch dropdown options on mount
+- `useDeferredOptionCache` — Lazy-load dependent options (items by group)
+- `buildLabelMap` / `createLabelResolver` — Map IDs to display labels
+
+## Forms & grids
+- `src/components/ui/muiform.tsx` renders schema-driven forms: fields accept `{ name, label, type, options, grid, required, disabled }`. Keep options as `{ label, value }` strings.
+- Setup endpoints often return multiple option arrays (see `dashboardportal/masters/itemMaster/createItem.tsx`); map them immediately to label/value pairs and memoise results.
+- For DataGrids, use `src/components/ui/muiDataGrid.tsx`. Parent pages manage `rows`, `paginationModel`, and call APIs with `page: paginationModel.page + 1`. Always supply an `id` field.
+- Dependent dropdown rows (e.g., procurement indent creation) maintain per-row option caches to avoid leaking values; clear downstream fields before refetching.
+
+## Data & side-effects
+- Use `fetchWithCookie(route, method, body?)` for API calls; expect `{ data, error }`. Build GET query strings with `URLSearchParams`.
+- Middleware (`src/middleware.ts`) enforces subdomain/session cookies—avoid touching it unless absolutely required.
+- When adding new endpoints, extend `apiRoutes...` enums and TypeScript types in `src/types`; propagate through services before UI.
+
+## Workflow & verification
+- Core commands: `pnpm dev`, `pnpm build`, `pnpm start`, `pnpm test`, `pnpm storybook`, `npx tsc --noEmit`.
+- Document manual verification in PRs (which dashboard page you exercised). Keep changes small and note any env vars used.
+- Storybook stories under `src/stories/**` illustrate component usage; add new stories when expanding UI primitives.
+
+## Testing requirements (MANDATORY for new/modified code)
+
+When adding new components, hooks, utilities, or modifying existing code, **always write tests** to validate the changes. This ensures a clear picture of what works and what doesn't.
+
+### Test framework & setup
+- **Test runner**: Vitest (configured in `vitest.config.ts`)
+- **Testing library**: `@testing-library/react` for component/hook tests
+- **Environment**: jsdom for DOM simulation
+- **Run tests**: `pnpm test` or `pnpm vitest`
+
+### Test file location & naming
+| Code Location | Test Location | Naming |
+|---------------|---------------|--------|
+| `src/hooks/useMyHook.ts` | `src/hooks/useMyHook.test.ts` | Co-located |
+| `src/components/ui/MyComponent.tsx` | `src/components/ui/MyComponent.test.tsx` | Co-located |
+| `src/app/.../page.tsx` | `src/app/.../page.test.tsx` or `src/app/.../*.test.ts` | Co-located |
+| `src/utils/myUtil.ts` | `src/utils/myUtil.test.ts` | Co-located |
+| Complex page logic | `src/app/.../hooks/*.test.ts` | In hooks folder |
+
+### What to test
+| Code Change | Required Tests |
+|-------------|----------------|
+| New hook | State changes, effects, edge cases, return values |
+| New component | Rendering, user interactions, props handling |
+| New utility function | Input/output, edge cases, error handling |
+| Mapper function | API response → UI type conversion, null safety |
+| Form logic | Validation, field dependencies, mode switching |
+| Bug fix | Regression test that would have caught the bug |
+
+### Test patterns to follow
+
+**Hook tests (using renderHook):**
+```typescript
+// src/hooks/useMyHook.test.ts
+/**
+ * @jest-environment jsdom
+ */
+import { renderHook, act } from '@testing-library/react';
+import { useMyFormState } from './useMyFormState';
+
+describe('useMyFormState', () => {
+  const mockBuildDefaults = () => ({ name: '', value: '' });
+
+  it('should initialize with default values in create mode', () => {
+    const { result } = renderHook(() =>
+      useMyFormState({ mode: 'create', buildDefaultFormValues: mockBuildDefaults })
+    );
+
+    expect(result.current.formValues.name).toBe('');
+    expect(result.current.formValues.value).toBe('');
+  });
+
+  it('should update form values when setFormValues is called', () => {
+    const { result } = renderHook(() =>
+      useMyFormState({ mode: 'create', buildDefaultFormValues: mockBuildDefaults })
+    );
+
+    act(() => {
+      result.current.setFormValues({ name: 'Test', value: '123' });
+    });
+
+    expect(result.current.formValues.name).toBe('Test');
+  });
+
+  it('should disable fields in view mode', () => {
+    const { result } = renderHook(() =>
+      useMyFormState({ mode: 'view', buildDefaultFormValues: mockBuildDefaults })
+    );
+
+    expect(result.current.isDisabled).toBe(true);
+  });
+});
+```
+
+**Pure function/utility tests:**
+```typescript
+// src/utils/calculations.test.ts
+import { calculateTotals, calculateTax } from './calculations';
+
+describe('calculateTotals', () => {
+  it('should sum line item amounts correctly', () => {
+    const lines = [
+      { amount: 100, taxAmount: 18 },
+      { amount: 200, taxAmount: 36 },
+    ];
+    const result = calculateTotals(lines);
+    expect(result.subtotal).toBe(300);
+    expect(result.totalTax).toBe(54);
+    expect(result.grandTotal).toBe(354);
+  });
+
+  it('should return zeros for empty array', () => {
+    const result = calculateTotals([]);
+    expect(result.subtotal).toBe(0);
+    expect(result.totalTax).toBe(0);
+    expect(result.grandTotal).toBe(0);
+  });
+
+  it('should handle undefined/null values gracefully', () => {
+    const lines = [{ amount: undefined, taxAmount: null }];
+    const result = calculateTotals(lines);
+    expect(result.subtotal).toBe(0);
+  });
+});
+```
+
+**Mapper function tests:**
+```typescript
+// src/app/.../utils/myMappers.test.ts
+import { mapAPIResponseToFormValues, mapDepartmentRecords } from './myMappers';
+
+describe('mapAPIResponseToFormValues', () => {
+  it('should map API response to form values', () => {
+    const apiResponse = {
+      branch_id: '123',
+      po_date: '2025-01-15T00:00:00Z',
+      supplier_id: '456',
+    };
+    const defaults = { branch: '', date: '', supplier: '' };
+
+    const result = mapAPIResponseToFormValues(apiResponse, defaults);
+
+    expect(result.branch).toBe('123');
+    expect(result.date).toBe('2025-01-15');
+    expect(result.supplier).toBe('456');
+  });
+
+  it('should use defaults for missing fields', () => {
+    const apiResponse = { branch_id: '123' };
+    const defaults = { branch: '', date: '2025-01-01', supplier: 'default' };
+
+    const result = mapAPIResponseToFormValues(apiResponse, defaults);
+
+    expect(result.date).toBe('2025-01-01');
+    expect(result.supplier).toBe('default');
+  });
+
+  it('should handle null/undefined API response', () => {
+    const defaults = { branch: '', date: '', supplier: '' };
+    const result = mapAPIResponseToFormValues(null, defaults);
+    expect(result).toEqual(defaults);
+  });
+});
+
+describe('mapDepartmentRecords', () => {
+  it('should map raw records to DepartmentRecord type', () => {
+    const raw = [
+      { dept_id: '1', dept_desc: 'Engineering', branch_id: '10' },
+      { dept_id: '2', dept_desc: 'Sales' },
+    ];
+
+    const result = mapDepartmentRecords(raw);
+
+    expect(result).toEqual([
+      { id: '1', name: 'Engineering', branchId: '10' },
+      { id: '2', name: 'Sales', branchId: undefined },
+    ]);
+  });
+
+  it('should filter out records without id', () => {
+    const raw = [{ dept_desc: 'No ID' }, { dept_id: '1', dept_desc: 'Valid' }];
+    const result = mapDepartmentRecords(raw);
+    expect(result).toHaveLength(1);
+    expect(result[0].id).toBe('1');
+  });
+});
+```
+
+**Logic extraction tests (for complex page logic):**
+```typescript
+// src/app/.../branchLogic.test.ts
+describe('resolvedBranchOptions logic', () => {
+  function computeResolvedBranchOptions(
+    branchOptions: Array<{ label: string; value: string }>,
+    branchValue: string,
+    poDetailsBranch?: string
+  ) {
+    if (!branchValue) return branchOptions;
+    const exists = branchOptions.some((opt) => String(opt.value) === String(branchValue));
+    if (exists) return branchOptions;
+    const fallbackLabel = poDetailsBranch || branchValue;
+    return [...branchOptions, { label: fallbackLabel, value: branchValue }];
+  }
+
+  it('should return branchOptions when branchValue is empty', () => {
+    const branchOptions = [{ label: 'A', value: '1' }];
+    const result = computeResolvedBranchOptions(branchOptions, '');
+    expect(result).toEqual(branchOptions);
+  });
+
+  it('should add fallback option when branchValue does NOT exist', () => {
+    const branchOptions = [{ label: 'A', value: '1' }];
+    const result = computeResolvedBranchOptions(branchOptions, '99', 'My Branch');
+    expect(result).toContainEqual({ label: 'My Branch', value: '99' });
+  });
+});
+```
+
+**Component tests:**
+```typescript
+// src/components/ui/MyButton.test.tsx
+import { render, screen, fireEvent } from '@testing-library/react';
+import { MyButton } from './MyButton';
+
+describe('MyButton', () => {
+  it('should render with label', () => {
+    render(<MyButton label="Click me" onClick={() => {}} />);
+    expect(screen.getByText('Click me')).toBeInTheDocument();
+  });
+
+  it('should call onClick when clicked', () => {
+    const handleClick = vi.fn();
+    render(<MyButton label="Click" onClick={handleClick} />);
+    
+    fireEvent.click(screen.getByText('Click'));
+    
+    expect(handleClick).toHaveBeenCalledTimes(1);
+  });
+
+  it('should be disabled when disabled prop is true', () => {
+    render(<MyButton label="Disabled" onClick={() => {}} disabled />);
+    expect(screen.getByRole('button')).toBeDisabled();
+  });
+});
+```
+
+### Running tests
+```bash
+# Run all tests
+pnpm test
+
+# Run tests in watch mode
+pnpm vitest
+
+# Run specific test file
+pnpm vitest src/hooks/useMenuId.test.ts
+
+# Run tests matching a pattern
+pnpm vitest -t "should calculate"
+
+# Run with coverage
+pnpm vitest --coverage
+
+# Run with UI
+pnpm vitest --ui
+```
+
+### Test checklist for PRs
+Before submitting code changes, ensure:
+- [ ] All new hooks have corresponding `*.test.ts` files
+- [ ] All new utility functions have tests covering happy path + edge cases
+- [ ] All mapper functions have tests for null safety and type conversion
+- [ ] Complex page logic is extracted and tested in isolation
+- [ ] Modified functions have updated tests (if behavior changed)
+- [ ] Tests pass locally: `pnpm test`
+- [ ] No console errors or warnings in test output
+- [ ] TypeScript compiles: `npx tsc --noEmit`
+
+### Testing tips
+- **Extract testable logic**: If a page has complex conditional logic, extract it to a pure function and test that function
+- **Mock external dependencies**: Use `vi.mock()` for API calls, localStorage, router, etc.
+- **Test edge cases**: Empty arrays, null/undefined, boundary values, error states
+- **Use `satisfies`**: In mappers, use `satisfies` to catch type mismatches at compile time
+- **Co-locate tests**: Keep test files next to the code they test for easy discovery
+
+## Gotchas & dos/don'ts
+- Do read existing transaction pages (`procurement/indent/createIndent/`, `procurement/purchaseOrder/createPO/`) before building new ones.
+- Do reuse cache utilities (`branchUtils`, etc.) when populating dropdowns; they already handle localStorage versioning.
+- Do provide `aria-label`s on icon buttons (lucide icons) and respect theme spacing.
+- Do use `satisfies` type assertions in mappers to catch type mismatches early.
+- Do use `Object.freeze()` on empty arrays/objects used as defaults to prevent accidental mutations.
+- Don't import `@mui/material` or `@mui/x-data-grid` directly in page components—extend the wrappers instead.
+- Don't mutate shared option arrays across rows; clone or build per-row maps.
+- Don't bypass Zod validation or skip loading/error states—each async UI path must represent all three clearly.
+- Don't mix business logic with rendering—keep calculations in utils, state in hooks, and only rendering in components.
+- Legacy notice: some older/testing pages still use raw MUI or ad-hoc fetches; treat them as migration targets, but new or touched code must follow the wrappers/services approach above.
 
 ---
-Please review and tell me which sections should be expanded (architecture, examples, or CI details) or if you want me to automatically open a PR with this file added.
+Let me know if any sections need more depth (architecture diagrams, API workflows, testing specifics) and I can expand them.
 
 
 

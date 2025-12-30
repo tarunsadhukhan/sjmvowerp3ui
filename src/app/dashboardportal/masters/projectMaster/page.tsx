@@ -1,17 +1,30 @@
 "use client";
 
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import { Button } from "@/components/ui/button";
-import MuiDataGrid from "@/components/ui/muiDataGrid";
-import { Box, TextField, Snackbar, Alert } from "@mui/material";
+import { Snackbar, Alert } from "@mui/material";
 import { GridColDef, GridPaginationModel } from "@mui/x-data-grid";
 import { fetchWithCookie } from "@/utils/apiClient2";
 import CreateProjectPage from "./CreateProjectPage";
 import ViewProjectPage from "./ViewProjectPage";
 import EditProjectPage from "./EditProjectPage";
 import { apiRoutesPortalMasters } from "@/utils/api";
+import IndexWrapper from "@/components/ui/IndexWrapper";
 
-type Row = { id?: string | number; prj_name?: string; prj_desc?: string; prj_start_dt?: string; prj_end_dt?: string; branch_display?: string; dept_name?: string; status?: string; active?: number | boolean };
+type Row = {
+  id?: string | number;
+  project_id?: string | number;
+  prj_id?: string | number;
+  prj_name?: string;
+  prj_desc?: string;
+  prj_start_dt?: string;
+  prj_end_dt?: string;
+  branch_display?: string;
+  dept_name?: string;
+  status?: string;
+  active?: number | boolean;
+  [key: string]: unknown;
+};
 
 export default function ProjectMasterPage(){
   const [rows, setRows] = useState<Row[]>([]);
@@ -19,7 +32,6 @@ export default function ProjectMasterPage(){
   const [paginationModel, setPaginationModel] = useState<GridPaginationModel>({ pageSize: 10, page: 0 });
   const [totalRows, setTotalRows] = useState<number>(0);
   const [searchQuery, setSearchQuery] = useState<string>("");
-  const [searchTimeout, setSearchTimeout] = useState<NodeJS.Timeout | null>(null);
   const [snackbar, setSnackbar] = useState<{ open: boolean; message: string; severity: "success" | "error" }>({ open: false, message: "", severity: "success" });
 
   const [createOpen, setCreateOpen] = useState<boolean>(false);
@@ -72,54 +84,93 @@ export default function ProjectMasterPage(){
     } catch(err:any){ setSnackbar({ open: true, message: err?.message || 'Error fetching projects', severity: 'error' }); } finally { setLoading(false); }
   }
 
-  useEffect(()=>{ fetchProjects(); }, [paginationModel.page, paginationModel.pageSize, searchQuery]);
+  useEffect(() => { fetchProjects(); }, [paginationModel.page, paginationModel.pageSize, searchQuery]);
 
   const handlePaginationModelChange = (newModel: GridPaginationModel) => setPaginationModel(newModel);
-  const handleSearchChange = (e: React.ChangeEvent<HTMLInputElement>) => { const v = e.target.value; if (searchTimeout) clearTimeout(searchTimeout); const t = setTimeout(()=>{ setSearchQuery(v); setPaginationModel((p)=>({ ...p, page: 0 })); }, 500); setSearchTimeout(t); };
+
+  const handleSearchChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const v = e.target.value;
+    setSearchQuery(v);
+    setPaginationModel(prev => ({ ...prev, page: 0 }));
+  };
 
   const openCreate = () => setCreateOpen(true);
   const closeCreate = () => setCreateOpen(false);
-  const handleOpenView = (id: string | number) => { setSelectedId(id); setViewOpen(true); };
-  const handleOpenEdit = (id: string | number) => { setSelectedId(id); setEditOpen(true); };
-  const handleCloseView = (saved?: boolean) => { setViewOpen(false); setSelectedId(null); };
 
-  const columns: GridColDef[] = [
-    { field: 'prj_name', headerName: 'Project', flex: 1, minWidth: 220, headerClassName: 'bg-[#3ea6da] text-white' },
-    { field: 'prj_desc', headerName: 'Description', flex: 1, minWidth: 220, headerClassName: 'bg-[#3ea6da] text-white' },
-    { field: 'dept_name', headerName: 'Department', flex: 1, minWidth: 180, headerClassName: 'bg-[#3ea6da] text-white' },
-    { field: 'branch_display', headerName: 'Branch', flex: 1, minWidth: 180, headerClassName: 'bg-[#3ea6da] text-white' },
-    { field: 'status', headerName: 'Status', width: 140, headerClassName: 'bg-[#3ea6da] text-white' },
-    { field: 'active', headerName: 'Active', width: 120, headerClassName: 'bg-[#3ea6da] text-white', renderCell: (params:any)=> <span>{params.value ? 'Yes' : 'No'}</span> },
-    { field: 'actions', headerName: 'Actions', width: 200, sortable: false, filterable: false, headerClassName: 'bg-[#3ea6da] text-white', renderCell: (params:any)=> (
-      <div className="flex items-center gap-2"><button className="text-blue-600 underline" onClick={()=>handleOpenView(params.row.id)}>View</button><button className="text-green-600 underline" onClick={()=>handleOpenEdit(params.row.id)}>Edit</button></div>
-    ) }
-  ];
+  const handleViewRow = (row: Row) => {
+    const id = row.id ?? row.project_id ?? row.prj_id;
+    if (typeof id === "undefined" || id === null) return;
+    setSelectedId(id);
+    setViewOpen(true);
+  };
+
+  const handleEditRow = (row: Row) => {
+    const id = row.id ?? row.project_id ?? row.prj_id;
+    if (typeof id === "undefined" || id === null) return;
+    setSelectedId(id);
+    setEditOpen(true);
+  };
+
+  const handleCloseView = () => {
+    setViewOpen(false);
+    setSelectedId(null);
+  };
+
+  const columns = useMemo<GridColDef<Row>[]>(() => ([
+    { field: "prj_name", headerName: "Project", flex: 1, minWidth: 220 },
+    { field: "prj_desc", headerName: "Description", flex: 1, minWidth: 220 },
+    { field: "dept_name", headerName: "Department", flex: 1, minWidth: 180 },
+    { field: "branch_display", headerName: "Branch", flex: 1, minWidth: 180 },
+    { field: "status", headerName: "Status", width: 140 },
+    {
+      field: "active",
+      headerName: "Active",
+      width: 120,
+      renderCell: params => <span>{params.value ? "Yes" : "No"}</span>,
+    },
+  ]), []);
 
   return (
-    <div className="min-h-screen bg-gray-50 p-8">
-      <div className="mx-auto max-w-7xl">
-        <div className="mb-8 flex items-center justify-between">
-          <h1 className="text-2xl font-bold text-[#0C3C60]">Project Master</h1>
-          <Button className="btn-primary" onClick={openCreate}>+ Create Project</Button>
-        </div>
+    <IndexWrapper
+      title="Project Master"
+      rows={rows}
+      columns={columns}
+      rowCount={totalRows}
+      paginationModel={paginationModel}
+      onPaginationModelChange={handlePaginationModelChange}
+      loading={loading}
+      showLoadingUntilLoaded
+      search={{ value: searchQuery, onChange: handleSearchChange, placeholder: "Search projects", debounceDelayMs: 1000 }}
+      createAction={{ onClick: openCreate, label: "Create Project" }}
+      onView={handleViewRow}
+      onEdit={handleEditRow}
+    >
+      <Snackbar open={snackbar.open} autoHideDuration={4000} onClose={() => setSnackbar({ ...snackbar, open: false })} anchorOrigin={{ vertical: "top", horizontal: "center" }}>
+        <Alert severity={snackbar.severity} onClose={() => setSnackbar({ ...snackbar, open: false })} sx={{ width: "100%" }}>
+          {snackbar.message}
+        </Alert>
+      </Snackbar>
 
-        <Box sx={{ width: '100%', mb: 2 }}>
-          <TextField placeholder="Search projects..." onChange={handleSearchChange} fullWidth variant="outlined" size="small" sx={{ maxWidth: 350 }} />
-        </Box>
+      <CreateProjectPage
+        open={createOpen}
+        onClose={() => {
+          closeCreate();
+          fetchProjects();
+        }}
+        existingRows={rows}
+      />
 
-        <MuiDataGrid rows={rows} columns={columns} rowCount={totalRows} paginationModel={paginationModel} onPaginationModelChange={handlePaginationModelChange} loading={loading} showLoadingUntilLoaded={true} />
-
-        <Snackbar open={snackbar.open} autoHideDuration={4000} onClose={()=> setSnackbar({ ...snackbar, open:false })} anchorOrigin={{ vertical: 'top', horizontal: 'center' }}>
-          <Alert severity={snackbar.severity} onClose={()=> setSnackbar({ ...snackbar, open:false })} sx={{ width: '100%' }}>
-            {snackbar.message}
-          </Alert>
-        </Snackbar>
-      </div>
-
-        <CreateProjectPage open={createOpen} onClose={() => { closeCreate(); fetchProjects(); }} existingRows={rows} />
       <ViewProjectPage open={viewOpen} project_id={selectedId ?? undefined} onClose={handleCloseView} />
-  
-  <EditProjectPage open={editOpen} project_id={selectedId ?? undefined} onClose={(saved?: boolean) => { setEditOpen(false); setSelectedId(null); if (saved) fetchProjects(); }} />
-    </div>
+
+      <EditProjectPage
+        open={editOpen}
+        project_id={selectedId ?? undefined}
+        onClose={(saved?: boolean) => {
+          setEditOpen(false);
+          setSelectedId(null);
+          if (saved) fetchProjects();
+        }}
+      />
+    </IndexWrapper>
   );
 }

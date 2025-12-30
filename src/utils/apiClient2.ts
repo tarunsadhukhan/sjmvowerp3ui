@@ -14,10 +14,6 @@ export const fetchWithCookie = async <T = any>(
     body?: unknown,
 ): Promise<FetchResult<T>> => {
     try {
-        const cookies = typeof document !== "undefined" ? document.cookie : "";
-        // Keep a small debug log but avoid logging bodies in production
-        console.debug(`Making ${method} request to ${url} with cookies length: ${cookies.length}`);
-
         const response: AxiosResponse<T> = await axios({
             url,
             method,
@@ -28,6 +24,21 @@ export const fetchWithCookie = async <T = any>(
             data: body,
             validateStatus: (status) => status >= 200 && status < 500,
         });
+        const isSuccess = response.status >= 200 && response.status < 300;
+        if (!isSuccess) {
+            let message: string | null = null;
+            const payload = response.data as unknown;
+            if (payload && typeof payload === "object") {
+                const detail = (payload as { detail?: unknown }).detail;
+                if (typeof detail === "string") {
+                    message = detail;
+                }
+            }
+            if (!message) {
+                message = `Request failed with status ${response.status}`;
+            }
+            return { data: null, error: message, status: response.status };
+        }
 
         return { data: response.data ?? null, error: null, status: response.status };
     } catch (err: unknown) {

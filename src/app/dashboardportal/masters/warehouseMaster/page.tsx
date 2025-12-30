@@ -1,14 +1,13 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import { Button } from "@/components/ui/button";
-import MuiDataGrid from "@/components/ui/muiDataGrid";
-import { Box, TextField, Dialog, DialogTitle, DialogContent, DialogActions, Snackbar, Alert, IconButton } from "@mui/material";
+import { Dialog, DialogTitle, DialogContent, DialogActions, Snackbar, Alert } from "@mui/material";
 import { GridColDef, GridPaginationModel } from "@mui/x-data-grid";
 import { fetchWithCookie } from "@/utils/apiClient2";
 import { apiRoutesPortalMasters } from "@/utils/api";
-import { Edit } from 'lucide-react';
-import CreateWarehouse from './createWarehouse';
+import CreateWarehouse from "./createWarehouse";
+import IndexWrapper from "@/components/ui/IndexWrapper";
 
 type WarehouseRow = {
   id?: number | string;
@@ -25,11 +24,10 @@ export default function WarehouseMasterPage() {
   const [totalRows, setTotalRows] = useState(0);
   const [paginationModel, setPaginationModel] = useState<GridPaginationModel>({ pageSize: 10, page: 0 });
   const [searchQuery, setSearchQuery] = useState("");
-  const [searchTimeout, setSearchTimeout] = useState<NodeJS.Timeout | null>(null);
   const [snackbar, setSnackbar] = useState<{ open: boolean; message: string; severity: "success" | "error" }>({ open: false, message: "", severity: "success" });
   const [detailsDialogOpen, setDetailsDialogOpen] = useState(false);
   const [detailsLoading, setDetailsLoading] = useState(false);
-    const [createDialogOpen, setCreateDialogOpen] = useState(false);
+  const [createDialogOpen, setCreateDialogOpen] = useState(false);
   const [detailsData, setDetailsData] = useState<any>(null);
   const [detailsDialogMode, setDetailsDialogMode] = useState<'view' | 'edit'>('view');
 
@@ -96,22 +94,16 @@ export default function WarehouseMasterPage() {
 
   const handleSearchChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const v = e.target.value;
-    if (searchTimeout) clearTimeout(searchTimeout);
-    const t = setTimeout(() => {
-      setSearchQuery(v);
-      setPaginationModel(prev => ({ ...prev, page: 0 }));
-    }, 500);
-    setSearchTimeout(t);
+    setSearchQuery(v);
+    setPaginationModel(prev => ({ ...prev, page: 0 }));
   };
 
-  const _handleOpenDetails = (id: number | string) => {
+  const handleOpenDetails = (row: WarehouseRow) => {
     setDetailsDialogMode('view');
     setDetailsDialogOpen(true);
     setDetailsLoading(true);
-    setDetailsData(null);
     try {
-      const row = rows.find(r => r.id === id);
-      setDetailsData(row || { error: "No details found" });
+      setDetailsData(row ?? { error: "No details found" });
     } catch (err: any) {
       setDetailsData({ error: err.message || "Failed to load details" });
     } finally {
@@ -119,58 +111,42 @@ export default function WarehouseMasterPage() {
     }
   };
 
-  const columns: GridColDef[] = [
-    { field: 'branch_name', headerName: 'Branch', flex: 1, minWidth: 180, headerClassName: 'bg-[#3ea6da] text-white' },
-    { field: 'warehouse_path', headerName: 'Warehouse', flex: 1, minWidth: 260, headerClassName: 'bg-[#3ea6da] text-white' },
-    { field: 'warehouse_type', headerName: 'Warehouse Type', flex: 1, minWidth: 160, headerClassName: 'bg-[#3ea6da] text-white' },
-    {
-      field: 'actions', headerName: 'Actions', width: 80, sortable: false, filterable: false, headerClassName: 'bg-[#3ea6da] text-white',
-      renderCell: (params) => (
-        <IconButton size="small" onClick={() => {
-          // open edit dialog for the row
-          setDetailsDialogMode('edit');
-          setDetailsDialogOpen(true);
-          setDetailsData(params.row);
-        }}>
-          <Edit size={14} />
-        </IconButton>
-      ),
-    },
-  ];
+  const handleOpenEdit = (row: WarehouseRow) => {
+    setDetailsDialogMode('edit');
+    setDetailsDialogOpen(true);
+    setDetailsLoading(false);
+    setDetailsData(row);
+  };
+
+  const columns = useMemo<GridColDef<WarehouseRow>[]>(() => ([
+    { field: "branch_name", headerName: "Branch", flex: 1, minWidth: 180 },
+    { field: "warehouse_path", headerName: "Warehouse", flex: 1, minWidth: 260 },
+    { field: "warehouse_type", headerName: "Warehouse Type", flex: 1, minWidth: 160 },
+  ]), []);
 
   return (
-    <div className="min-h-screen bg-gray-50 p-8">
-      <div className="mx-auto max-w-7xl">
-        <div className="mb-8 flex items-center justify-between">
-          <h1 className="text-2xl font-bold text-[#0C3C60]">Warehouse Master</h1>
-          <Button className="btn-primary" onClick={() => setCreateDialogOpen(true)}>
-            + Create Warehouse
-          </Button>
-        </div>
-
-        <Box sx={{ width: "100%", mb: 2 }}>
-          <TextField placeholder="Search warehouses..." onChange={handleSearchChange} fullWidth variant="outlined" size="small" sx={{ maxWidth: 350 }} />
-        </Box>
-
-        <MuiDataGrid
-          rows={rows}
-          columns={columns}
-          rowCount={totalRows}
-          paginationModel={paginationModel}
-          onPaginationModelChange={handlePaginationModelChange}
-          loading={loading}
-          showLoadingUntilLoaded={true}
-        />
-
-        <Snackbar open={snackbar.open} autoHideDuration={4000} onClose={() => setSnackbar({ ...snackbar, open: false })} anchorOrigin={{ vertical: 'top', horizontal: 'center' }}>
-          <Alert severity={snackbar.severity} onClose={() => setSnackbar({ ...snackbar, open: false })} sx={{ width: '100%' }}>
-            {snackbar.message}
-          </Alert>
-        </Snackbar>
-      </div>
+    <IndexWrapper
+      title="Warehouse Master"
+      rows={rows}
+      columns={columns}
+      rowCount={totalRows}
+      paginationModel={paginationModel}
+      onPaginationModelChange={handlePaginationModelChange}
+      loading={loading}
+      showLoadingUntilLoaded
+      search={{ value: searchQuery, onChange: handleSearchChange, placeholder: "Search warehouses", debounceDelayMs: 1000 }}
+      createAction={{ onClick: () => setCreateDialogOpen(true), label: "Create Warehouse" }}
+      onEdit={handleOpenEdit}
+      onView={handleOpenDetails}
+    >
+      <Snackbar open={snackbar.open} autoHideDuration={4000} onClose={() => setSnackbar({ ...snackbar, open: false })} anchorOrigin={{ vertical: 'top', horizontal: 'center' }}>
+        <Alert severity={snackbar.severity} onClose={() => setSnackbar({ ...snackbar, open: false })} sx={{ width: '100%' }}>
+          {snackbar.message}
+        </Alert>
+      </Snackbar>
 
       <Dialog open={detailsDialogOpen} onClose={() => setDetailsDialogOpen(false)} maxWidth="sm" fullWidth>
-        <DialogTitle>Warehouse Details</DialogTitle>
+        <DialogTitle>{detailsDialogMode === 'edit' ? 'Edit Warehouse' : 'Warehouse Details'}</DialogTitle>
         <DialogContent>
           {detailsLoading ? (
             <div>Loading...</div>
@@ -184,7 +160,7 @@ export default function WarehouseMasterPage() {
           <Button onClick={() => setDetailsDialogOpen(false)} autoFocus>Okay</Button>
         </DialogActions>
       </Dialog>
-  <CreateWarehouse open={createDialogOpen} onClose={() => setCreateDialogOpen(false)} onSaved={() => { setCreateDialogOpen(false); fetchWarehouses(); }} />
-    </div>
+      <CreateWarehouse open={createDialogOpen} onClose={() => setCreateDialogOpen(false)} onSaved={() => { setCreateDialogOpen(false); fetchWarehouses(); }} />
+    </IndexWrapper>
   );
 }

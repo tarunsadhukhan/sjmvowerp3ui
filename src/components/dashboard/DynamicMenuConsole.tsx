@@ -16,10 +16,6 @@ interface MenuItem {
 export function DynamicMenuConsole({ isCollapsed }: { isCollapsed: boolean }) {
   const { menuItems } = useCompanyConsole();
   const [openMenus, setOpenMenus] = useState<string[]>([]);
-  console.log(menuItems)
-
-  // const userid = localStorage.getItem("user_id");
-  // console.log('userid from dynamic menu console',userid)
 
   const toggleSubmenu = (title: string) => {
     setOpenMenus(prev =>
@@ -34,27 +30,25 @@ export function DynamicMenuConsole({ isCollapsed }: { isCollapsed: boolean }) {
     return (
       <div key={item.title}>
         <Link
-          // href={item.path || "#"}
           href={item.path?.startsWith("/") ? item.path : `/${item.path}` || "#"}
-          className="flex items-center px-4 py-2 text-sm text-white hover:bg-[#005580] transition-colors"
+          className="sidebar-menu-link"
           onClick={(e) => {
             if (hasSubmenu) {
               e.preventDefault();
               toggleSubmenu(item.title);
-              console.log('itttsts',item.title)
             } 
           }}
         >
-          <span className="mr-3">{item.icon}</span>
+          <span className="sidebar-menu-icon">{item.icon}</span>
           {!isCollapsed && (
             <>
-              <span className="flex-1">{item.title}</span>
-              {hasSubmenu && <ChevronDown size={16} className={isOpen ? "rotate-180" : ""} />}
+              <span className="sidebar-menu-title">{item.title}</span>
+              {hasSubmenu && <ChevronDown size={16} className={`sidebar-menu-chevron ${isOpen ? "rotate-180" : ""}`} />}
             </>
           )}
         </Link>
         {hasSubmenu && isOpen && !isCollapsed && (
-          <div className="ml-4 border-l border-[#005580]">
+          <div className="sidebar-submenu">
             {item.submenu?.map(subItem => renderMenuItem(subItem))}
           </div>
         )}

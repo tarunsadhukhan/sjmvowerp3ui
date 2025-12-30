@@ -1,0 +1,273 @@
+/**
+ * Purchase Order specific shared TypeScript definitions.
+ * Keeping these in a dedicated module makes it easier to reuse them
+ * across hooks, utils, and components without circular dependencies.
+ */
+
+/**
+ * Basic label/value tuple used across PO forms.
+ */
+export type Option = {
+	label: string;
+	value: string;
+};
+
+/**
+ * Normalized representation of a PO line item used in the UI.
+ */
+export type EditableLineItem = {
+	id: string;
+	indentDtlId?: string;
+	indentNo?: string;
+	department?: string;
+	itemGroup: string;
+	item: string;
+	itemCode?: string;
+	itemMake: string;
+	quantity: string;
+	rate: string;
+	uom: string;
+	discountMode?: number;
+	discountValue: string;
+	discountAmount?: number;
+	amount?: number;
+	remarks: string;
+	taxPercentage?: number;
+	igstAmount?: number;
+	cgstAmount?: number;
+	sgstAmount?: number;
+	taxAmount?: number;
+};
+
+/**
+ * Supplier branch details as consumed by the PO UI.
+ */
+export type SupplierBranchRecord = {
+	id: string;
+	address: string;
+	stateName?: string;
+};
+
+/**
+ * Supplier master record as consumed by the PO UI.
+ */
+export type SupplierRecord = {
+	id: string;
+	name: string;
+	code?: string;
+	branches?: SupplierBranchRecord[];
+};
+
+/**
+ * Company branch/billing address details as consumed by the PO UI.
+ */
+export type BranchAddressRecord = {
+	id: string;
+	name: string;
+	address1?: string;
+	address2?: string;
+	zipcode?: string;
+	stateName?: string;
+	stateId?: number;
+	fullAddress?: string;
+};
+
+/**
+ * Project option displayed in PO header.
+ */
+export type ProjectRecord = {
+	id: string;
+	name: string;
+	branchId?: string;
+};
+
+/**
+ * Expense type option displayed in PO header.
+ */
+export type ExpenseRecord = {
+	id: string;
+	name: string;
+};
+
+/**
+ * Item group option displayed in line items table.
+ */
+export type ItemGroupRecord = {
+	id: string;
+	label: string;
+};
+
+/**
+ * Individual item option metadata returned from setup API.
+ */
+export type ItemOption = Option & {
+	defaultUomId?: string;
+	defaultUomLabel?: string;
+	defaultRate?: number;
+	taxPercentage?: number;
+};
+
+/**
+ * Cached metadata for an item group to avoid redundant network calls.
+ */
+export type ItemGroupCacheEntry = {
+	groupLabel?: string;
+	items: ItemOption[];
+	makes: Option[];
+	uomsByItemId: Record<string, Option[]>;
+	itemLabelById: Record<string, string>;
+	makeLabelById: Record<string, string>;
+	uomLabelByItemId: Record<string, Record<string, string>>;
+	itemRateById: Record<string, number>;
+	itemTaxById: Record<string, number>;
+};
+
+/**
+ * Normalized setup data returned by `fetchPOSetup1`.
+ */
+export type POSetupData = {
+	suppliers: SupplierRecord[];
+	projects: ProjectRecord[];
+	expenses: ExpenseRecord[];
+	itemGroups: ItemGroupRecord[];
+	coConfig?: {
+		india_gst?: number;
+		indent_required?: number;
+		back_date_allowable?: number;
+	};
+	branchAddresses: BranchAddressRecord[];
+};
+
+/**
+ * Raw supplier structure returned by API responses before mapping.
+ */
+export type SupplierRecordRaw = {
+	id?: string | number;
+	party_id?: string | number;
+	supplier_name?: string;
+	supp_name?: string;
+	name?: string;
+	supplier_code?: string;
+	supp_code?: string;
+	branches?: SupplierBranchRecordRaw[];
+};
+
+/**
+ * Raw supplier branch representation from API responses.
+ */
+export type SupplierBranchRecordRaw = {
+	id?: string | number;
+	party_mst_branch_id?: string | number;
+	branch_address1?: string;
+	branch_address2?: string;
+	state_name?: string;
+	state?: string;
+};
+
+/**
+ * Raw branch/billing address representation from API responses.
+ */
+export type BranchAddressRecordRaw = {
+	id?: string | number;
+	branch_id?: string | number;
+	branch_name?: string;
+	branch_address1?: string;
+	branch_address2?: string;
+	branch_zipcode?: string;
+	state_name?: string;
+	state_id?: number;
+};
+
+/**
+ * Raw project representation from API responses.
+ */
+export type ProjectRecordRaw = {
+	id?: string | number;
+	project_id?: string | number;
+	prj_name?: string;
+	project_name?: string;
+	name?: string;
+	branch_id?: string | number | null;
+};
+
+/**
+ * Raw expense representation from API responses.
+ */
+export type ExpenseRecordRaw = {
+	id?: string | number;
+	expense_type_id?: string | number;
+	expense_type_name?: string;
+	name?: string;
+};
+
+/**
+ * Raw item group representation from API responses.
+ */
+export type ItemGroupRecordRaw = {
+	id?: string | number;
+	item_grp_id?: string | number;
+	item_grp_code_display?: string;
+	code?: string;
+	item_grp_name_display?: string;
+	name?: string;
+};
+
+/**
+ * Raw item option as returned by setup api's `items` collection.
+ */
+export type ItemOptionRaw = {
+	id?: string | number;
+	item_id?: string | number;
+	item_code?: string;
+	item_name?: string;
+	uom_id?: string | number | null;
+	uom_name?: string | null;
+	rate?: number | string | null;
+	tax_percentage?: number | string | null;
+};
+
+/**
+ * Raw item make option as returned by setup api's `makes` collection.
+ */
+export type ItemMakeOptionRaw = {
+	id?: string | number;
+	item_make_id?: string | number;
+	item_make_name?: string;
+	name?: string;
+};
+
+/**
+ * Raw UOM mapping as returned by setup api's `uoms` collection.
+ */
+export type ItemUomOptionRaw = {
+	id?: string | number;
+	item_id?: string | number;
+	map_to_id?: string | number;
+	mapToId?: string | number;
+	uom_id?: string | number;
+	uom_name?: string;
+};
+
+/**
+ * Raw response for `fetchPOSetup1`.
+ */
+export type POSetup1ResponseRaw = {
+	suppliers?: SupplierRecordRaw[];
+	projects?: ProjectRecordRaw[];
+	expense_types?: ExpenseRecordRaw[];
+	item_groups?: ItemGroupRecordRaw[];
+	co_config?: Record<string, unknown>;
+	branch_addresses?: BranchAddressRecordRaw[];
+};
+
+/**
+ * Raw response for `fetchPOSetup2`.
+ */
+export type POSetup2ResponseRaw = {
+	item_grp_code?: string;
+	item_grp_name?: string;
+	items?: ItemOptionRaw[];
+	makes?: ItemMakeOptionRaw[];
+	uoms?: ItemUomOptionRaw[];
+};
+

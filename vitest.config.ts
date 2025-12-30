@@ -22,11 +22,12 @@ export default defineConfig({
         test: {
           name: 'storybook',
           browser: {
-        enabled: true,
-        headless: true,
-        provider: 'playwright',
-        instances: [{ browser: 'chromium' }]
-      },
+            enabled: true,
+            headless: true,
+            // @ts-expect-error - vitest browser types are in flux
+            provider: 'playwright',
+            instances: [{ browser: 'chromium' }]
+          },
           setupFiles: ['.storybook/vitest.setup.ts'],
         },
       },

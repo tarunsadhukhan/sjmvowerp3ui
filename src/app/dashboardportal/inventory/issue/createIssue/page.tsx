@@ -22,7 +22,6 @@ import {
 	updateIssue,
 	updateIssueStatus,
 	type IssueDetails,
-	type AvailableInventoryResponse,
 	type CostFactorResponse,
 	type MachineResponse,
 } from "@/utils/issueService";
@@ -36,9 +35,9 @@ import type {
 	EditableLineItem,
 	IssueSetupData,
 	ItemGroupCacheEntry,
-	AvailableInventoryItem,
 	CostFactorRecord,
 	MachineRecord,
+	SRCacheEntry,
 } from "./types/issueTypes";
 
 // Utils
@@ -61,9 +60,9 @@ import {
 import {
 	mapIssueSetupResponse,
 	mapItemGroupDetailResponse,
-	mapAvailableInventoryItems,
 	mapCostFactorRecords,
 	mapMachineRecords,
+	mapSRCacheEntry,
 } from "./utils/issueMappers";
 
 // Hooks
@@ -168,6 +167,16 @@ function IssueTransactionPageContent() {
 		formRef,
 	} = useIssueFormState({ mode });
 
+	// Derived branch values (needed early for caches)
+	const branchValue = React.useMemo(
+		() => String(formValues.branch ?? ""),
+		[formValues.branch]
+	);
+	const branchIdForSetup = React.useMemo(
+		() => (branchValue && /^\d+$/.test(branchValue) ? branchValue : undefined),
+		[branchValue]
+	);
+
 	// Issue details state
 	const [issueDetails, setIssueDetails] = React.useState<IssueDetails | null>(
 		null
@@ -175,13 +184,6 @@ function IssueTransactionPageContent() {
 	const [loading, setLoading] = React.useState<boolean>(mode !== "create");
 	const [saving, setSaving] = React.useState(false);
 	const [pageError, setPageError] = React.useState<string | null>(null);
-
-	// Available inventory state
-	const [availableInventory, setAvailableInventory] = React.useState<
-		AvailableInventoryItem[]
-	>([]);
-	const [availableInventoryLoading, setAvailableInventoryLoading] =
-		React.useState(false);
 
 	// Cost factors and machines state
 	const [costFactors, setCostFactors] =
@@ -218,6 +220,38 @@ function IssueTransactionPageContent() {
 		},
 	});
 
+	// SR (Stores Receipt) cache - per-item available inventory
+	const {
+		cache: srCache,
+		loading: srLoading,
+		ensure: ensureSRData,
+		reset: resetSRCache,
+	} = useDeferredOptionCache<string, SRCacheEntry>({
+		fetcher: async (cacheKey: string) => {
+			// cacheKey format: "branchId-itemId"
+			const [branchId, itemId] = cacheKey.split("-");
+			if (!branchId || !itemId) {
+				throw new Error(`Invalid SR cache key: ${cacheKey}`);
+			}
+			const response = await fetchAvailableInventory(coId, {
+				branchId,
+				itemId,
+			});
+			return mapSRCacheEntry(response);
+		},
+		onError: (error) => {
+			const message =
+				error instanceof Error
+					? error.message
+					: "Unable to load available inventory.";
+			toast({
+				variant: "destructive",
+				title: "SR data not available",
+				description: message,
+			});
+		},
+	});
+
 	// Line items hook
 	const {
 		lineItems,
@@ -231,6 +265,10 @@ function IssueTransactionPageContent() {
 		itemGroupCache,
 		itemGroupLoading,
 		ensureItemGroupData,
+		srCache,
+		srLoading,
+		ensureSRData,
+		branchId: branchIdForSetup,
 	});
 
 	// Branch options prefill for create mode
@@ -252,6 +290,11 @@ function IssueTransactionPageContent() {
 	React.useEffect(() => {
 		resetItemGroupCache();
 	}, [coId, resetItemGroupCache]);
+
+	// Reset SR cache when company or branch changes
+	React.useEffect(() => {
+		resetSRCache();
+	}, [coId, branchIdForSetup, resetSRCache]);
 
 	// Initialize blank line for create mode
 	const initialLineSeededRef = React.useRef(false);
@@ -341,6 +384,20 @@ function IssueTransactionPageContent() {
 						void ensureItemGroupData(groupId);
 					}
 				});
+
+				// Pre-fetch SR cache for existing line items
+				const issueBranchId = String(detail.branchId ?? "");
+				if (issueBranchId) {
+					const uniqueItems = [
+						...new Set(mappedLines.map((line) => line.item).filter(Boolean)),
+					];
+					uniqueItems.forEach((itemId) => {
+						const cacheKey = `${issueBranchId}-${itemId}`;
+						if (!srCache[cacheKey] && !srLoading[cacheKey]) {
+							void ensureSRData(cacheKey);
+						}
+					});
+				}
 			})
 			.catch((error) => {
 				if (cancelled) return;
@@ -372,17 +429,12 @@ function IssueTransactionPageContent() {
 		itemGroupCache,
 		itemGroupLoading,
 		ensureItemGroupData,
+		srCache,
+		srLoading,
+		ensureSRData,
 	]);
 
 	// Setup data
-	const branchValue = React.useMemo(
-		() => String(formValues.branch ?? ""),
-		[formValues.branch]
-	);
-	const branchIdForSetup = React.useMemo(
-		() => (branchValue && /^\d+$/.test(branchValue) ? branchValue : undefined),
-		[branchValue]
-	);
 	const setupParams = React.useMemo(
 		() => (branchIdForSetup ? { branchId: branchIdForSetup } : EMPTY_SETUP_PARAMS),
 		[branchIdForSetup]
@@ -457,32 +509,6 @@ function IssueTransactionPageContent() {
 		};
 	}, [coId, departmentValue]);
 
-	// Load available inventory when branch changes
-	React.useEffect(() => {
-		if (!coId || !branchIdForSetup) {
-			setAvailableInventory([]);
-			return;
-		}
-
-		let cancelled = false;
-		setAvailableInventoryLoading(true);
-		fetchAvailableInventory(coId, { branchId: branchIdForSetup })
-			.then((response: AvailableInventoryResponse[]) => {
-				if (cancelled) return;
-				setAvailableInventory(mapAvailableInventoryItems(response));
-			})
-			.catch(() => {
-				if (!cancelled) setAvailableInventory([]);
-			})
-			.finally(() => {
-				if (!cancelled) setAvailableInventoryLoading(false);
-			});
-
-		return () => {
-			cancelled = true;
-		};
-	}, [coId, branchIdForSetup]);
-
 	// Select options hook
 	const {
 		departmentOptions,
@@ -554,8 +580,9 @@ function IssueTransactionPageContent() {
 		getUomOptions,
 		handleLineFieldChange,
 		updateLineFields,
-		availableInventory,
-		availableInventoryLoading,
+		srCache,
+		srLoading,
+		branchId: branchIdForSetup,
 	});
 
 	// Form submit handler

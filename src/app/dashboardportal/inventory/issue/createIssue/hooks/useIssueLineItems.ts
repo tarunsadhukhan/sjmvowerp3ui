@@ -1,6 +1,6 @@
 import React from "react";
 import { useLineItems } from "@/components/ui/transaction";
-import type { EditableLineItem, ItemGroupCacheEntry } from "../types/issueTypes";
+import type { EditableLineItem, ItemGroupCacheEntry, SRCacheEntry } from "../types/issueTypes";
 import {
 	createBlankLine,
 	lineHasAnyData,
@@ -12,6 +12,10 @@ type UseIssueLineItemsParams = {
 	itemGroupCache: Partial<Record<string, ItemGroupCacheEntry>>;
 	itemGroupLoading: Partial<Record<string, boolean>>;
 	ensureItemGroupData: (groupId: string) => Promise<void>;
+	srCache: Partial<Record<string, SRCacheEntry>>;
+	srLoading: Partial<Record<string, boolean>>;
+	ensureSRData: (cacheKey: string) => Promise<void>;
+	branchId?: string;
 };
 
 /**
@@ -23,6 +27,10 @@ export const useIssueLineItems = ({
 	itemGroupCache,
 	itemGroupLoading,
 	ensureItemGroupData,
+	srCache,
+	srLoading,
+	ensureSRData,
+	branchId,
 }: UseIssueLineItemsParams) => {
 	const {
 		items: lineItems,
@@ -70,7 +78,7 @@ export const useIssueLineItems = ({
 				return;
 			}
 
-			// Item changed → reset uom (item-based defaults would be applied via available inventory)
+			// Item changed → reset uom, rate, inwardDtlId and trigger SR fetch
 			if (field === "item") {
 				setLineItems((prev) =>
 					prev.map((item) =>
@@ -82,10 +90,18 @@ export const useIssueLineItems = ({
 									rate: "",
 									inwardDtlId: "",
 									availableQty: "",
+									srNo: "",
 								}
 							: item
 					)
 				);
+				// Pre-fetch SR data for this item if not cached
+				if (value && branchId) {
+					const srCacheKey = `${branchId}-${value}`;
+					if (!srCache[srCacheKey] && !srLoading[srCacheKey]) {
+						void ensureSRData(srCacheKey);
+					}
+				}
 				return;
 			}
 
@@ -108,7 +124,7 @@ export const useIssueLineItems = ({
 				)
 			);
 		},
-		[mode, setLineItems, itemGroupCache, itemGroupLoading, ensureItemGroupData]
+		[mode, setLineItems, itemGroupCache, itemGroupLoading, ensureItemGroupData, srCache, srLoading, ensureSRData, branchId]
 	);
 
 	/**

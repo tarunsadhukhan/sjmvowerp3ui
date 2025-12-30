@@ -50,7 +50,6 @@ export function SearchableSelect<TOption>({
       clearOnEscape={clearOnEscape}
       className={className}
       fullWidth={fullWidth}
-      disablePortal
       openOnFocus
       renderInput={(params) => (
         <TextField

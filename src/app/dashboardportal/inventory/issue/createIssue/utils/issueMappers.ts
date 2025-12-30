@@ -10,6 +10,7 @@ import type {
 	ItemGroupCacheEntry,
 	ItemOption,
 	Option,
+	SRCacheEntry,
 } from "../types/issueTypes";
 
 /**
@@ -64,6 +65,7 @@ export const mapExpenseRecords = (records: unknown[]): ExpenseRecord[] =>
 
 /**
  * Maps raw item group records from API to ItemGroupRecord type.
+ * Uses code — name format for display, matching indent pattern.
  */
 export const mapItemGroupRecords = (records: unknown[]): ItemGroupRecord[] =>
 	records
@@ -71,9 +73,12 @@ export const mapItemGroupRecords = (records: unknown[]): ItemGroupRecord[] =>
 			const data = row as Record<string, unknown>;
 			const id = data?.item_grp_id ?? data?.id;
 			if (!id) return null;
+			const code = data?.item_grp_code_display ?? data?.item_grp_code ?? data?.code;
+			const name = data?.item_grp_name_display ?? data?.item_grp_name ?? data?.name;
+			const labelParts = [code, name].filter(Boolean);
 			return {
 				id: String(id),
-				label: String(data?.item_grp_name ?? data?.label ?? data?.name ?? id),
+				label: labelParts.length ? labelParts.join(" — ") : String(id),
 			} satisfies ItemGroupRecord;
 		})
 		.filter(Boolean) as ItemGroupRecord[];
@@ -171,12 +176,21 @@ export const mapItemGroupDetailResponse = (response: unknown): ItemGroupCacheEnt
 	const rawMakes = (data?.makes ?? innerData?.makes ?? []) as Record<string, unknown>[];
 	const rawUoms = (data?.uoms ?? innerData?.uoms ?? []) as Record<string, unknown>[];
 
-	const items: ItemOption[] = rawItems.map((it) => ({
-		label: String(it?.item_name ?? it?.label ?? ""),
-		value: String(it?.item_id ?? it?.value ?? ""),
-		defaultUomId: it?.uom_id != null ? String(it.uom_id) : undefined,
-		defaultUomLabel: it?.uom_name != null ? String(it.uom_name) : undefined,
-	}));
+	const items: ItemOption[] = rawItems
+		.map((it) => {
+			const id = it?.item_id ?? it?.value;
+			if (!id) return null;
+			const code = it?.item_code;
+			const name = it?.item_name;
+			const labelParts = [code, name].filter(Boolean);
+			return {
+				value: String(id),
+				label: labelParts.length ? labelParts.join(" — ") : String(id),
+				defaultUomId: it?.uom_id != null ? String(it.uom_id) : undefined,
+				defaultUomLabel: it?.uom_name != null ? String(it.uom_name) : undefined,
+			} satisfies ItemOption;
+		})
+		.filter(Boolean) as ItemOption[];
 
 	const makes: Option[] = rawMakes.map((mk) => ({
 		label: String(mk?.item_make_name ?? mk?.label ?? ""),
@@ -216,4 +230,24 @@ export const mapItemGroupDetailResponse = (response: unknown): ItemGroupCacheEnt
 		makeLabelById,
 		uomLabelByItemId,
 	};
+};
+
+/**
+ * Maps available inventory response to SR cache entry.
+ * Used for per-item SR caching when item is selected.
+ */
+export const mapSRCacheEntry = (records: unknown[]): SRCacheEntry => {
+	const inventoryItems = mapAvailableInventoryItems(records);
+	
+	const srOptions: Option[] = inventoryItems.map((item) => ({
+		label: `${item.srNo} (Qty: ${item.availableQty})`,
+		value: item.inwardDtlId,
+	}));
+
+	const srDataById: Record<string, AvailableInventoryItem> = {};
+	for (const item of inventoryItems) {
+		srDataById[item.inwardDtlId] = item;
+	}
+
+	return { srOptions, srDataById };
 };

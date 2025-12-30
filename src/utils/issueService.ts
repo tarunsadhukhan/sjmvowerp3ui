@@ -220,26 +220,24 @@ export const fetchIssueSetup1 = async (
 };
 
 /**
- * Fetch item group details (items, UOMs) - uses existing item master endpoint
+ * Fetch item group details (items, makes, UOMs) - reuses existing procurement endpoint
  */
 export const fetchIssueSetup2 = async (
 	itemGroupId: string,
-	coId?: string
-): Promise<{ items?: unknown[]; uoms_by_item?: Record<string, unknown[]> }> => {
-	// Use the item master setup endpoint for item group details
-	const API_URL = process.env.NEXT_PUBLIC_API_BASE_URL || "/apix";
+	_coId?: string
+): Promise<{ items?: unknown[]; makes?: unknown[]; uoms?: unknown[] }> => {
+	// Use the existing procurement indent setup 2 endpoint which returns items by group
 	const searchParams = new URLSearchParams();
-	searchParams.append("item_grp_id", itemGroupId);
-	if (coId) searchParams.append("co_id", coId);
+	searchParams.append("item_group", itemGroupId);
 
-	const url = `${API_URL}/itemMaster/setup2_dropdown?${searchParams.toString()}`;
+	const url = `${apiRoutesPortalMasters.GET_INDENT_SETUP_2}?${searchParams.toString()}`;
 	const response = await fetchWithCookie(url, "GET");
 	
-	if (!response || response.error) {
-		throw new Error(response?.error ?? "Failed to fetch item group details");
+	if (response.error) {
+		throw new Error(response.error ?? "Failed to fetch item group details");
 	}
 
-	return response.data ?? response;
+	return response.data ?? response ?? {};
 };
 
 /**

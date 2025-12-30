@@ -133,6 +133,19 @@ export type ItemGroupCacheEntry = {
 };
 
 /**
+ * Cache key for SR data: branchId-itemId combination
+ */
+export type SRCacheKey = string;
+
+/**
+ * Cached SR data for an item in a branch.
+ */
+export type SRCacheEntry = {
+	srOptions: Option[];
+	srDataById: Record<string, AvailableInventoryItem>;
+};
+
+/**
  * Normalized setup data returned by `fetchIssueSetup1`.
  */
 export type IssueSetupData = {

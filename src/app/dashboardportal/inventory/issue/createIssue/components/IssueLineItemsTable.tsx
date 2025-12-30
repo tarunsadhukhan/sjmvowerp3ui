@@ -6,8 +6,8 @@ import type { MuiFormMode } from "@/components/ui/muiform";
 import type {
 	EditableLineItem,
 	Option,
-	AvailableInventoryItem,
 	IssueLabelResolvers,
+	SRCacheEntry,
 } from "../types/issueTypes";
 import { SearchableSelect } from "@/components/ui/transaction/SearchableSelect";
 import { TextField, Tooltip, CircularProgress } from "@mui/material";
@@ -29,8 +29,10 @@ type UseIssueLineItemColumnsParams = {
 		value: string | number
 	) => void;
 	updateLineFields: (id: string, updates: Partial<EditableLineItem>) => void;
-	availableInventory: AvailableInventoryItem[];
-	availableInventoryLoading: boolean;
+	// SR cache for per-item inventory data
+	srCache: Partial<Record<string, SRCacheEntry>>;
+	srLoading: Partial<Record<string, boolean>>;
+	branchId?: string;
 };
 
 /**
@@ -49,8 +51,9 @@ export const useIssueLineItemColumns = ({
 	getUomOptions,
 	handleLineFieldChange,
 	updateLineFields,
-	availableInventory,
-	availableInventoryLoading,
+	srCache,
+	srLoading,
+	branchId,
 }: UseIssueLineItemColumnsParams): TransactionLineColumn<EditableLineItem>[] => {
 	return React.useMemo(
 		() => [
@@ -150,23 +153,28 @@ export const useIssueLineItemColumns = ({
 							</span>
 						);
 					}
-					// Filter available inventory by selected item
-					const filteredInventory = availableInventory.filter(
-						(inv) =>
-							String(inv.itemId) === String(item.item) &&
-							parseFloat(String(inv.availableQty)) > 0
-					);
-					const inventoryOptions: Option[] = filteredInventory.map((inv) => ({
-						label: `${inv.srNo} (Avl: ${inv.availableQty})`,
-						value: String(inv.inwardDtlId),
-					}));
+
+					// Get SR cache for this item
+					const srCacheKey = branchId && item.item ? `${branchId}-${item.item}` : "";
+					const cacheEntry = srCacheKey ? srCache[srCacheKey] : undefined;
+					const isLoading = srCacheKey ? srLoading[srCacheKey] ?? false : false;
+
+					// Filter only items with available quantity > 0
+					const inventoryOptions: Option[] = (cacheEntry?.srOptions ?? []).filter((opt) => {
+						const invItem = cacheEntry?.srDataById[opt.value];
+						return invItem && invItem.availableQty > 0;
+					});
 
 					const selectedValue =
 						inventoryOptions.find((opt) => opt.value === item.inwardDtlId) ??
 						null;
 
-					if (availableInventoryLoading) {
+					if (isLoading) {
 						return <CircularProgress size={16} />;
+					}
+
+					if (!item.item) {
+						return <span className="text-xs text-gray-400">Select item first</span>;
 					}
 
 					return (
@@ -183,9 +191,7 @@ export const useIssueLineItemColumns = ({
 									});
 									return;
 								}
-								const selectedInv = filteredInventory.find(
-									(inv) => String(inv.inwardDtlId) === next.value
-								);
+								const selectedInv = cacheEntry?.srDataById[next.value];
 								if (selectedInv) {
 									updateLineFields(item.id, {
 										inwardDtlId: next.value,
@@ -200,7 +206,7 @@ export const useIssueLineItemColumns = ({
 							isOptionEqualToValue={(a, b) => a.value === b.value}
 							placeholder="Select SR"
 							textFieldProps={{ size: "small" }}
-							disabled={!item.item}
+							disabled={!item.item || isLoading}
 						/>
 					);
 				},
@@ -435,8 +441,9 @@ export const useIssueLineItemColumns = ({
 			getUomOptions,
 			handleLineFieldChange,
 			updateLineFields,
-			availableInventory,
-			availableInventoryLoading,
+			srCache,
+			srLoading,
+			branchId,
 		]
 	);
 };

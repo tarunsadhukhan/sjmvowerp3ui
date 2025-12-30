@@ -240,6 +240,11 @@ const apiRoutesPortalMasters = {
     BILL_PASS_LIST: `${API_URL}/billPass/get_bill_pass_list`,
     BILL_PASS_GET_BY_ID: `${API_URL}/billPass/get_bill_pass_by_id`,
 
+    // Inventory Issue endpoints
+    ISSUE_TABLE: `${API_URL}/inventoryIssue/get_issue_table`,
+    ISSUE_GET_BY_ID: `${API_URL}/inventoryIssue/get_issue_by_id`,
+    ISSUE_SETUP_1: `${API_URL}/inventoryIssue/get_issue_setup_1`,
+
 
 };
 

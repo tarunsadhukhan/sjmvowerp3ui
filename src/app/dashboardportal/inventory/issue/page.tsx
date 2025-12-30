@@ -4,6 +4,7 @@ import * as React from "react";
 import { Alert, Chip, Typography } from "@mui/material";
 import type { GridColDef, GridPaginationModel, GridRenderCellParams } from "@mui/x-data-grid";
 import { fetchWithCookie } from "@/utils/apiClient2";
+import { apiRoutesPortalMasters } from "@/utils/api";
 import IndexWrapper from "@/components/ui/IndexWrapper";
 import { useRouter } from "next/navigation";
 
@@ -50,10 +51,6 @@ const getStatusColor = (status: string): "success" | "error" | "warning" | "info
 	if (normalized.includes("draft")) return "default";
 	return "info";
 };
-
-// TODO: Add this route to api.ts once the backend endpoint is created
-const API_URL = process.env.NEXT_PUBLIC_API_BASE_URL || "/apix";
-const ISSUE_TABLE_URL = `${API_URL}/inventoryIssue/get_issue_table`;
 
 export default function InventoryIssueIndexPage() {
 	const router = useRouter();
@@ -145,7 +142,7 @@ export default function InventoryIssueIndexPage() {
 			const trimmedSearch = searchValue.trim();
 			if (trimmedSearch) query.set("search", trimmedSearch);
 
-			const url = `${ISSUE_TABLE_URL}?${query.toString()}`;
+			const url = `${apiRoutesPortalMasters.ISSUE_TABLE}?${query.toString()}`;
 			const { data, error } = await fetchWithCookie(url, "GET");
 
 			if (error) {

@@ -1,12 +1,13 @@
 "use client";
 
 import { Button } from "@/components/ui/button";
-import { Search } from "lucide-react";
+import IndexWrapper from "@/components/ui/IndexWrapper";
 import { apiRoutesPortalMasters } from "@/utils/api";
 import { fetchWithCookie } from "@/utils/apiClient2";
-import MuiDataGrid from '@/components/ui/muiDataGrid';
-import { Box, TextField, InputAdornment, Switch, Snackbar, Alert, Dialog, DialogTitle, DialogContent, DialogActions, CircularProgress } from '@mui/material';
-import { useState, useEffect } from 'react';
+import { Box, Switch, Snackbar, Alert, Dialog, DialogTitle, DialogContent, DialogActions, CircularProgress, TextField } from '@mui/material';
+import { useState, useEffect, useMemo } from 'react';
+import { usePathname } from "next/navigation";
+import { useSidebarContext } from "@/components/dashboard/sidebarContext";
 import { GridColDef, GridPaginationModel, GridRenderCellParams } from '@mui/x-data-grid';
 import CreateItemGroupPage from "@/app/dashboardportal/masters/itemGroupMaster/CreateItemGroupPage";
 
@@ -21,22 +22,25 @@ type ItemGroup =  {
   item_sub_grp_name: string;
   item_grp_code_display: string;
   item_type_id: number;
+  [key: string]: any;
 }
 
 export default function CompanyManagement() {
   const [rows, setRows] = useState<ItemGroup[]>([]);
   const [loading, setLoading] = useState(true);
-  const [paginationModel, setPaginationModel] = useState({
+  const [paginationModel, setPaginationModel] = useState<GridPaginationModel>({
     pageSize: 10,
     page: 0,
   });
   const [totalRows, setTotalRows] = useState(0);
   const [searchQuery, setSearchQuery] = useState('');
-  const [searchTimeout, setSearchTimeout] = useState<NodeJS.Timeout | null>(null);
   const [snackbar, setSnackbar] = useState<{ open: boolean; message: string; severity: 'success' | 'error' }>({ open: false, message: '', severity: 'success' });
   const [detailsDialogOpen, setDetailsDialogOpen] = useState(false);
   const [detailsLoading, setDetailsLoading] = useState(false);
   const [detailsData, setDetailsData] = useState<any>(null);
+  const pathname = usePathname();
+  const { hasMenuAccess } = useSidebarContext();
+  const canEdit = hasMenuAccess(pathname, 'edit');
 
   // Fetch companies from API with pagination and search
   const fetchItemGrps = async () => {
@@ -94,22 +98,11 @@ export default function CompanyManagement() {
   // Handle search with debounce
   const handleSearchChange = (event: React.ChangeEvent<HTMLInputElement>) => {
     const newSearchValue = event.target.value;
-    
-    // Clear previous timeout
-    if (searchTimeout) {
-      clearTimeout(searchTimeout);
-    }
-    
-    // Set new timeout for debouncing
-    const timeout = setTimeout(() => {
-      setSearchQuery(newSearchValue);
-      setPaginationModel(prev => ({
-        ...prev,
-        page: 0 // Reset to first page on new search
-      }));
-    }, 500); // 500ms debounce
-    
-    setSearchTimeout(timeout);
+    setSearchQuery(newSearchValue);
+    setPaginationModel(prev => ({
+      ...prev,
+      page: 0,
+    }));
   };
 
   // Open dialog for create
@@ -124,6 +117,10 @@ export default function CompanyManagement() {
 
   // Toggle active status handler
   const handleToggleActive = async (item_grp_id: number, currentActive: number) => {
+    if (!canEdit) {
+      setSnackbar({ open: true, message: 'You do not have permission to edit item groups', severity: 'error' });
+      return;
+    }
     setLoading(true);
     try {
       const selectedCompany = localStorage.getItem('sidebar_selectedCompany');
@@ -171,115 +168,84 @@ export default function CompanyManagement() {
     }
   };
 
-  // Column definitions for the DataGrid
-  const columns: GridColDef[] = [
+  const columns = useMemo<GridColDef<ItemGroup>[]>(() => [
     {
       field: 'item_grp_code_display',
       headerName: 'Item Group Code',
       flex: 1,
       minWidth: 180,
-      headerClassName: 'bg-[#3ea6da] text-white',
-      renderCell: (params: GridRenderCellParams) => (
-        <span
-          className="text-blue-700 underline cursor-pointer"
-          onClick={() => handleOpenDetails(params.row.item_grp_id)}
-        >
-          {params.value}
-        </span>
-      ),
     },
     {
       field: 'item_grp_name_parent',
       headerName: 'Item Group Name',
       flex: 1,
       minWidth: 200,
-      headerClassName: 'bg-[#3ea6da] text-white',
-      renderCell: (params: GridRenderCellParams) => (
-        <span
-          className="text-blue-700 underline cursor-pointer"
-          onClick={() => handleOpenDetails(params.row.item_grp_id)}
-        >
-          {params.value}
-        </span>
-      ),
     },
-    { 
-      field: 'item_sub_grp_name', 
-      headerName: 'Item Sub Group Name', 
+    {
+      field: 'item_sub_grp_name',
+      headerName: 'Item Sub Group Name',
       flex: 1,
       minWidth: 200,
-      headerClassName: 'bg-[#3ea6da] text-white',
     },
     {
       field: 'active',
       headerName: 'Active',
       width: 120,
-      headerClassName: 'bg-[#3ea6da] text-white',
-      renderCell: (params: GridRenderCellParams) => (
+      renderCell: (params: GridRenderCellParams<ItemGroup>) => (
         <Switch
-          checked={!!params.value}
+          checked={Boolean(params.value)}
           color="primary"
           onChange={() => handleToggleActive(params.row.item_grp_id, params.value)}
-          disabled={loading}
+          disabled={loading || !canEdit}
         />
       ),
     },
-  ];
+  ], [canEdit, handleToggleActive, loading]);
+
+  const viewRowHandler = (row: ItemGroup) => {
+    const identifier = row.item_grp_id ?? row.id;
+    if (typeof identifier !== 'undefined' && identifier !== null) {
+      void handleOpenDetails(Number(identifier));
+    }
+  };
+
+  const editRowHandler = (row: ItemGroup) => {
+    const identifier = row.item_grp_id ?? row.id;
+    if (typeof identifier !== 'undefined' && identifier !== null) {
+      void handleOpenDetails(Number(identifier));
+    }
+  };
 
   return (
     <>
-      <div className="min-h-screen bg-gray-50 p-8">
-        <div className="mx-auto max-w-7xl">
-          <div className="mb-8 flex items-center justify-between">
-            <h1 className="text-2xl font-bold text-[#0C3C60]">Item Group Master</h1>
-          <Button
-            className="btn-primary"
-            onClick={handleOpenCreate}
-          >
-            + Create Item Group
-          </Button>
-          {/* Create Item Group Dialog */}
-          <CreateItemGroupPage open={createDialogOpen} onClose={handleCloseCreateDialog} />
-          </div>
-          <Box sx={{ width: '100%', mb: 2 }}>
-            <TextField
-              placeholder="Search item groups..."
-              onChange={handleSearchChange}
-              fullWidth
-              variant="outlined"
-              size="small"
-              sx={{ maxWidth: 350 }}
-              InputProps={{
-                startAdornment: (
-                  <InputAdornment position="start">
-                    <Search className="h-4 w-4" />
-                  </InputAdornment>
-                ),
-              }}
-            />
-          </Box>
-          <MuiDataGrid
-            rows={rows}
-            columns={columns}
-            rowCount={totalRows}
-            paginationModel={paginationModel}
-            onPaginationModelChange={handlePaginationModelChange}
-            loading={loading}
-            showLoadingUntilLoaded={true}
-          />
-          <Snackbar
-            open={snackbar.open}
-            autoHideDuration={4000}
-            onClose={() => setSnackbar({ ...snackbar, open: false })}
-            anchorOrigin={{ vertical: 'top', horizontal: 'center' }}
-          >
-            <Alert severity={snackbar.severity} onClose={() => setSnackbar({ ...snackbar, open: false })} sx={{ width: '100%' }}>
-              {snackbar.message}
-            </Alert>
-          </Snackbar>
-        </div>
-      </div>
-      {/* Details Dialog */}
+      <IndexWrapper
+        title="Item Group Master"
+        rows={rows}
+        columns={columns}
+        rowCount={totalRows}
+        paginationModel={paginationModel}
+        onPaginationModelChange={handlePaginationModelChange}
+        loading={loading}
+        showLoadingUntilLoaded
+  search={{ value: searchQuery, onChange: handleSearchChange, placeholder: "Search item groups", debounceDelayMs: 1000 }}
+        createAction={{ onClick: handleOpenCreate }}
+        onView={viewRowHandler}
+        onEdit={editRowHandler}
+      >
+        <Snackbar
+          open={snackbar.open}
+          autoHideDuration={4000}
+          onClose={() => setSnackbar({ ...snackbar, open: false })}
+          anchorOrigin={{ vertical: 'top', horizontal: 'center' }}
+        >
+          <Alert severity={snackbar.severity} onClose={() => setSnackbar({ ...snackbar, open: false })} sx={{ width: '100%' }}>
+            {snackbar.message}
+          </Alert>
+        </Snackbar>
+
+        <CreateItemGroupPage open={createDialogOpen} onClose={handleCloseCreateDialog} />
+      </IndexWrapper>
+
       <Dialog open={detailsDialogOpen} onClose={() => setDetailsDialogOpen(false)} maxWidth="sm" fullWidth>
         <DialogTitle>Item Group Details</DialogTitle>
         <DialogContent>

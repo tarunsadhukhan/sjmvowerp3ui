@@ -34,6 +34,7 @@ export default function CreateParty({ open, onClose, mode = 'create', editId, on
   const [_loading, setLoading] = useState(false);
   const [snackbar, setSnackbar] = useState<{ open: boolean; message: string; severity: 'success' | 'error' }>({ open: false, message: '', severity: 'success' });
   const [branches, setBranches] = useState<BranchRow[]>([]);
+  const [initialBranches, setInitialBranches] = useState<BranchRow[]>([]);
   const [statesByCountry, setStatesByCountry] = useState<Record<string, any[]>>({});
   const [citiesByState, setCitiesByState] = useState<Record<string, any[]>>({});
   const [selectedCountry, setSelectedCountry] = useState<string | undefined>(undefined);
@@ -157,9 +158,12 @@ export default function CreateParty({ open, onClose, mode = 'create', editId, on
             contact_no: br.contact_no,
             active: br.active === 1 || br.active === '1' || br.active === true,
           }));
-          setBranches([...b, {}]);
+          const branchData = [...b, {}];
+          setBranches(branchData);
+          setInitialBranches(branchData);
         } else {
           setBranches([{}]);
+          setInitialBranches([{}]);
         }
       } catch (err: any) {
         setSnackbar({ open: true, message: err.message || 'Error loading setup', severity: 'error' });
@@ -205,6 +209,11 @@ export default function CreateParty({ open, onClose, mode = 'create', editId, on
 
   if (!schema) return null;
 
+  // Check if branches have changed from initial state
+  const serializeBranches = (arr: BranchRow[]) => 
+    JSON.stringify(arr.filter(b => b && (b.address || b.contact_person || b.contact_no || b.gst_no)));
+  const branchesDirty = serializeBranches(branches) !== serializeBranches(initialBranches);
+
   // compute available states for a branch given selected country
   const availableStates = (countryId?: string) => {
     if (!countryId) return [] as { id?: any; name?: string }[];
@@ -222,12 +231,14 @@ export default function CreateParty({ open, onClose, mode = 'create', editId, on
       <DialogContent>
         <Box sx={{ mt: 1 }}>
           <MuiForm schema={schema} initialValues={initialValues} mode={mode} onSubmit={handleSubmit} submitLabel={mode === 'edit' ? 'Update' : 'Save'} cancelLabel="Close" onCancel={onClose} hideModeToggle={true}
+            externalDirty={branchesDirty}
             onValuesChange={(vals) => {
               setSelectedCountry(vals.country_id ? String(vals.country_id) : undefined);
             }}
           />
 
-          {/* Branches as a MUI Table */}
+          {/* Branches as a MUI Table - only show in edit mode */}
+          {mode === 'edit' && (
           <Box sx={{ mt: 3 }}>
             <h3 className="text-lg font-medium">Branches</h3>
             <TableContainer sx={{ overflowX: 'auto' }}>
@@ -316,6 +327,7 @@ export default function CreateParty({ open, onClose, mode = 'create', editId, on
             </Table>
             </TableContainer>
           </Box>
+          )}
         </Box>
       </DialogContent>
       <DialogActions>

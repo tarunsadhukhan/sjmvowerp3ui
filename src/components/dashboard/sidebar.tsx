@@ -8,21 +8,25 @@ import { apiRoutes } from "@/utils/api";
 import MuiSelect from "@/components/ui/muiSelect";
 import { ChevronDown, ChevronRight } from "lucide-react";
 import { useSidebarContext } from "@/components/dashboard/sidebarContext";
+import { normalisePortalPath } from "@/utils/portalPermissions";
 
 interface SidebarProps {
   isCollapsed: boolean;
   onToggle: () => void;
+  onMouseEnter?: () => void;
+  onMouseLeave?: () => void;
 }
 
-export default function Sidebar({ isCollapsed, onToggle }: SidebarProps) {
+export default function Sidebar({ isCollapsed, onToggle, onMouseEnter, onMouseLeave }: SidebarProps) {
   const { compshow } = urlcheck();
   const {
     companies, setCompanies,
-    selectedCompany, setSelectedCompany,
+    selectedCompany,
     selectedBranches, setSelectedBranches,
     expandedMenus, setExpandedMenus,
     availableMenus, parentMenus,
-    handleCompanyChange, handleBranchChange
+    handleCompanyChange, handleBranchChange,
+    setMenuPermissions
   } = useSidebarContext();
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -54,8 +58,45 @@ export default function Sidebar({ isCollapsed, onToggle }: SidebarProps) {
       setIsLoading(true);
       try {
         const result = await fetchWithCookie(apiRoutes.PORTAL_MENU_ITEMS, "GET");
-        if (result.data && !result.error) {
+        if (result.status === 401 || result.status === 403) {
+          console.warn("Access token expired or unauthorized – redirecting to login");
+          try {
+            localStorage.removeItem('sidebar_companies');
+            localStorage.removeItem('sidebar_selectedCompany');
+            localStorage.removeItem('sidebar_selectedBranches');
+            localStorage.removeItem('sidebar_expandedMenus');
+            localStorage.removeItem('sidebar_menuItems');
+          } catch (storageErr) {
+            console.warn('Failed to clear cached sidebar data', storageErr);
+          }
+          window.location.href = "/";
+          return;
+        }
+
+        if (result.error) {
+          setError(result.error);
+          return;
+        }
+
+        if (Array.isArray(result.data)) {
           setCompanies(result.data);
+          const permissionResult = await fetchWithCookie(apiRoutes.PORTAL_MENU_PERMISSIONS, "GET");
+          if (permissionResult.status >= 200 && permissionResult.status < 300 && permissionResult.data) {
+            const payload = permissionResult.data as { permissions?: Record<string, unknown> };
+            const rawPermissions = payload.permissions ?? {};
+            const normalised: Record<string, number> = {};
+            Object.entries(rawPermissions).forEach(([key, value]) => {
+              const cleaned = normalisePortalPath(key);
+              if (!cleaned) return;
+              const numeric = typeof value === 'number' ? value : Number(value);
+              if (Number.isFinite(numeric)) {
+                normalised[cleaned] = numeric;
+              }
+            });
+            setMenuPermissions(normalised);
+          } else {
+            setMenuPermissions({});
+          }
         } else {
           setError("Failed to load company data");
         }
@@ -66,7 +107,7 @@ export default function Sidebar({ isCollapsed, onToggle }: SidebarProps) {
       }
     };
     fetchCompanyData();
-  }, [compshow, isClient, setCompanies]);
+  }, [compshow, isClient, setCompanies, setMenuPermissions]);
 
   // Toggle menu expansion
   const toggleMenu = (menuId: number) => {
@@ -88,12 +129,12 @@ export default function Sidebar({ isCollapsed, onToggle }: SidebarProps) {
         <div className={`flex items-center py-2 px-2 hover:bg-[#00557a] rounded-md transition-colors ${level > 0 ? 'ml-6' : ''}`}
           style={{ paddingLeft: `${level * 8}px` }}>
           {isParent && (
-            <div className="flex items-center cursor-pointer mr-2 text-muted-foreground hover:text-foreground transition-colors"
+            <div className="flex items-center cursor-pointer mr-2 sidebar-menu-chevron hover:text-gray-200 transition-colors"
               onClick={() => toggleMenu(menu.menu_id)}>
               {isExpanded ? <ChevronDown className="h-4 w-4 transition-transform duration-200" /> : <ChevronRight className="h-4 w-4 transition-transform duration-200" />}
             </div>
           )}
-          <a href={`/dashboardportal/${menu.menu_path}`} className="text-sm flex-1 text-white hover:text-gray-200">{menu.menu_name}</a>
+          <a href={`/dashboardportal/${menu.menu_path}`} className="text-sm flex-1 sidebar-menu-title hover:text-gray-200">{menu.menu_name}</a>
         </div>
         {isParent && isExpanded && (
           <div className="overflow-hidden transition-all duration-300 ease-in-out">
@@ -105,10 +146,14 @@ export default function Sidebar({ isCollapsed, onToggle }: SidebarProps) {
   };
 
   return (
-    <div className={`bg-[#006699] text-white transition-all duration-300 h-screen flex flex-col ${isCollapsed ? "w-20" : "w-56"}`}>
-      <div className={`bg-[#006699] text-white transition-all duration-300 h-screen flex flex-col ${isCollapsed ? 'collapsed-class' : ''}`}>
+    <div 
+      className={`sidebar-container ${isCollapsed ? "w-20" : "w-56"}`}
+      onMouseEnter={onMouseEnter}
+      onMouseLeave={onMouseLeave}
+    >
+      <div className="sidebar-container">
         <LogoSection isCollapsed={isCollapsed} onToggle={onToggle} logoSrc="path/to/logo.png" title="Your Title" />
-        <div className="px-4 py-3 border-b border-[#005580]">
+        <div className="px-4 py-3 sidebar-section-border">
           {isClient && compshow === 2 && !isCollapsed ? (
             <>
               <div className="mb-2">

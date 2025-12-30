@@ -1,14 +1,16 @@
 "use client";
 
-import { SearchablePaginatedTable } from "@/components/ui/searchablePaginatedTable";
-import { Column } from "@/components/ui/datatablewithedit";
-import { Button } from "@/components/ui/button";
-import { PencilIcon } from "lucide-react";
-import { apiRoutes,apiRoutesconsole } from "@/utils/api";
+import React, { useEffect, useMemo, useState } from "react";
+import { useRouter } from "next/navigation";
+import { Snackbar, Alert } from "@mui/material";
+import { GridColDef, GridPaginationModel } from "@mui/x-data-grid";
+import IndexWrapper from "@/components/ui/IndexWrapper";
+import { apiRoutesconsole } from "@/utils/api";
 import { fetchWithCookie } from "@/utils/apiClient2";
+import { handleAuthError } from "@/utils/auth";
 
-// Sample Role type
 type Role = {
+  id: number;
   con_role_id: number;
   con_role_name: string;
   con_org_id: number;
@@ -19,148 +21,183 @@ type Role = {
   is_enable: number;
 };
 
-// Real API fetch function with pagination and search
-const fetchRoles = async (page: number, search?: string, sortKey?: string | null, sortOrder?: "asc" | "desc") => {
-  const limit = 20;
-  const queryParams = new URLSearchParams({
-    page: page.toString(),
-    limit: limit.toString(),
-    user_id: localStorage.getItem('user_id') || '', // Ensure user_id is not null
+export default function RoleManagementAdminPage() {
+  const router = useRouter();
+  const [rows, setRows] = useState<Role[]>([]);
+  const [loading, setLoading] = useState(false);
+  const [paginationModel, setPaginationModel] = useState<GridPaginationModel>({
+    pageSize: 20,
+    page: 0,
   });
-  if (search) {
-    queryParams.append('search', search);
-  }
-  
-  // Add sorting parameters if provided
-  if (sortKey) {
-    queryParams.append('sort_key', sortKey);
-    queryParams.append('sort_order', sortOrder || 'asc');
-  }
+  const [totalRows, setTotalRows] = useState(0);
+  const [searchValue, setSearchValue] = useState("");
+  const [snackbar, setSnackbar] = useState<{
+    open: boolean;
+    message: string;
+    severity: "success" | "error";
+  }>({ open: false, message: "", severity: "success" });
 
-  const url = `${apiRoutesconsole.ROLES_CTRLDSK}?${queryParams}`;
-  console.log("Fetching roles with URL:", url);
+  const fetchRoles = React.useCallback(async () => {
+    setLoading(true);
+    try {
+      const userId = localStorage.getItem("user_id") || "";
+      const queryParams = new URLSearchParams({
+        page: (paginationModel.page + 1).toString(),
+        limit: paginationModel.pageSize.toString(),
+        user_id: userId,
+      });
 
-  const { data, error } = await fetchWithCookie(url, "GET");
-
-  if (error || !data) {
-    console.error("Error fetching roles:", error);
-    throw new Error(error || 'Failed to fetch roles');
-  }
-
-  console.log("API response structure:", JSON.stringify(data, null, 2));
-
-  // Check the actual structure of your API response and adjust accordingly
-  if (data.data && typeof data.total === 'number') {
-    // If API already returns the expected format
-    console.log("Using data.data format, returned items:", data.data.length, "total:", data.total);
-    return { data: data.data, total: data.total };
-  } else if (Array.isArray(data)) {
-    // If API returns just an array of roles
-    console.log("Using array format, returned items:", data.length);
-    return { data, total: data.length };
-  } else if (data.roles && typeof data.count === 'number') {
-    // If API returns a different format like { roles: [...], count: 100 }
-    console.log("Using roles/count format, returned items:", data.roles.length, "total:", data.count);
-    return { data: data.roles, total: data.count };
-  } else {
-    // Try to determine the actual structure
-    console.error("Unexpected API response format:", data);
-    
-    // Look for array properties in the response
-    const arrayProps = Object.entries(data).find(([_, value]) => Array.isArray(value));
-    if (arrayProps) {
-      const [propName, arrayValue] = arrayProps;
-      console.log(`Found array property "${propName}" with ${(arrayValue as any[]).length} items`);
-      
-      // Look for a count/total property
-      const countProps = Object.entries(data).find(([key, value]) => 
-        typeof value === 'number' && 
-        (key.includes('total') || key.includes('count') || key === 'length')
-      );
-      
-      if (countProps) {
-        console.log(`Using discovered format: items from "${propName}", count from "${countProps[0]}"`);
-        return { 
-          data: arrayValue as any[], 
-          total: countProps[1] as number 
-        };
+      const trimmedSearch = searchValue.trim();
+      if (trimmedSearch) {
+        queryParams.append("search", trimmedSearch);
       }
-      
-      // If we found an array but no count, use the array length
-      console.log(`Using discovered array "${propName}" with length as total`);
-      return { 
-        data: arrayValue as any[], 
-        total: (arrayValue as any[]).length 
-      };
+
+      const url = `${apiRoutesconsole.ROLES_CTRLDSK}?${queryParams}`;
+      const { data, error, status } = await fetchWithCookie(url, "GET");
+
+      // Handle auth errors
+      if (handleAuthError(status)) return;
+
+      if (error || !data) {
+        throw new Error(error || "Failed to fetch roles");
+      }
+
+      // Parse API response - handle different response formats
+      let rolesData: any[] = [];
+      let total = 0;
+
+      if (data.data && typeof data.total === "number") {
+        rolesData = data.data;
+        total = data.total;
+      } else if (Array.isArray(data)) {
+        rolesData = data;
+        total = data.length;
+      } else if (data.roles && typeof data.count === "number") {
+        rolesData = data.roles;
+        total = data.count;
+      } else {
+        // Try to find array property
+        const arrayProps = Object.entries(data).find(([_, value]) => Array.isArray(value));
+        if (arrayProps) {
+          rolesData = arrayProps[1] as any[];
+          const countProps = Object.entries(data).find(
+            ([key, value]) =>
+              typeof value === "number" &&
+              (key.includes("total") || key.includes("count") || key === "length")
+          );
+          total = countProps ? (countProps[1] as number) : rolesData.length;
+        }
+      }
+
+      // Map API response to grid rows with 'id' field required by MUI DataGrid
+      const mappedRows: Role[] = rolesData.map((row: any) => ({
+        id: row.con_role_id,
+        con_role_id: row.con_role_id,
+        con_role_name: row.con_role_name ?? "",
+        con_org_id: row.con_org_id,
+        status: row.status,
+        created_by: row.created_by,
+        created_date_time: row.created_date_time,
+        con_company_id: row.con_company_id,
+        is_enable: row.is_enable ?? 0,
+      }));
+
+      setRows(mappedRows);
+      setTotalRows(total);
+    } catch (err: any) {
+      setSnackbar({
+        open: true,
+        message: err.message || "Error fetching roles",
+        severity: "error",
+      });
+      setRows([]);
+      setTotalRows(0);
+    } finally {
+      setLoading(false);
     }
-    
-    // Default fallback
-    console.error("Could not determine response structure, returning empty result");
-    return { data: [], total: 0 };
-  }
-};
+  }, [paginationModel.page, paginationModel.pageSize, searchValue]);
 
-const createEditUrl = (role: Role): string => {
-  // Encode values to handle special characters in role names
-  const params = new URLSearchParams({
-    roleId: role.con_role_id.toString(),
-    roleName: role.con_role_name, // URLSearchParams handles encoding
-  });
+  useEffect(() => {
+    fetchRoles();
+  }, [fetchRoles]);
 
-  // Update the path to match your app’s routing if necessary
-  return `/dashboardctrldesk/roleManagementAdmin/createRoleAdmin?${params.toString()}`;
-}
+  const handlePaginationModelChange = (newModel: GridPaginationModel) => {
+    setPaginationModel(newModel);
+  };
 
-// Table columns
-const columns: Column<Role>[] = [
-  {
-    key: "con_role_name",
-    label: "Role Name",
-    className: "bg-[#3ea6da] text-white font-medium",
-  },
-  {
-    key: "is_enable",
-    label: "Active",
-    className: "bg-[#3ea6da] text-white",
-    render: (val) => (val === 1 ? "Yes" : "No"),
-  },
-  {
-    key: "actions",
-    label: "Actions",
-    className: "bg-[#3ea6da] text-white",
-    render: (_val, row) => (
-      <Button
-        variant="ghost"
-        size="icon"
-        onClick={() => {
-          const roleId = row.con_role_id;
-          window.location.href = createEditUrl(row);
-        }}
-      >
-        <PencilIcon className="h-4 w-4" />
-      </Button>
-    ),
-  },
-];
+  const handleSearchChange = React.useCallback((event: React.ChangeEvent<HTMLInputElement>) => {
+    const value = event.target.value;
+    setPaginationModel((prev) => ({ ...prev, page: 0 }));
+    setSearchValue(value);
+  }, []);
 
-export default function SampleRoleTablePage() {
+  const handleEdit = React.useCallback(
+    (row: Role) => {
+      const params = new URLSearchParams({
+        roleId: row.con_role_id.toString(),
+        roleName: row.con_role_name,
+      });
+      router.push(`/dashboardctrldesk/roleManagementAdmin/createRoleAdmin?${params.toString()}`);
+    },
+    [router]
+  );
+
+  const columns = useMemo<GridColDef<Role>[]>(
+    () => [
+      {
+        field: "con_role_name",
+        headerName: "Role Name",
+        flex: 1,
+        minWidth: 200,
+      },
+      {
+        field: "is_enable",
+        headerName: "Active",
+        width: 100,
+        valueGetter: (value: number) => (value === 1 ? "Yes" : "No"),
+      },
+    ],
+    []
+  );
+
   return (
-    <div className="min-h-screen bg-gray-50 p-8">
-      <div className="mx-auto max-w-7xl">
-        <div className="mb-8 flex items-center justify-between">
-          <h1 className="text-2xl font-bold text-[#0C3C60]">Admin Role Management</h1>
-            <Button
-            className="bg-[#95C11F] hover:bg-[#85ad1b] text-white"
-            onClick={() => {
-              window.location.href = "/dashboardctrldesk/roleManagementAdmin/createRoleAdmin";
-            }}
-            >
-            + Create Role
-            </Button>
-        </div>
-
-        <SearchablePaginatedTable columns={columns} fetchFn={fetchRoles} />
-      </div>
-    </div>
+    <IndexWrapper
+      title="Admin Role Management"
+      rows={rows}
+      columns={columns}
+      rowCount={totalRows}
+      paginationModel={paginationModel}
+      onPaginationModelChange={handlePaginationModelChange}
+      loading={loading}
+      showLoadingUntilLoaded
+      search={{
+        value: searchValue,
+        onChange: handleSearchChange,
+        placeholder: "Search roles",
+        debounceDelayMs: 1000,
+      }}
+      createAction={{
+        label: "+ Create Role",
+        onClick: () => {
+          router.push("/dashboardctrldesk/roleManagementAdmin/createRoleAdmin");
+        },
+      }}
+      onEdit={handleEdit}
+    >
+      <Snackbar
+        open={snackbar.open}
+        autoHideDuration={4000}
+        onClose={() => setSnackbar((prev) => ({ ...prev, open: false }))}
+        anchorOrigin={{ vertical: "top", horizontal: "center" }}
+      >
+        <Alert
+          severity={snackbar.severity}
+          onClose={() => setSnackbar((prev) => ({ ...prev, open: false }))}
+          sx={{ width: "100%" }}
+        >
+          {snackbar.message}
+        </Alert>
+      </Snackbar>
+    </IndexWrapper>
   );
 }

@@ -1,10 +1,22 @@
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
-  // Allow skipping ESLint during build for incremental migration. Set
-  // SKIP_ESLINT_ON_BUILD=true in your environment to disable lint step.
-  eslint: {
-    ignoreDuringBuilds: process.env.SKIP_ESLINT_ON_BUILD === 'true',
+  images: {
+    // Allow image optimization for localhost subdomains
+    remotePatterns: [
+      {
+        protocol: 'http',
+        hostname: '*.localhost',
+        port: '3000',
+      },
+      {
+        protocol: 'http',
+        hostname: 'localhost',
+        port: '3000',
+      },
+    ],
+    // Use unoptimized images for local development to avoid subdomain issues
+    unoptimized: process.env.NODE_ENV === 'development',
   },
   // async rewrites() {
   //   // Determine the backend URL based on the environment

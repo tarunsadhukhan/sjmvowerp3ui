@@ -27,142 +27,187 @@ export type UOMRow = {
   isFixed?: boolean;
   relationValue?: number | null; // decimal
   rounding?: number | null; // integer
-  id?: string; // client-side id
+  id?: string; // client-side id for stable rendering
 };
 
 interface UOMMappingTableProps {
-  mapping?: UOMRow[]; // initial mapping
+  value?: UOMRow[];
   uomOptions: UOMOption[];
   itemDefaultUom?: string | number | null; // the item's current UOM (map_from default)
   onChange?: (rows: UOMRow[]) => void;
+  disabled?: boolean;
+  readOnly?: boolean;
 }
 
-const blankRow = (itemDefaultUom?: string | number | null): UOMRow => ({ mapFromUom: itemDefaultUom != null ? String(itemDefaultUom) : null, mapFromName: null, mapToUom: null, mapToName: null, isFixed: false, relationValue: null, rounding: null, id: String(Date.now()) });
+const makeId = () => (typeof crypto !== "undefined" && "randomUUID" in crypto
+  ? crypto.randomUUID()
+  : Math.random().toString(36).slice(2));
 
-const UOMMappingTable: React.FC<UOMMappingTableProps> = ({ mapping = [], uomOptions, itemDefaultUom = null, onChange }) => {
-  // Start with a single blank row; we'll sync to `mapping` when effect runs.
-  const [rows, setRows] = React.useState<UOMRow[]>(() => [blankRow(itemDefaultUom)]);
+const blankRow = (itemDefaultUom?: string | number | null): UOMRow => ({
+  id: makeId(),
+  mapFromUom: itemDefaultUom != null ? String(itemDefaultUom) : null,
+  mapFromName: null,
+  mapToUom: null,
+  mapToName: null,
+  isFixed: false,
+  relationValue: null,
+  rounding: null,
+});
 
-  // Keep internal rows in sync when parent `mapping` or `itemDefaultUom` changes.
-  // Accept both server-shaped rows ({ map_from_id, map_to_id, is_fixed, ... })
-  // and UI-shaped rows ({ mapFromUom, mapToUom, isFixed, ... }).
+const normalizeRow = (row: any, options: UOMOption[]): UOMRow => {
+  const mapFromUomRaw = row?.mapFromUom ?? row?.map_from_id ?? row?.map_from ?? null;
+  const mapFromUom = mapFromUomRaw != null ? String(mapFromUomRaw) : null;
+  const mapToUomRaw = row?.mapToUom ?? row?.map_to_id ?? row?.map_to ?? null;
+  const mapToUom = mapToUomRaw != null ? String(mapToUomRaw) : null;
+  const mapFromName = row?.mapFromName ?? row?.map_from_name ?? options.find(o => String(o.value) === String(mapFromUom))?.label ?? null;
+  const mapToName = row?.mapToName ?? row?.map_to_name ?? options.find(o => String(o.value) === String(mapToUom))?.label ?? null;
+  
+  // Parse relationValue - handle both number and string from API
+  const rawRelation = row?.relationValue ?? row?.relation_value;
+  let relationValue: number | null = null;
+  if (rawRelation != null && rawRelation !== "") {
+    const parsed = Number(rawRelation);
+    if (!Number.isNaN(parsed)) relationValue = parsed;
+  }
+  
+  // Parse rounding - handle both number and string from API
+  const rawRounding = row?.rounding;
+  let rounding: number | null = null;
+  if (rawRounding != null && rawRounding !== "") {
+    const parsed = parseInt(String(rawRounding), 10);
+    if (!Number.isNaN(parsed)) rounding = parsed;
+  }
+  
+  return {
+    id: row?.id ?? makeId(),
+    mapFromUom,
+    mapFromName,
+    mapToUom,
+    mapToName,
+    isFixed: Boolean(row?.isFixed ?? row?.is_fixed ?? false),
+    relationValue,
+    rounding,
+  };
+};
+
+const ensureTrailingBlank = (rows: UOMRow[], itemDefaultUom?: string | number | null) => {
+  if (!rows.length) return [blankRow(itemDefaultUom)];
+  const last = rows[rows.length - 1];
+  if (!last) return [blankRow(itemDefaultUom)];
+  const isEmpty = !last.mapToUom && last.relationValue == null && last.rounding == null;
+  return isEmpty ? rows : [...rows, blankRow(itemDefaultUom)];
+};
+
+const isRowEmpty = (r: UOMRow) => !r.mapToUom && (r.relationValue == null) && (r.rounding == null);
+
+const toSerializable = (rows: UOMRow[]) =>
+  rows
+    .filter((r, idx) => !(idx === rows.length - 1 && isRowEmpty(r)))
+    .map((r) => ({
+      mapFromUom: r.mapFromUom ?? null,
+      mapToUom: r.mapToUom ?? null,
+      isFixed: Boolean(r.isFixed),
+      relationValue: r.relationValue ?? null,
+      rounding: r.rounding ?? null,
+    }));
+
+const serializeRows = (rows: UOMRow[]) => JSON.stringify(toSerializable(rows));
+
+const UOMMappingTable: React.FC<UOMMappingTableProps> = ({ value = [], uomOptions, itemDefaultUom = null, onChange, disabled = false, readOnly = false }) => {
+  const disabledAll = disabled || readOnly;
   const syncingFromPropRef = React.useRef(false);
+  const lastEmittedRef = React.useRef<string>("");
+
+  const prepareState = React.useCallback((source: UOMRow[]) => {
+    const base = Array.isArray(source) && source.length > 0
+      ? source.map((row) => {
+        const normalized = normalizeRow(row, uomOptions);
+        if (!normalized.mapFromName && normalized.mapFromUom) {
+          normalized.mapFromName = uomOptions.find(o => String(o.value) === String(normalized.mapFromUom))?.label ?? null;
+        }
+        return normalized;
+      })
+      : [blankRow(itemDefaultUom)];
+    // ensure default mapFrom is populated on blanks
+    return ensureTrailingBlank(base.map((row) => ({
+      ...row,
+      id: row.id ?? makeId(),
+      mapFromUom: row.mapFromUom ?? (itemDefaultUom != null ? String(itemDefaultUom) : null),
+      mapFromName: row.mapFromName ?? (row.mapFromUom ? uomOptions.find(o => String(o.value) === String(row.mapFromUom))?.label ?? null : (itemDefaultUom != null ? uomOptions.find(o => String(o.value) === String(itemDefaultUom))?.label ?? null : null)),
+    })), itemDefaultUom);
+  }, [uomOptions, itemDefaultUom]);
+
+  const [rows, setRows] = React.useState<UOMRow[]>(() => prepareState(value));
+
   React.useEffect(() => {
-    syncingFromPropRef.current = true;
-
-    const mkBlank = () => {
-      const bf = blankRow(itemDefaultUom);
-      const fromVal = bf.mapFromUom;
-      return { ...bf, mapFromName: fromVal ? uomOptions.find(o => String(o.value) === String(fromVal))?.label ?? null : null } as UOMRow;
-    };
-
-    if (Array.isArray(mapping) && mapping.length > 0) {
-      const normalized = mapping.map((r) => {
-        const m: any = r || {};
-        const mapFromUomRaw = m.mapFromUom ?? m.map_from_id ?? m.map_from ?? null;
-        const mapFromUom = mapFromUomRaw != null ? String(mapFromUomRaw) : null;
-        const mapToUomRaw = m.mapToUom ?? m.map_to_id ?? m.map_to ?? null;
-        const mapToUom = mapToUomRaw != null ? String(mapToUomRaw) : null;
-        const mapFromName = m.mapFromName ?? m.map_from_name ?? uomOptions.find(o => String(o.value) === String(mapFromUom))?.label ?? null;
-        const mapToName = m.mapToName ?? m.map_to_name ?? uomOptions.find(o => String(o.value) === String(mapToUom))?.label ?? null;
-        const isFixed = Boolean(m.isFixed ?? m.is_fixed ?? false);
-        const relationValue = m.relationValue ?? m.relation_value ?? null;
-        const rounding = m.rounding ?? null;
-        return {
-          id: String(Math.random()),
-          mapFromUom,
-          mapFromName,
-          mapToUom,
-          mapToName,
-          isFixed,
-          relationValue,
-          rounding,
-        } as UOMRow;
-      });
-      setRows([...normalized, mkBlank()]);
-    } else {
-      setRows([mkBlank()]);
-    }
-
-    const t = setTimeout(() => { syncingFromPropRef.current = false; }, 0);
+    const prepared = prepareState(value);
+  const signature = serializeRows(prepared);
+  syncingFromPropRef.current = true;
+    lastEmittedRef.current = signature;
+    setRows(prepared);
+    const t = setTimeout(() => {
+      syncingFromPropRef.current = false;
+    }, 0);
     return () => clearTimeout(t);
-     
-  }, [mapping, itemDefaultUom, uomOptions]);
+  }, [value, prepareState]);
 
-  const isRowEmpty = (r: UOMRow) => !r.mapToUom && (r.relationValue === null || r.relationValue === undefined) && (r.rounding === null || r.rounding === undefined);
-
-  // simple validation state: track duplicate map_to values
   const [errors, setErrors] = React.useState<Record<number, string>>({});
 
-  // emit changes to parent and validate uniqueness — but do it in an effect to avoid
-  // updating parent state while rendering this component.
+  const emitRows = React.useCallback((nextRows: UOMRow[]) => {
+    if (syncingFromPropRef.current) return;
+    const trimmed = nextRows.filter((r, idx) => !(idx === nextRows.length - 1 && isRowEmpty(r)));
+    const signature = JSON.stringify(trimmed.map((r) => ({
+      mapFromUom: r.mapFromUom ?? null,
+      mapToUom: r.mapToUom ?? null,
+      isFixed: Boolean(r.isFixed),
+      relationValue: r.relationValue ?? null,
+      rounding: r.rounding ?? null,
+    })));
+    if (signature === lastEmittedRef.current) return;
+    lastEmittedRef.current = signature;
+    onChange?.(trimmed);
+  }, [onChange]);
+
   React.useEffect(() => {
-    // ensure there's always one empty trailing row
-    const last = rows[rows.length - 1];
-    const lastEmpty = last ? isRowEmpty(last) : true;
-    if (!lastEmpty) {
-      setRows((prev) => [...prev, blankRow(itemDefaultUom)]);
-      return; // wait for next render where trailing blank exists
-    }
-
-    // if we're currently syncing from prop, skip emitting back to parent to avoid loops
-    if (syncingFromPropRef.current) {
-      // compute validation only
-      const seenSkip = new Map<string, number>();
-      const newErrorsSkip: Record<number, string> = {};
-      rows.forEach((r, i) => {
-        if (r.mapToUom) {
-          const key = String(r.mapToUom);
-          if (seenSkip.has(key)) {
-            newErrorsSkip[i] = 'Duplicate mapping';
-            newErrorsSkip[seenSkip.get(key)!] = 'Duplicate mapping';
-          } else {
-            seenSkip.set(key, i);
-          }
-        }
-      });
-      setErrors(newErrorsSkip);
-      return;
-    }
-
-    // compute validation: unique mapToUom across non-empty rows
     const seen = new Map<string, number>();
     const newErrors: Record<number, string> = {};
-    rows.forEach((r, i) => {
+    rows.forEach((r, idx) => {
+      if (idx === rows.length - 1 && isRowEmpty(r)) return;
       if (r.mapToUom) {
         const key = String(r.mapToUom);
         if (seen.has(key)) {
-          newErrors[i] = 'Duplicate mapping';
-          newErrors[seen.get(key)!] = 'Duplicate mapping';
+          newErrors[idx] = "Duplicate mapping";
+          const firstIdx = seen.get(key)!;
+          newErrors[firstIdx] = "Duplicate mapping";
         } else {
-          seen.set(key, i);
+          seen.set(key, idx);
         }
       }
     });
     setErrors(newErrors);
+    emitRows(rows);
+  }, [rows, emitRows]);
 
-    // emit trimmed rows (exclude trailing blank)
-    const trimmed = rows.filter((r, i) => !(i === rows.length - 1 && isRowEmpty(r)));
-    const emitted = trimmed.map(r => ({
-      map_from_id: r.mapFromUom ? Number(r.mapFromUom) : null,
-      map_to_id: r.mapToUom ? Number(r.mapToUom) : null,
-      is_fixed: r.isFixed ? 1 : 0,
-      relation_value: r.relationValue ?? null,
-      rounding: r.rounding ?? null,
-    }));
-    onChange?.(emitted as any);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [rows, itemDefaultUom, uomOptions]);
+  const updateRows = React.useCallback((updater: (prev: UOMRow[]) => UOMRow[]) => {
+    setRows((prev) => {
+      const next = ensureTrailingBlank(updater(prev), itemDefaultUom).map((row) => ({
+        ...row,
+        id: row.id ?? makeId(),
+        mapFromUom: row.mapFromUom ?? (itemDefaultUom != null ? String(itemDefaultUom) : null),
+        mapFromName: row.mapFromName ?? (row.mapFromUom ? uomOptions.find(o => String(o.value) === String(row.mapFromUom))?.label ?? null : (itemDefaultUom != null ? uomOptions.find(o => String(o.value) === String(itemDefaultUom))?.label ?? null : null)),
+      }));
+      return next;
+    });
+  }, [itemDefaultUom, uomOptions]);
 
   const updateRow = (idx: number, patch: Partial<UOMRow>) => {
-  setRows((cur) => cur.map((r, i) => (i === idx ? { ...r, ...patch } : r)));
+    updateRows((current) => current.map((row, i) => (i === idx ? { ...row, ...patch } : row)));
   };
 
   const removeRow = (idx: number) => {
-    setRows((cur) => {
-      const next = cur.filter((_, i) => i !== idx);
-      if (next.length === 0) next.push(blankRow(itemDefaultUom));
-      return next;
+    updateRows((current) => {
+      const filtered = current.filter((_, i) => i !== idx);
+      return filtered.length ? filtered : [blankRow(itemDefaultUom)];
     });
   };
 
@@ -198,6 +243,7 @@ const UOMMappingTable: React.FC<UOMMappingTableProps> = ({ mapping = [], uomOpti
                       const label = uomOptions.find(o => String(o.value) === String(val))?.label ?? null;
                       updateRow(idx, { mapToUom: val, mapToName: label });
                     }}
+                    disabled={disabledAll}
                   >
                     <MenuItem value=""><em>None</em></MenuItem>
                     {uomOptions
@@ -219,6 +265,7 @@ const UOMMappingTable: React.FC<UOMMappingTableProps> = ({ mapping = [], uomOpti
                   <Checkbox
                     checked={Boolean(r.isFixed)}
                     onChange={(e) => updateRow(idx, { isFixed: e.target.checked })}
+                    disabled={disabledAll}
                   />
                 </TableCell>
                 <TableCell>
@@ -232,6 +279,7 @@ const UOMMappingTable: React.FC<UOMMappingTableProps> = ({ mapping = [], uomOpti
                       const num = v === "" ? null : Number(v);
                       if (v === "" || !Number.isNaN(num)) updateRow(idx, { relationValue: num });
                     }}
+                    disabled={disabledAll}
                   />
                 </TableCell>
                 <TableCell>
@@ -245,13 +293,16 @@ const UOMMappingTable: React.FC<UOMMappingTableProps> = ({ mapping = [], uomOpti
                       const num = v === "" ? null : parseInt(v, 10);
                       if (v === "" || !Number.isNaN(num)) updateRow(idx, { rounding: num });
                     }}
+                    disabled={disabledAll}
                   />
                 </TableCell>
                 <TableCell>
                   <Tooltip title="Remove row">
-                    <IconButton size="small" onClick={() => removeRow(idx)}>
-                      <Trash size={14} />
-                    </IconButton>
+                    <span style={{ display: 'inline-block' }}>
+                      <IconButton size="small" onClick={() => removeRow(idx)} disabled={disabledAll}>
+                        <Trash size={14} />
+                      </IconButton>
+                    </span>
                   </Tooltip>
                 </TableCell>
               </TableRow>

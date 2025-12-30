@@ -1,13 +1,12 @@
 
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import { Button } from "@/components/ui/button";
-import { Box, TextField, Tooltip, IconButton, Stack } from "@mui/material";
-import { Edit } from 'lucide-react';
+import { Snackbar, Alert } from "@mui/material";
 import CreateItem from "./createItem";
-import MuiDataGrid from "@/components/ui/muiDataGrid";
-import { GridColDef, GridPaginationModel, GridRenderCellParams } from "@mui/x-data-grid";
+import IndexWrapper from "@/components/ui/IndexWrapper";
+import { GridColDef, GridPaginationModel } from "@mui/x-data-grid";
 import { fetchWithCookie } from "@/utils/apiClient2";
 import { apiRoutesPortalMasters } from "@/utils/api";
 
@@ -20,26 +19,14 @@ type Item = {
   [key: string]: any;
 };
 export default function ItemMasterPage() {
-  const [createDialogOpen, setCreateDialogOpen] = useState(false);
-  const handleOpenCreate = () => {
-    setCreateDialogOpen(true);
-  };
-  const handleCloseCreateDialog = () => {
-    setCreateDialogOpen(false);
-    fetchItems(); // Optionally refresh grid after create
-  };
   const [rows, setRows] = useState<Item[]>([]);
   const [loading, setLoading] = useState(true);
-  const [paginationModel, setPaginationModel] = useState({
-    pageSize: 10,
-    page: 0,
-  });
+  const [paginationModel, setPaginationModel] = useState<GridPaginationModel>({ pageSize: 10, page: 0 });
   const [totalRows, setTotalRows] = useState(0);
   const [searchQuery, setSearchQuery] = useState("");
-  const [searchTimeout, setSearchTimeout] = useState<NodeJS.Timeout | null>(null);
-  const [_snackbar, _setSnackbar] = useState<{ open: boolean; message: string; severity: "success" | "error" }>({ open: false, message: "", severity: "success" });
+  const [snackbar, setSnackbar] = useState<{ open: boolean; message: string; severity: "success" | "error" }>({ open: false, message: "", severity: "success" });
+  const [createDialogOpen, setCreateDialogOpen] = useState(false);
   const [viewDialogOpen, setViewDialogOpen] = useState(false);
-  const [_viewLoading, _setViewLoading] = useState(false);
   const [viewData, setViewData] = useState<any>(null);
   const [editDialogOpen, setEditDialogOpen] = useState(false);
   const [editItemData, setEditItemData] = useState<any>(null);
@@ -76,7 +63,7 @@ export default function ItemMasterPage() {
       setRows(mappedRows);
       setTotalRows(data.total || 0);
     } catch (error: any) {
-      _setSnackbar({ open: true, message: error.message || "Error fetching items", severity: "error" });
+      setSnackbar({ open: true, message: error.message || "Error fetching items", severity: "error" });
     } finally {
       setLoading(false);
     }
@@ -96,169 +83,89 @@ export default function ItemMasterPage() {
   // Handle search with debounce
   const handleSearchChange = (event: React.ChangeEvent<HTMLInputElement>) => {
     const newSearchValue = event.target.value;
-    if (searchTimeout) {
-      clearTimeout(searchTimeout);
-    }
-    const timeout = setTimeout(() => {
-      setSearchQuery(newSearchValue);
-      setPaginationModel(prev => ({ ...prev, page: 0 }));
-    }, 500);
-    setSearchTimeout(timeout);
+    setSearchQuery(newSearchValue);
+    setPaginationModel(prev => ({ ...prev, page: 0 }));
   };
 
   // Open dialog for create (handled by CreateItem component)
   // ...existing code...
 
-  // Handler to open view dialog and fetch edit/setup payload then show CreateItem in view mode
-  const _handleOpenView = async (item_id: number) => {
-  setViewDialogOpen(true);
-  _setViewLoading(true);
-  setViewData(null);
+  const openCreateDialog = () => setCreateDialogOpen(true);
+  const closeCreateDialog = () => {
+    setCreateDialogOpen(false);
+    fetchItems();
+  };
+
+  const fetchItemSetup = async (itemId: number) => {
+    const selectedCompany = localStorage.getItem("sidebar_selectedCompany");
+    const co_id = selectedCompany ? JSON.parse(selectedCompany).co_id : "";
+    const params = new URLSearchParams({ item_id: String(itemId), co_id: co_id });
+    const apiUrl = `${apiRoutesPortalMasters.ITEM_EDIT_SETUP}?${params}`;
+    const { data, error } = await fetchWithCookie(apiUrl, "GET") as any;
+    if (error || !data) {
+      throw new Error(error || "Failed to fetch item setup");
+    }
+    return data;
+  };
+
+  const handleView = async (row: Item) => {
+    const targetId = row.item_id ?? row.id;
+    if (typeof targetId === "undefined" || targetId === null) {
+      return;
+    }
+    setViewDialogOpen(true);
+    setViewData(null);
     try {
-      const selectedCompany = localStorage.getItem("sidebar_selectedCompany");
-      const co_id = selectedCompany ? JSON.parse(selectedCompany).co_id : "";
-      const params = new URLSearchParams({ item_id: String(item_id), co_id: co_id });
-      const apiUrl = `${apiRoutesPortalMasters.ITEM_EDIT_SETUP}?${params}`;
-      const { data, error } = await fetchWithCookie(apiUrl, 'GET') as any;
-      if (error || !data) throw new Error(error || 'Failed to fetch view payload');
+      const data = await fetchItemSetup(targetId);
       setViewData(data);
     } catch (err: any) {
-      _setSnackbar({ open: true, message: err.message || 'Failed to load item for view', severity: 'error' });
+      setSnackbar({ open: true, message: err.message || "Failed to load item", severity: "error" });
       setViewDialogOpen(false);
-    } finally {
-      _setViewLoading(false);
     }
   };
 
-  // Handler to open edit dialog: fetch ITEM_EDIT_SETUP and open the edit form with prefetched data
-  const _handleOpenEdit = async (item_id: number) => {
+  const handleEdit = async (row: Item) => {
+    const targetId = row.item_id ?? row.id;
+    if (typeof targetId === "undefined" || targetId === null) {
+      return;
+    }
     setEditDialogOpen(true);
+    setEditItemId(targetId);
     setEditItemData(null);
-    setEditItemId(item_id);
     try {
-      const selectedCompany = localStorage.getItem("sidebar_selectedCompany");
-      const co_id = selectedCompany ? JSON.parse(selectedCompany).co_id : "";
-      const params = new URLSearchParams({ item_id: String(item_id), co_id: co_id });
-      const apiUrl = `${apiRoutesPortalMasters.ITEM_EDIT_SETUP}?${params}`;
-      const { data, error } = await fetchWithCookie(apiUrl, 'GET') as any;
-      if (error || !data) {
-        throw new Error(error || 'Failed to fetch edit setup');
-      }
-      // store the prefetched payload so we can pass it to the edit dialog
+      const data = await fetchItemSetup(targetId);
       setEditItemData(data);
     } catch (err: any) {
-      _setSnackbar({ open: true, message: err.message || 'Failed to load edit setup', severity: 'error' });
+      setSnackbar({ open: true, message: err.message || "Failed to load edit setup", severity: "error" });
       setEditDialogOpen(false);
       setEditItemId(null);
     }
   };
 
-  // Column definitions for the DataGrid
-  const columns: GridColDef[] = [
-    {
-      field: "item_code",
-      headerName: "Item Code",
-      flex: 1,
-      minWidth: 120,
-      headerClassName: "bg-[#3ea6da] text-white",
-      renderCell: (params: GridRenderCellParams) => (
-          <Tooltip title="View details">
-              <span
-              className="text-blue-700 underline cursor-pointer"
-              onClick={() => _handleOpenView(params.row.id)}
-            >
-              {params.value}
-            </span>
-          </Tooltip>
-        ),
-    },
-    {
-      field: "item_name",
-      headerName: "Item Name",
-      flex: 1,
-      minWidth: 180,
-      headerClassName: "bg-[#3ea6da] text-white",
-      renderCell: (params: GridRenderCellParams) => (
-          <Tooltip title="View details">
-              <span
-              className="text-blue-700 underline cursor-pointer"
-              onClick={() => _handleOpenView(params.row.id)}
-            >
-              {params.value}
-            </span>
-          </Tooltip>
-        ),
-    },
-    {
-      field: "item_group_code_display",
-      headerName: "Group Code",
-      flex: 1,
-      minWidth: 120,
-      headerClassName: "bg-[#3ea6da] text-white",
-    },
-    {
-      field: "item_group_display",
-      headerName: "Group Name",
-      flex: 1,
-      minWidth: 180,
-      headerClassName: "bg-[#3ea6da] text-white",
-    },
-  // 'active' column intentionally removed per requirements
-    {
-      field: "actions",
-      headerName: "Actions",
-      width: 120,
-      sortable: false,
-      filterable: false,
-      headerClassName: "bg-[#3ea6da] text-white",
-      renderCell: (params: GridRenderCellParams) => (
-        <Stack direction="row" spacing={0.5}>
-          <Tooltip title="Edit">
-            <IconButton size="small" onClick={() => _handleOpenEdit(params.row.id)}>
-              <Edit size={16} />
-            </IconButton>
-          </Tooltip>
-        </Stack>
-      ),
-    },
-  ];
+  const columns = useMemo<GridColDef<Item>[]>(() => ([
+    { field: "item_code", headerName: "Item Code", flex: 1, minWidth: 120 },
+    { field: "item_name", headerName: "Item Name", flex: 1, minWidth: 180 },
+    { field: "item_group_code_display", headerName: "Group Code", flex: 1, minWidth: 120 },
+    { field: "item_group_display", headerName: "Group Name", flex: 1, minWidth: 180 },
+  ]), []);
 
   return (
-    <>
-      <div className="min-h-screen bg-gray-50 p-8">
-        <div className="mx-auto max-w-7xl">
-          <div className="mb-8 flex items-center justify-between">
-            <h1 className="text-2xl font-bold text-[#0C3C60]">Item Master</h1>
-          <Button
-            className="btn-primary"
-            onClick={handleOpenCreate}
-          >
-            + Create Item
-          </Button>
-          <CreateItem open={createDialogOpen} onClose={handleCloseCreateDialog} />
-          </div>
-          <Box sx={{ width: "100%", mb: 2 }}>
-            <TextField
-              placeholder="Search items..."
-              onChange={handleSearchChange}
-              fullWidth
-              variant="outlined"
-              size="small"
-              sx={{ maxWidth: 350 }}
-            />
-          </Box>
-          <MuiDataGrid
-            rows={rows}
-            columns={columns}
-            rowCount={totalRows}
-            paginationModel={paginationModel}
-            onPaginationModelChange={handlePaginationModelChange}
-            loading={loading}
-            showLoadingUntilLoaded={true}
-          />
-        </div>
-      </div>
-      {/* View dialog: show CreateItem form in view mode (inputs disabled) */}
+    <IndexWrapper
+      title="Item Master"
+      rows={rows}
+      columns={columns}
+      rowCount={totalRows}
+      paginationModel={paginationModel}
+      onPaginationModelChange={handlePaginationModelChange}
+      loading={loading}
+      showLoadingUntilLoaded
+  search={{ value: searchQuery, onChange: handleSearchChange, placeholder: "Search items", debounceDelayMs: 1000 }}
+      createAction={{ onClick: openCreateDialog }}
+      onView={handleView}
+      onEdit={handleEdit}
+    >
+      <CreateItem open={createDialogOpen} onClose={closeCreateDialog} />
+
       <CreateItem
         open={viewDialogOpen}
         onClose={() => {
@@ -271,7 +178,6 @@ export default function ItemMasterPage() {
         prefetchedItem={viewData}
       />
 
-      {/* Edit dialog: use CreateItem form in edit mode with prefetched setup/item */}
       <CreateItem
         open={editDialogOpen}
         onClose={() => {
@@ -285,6 +191,21 @@ export default function ItemMasterPage() {
         prefetchedSetup={editItemData}
         prefetchedItem={editItemData}
       />
-    </>
+
+      <Snackbar
+        open={snackbar.open}
+        autoHideDuration={4000}
+        onClose={() => setSnackbar(prev => ({ ...prev, open: false }))}
+        anchorOrigin={{ vertical: "top", horizontal: "center" }}
+      >
+        <Alert
+          severity={snackbar.severity}
+          onClose={() => setSnackbar(prev => ({ ...prev, open: false }))}
+          sx={{ width: "100%" }}
+        >
+          {snackbar.message}
+        </Alert>
+      </Snackbar>
+    </IndexWrapper>
   );
 }

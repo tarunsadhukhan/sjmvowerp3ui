@@ -61,6 +61,7 @@ const HandleCreateEditBranch = () => {  const router = useRouter();
             const formValues = {
             co_id: companyId || data.data.co_id?.toString() || "",
             branch_name: data.data.branch_name || "",
+            branch_prefix: data.data.branch_prefix || "",
             branch_address1: data.data.branch_address1 || "",
             branch_address2: data.data.branch_address2 || "",
             branch_zipcode: data.data.branch_zipcode?.toString() || "",

@@ -6,8 +6,6 @@ import { apiRoutes } from "@/utils/api";
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL;
 
-console.log('nnnnn', API_URL);
-
 export const login = async (
   username: string,
   password: string,
@@ -16,7 +14,6 @@ export const login = async (
 ) => {
   try {
     const subdomain = typeof window !== 'undefined' ? window.location.hostname.split(".")[0] : ""; 
-    console.log('Subdomain in login method:', subdomain);
 
     // Make the request to the login endpoint
     const response = await axios.post(

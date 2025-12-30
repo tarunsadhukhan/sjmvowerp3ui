@@ -32,13 +32,12 @@ interface LoginFormsProps {
 const formSchema = z.object({
   username: z.string().min(1,"user name must be 1 charecter"),
   password: z.string().min(6, "Password must be at least 6 characters"),
-  rememberMe: z.boolean().default(false),
+  rememberMe: z.boolean(),
   loginType: z.string().optional(),
 })
 
 export function LoginForm({ subdomain }: LoginFormsProps) {
   const [isLoading, setIsLoading] = useState(false)
-  console.log('subdomain loginform', subdomain); // Moved here to avoid undefined error
   const [autoLoginType, setAutoLoginType] = useState<string | null>(null); 
   const router = useRouter()
 
@@ -54,7 +53,6 @@ export function LoginForm({ subdomain }: LoginFormsProps) {
 
   async function onSubmit(values: z.infer<typeof formSchema>) {
     setIsLoading(true);
-    console.log('Check subdomain passed as prop to login form component:', subdomain);
     try {
       // Choose the login function based on subdomain or selected loginType
       const loginFunction = (subdomain === "admin" || values.loginType === "admin") ? loginConsole : login;
@@ -67,11 +65,6 @@ export function LoginForm({ subdomain }: LoginFormsProps) {
         values.rememberMe
       );
 
-
-      console.log("API Response Data   1:", data);
-
-
-      
       // Check if login was successful (status should be 200)
       if (data.status === 200) {
         // Store user data in localStorage
@@ -84,9 +77,6 @@ export function LoginForm({ subdomain }: LoginFormsProps) {
           localStorage.setItem("subdomain", subdomain);
         }
         
-        // Log the current access_token cookie for debugging
-        console.log("Cookies after successful login:", document.cookie);
-        
         // Determine where to redirect based on login type and subdomain
         let redirectPath = '/dashboardadmin'; // Default redirect path
 
@@ -96,14 +86,10 @@ export function LoginForm({ subdomain }: LoginFormsProps) {
           redirectPath = '/dashboardportal';
         }
         
-        console.log(`Login successful! Redirecting to: ${redirectPath}`);
-        
         // Construct the full URL with the current hostname to preserve subdomain
-        const currentHost = window.location.host; // Gets hostname with port if present
+        const currentHost = window.location.host;
         const protocol = window.location.protocol;
         const fullRedirectUrl = `${protocol}//${currentHost}${redirectPath}`;
-        
-        console.log(`Full redirect URL: ${fullRedirectUrl}`);
         
         // Use window.location.replace for a cleaner redirect that replaces current history entry
         window.location.replace(fullRedirectUrl);
@@ -145,9 +131,6 @@ export function LoginForm({ subdomain }: LoginFormsProps) {
     <div className="login-container" >
       <div className="text-center">
         <h2 className="login-h2">Login</h2>
-        <p className="mt-2 text-sm text-gray-300">
-          Welcome to VOW ERP Solutions. Start your journey with simple email ID login.
-        </p>
       </div>
 
       <Form {...form}>
@@ -162,6 +145,7 @@ export function LoginForm({ subdomain }: LoginFormsProps) {
                 <Input
               className="input-custom-login"
               placeholder="User Name"
+              autoComplete="username"
               {...field}
             />
                 </FormControl>
@@ -178,7 +162,7 @@ export function LoginForm({ subdomain }: LoginFormsProps) {
                 <FormLabel>Password</FormLabel>
                 <FormControl>
                
-                  <Input  className="input-custom-login" type="password" placeholder="••••••••" {...field} />
+                  <Input className="input-custom-login" type="password" placeholder="••••••••" autoComplete="current-password" {...field} />
                 </FormControl>
                 <FormMessage />
               </FormItem>

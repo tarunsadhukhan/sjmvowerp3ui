@@ -1,5 +1,4 @@
 const API_URL=process.env.NEXT_PUBLIC_API_BASE_URL || '/apix';
-console.log('API_URL for all', API_URL);
 
 
 
@@ -38,6 +37,8 @@ const apiRoutes ={
     PORTAL_APPROVAL_LEVELS_DATA: `${API_URL}/admin/PortalData/approval_level_data_setup`,
     PORTAL_APPROVAL_LEVELS_DATA_SUBMIT: `${API_URL}/admin/PortalData/approval_level_data_setup_submit`,
     PORTAL_MENU_ITEMS: `${API_URL}/admin/PortalData/portal_menu_items`,
+    PORTAL_MENU_PERMISSIONS: `${API_URL}/admin/PortalData/portal_menu_permissions`,
+    PORTAL_MENU_PERMISSION_CHECK: `${API_URL}/admin/PortalData/portal_menu_permissions/check`,
 
 
     ROLES_CONSOLE_CONSOLE: `${API_URL}/consoleAdmin/roles_console_admin`,
@@ -171,6 +172,85 @@ const apiRoutesPortalMasters = {
     COSTFACTOR_CREATE: `${API_URL}/costFactorMaster/cost_factor_create`,
     COSTFACTOR_EDIT_SETUP: `${API_URL}/costFactorMaster/cost_factor_edit_setup`,
     COSTFACTOR_EDIT: `${API_URL}/costFactorMaster/cost_factor_edit`,
+
+    GET_INDENT_SETUP_1: `${API_URL}/procurementIndent/get_indent_setup_1`,
+    GET_INDENT_SETUP_2: `${API_URL}/procurementIndent/get_indent_setup_2`,
+    INDENT_CREATE: `${API_URL}/procurementIndent/create_indent`,
+    INDENT_UPDATE: `${API_URL}/procurementIndent/update_indent`,
+    INDENT_TABLE: `${API_URL}/procurementIndent/get_indent_table`,
+    GET_INDENT_BY_ID: `${API_URL}/procurementIndent/get_indent_by_id`,
+    GET_ALL_APPROVED_INDENTS: `${API_URL}/procurementIndent/get_all_approved_indents`,
+    GET_APPROVAL_FLOW: `${API_URL}/procurementIndent/get_approval_flow`,
+    INDENT_APPROVE: `${API_URL}/procurementIndent/approve_indent`,
+    INDENT_APPROVE_WITH_VALUE: `${API_URL}/procurementIndent/approve_indent_with_value`,
+    INDENT_OPEN: `${API_URL}/procurementIndent/open_indent`,
+    INDENT_CANCEL_DRAFT: `${API_URL}/procurementIndent/cancel_draft_indent`,
+    INDENT_REOPEN: `${API_URL}/procurementIndent/reopen_indent`,
+    INDENT_SEND_FOR_APPROVAL: `${API_URL}/procurementIndent/send_indent_for_approval`,
+    INDENT_REJECT: `${API_URL}/procurementIndent/reject_indent`,
+    PO_TABLE: `${API_URL}/procurementPO/get_po_table`,
+    GET_PO_SETUP_1: `${API_URL}/procurementPO/get_po_setup_1`,
+    GET_PO_SETUP_2: `${API_URL}/procurementPO/get_po_setup_2`,
+    GET_INDENT_LINE_ITEMS: `${API_URL}/procurementPO/get_indent_line_items`,
+    GET_SUPPLIER_BRANCHES: `${API_URL}/procurementPO/get_supplier_branches`,
+    PO_CREATE: `${API_URL}/procurementPO/create_po`,
+    PO_SAVE: `${API_URL}/procurementPO/save_po`,
+    PO_UPDATE: `${API_URL}/procurementPO/update_po`,
+    GET_PO_BY_ID: `${API_URL}/procurementPO/get_po_by_id`,
+    PO_APPROVE: `${API_URL}/procurementPO/approve_po`,
+    PO_OPEN: `${API_URL}/procurementPO/open_po`,
+    PO_CANCEL_DRAFT: `${API_URL}/procurementPO/cancel_draft_po`,
+    PO_REOPEN: `${API_URL}/procurementPO/reopen_po`,
+    PO_SEND_FOR_APPROVAL: `${API_URL}/procurementPO/send_po_for_approval`,
+    PO_REJECT: `${API_URL}/procurementPO/reject_po`,
+    PO_CLONE: `${API_URL}/procurementPO/clone_po`,
+
+    INWARD_TABLE: `${API_URL}/procurementInward/get_inward_table`,
+    GET_INWARD_SETUP_1: `${API_URL}/procurementInward/get_inward_setup_1`,
+    GET_INWARD_SETUP_2: `${API_URL}/procurementInward/get_inward_setup_2`,
+    GET_APPROVED_POS_BY_SUPPLIER: `${API_URL}/procurementInward/get_approved_pos_by_supplier`,
+    GET_PO_LINE_ITEMS_FOR_INWARD: `${API_URL}/procurementInward/get_po_line_items`,
+    INWARD_CREATE: `${API_URL}/procurementInward/create_inward`,
+    INWARD_UPDATE: `${API_URL}/procurementInward/update_inward`,
+    GET_INWARD_BY_ID: `${API_URL}/procurementInward/get_inward_by_id`,
+
+    // Material Inspection endpoints
+    INSPECTION_PENDING_LIST: `${API_URL}/materialInspection/get_pending_inspection_list`,
+    INSPECTION_GET_BY_INWARD_ID: `${API_URL}/materialInspection/get_inspection_by_inward_id`,
+    INSPECTION_COMPLETE: `${API_URL}/materialInspection/complete_inspection`,
+
+    // Stores Receipt (SR) endpoints
+    SR_PENDING_LIST: `${API_URL}/storesReceipt/get_sr_pending_list`,
+    SR_GET_BY_INWARD_ID: `${API_URL}/storesReceipt/get_sr_by_inward_id`,
+    SR_SAVE: `${API_URL}/storesReceipt/save_sr`,
+    SR_OPEN: `${API_URL}/storesReceipt/open_sr`,
+    SR_APPROVE: `${API_URL}/storesReceipt/approve_sr`,
+    SR_REJECT: `${API_URL}/storesReceipt/reject_sr`,
+
+    // DRCR Note endpoints
+    DRCR_NOTE_LIST: `${API_URL}/drcrNote/get_drcr_note_list`,
+    DRCR_NOTE_GET_BY_ID: `${API_URL}/drcrNote/get_drcr_note_by_id`,
+    DRCR_NOTE_CREATE: `${API_URL}/drcrNote/create_drcr_note`,
+    DRCR_NOTE_OPEN: `${API_URL}/drcrNote/open_drcr_note`,
+    DRCR_NOTE_APPROVE: `${API_URL}/drcrNote/approve_drcr_note`,
+    DRCR_NOTE_REJECT: `${API_URL}/drcrNote/reject_drcr_note`,
+    DRCR_NOTE_GET_INWARD_FOR_CREATE: `${API_URL}/drcrNote/get_inward_for_drcr_note`,
+
+    // Bill Pass endpoints
+    BILL_PASS_LIST: `${API_URL}/billPass/get_bill_pass_list`,
+    BILL_PASS_GET_BY_ID: `${API_URL}/billPass/get_bill_pass_by_id`,
+
+    // Inventory Issue endpoints
+    ISSUE_TABLE: `${API_URL}/inventoryIssue/get_issue_table`,
+    ISSUE_GET_BY_ID: `${API_URL}/inventoryIssue/get_issue_by_id`,
+    ISSUE_SETUP_1: `${API_URL}/inventoryIssue/get_issue_setup_1`,
+    ISSUE_CREATE: `${API_URL}/inventoryIssue/create_issue`,
+    ISSUE_UPDATE: `${API_URL}/inventoryIssue/update_issue`,
+    ISSUE_UPDATE_STATUS: `${API_URL}/inventoryIssue/update_issue_status`,
+    ISSUE_AVAILABLE_INVENTORY: `${API_URL}/inventoryIssue/get_available_inventory`,
+    ISSUE_COST_FACTORS: `${API_URL}/inventoryIssue/get_cost_factors`,
+    ISSUE_MACHINES: `${API_URL}/inventoryIssue/get_machines`,
+
 
 };
 

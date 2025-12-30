@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { Inter } from "next/font/google";
 import "./globals.css";
 import SidebarCompaniesGuardClient from '@/components/clientside/SidebarCompaniesGuardClient';
+import { AppThemeProvider } from '@/styles/AppThemeProvider';
 
 const inter = Inter({ subsets: ["latin"] });
 /* 
@@ -29,11 +30,13 @@ export default function RootLayout({
   children: React.ReactNode;
 }) {
   return (
-    <html lang="en">
+    <html lang="en" suppressHydrationWarning>
       <body className={`${inter.className}`}>
         {/* <AuthProvider>    */}
-          <SidebarCompaniesGuardClient />
-          {children}
+          <AppThemeProvider>
+            <SidebarCompaniesGuardClient />
+            {children}
+          </AppThemeProvider>
          {/* </AuthProvider>  */}
       </body>
     </html>

@@ -56,10 +56,30 @@ export interface User {
   
   export function logout() {
     if (typeof window === 'undefined') return
+    // Clear localStorage
     localStorage.removeItem('user')
+    localStorage.removeItem('user_id')
+    localStorage.removeItem('subdomain')
     localStorage.removeItem('selectedCompany')
+    localStorage.removeItem('sidebar_selectedCompany')
+    // Clear cookies
     document.cookie = 'access_token=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;'
+    document.cookie = 'portal_permission_token=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;'
+    // Redirect to home
     window.location.href = '/'
+  }
+
+  /**
+   * Handle API auth errors (401/403) by logging out and redirecting.
+   * Returns true if the error was an auth error and handled, false otherwise.
+   * @param status - HTTP status code from API response
+   */
+  export function handleAuthError(status: number): boolean {
+    if (status === 401 || status === 403) {
+      logout()
+      return true
+    }
+    return false
   }
 
   export function urlcheck() {

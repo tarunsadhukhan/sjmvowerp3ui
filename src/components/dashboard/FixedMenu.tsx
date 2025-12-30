@@ -25,24 +25,23 @@ export function FixedMenu({ isCollapsed }: { isCollapsed: boolean }) {
   };
 
   return (
-    <div className="border-t border-[#005580] mt-2">
+    <div className="sidebar-section-border">
       <div
-        className="flex items-center px-4 py-2 text-sm text-white hover:bg-[#005580] transition-colors cursor-pointer"
+        className="sidebar-user-settings"
         onClick={() => setOpen(!open)}
       >
-        <Users size={20} className="mr-2" />
-        {!isCollapsed && "User Settings"}
+        <Users size={20} className="sidebar-menu-icon" />
+        {!isCollapsed && <span className="sidebar-menu-title">User Settings</span>}
       </div>
 
       {open && !isCollapsed && (
-        <div className="ml-4 border-l border-[#005580]">
-          <Link href="/" className="block px-4 py-2 text-white hover:bg-[#005580]" onClick={handleLogout}>
+        <div className="sidebar-submenu">
+          <Link href="/" className="sidebar-submenu-link" onClick={handleLogout}>
             <LogOut size={16} className="mr-2 inline" /> Logout
           </Link>
-          <Link href="/reset-password" className="block px-4 py-2 text-white hover:bg-[#005580]">
+          <Link href="/reset-password" className="sidebar-submenu-link">
             <Key size={16} className="mr-2 inline" /> Reset Password
           </Link>
-          {/* FY Year selection removed as requested */}
         </div>
       )}
     </div>

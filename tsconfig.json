@@ -2,13 +2,15 @@
   "compilerOptions": {
     // Higher target leverages modern features in Node 22
     "target": "ES2022",
-    
     // Keep "esnext" so Next.js can handle ESM bundling
     "module": "esnext",
     "moduleResolution": "bundler",
-    
     // Some standard Next.js suggestions
-    "lib": ["dom", "dom.iterable", "esnext"],
+    "lib": [
+      "dom",
+      "dom.iterable",
+      "esnext"
+    ],
     "allowJs": true,
     "skipLibCheck": true,
     "strict": true,
@@ -16,24 +18,27 @@
     "esModuleInterop": true,
     "resolveJsonModule": true,
     "isolatedModules": true,
-    "jsx": "preserve",
+    "jsx": "react-jsx",
     "incremental": true,
-    
     // This helps avoid cross-platform issues
     "forceConsistentCasingInFileNames": true,
-    
     // Next.js plugin for type-checking
     "plugins": [
-      { "name": "next" }
+      {
+        "name": "next"
+      }
     ],
-
     // Path alias for `@/` if you have `src` folder
     "paths": {
-      "@/*": ["./src/*"]
+      "@/*": [
+        "./src/*"
+      ]
     },
-
     // Add typeRoots to include custom type declarations
-    "typeRoots": ["./node_modules/@types", "./types"]
+    "typeRoots": [
+      "./node_modules/@types",
+      "./types"
+    ]
   },
   "include": [
     "next-env.d.ts",
@@ -41,6 +46,10 @@
     "**/*.tsx",
     ".next/types/**/*.ts",
     "./types/eslint-eslintrc.d.ts" // Include the custom declaration file
+    ,
+    ".next/dev/types/**/*.ts"
   ],
-  "exclude": ["node_modules"]
+  "exclude": [
+    "node_modules"
+  ]
 }

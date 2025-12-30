@@ -1,13 +1,13 @@
 "use client";
 
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import { Button } from "@/components/ui/button";
-import MuiDataGrid from "@/components/ui/muiDataGrid";
-import { Box, TextField, Snackbar, Alert, Dialog, DialogTitle, DialogContent, DialogActions, Switch, FormControlLabel, MenuItem } from "@mui/material";
+import { Snackbar, Alert, Dialog, DialogTitle, DialogContent, DialogActions } from "@mui/material";
 import { GridColDef, GridPaginationModel, GridRenderCellParams } from "@mui/x-data-grid";
 import { fetchWithCookie } from "@/utils/apiClient2";
 import CreateSubDepartmentPage from "./CreateSubDepartmentPage";
 import { apiRoutesPortalMasters } from "@/utils/api";
+import IndexWrapper from "@/components/ui/IndexWrapper";
 
 
 type SubDeptRow = { id?: string | number; subdept_code?: string; subdept_name?: string; dept_name?: string; branch_display?: string; active?: number | boolean | string; order_by?: number | string };
@@ -18,7 +18,6 @@ export default function SubDepartmentMasterPage() {
   const [paginationModel, setPaginationModel] = useState<GridPaginationModel>({ pageSize: 10, page: 0 });
   const [totalRows, setTotalRows] = useState<number>(0);
   const [searchQuery, setSearchQuery] = useState<string>("");
-  const [searchTimeout, setSearchTimeout] = useState<any>(null);
 
   const [snackbar, setSnackbar] = useState<{ open: boolean; message: string; severity: "success" | "error" }>({ open: false, message: "", severity: "success" });
 
@@ -37,32 +36,26 @@ export default function SubDepartmentMasterPage() {
       const selectedCompany = localStorage.getItem("sidebar_selectedCompany");
       const co_id = selectedCompany ? JSON.parse(selectedCompany).co_id : "";
       const selectedBranches = localStorage.getItem("sidebar_selectedBranches");
-      void selectedBranches; // intentionally read for side-effects; avoid console logging in Stage A cleanup
-			let branch_ids = "";
-			if (selectedBranches) {
-				try {
-					const parsed = JSON.parse(selectedBranches);
-					console.log('parsed selectedBranches', parsed);
-					branch_ids=parsed
-			 		if (Array.isArray(parsed)) {
-						// support array of objects [{ branch_id: 1 }] OR array of primitives [1,2] OR mixed
-						const ids = parsed
-							.map((b: any) => {
-								if (b && typeof b === 'object') return b.branch_id ?? b.id ?? b.value ?? '';
-								// allow numeric 0 as valid id
-								if (b === 0) return '0';
+      let branch_ids = "";
+      if (selectedBranches) {
+        try {
+          const parsed = JSON.parse(selectedBranches);
+          if (Array.isArray(parsed)) {
+            const ids = parsed
+              .map((b: any) => {
+                if (b && typeof b === "object") return b.branch_id ?? b.id ?? b.value ?? "";
+                if (b === 0) return "0";
                 if (b) return String(b);
-								return '';
-							})
-							.map(String)
-							.filter(Boolean);
-						branch_ids = ids.join(',');
-						console.log('branch_ids', branch_ids);
-					} 
-				} catch (e) {
-					console.warn("Failed to parse selectedBranches:", e);
-				}
-			}
+                return "";
+              })
+              .map(String)
+              .filter(Boolean);
+            branch_ids = ids.join(",");
+          }
+        } catch {
+          /* ignore branch cache parse errors */
+        }
+      }
 			const queryParams = new URLSearchParams({
 				page: String((paginationModel.page ?? 0) + 1),
 				limit: String(paginationModel.pageSize ?? 10),
@@ -85,11 +78,11 @@ export default function SubDepartmentMasterPage() {
   useEffect(() => { fetchSubDepartments();   }, [paginationModel.page, paginationModel.pageSize, searchQuery]);
 
   const handlePaginationModelChange = (newModel: GridPaginationModel) => setPaginationModel(newModel);
+
   const handleSearchChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const v = e.target.value;
-    if (searchTimeout) clearTimeout(searchTimeout);
-    const t = setTimeout(() => { setSearchQuery(v); setPaginationModel((p) => ({ ...p, page: 0 })); }, 500);
-    setSearchTimeout(t);
+    setSearchQuery(v);
+    setPaginationModel(p => ({ ...p, page: 0 }));
   };
 
   const openCreate = () => setCreateOpen(true);
@@ -129,36 +122,46 @@ export default function SubDepartmentMasterPage() {
 
   const handleSaveEdit = async () => { /* implement when API known */ };
 
-  const columns: GridColDef[] = [
-    { field: 'subdept_code', headerName: 'Subdept Code', flex: 1, minWidth: 140, headerClassName: 'bg-[#3ea6da] text-white' },
-    { field: 'subdept_name', headerName: 'Subdepartment', flex: 1, minWidth: 220, headerClassName: 'bg-[#3ea6da] text-white' },
-    { field: 'dept_name', headerName: 'Department', flex: 1, minWidth: 180, headerClassName: 'bg-[#3ea6da] text-white' },
-    { field: 'branch_display', headerName: 'Branch', flex: 1, minWidth: 180, headerClassName: 'bg-[#3ea6da] text-white' },
-    { field: 'active', headerName: 'Active', width: 120, headerClassName: 'bg-[#3ea6da] text-white', renderCell: (params: GridRenderCellParams) => <span>{params.value ? 'Yes' : 'No'}</span> },
-    { field: 'order_by', headerName: 'Order By', width: 120, headerClassName: 'bg-[#3ea6da] text-white' },
-    { field: 'actions', headerName: 'Actions', width: 140, sortable: false, filterable: false, headerClassName: 'bg-[#3ea6da] text-white', renderCell: (params: GridRenderCellParams) => (
-      <div className="flex items-center gap-2"><button className="text-blue-600 underline" onClick={() => handleOpenView(params.row.id)}>View</button><button className="text-green-600 underline" onClick={() => handleOpenEdit(params.row.id)}>Edit</button></div>
-    ) }
-  ];
+  const columns = useMemo<GridColDef<SubDeptRow>[]>(() => ([
+    { field: "subdept_code", headerName: "Subdept Code", flex: 1, minWidth: 140 },
+    { field: "subdept_name", headerName: "Subdepartment", flex: 1, minWidth: 220 },
+    { field: "dept_name", headerName: "Department", flex: 1, minWidth: 180 },
+    { field: "branch_display", headerName: "Branch", flex: 1, minWidth: 180 },
+    {
+      field: "active",
+      headerName: "Active",
+      width: 120,
+      renderCell: (params: GridRenderCellParams) => <span>{params.value ? "Yes" : "No"}</span>,
+    },
+    { field: "order_by", headerName: "Order By", width: 120 },
+  ]), []);
 
   return (
-    <div className="min-h-screen bg-gray-50 p-8">
-      <div className="mx-auto max-w-7xl">
-        <div className="mb-8 flex items-center justify-between">
-          <h1 className="text-2xl font-bold text-[#0C3C60]">Subdepartment Master</h1>
-          <Button className="btn-primary" onClick={openCreate}>+ Create Subdepartment</Button>
-        </div>
-
-        <Box sx={{ width: '100%', mb: 2 }}>
-          <TextField placeholder="Search subdepartments..." onChange={handleSearchChange} fullWidth variant="outlined" size="small" sx={{ maxWidth: 350 }} />
-        </Box>
-
-        <MuiDataGrid rows={rows} columns={columns} rowCount={totalRows} paginationModel={paginationModel} onPaginationModelChange={handlePaginationModelChange} loading={loading} showLoadingUntilLoaded={true} />
-
-        <Snackbar open={snackbar.open} autoHideDuration={4000} onClose={() => setSnackbar({ ...snackbar, open: false })} anchorOrigin={{ vertical: 'top', horizontal: 'center' }}>
-          <Alert severity={snackbar.severity} onClose={() => setSnackbar({ ...snackbar, open: false })} sx={{ width: '100%' }}>{snackbar.message}</Alert>
-        </Snackbar>
-      </div>
+    <IndexWrapper
+      title="Subdepartment Master"
+      rows={rows}
+      columns={columns}
+      rowCount={totalRows}
+      paginationModel={paginationModel}
+      onPaginationModelChange={handlePaginationModelChange}
+      loading={loading}
+      showLoadingUntilLoaded
+      search={{ value: searchQuery, onChange: handleSearchChange, placeholder: "Search subdepartments", debounceDelayMs: 1000 }}
+      createAction={{ onClick: openCreate, label: "Create Subdepartment" }}
+      onView={(row) => {
+        const id = row.id;
+        if (id === undefined || id === null) return;
+        void handleOpenView(id);
+      }}
+      onEdit={(row) => {
+        const id = row.id;
+        if (id === undefined || id === null) return;
+        void handleOpenEdit(id);
+      }}
+    >
+      <Snackbar open={snackbar.open} autoHideDuration={4000} onClose={() => setSnackbar({ ...snackbar, open: false })} anchorOrigin={{ vertical: 'top', horizontal: 'center' }}>
+        <Alert severity={snackbar.severity} onClose={() => setSnackbar({ ...snackbar, open: false })} sx={{ width: '100%' }}>{snackbar.message}</Alert>
+      </Snackbar>
 
       <CreateSubDepartmentPage open={createOpen} onClose={() => { closeCreate(); fetchSubDepartments(); }} existingRows={rows} />
 
@@ -176,6 +179,6 @@ export default function SubDepartmentMasterPage() {
           <Button className="btn-primary" onClick={handleSaveEdit} disabled={editLoading}>Save</Button>
         </DialogActions>
       </Dialog>
-    </div>
+    </IndexWrapper>
   );
 }

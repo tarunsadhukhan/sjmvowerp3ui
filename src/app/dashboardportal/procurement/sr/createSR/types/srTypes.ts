@@ -13,6 +13,15 @@ export type Option = {
 };
 
 /**
+ * Warehouse option with branch association.
+ */
+export type WarehouseOption = {
+	label: string;
+	value: string;
+	branchId?: number;
+};
+
+/**
  * Normalized representation of an SR line item used in the UI.
  */
 export type SRLineItem = {
@@ -42,6 +51,8 @@ export type SRLineItem = {
 	tax_amount: number;
 	total_amount: number;
 	remarks: string;
+	warehouse_id: number | null;
+	warehouse_name: string;
 };
 
 /**
@@ -129,6 +140,8 @@ export type SRLineItemRaw = {
 	discount_amount?: number | null;
 	tax_percentage?: number;
 	remarks?: string;
+	warehouse_id?: number | null;
+	warehouse_name?: string;
 };
 
 /**

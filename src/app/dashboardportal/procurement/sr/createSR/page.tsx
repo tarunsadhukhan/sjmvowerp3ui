@@ -9,7 +9,7 @@ import { fetchWithCookie } from "@/utils/apiClient2";
 import { apiRoutesPortalMasters } from "@/utils/api";
 import useSelectedCompanyCoId from "@/hooks/use-selected-company-coid";
 
-import type { SRHeader, SRLineItem, SRHeaderRaw, SRLineItemRaw } from "./types/srTypes";
+import type { SRHeader, SRLineItem, SRHeaderRaw, SRLineItemRaw, WarehouseOption } from "./types/srTypes";
 import { mapSRHeader, mapSRLineItems } from "./utils/srMappers";
 import { calculateTotals } from "./utils/srCalculations";
 import { getStatusColor } from "./utils/srConstants";
@@ -50,6 +50,7 @@ function SRTransactionPageContent() {
 	const [header, setHeader] = React.useState<SRHeader | null>(null);
 	const [loading, setLoading] = React.useState(true);
 	const [pageError, setPageError] = React.useState<string | null>(null);
+	const [warehouseOptions, setWarehouseOptions] = React.useState<WarehouseOption[]>([]);
 
 	// Form state hook
 	const { srDate, setSRDate, srRemarks, setSRRemarks, resetFormState } = useSRFormState();
@@ -81,7 +82,10 @@ function SRTransactionPageContent() {
 				throw new Error(error);
 			}
 
-			const result = data as { header?: SRHeaderRaw; line_items?: SRLineItemRaw[] };
+			const result = data as { header?: SRHeaderRaw; line_items?: SRLineItemRaw[]; warehouses?: Array<{ warehouse_id: number; warehouse_name: string; branch_id?: number }> };
+
+			// Debug: Log warehouses received from API
+			console.log("Warehouses from API:", result.warehouses);
 
 			// Map header
 			const mappedHeader = mapSRHeader(result.header);
@@ -93,6 +97,21 @@ function SRTransactionPageContent() {
 			// Map line items
 			const mappedItems = mapSRLineItems(result.line_items, mappedHeader);
 			setLineItems(mappedItems);
+
+			// Map warehouse options (filter by branch if needed)
+			const warehouseData = result.warehouses ?? [];
+			const branchId = mappedHeader.branch_id;
+			console.log("Branch ID for warehouse filtering:", branchId);
+			const filteredWarehouses = branchId
+				? warehouseData.filter((wh) => !wh.branch_id || wh.branch_id === branchId)
+				: warehouseData;
+			console.log("Filtered warehouses:", filteredWarehouses);
+			const mappedWarehouses: WarehouseOption[] = filteredWarehouses.map((wh) => ({
+				label: wh.warehouse_name,
+				value: String(wh.warehouse_id),
+				branchId: wh.branch_id,
+			}));
+			setWarehouseOptions(mappedWarehouses);
 		} catch (err) {
 			const message = err instanceof Error ? err.message : "Failed to load SR data";
 			setPageError(message);
@@ -129,6 +148,7 @@ function SRTransactionPageContent() {
 	const columns = useSRLineItemColumns({
 		canEdit: canEdit && !isViewMode,
 		onLineItemChange: handleLineItemChange,
+		warehouseOptions,
 	});
 
 	// Calculate totals

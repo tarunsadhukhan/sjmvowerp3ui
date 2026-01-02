@@ -53,6 +53,17 @@ export const useSRApproval = ({
 	const handleSave = React.useCallback(async () => {
 		if (!inwardId) return;
 
+		// Validate warehouse_id is set for all line items
+		const missingWarehouse = lineItems.filter((item) => item.warehouse_id === null || item.warehouse_id === undefined);
+		if (missingWarehouse.length > 0) {
+			toast({
+				title: "Validation Error",
+				description: `Warehouse is required for all line items. ${missingWarehouse.length} item(s) missing warehouse.`,
+				variant: "destructive",
+			});
+			return;
+		}
+
 		setSaving(true);
 		try {
 			const lineItemsPayload = lineItems.map((item) => ({
@@ -62,7 +73,11 @@ export const useSRApproval = ({
 				discount_mode: item.discount_mode,
 				discount_value: item.discount_value,
 				discount_amount: item.discount_amount,
+				warehouse_id: item.warehouse_id,
 			}));
+
+			// Debug: Log payload being sent to API
+			console.log("SR Save Payload:", { inward_id: Number(inwardId), sr_date: srDate, line_items: lineItemsPayload });
 
 			const url = apiRoutesPortalMasters.SR_SAVE;
 			const { error } = await fetchWithCookie(url, "POST", {

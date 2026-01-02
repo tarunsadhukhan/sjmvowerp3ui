@@ -144,6 +144,8 @@ export const mapSRLineItem = (
 		tax_amount: tax.total,
 		total_amount: amount + tax.total,
 		remarks: raw.remarks ?? "",
+		warehouse_id: raw.warehouse_id ?? null,
+		warehouse_name: raw.warehouse_name ?? "",
 	};
 };
 

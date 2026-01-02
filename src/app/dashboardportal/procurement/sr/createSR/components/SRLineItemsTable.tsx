@@ -1,9 +1,9 @@
 "use client";
 
 import * as React from "react";
-import { Box, TextField, Typography } from "@mui/material";
+import { Autocomplete, Box, TextField, Typography } from "@mui/material";
 import type { TransactionLineColumn } from "@/components/ui/transaction";
-import type { SRLineItem } from "../types/srTypes";
+import type { SRLineItem, WarehouseOption } from "../types/srTypes";
 
 /**
  * Format currency for display.
@@ -63,6 +63,7 @@ const EditableNumberCell: React.FC<EditableNumberCellProps> = ({
 type UseSRLineItemColumnsParams = {
 	canEdit: boolean;
 	onLineItemChange: (id: string, field: keyof SRLineItem, value: unknown) => void;
+	warehouseOptions: WarehouseOption[];
 };
 
 /**
@@ -71,13 +72,23 @@ type UseSRLineItemColumnsParams = {
 export const useSRLineItemColumns = ({
 	canEdit,
 	onLineItemChange,
+	warehouseOptions,
 }: UseSRLineItemColumnsParams): TransactionLineColumn<SRLineItem>[] => {
+	// Build warehouse label map for display
+	const warehouseLabelMap = React.useMemo(() => {
+		const map: Record<string, string> = {};
+		for (const opt of warehouseOptions) {
+			map[opt.value] = opt.label;
+		}
+		return map;
+	}, [warehouseOptions]);
+
 	return React.useMemo(
 		() => [
 			{
 				id: "item_grp_name",
 				header: "Item Group",
-				width: "minmax(120px, 1fr)",
+				width: "minmax(100px, 0.8fr)",
 				renderCell: ({ item }) => (
 					<Box sx={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
 						<Typography variant="body2" noWrap>
@@ -154,6 +165,54 @@ export const useSRLineItemColumns = ({
 				),
 			},
 			{
+				id: "warehouse_id",
+				header: "Warehouse *",
+				width: "minmax(140px, 1.2fr)",
+				renderCell: ({ item }) => {
+					if (!canEdit) {
+						const warehouseLabel = item.warehouse_id ? warehouseLabelMap[String(item.warehouse_id)] || item.warehouse_name : "-";
+						return (
+							<Typography variant="body2" noWrap>
+								{warehouseLabel}
+							</Typography>
+						);
+					}
+
+					const selectedOption = warehouseOptions.find(
+						(opt) => String(opt.value) === String(item.warehouse_id)
+					) ?? null;
+
+					return (
+						<Autocomplete
+							size="small"
+							options={warehouseOptions}
+							value={selectedOption}
+							onChange={(_, newValue) => {
+								onLineItemChange(item.id, "warehouse_id", newValue ? Number(newValue.value) : null);
+							}}
+							getOptionLabel={(opt) => opt.label}
+							isOptionEqualToValue={(opt, val) => opt.value === val.value}
+							renderInput={(params) => (
+								<TextField
+									{...params}
+									placeholder="Select warehouse"
+									variant="outlined"
+									size="small"
+									error={item.warehouse_id === null || item.warehouse_id === undefined}
+								/>
+							)}
+							sx={{ minWidth: 130 }}
+						/>
+					);
+				},
+				getTooltip: ({ item }) => {
+					if (item.warehouse_id) {
+						return warehouseLabelMap[String(item.warehouse_id)] || item.warehouse_name || undefined;
+					}
+					return "Warehouse is required";
+				},
+			},
+			{
 				id: "amount",
 				header: "Amount",
 				width: "110px",
@@ -194,6 +253,6 @@ export const useSRLineItemColumns = ({
 				),
 			},
 		],
-		[canEdit, onLineItemChange],
+		[canEdit, onLineItemChange, warehouseOptions, warehouseLabelMap],
 	);
 };

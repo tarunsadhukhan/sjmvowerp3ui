@@ -222,6 +222,7 @@ const apiRoutesPortalMasters = {
     // Stores Receipt (SR) endpoints
     SR_PENDING_LIST: `${API_URL}/storesReceipt/get_sr_pending_list`,
     SR_GET_BY_INWARD_ID: `${API_URL}/storesReceipt/get_sr_by_inward_id`,
+    SR_SETUP: `${API_URL}/storesReceipt/get_sr_setup`,
     SR_SAVE: `${API_URL}/storesReceipt/save_sr`,
     SR_OPEN: `${API_URL}/storesReceipt/open_sr`,
     SR_APPROVE: `${API_URL}/storesReceipt/approve_sr`,

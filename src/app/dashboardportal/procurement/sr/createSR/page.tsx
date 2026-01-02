@@ -9,17 +9,19 @@ import { fetchWithCookie } from "@/utils/apiClient2";
 import { apiRoutesPortalMasters } from "@/utils/api";
 import useSelectedCompanyCoId from "@/hooks/use-selected-company-coid";
 
-import type { SRHeader, SRLineItem, SRHeaderRaw, SRLineItemRaw, WarehouseOption } from "./types/srTypes";
+import type { SRHeader, SRLineItem, SRHeaderRaw, SRLineItemRaw, WarehouseOption, AdditionalChargeOption, SRAdditionalChargeRaw } from "./types/srTypes";
 import { mapSRHeader, mapSRLineItems } from "./utils/srMappers";
 import { calculateTotals } from "./utils/srCalculations";
 import { getStatusColor } from "./utils/srConstants";
 import { useSRFormState } from "./hooks/useSRFormState";
 import { useSRLineItems } from "./hooks/useSRLineItems";
 import { useSRApproval } from "./hooks/useSRApproval";
+import { useSRAdditionalCharges } from "./hooks/useSRAdditionalCharges";
 import { SRHeaderForm } from "./components/SRHeaderForm";
 import { useSRLineItemColumns } from "./components/SRLineItemsTable";
 import { SRTotalsDisplay } from "./components/SRTotalsDisplay";
 import { SRPreview } from "./components/SRPreview";
+import { SRAdditionalCharges } from "./components/SRAdditionalCharges";
 
 // Loading fallback for Suspense
 function SRPageLoading() {
@@ -51,12 +53,26 @@ function SRTransactionPageContent() {
 	const [loading, setLoading] = React.useState(true);
 	const [pageError, setPageError] = React.useState<string | null>(null);
 	const [warehouseOptions, setWarehouseOptions] = React.useState<WarehouseOption[]>([]);
+	const [additionalChargeOptions, setAdditionalChargeOptions] = React.useState<AdditionalChargeOption[]>([]);
 
 	// Form state hook
 	const { srDate, setSRDate, srRemarks, setSRRemarks, resetFormState } = useSRFormState();
 
 	// Line items hook
 	const { lineItems, setLineItems, handleLineItemChange } = useSRLineItems({ header });
+
+	// Additional charges hook
+	const mode = isViewMode ? "view" : "edit";
+	const {
+		charges: additionalCharges,
+		addCharge,
+		removeCharge,
+		updateCharge,
+		replaceCharges,
+		mapRawToCharges,
+		getChargesToSave,
+		totalChargesAmount,
+	} = useSRAdditionalCharges({ mode });
 
 	// Fetch SR data
 	const fetchSRData = React.useCallback(async () => {
@@ -82,7 +98,13 @@ function SRTransactionPageContent() {
 				throw new Error(error);
 			}
 
-			const result = data as { header?: SRHeaderRaw; line_items?: SRLineItemRaw[]; warehouses?: Array<{ warehouse_id: number; warehouse_name: string; branch_id?: number }> };
+			const result = data as { 
+				header?: SRHeaderRaw; 
+				line_items?: SRLineItemRaw[]; 
+				warehouses?: Array<{ warehouse_id: number; warehouse_name: string; branch_id?: number }>;
+				additional_charges_options?: AdditionalChargeOption[];
+				additional_charges?: SRAdditionalChargeRaw[];
+			};
 
 			// Debug: Log warehouses received from API
 			console.log("Warehouses from API:", result.warehouses);
@@ -112,13 +134,22 @@ function SRTransactionPageContent() {
 				branchId: wh.branch_id,
 			}));
 			setWarehouseOptions(mappedWarehouses);
+
+			// Map additional charge options
+			setAdditionalChargeOptions(result.additional_charges_options ?? []);
+
+			// Map existing additional charges
+			if (result.additional_charges && result.additional_charges.length > 0) {
+				const mappedCharges = mapRawToCharges(result.additional_charges);
+				replaceCharges(mappedCharges);
+			}
 		} catch (err) {
 			const message = err instanceof Error ? err.message : "Failed to load SR data";
 			setPageError(message);
 		} finally {
 			setLoading(false);
 		}
-	}, [inwardId, coId, resetFormState, setLineItems]);
+	}, [inwardId, coId, resetFormState, setLineItems, mapRawToCharges, replaceCharges]);
 
 	// Initial fetch
 	React.useEffect(() => {
@@ -141,6 +172,8 @@ function SRTransactionPageContent() {
 		srDate,
 		srRemarks,
 		lineItems,
+		additionalCharges,
+		getChargesToSave,
 		onRefresh: fetchSRData,
 	});
 
@@ -248,7 +281,16 @@ function SRTransactionPageContent() {
 			}}
 			footer={
 				<Box sx={{ display: "flex", flexDirection: "column", gap: 3 }}>
-					<SRTotalsDisplay totals={totals} />
+					{/* Additional Charges Section */}
+					<SRAdditionalCharges
+						charges={additionalCharges}
+						options={additionalChargeOptions}
+						canEdit={canEdit && !isViewMode}
+						onAddCharge={addCharge}
+						onRemoveCharge={removeCharge}
+						onChargeChange={updateCharge}
+					/>
+					<SRTotalsDisplay totals={totals} additionalChargesTotal={totalChargesAmount} />
 				</Box>
 			}
 			preview={

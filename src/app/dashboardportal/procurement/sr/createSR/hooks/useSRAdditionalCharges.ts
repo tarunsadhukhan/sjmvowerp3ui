@@ -1,0 +1,151 @@
+"use client";
+
+import * as React from "react";
+import type { AdditionalChargeOption, SRAdditionalCharge, SRAdditionalChargeRaw } from "../types/srTypes";
+import { createBlankCharge, generateChargeId } from "../components/SRAdditionalCharges";
+
+type UseSRAdditionalChargesParams = {
+	mode: "create" | "edit" | "view";
+};
+
+type UseSRAdditionalChargesReturn = {
+	charges: SRAdditionalCharge[];
+	setCharges: React.Dispatch<React.SetStateAction<SRAdditionalCharge[]>>;
+	addCharge: () => void;
+	removeCharge: (id: string) => void;
+	updateCharge: (id: string, field: keyof SRAdditionalCharge, value: unknown) => void;
+	replaceCharges: (charges: SRAdditionalCharge[]) => void;
+	getChargesToSave: () => SRAdditionalCharge[];
+	mapRawToCharges: (raw: SRAdditionalChargeRaw[]) => SRAdditionalCharge[];
+	hasValidCharges: boolean;
+	totalChargesAmount: number;
+};
+
+/**
+ * Hook for managing additional charges state in SR.
+ */
+export const useSRAdditionalCharges = ({ mode }: UseSRAdditionalChargesParams): UseSRAdditionalChargesReturn => {
+	const [charges, setCharges] = React.useState<SRAdditionalCharge[]>([]);
+
+	/**
+	 * Add a new blank charge.
+	 */
+	const addCharge = React.useCallback(() => {
+		if (mode === "view") return;
+		setCharges((prev) => [...prev, createBlankCharge()]);
+	}, [mode]);
+
+	/**
+	 * Remove a charge by ID.
+	 */
+	const removeCharge = React.useCallback(
+		(id: string) => {
+			if (mode === "view") return;
+			setCharges((prev) => prev.filter((c) => c.id !== id));
+		},
+		[mode]
+	);
+
+	/**
+	 * Update a single field of a charge.
+	 */
+	const updateCharge = React.useCallback(
+		(id: string, field: keyof SRAdditionalCharge, value: unknown) => {
+			if (mode === "view") return;
+			setCharges((prev) =>
+				prev.map((charge) => {
+					if (charge.id !== id) return charge;
+					const updated = { ...charge, [field]: value };
+
+					// Recalculate amounts when relevant fields change
+					if (field === "qty" || field === "rate") {
+						updated.net_amount = (updated.qty || 1) * (updated.rate || 0);
+					}
+
+					// Recalculate tax when apply_tax or tax_pct changes
+					if (field === "apply_tax" || field === "tax_pct" || field === "net_amount") {
+						if (updated.apply_tax && updated.tax_pct > 0) {
+							updated.tax_amount = (updated.net_amount * updated.tax_pct) / 100;
+							// For now, put all tax in IGST (can be split based on state logic later)
+							updated.igst_amount = updated.tax_amount;
+							updated.sgst_amount = 0;
+							updated.cgst_amount = 0;
+						} else {
+							updated.tax_amount = 0;
+							updated.igst_amount = 0;
+							updated.sgst_amount = 0;
+							updated.cgst_amount = 0;
+						}
+					}
+
+					return updated;
+				})
+			);
+		},
+		[mode]
+	);
+
+	/**
+	 * Replace all charges (used when loading from API).
+	 */
+	const replaceCharges = React.useCallback((newCharges: SRAdditionalCharge[]) => {
+		setCharges(newCharges);
+	}, []);
+
+	/**
+	 * Map raw API response to SRAdditionalCharge objects.
+	 */
+	const mapRawToCharges = React.useCallback((raw: SRAdditionalChargeRaw[]): SRAdditionalCharge[] => {
+		return raw.map((r) => ({
+			id: generateChargeId(),
+			inward_additional_id: r.inward_additional_id ?? null,
+			additional_charges_id: r.additional_charges_id ?? 0,
+			additional_charges_name: r.additional_charges_name || "",
+			qty: r.qty || 1,
+			rate: r.rate || 0,
+			net_amount: r.net_amount || 0,
+			remarks: r.remarks || "",
+			apply_tax: r.apply_tax ?? false,
+			tax_pct: r.tax_pct || 0,
+			igst_amount: r.igst_amount || 0,
+			sgst_amount: r.sgst_amount || 0,
+			cgst_amount: r.cgst_amount || 0,
+			tax_amount: r.tax_amount || 0,
+		}));
+	}, []);
+
+	/**
+	 * Get charges in the format needed for saving.
+	 * Filters out incomplete charges.
+	 */
+	const getChargesToSave = React.useCallback((): SRAdditionalCharge[] => {
+		return charges.filter((c) => c.additional_charges_id > 0 && c.net_amount > 0);
+	}, [charges]);
+
+	/**
+	 * Check if there are any valid charges to save.
+	 */
+	const hasValidCharges = React.useMemo(() => {
+		return charges.some((c) => c.additional_charges_id > 0 && c.net_amount > 0);
+	}, [charges]);
+
+	/**
+	 * Calculate total amount of all charges (including tax).
+	 */
+	const totalChargesAmount = React.useMemo(() => {
+		return charges.reduce((sum, c) => sum + (c.net_amount || 0) + (c.tax_amount || 0), 0);
+	}, [charges]);
+
+	return {
+		charges,
+		setCharges,
+		addCharge,
+		removeCharge,
+		updateCharge,
+		replaceCharges,
+		getChargesToSave,
+		mapRawToCharges,
+		hasValidCharges,
+		totalChargesAmount,
+	};
+};

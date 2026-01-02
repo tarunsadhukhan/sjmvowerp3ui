@@ -22,7 +22,7 @@ export async function middleware(request: NextRequest) {
     : hostname.split('.')[0];
 
   // Simulate subdomain validation
-  const staticSubdomains = ['admin', 'sls', 'abc'];
+  const staticSubdomains = ['admin', 'sls', 'abc', 'dev'];
   const isSubdomainValid = staticSubdomains.includes(subdomain);
 
   if (!isSubdomainValid) {

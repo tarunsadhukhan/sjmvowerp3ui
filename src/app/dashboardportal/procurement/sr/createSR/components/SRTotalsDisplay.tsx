@@ -18,12 +18,15 @@ const formatCurrency = (value?: number): string => {
 
 type SRTotalsDisplayProps = {
 	totals: SRTotals;
+	additionalChargesTotal?: number;
 };
 
 /**
  * Displays SR totals with GST breakdown.
  */
-export const SRTotalsDisplay: React.FC<SRTotalsDisplayProps> = ({ totals }) => {
+export const SRTotalsDisplay: React.FC<SRTotalsDisplayProps> = ({ totals, additionalChargesTotal = 0 }) => {
+	const grandTotalWithCharges = totals.grandTotal + additionalChargesTotal;
+	
 	return (
 		<Box sx={{ display: "flex", justifyContent: "flex-end" }}>
 			<Stack spacing={1} sx={{ minWidth: 280 }}>
@@ -78,6 +81,15 @@ export const SRTotalsDisplay: React.FC<SRTotalsDisplayProps> = ({ totals }) => {
 					</>
 				)}
 
+				{additionalChargesTotal > 0 && (
+					<Stack direction="row" justifyContent="space-between">
+						<Typography variant="body2" color="text.secondary">
+							Additional Charges:
+						</Typography>
+						<Typography variant="body2">{formatCurrency(additionalChargesTotal)}</Typography>
+					</Stack>
+				)}
+
 				<Divider />
 
 				<Stack direction="row" justifyContent="space-between">
@@ -85,7 +97,7 @@ export const SRTotalsDisplay: React.FC<SRTotalsDisplayProps> = ({ totals }) => {
 						Grand Total:
 					</Typography>
 					<Typography variant="body1" fontWeight={600} color="primary">
-						{formatCurrency(totals.grandTotal)}
+						{formatCurrency(grandTotalWithCharges)}
 					</Typography>
 				</Stack>
 			</Stack>

@@ -1,11 +1,21 @@
 "use client";
 
 import * as React from "react";
-import type { AdditionalChargeOption, SRAdditionalCharge, SRAdditionalChargeRaw } from "../types/srTypes";
+import type { SRAdditionalCharge, SRAdditionalChargeRaw, SRHeader } from "../types/srTypes";
 import { createBlankCharge, generateChargeId } from "../components/SRAdditionalCharges";
 
 type UseSRAdditionalChargesParams = {
 	mode: "create" | "edit" | "view";
+	header: SRHeader | null;
+};
+
+type AdditionalChargesTotals = {
+	baseAmount: number;  // Sum of net_amount (before tax)
+	totalIGST: number;
+	totalCGST: number;
+	totalSGST: number;
+	totalTax: number;
+	totalAmount: number; // baseAmount + totalTax
 };
 
 type UseSRAdditionalChargesReturn = {
@@ -19,12 +29,50 @@ type UseSRAdditionalChargesReturn = {
 	mapRawToCharges: (raw: SRAdditionalChargeRaw[]) => SRAdditionalCharge[];
 	hasValidCharges: boolean;
 	totalChargesAmount: number;
+	/** Detailed totals breakdown for additional charges */
+	chargesTotals: AdditionalChargesTotals;
+};
+
+/**
+ * Calculate tax split based on supplier/shipping state comparison.
+ * Same logic as line items: if same state → CGST+SGST split, else IGST.
+ */
+const calculateChargeTax = (
+	netAmount: number,
+	taxPct: number,
+	supplierState: string | undefined,
+	shippingState: string | undefined,
+	indiaGst: boolean,
+): { igst: number; cgst: number; sgst: number; total: number } => {
+	if (!indiaGst || !taxPct || taxPct <= 0) {
+		return { igst: 0, cgst: 0, sgst: 0, total: 0 };
+	}
+
+	const taxAmount = (netAmount * taxPct) / 100;
+
+	// If same state, split into CGST + SGST; otherwise IGST
+	if (supplierState && shippingState && supplierState === shippingState) {
+		const halfTax = taxAmount / 2;
+		return {
+			igst: 0,
+			cgst: Number(halfTax.toFixed(2)),
+			sgst: Number(halfTax.toFixed(2)),
+			total: Number(taxAmount.toFixed(2)),
+		};
+	}
+
+	return {
+		igst: Number(taxAmount.toFixed(2)),
+		cgst: 0,
+		sgst: 0,
+		total: Number(taxAmount.toFixed(2)),
+	};
 };
 
 /**
  * Hook for managing additional charges state in SR.
  */
-export const useSRAdditionalCharges = ({ mode }: UseSRAdditionalChargesParams): UseSRAdditionalChargesReturn => {
+export const useSRAdditionalCharges = ({ mode, header }: UseSRAdditionalChargesParams): UseSRAdditionalChargesReturn => {
 	const [charges, setCharges] = React.useState<SRAdditionalCharge[]>([]);
 
 	/**
@@ -62,27 +110,28 @@ export const useSRAdditionalCharges = ({ mode }: UseSRAdditionalChargesParams): 
 						updated.net_amount = (updated.qty || 1) * (updated.rate || 0);
 					}
 
-					// Recalculate tax when apply_tax or tax_pct changes
-					if (field === "apply_tax" || field === "tax_pct" || field === "net_amount") {
-						if (updated.apply_tax && updated.tax_pct > 0) {
-							updated.tax_amount = (updated.net_amount * updated.tax_pct) / 100;
-							// For now, put all tax in IGST (can be split based on state logic later)
-							updated.igst_amount = updated.tax_amount;
-							updated.sgst_amount = 0;
-							updated.cgst_amount = 0;
-						} else {
-							updated.tax_amount = 0;
-							updated.igst_amount = 0;
-							updated.sgst_amount = 0;
-							updated.cgst_amount = 0;
-						}
+					// Recalculate tax when tax_pct, qty, rate, or net_amount changes
+					if (field === "tax_pct" || field === "qty" || field === "rate") {
+						const tax = calculateChargeTax(
+							updated.net_amount,
+							updated.tax_pct,
+							header?.supplier_state_name,
+							header?.shipping_state_name || header?.billing_state_name,
+							header?.india_gst || false,
+						);
+						updated.igst_amount = tax.igst;
+						updated.cgst_amount = tax.cgst;
+						updated.sgst_amount = tax.sgst;
+						updated.tax_amount = tax.total;
+						// apply_tax is derived from tax_pct > 0
+						updated.apply_tax = updated.tax_pct > 0;
 					}
 
 					return updated;
 				})
 			);
 		},
-		[mode]
+		[mode, header]
 	);
 
 	/**
@@ -136,6 +185,23 @@ export const useSRAdditionalCharges = ({ mode }: UseSRAdditionalChargesParams): 
 		return charges.reduce((sum, c) => sum + (c.net_amount || 0) + (c.tax_amount || 0), 0);
 	}, [charges]);
 
+	/**
+	 * Detailed totals breakdown for additional charges.
+	 */
+	const chargesTotals = React.useMemo<AdditionalChargesTotals>(() => {
+		return charges.reduce(
+			(acc, c) => ({
+				baseAmount: acc.baseAmount + (c.net_amount || 0),
+				totalIGST: acc.totalIGST + (c.igst_amount || 0),
+				totalCGST: acc.totalCGST + (c.cgst_amount || 0),
+				totalSGST: acc.totalSGST + (c.sgst_amount || 0),
+				totalTax: acc.totalTax + (c.tax_amount || 0),
+				totalAmount: acc.totalAmount + (c.net_amount || 0) + (c.tax_amount || 0),
+			}),
+			{ baseAmount: 0, totalIGST: 0, totalCGST: 0, totalSGST: 0, totalTax: 0, totalAmount: 0 }
+		);
+	}, [charges]);
+
 	return {
 		charges,
 		setCharges,
@@ -147,5 +213,6 @@ export const useSRAdditionalCharges = ({ mode }: UseSRAdditionalChargesParams): 
 		mapRawToCharges,
 		hasValidCharges,
 		totalChargesAmount,
+		chargesTotals,
 	};
 };

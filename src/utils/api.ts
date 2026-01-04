@@ -175,6 +175,8 @@ const apiRoutesPortalMasters = {
 
     JUTE_QUALITY_TABLE: `${API_URL}/juteQualityMaster/get_jute_quality_table`,
     JUTE_QUALITY_BY_ID: `${API_URL}/juteQualityMaster/get_jute_quality_by_id`,
+    JUTE_QUALITY_CREATE_SETUP: `${API_URL}/juteQualityMaster/jute_quality_create_setup`,
+    JUTE_QUALITY_EDIT_SETUP: `${API_URL}/juteQualityMaster/jute_quality_edit_setup`,
     JUTE_QUALITY_CREATE: `${API_URL}/juteQualityMaster/jute_quality_create`,
     JUTE_QUALITY_EDIT: `${API_URL}/juteQualityMaster/jute_quality_edit`,
 

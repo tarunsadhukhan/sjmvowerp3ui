@@ -6,6 +6,8 @@ import { GridColDef, GridPaginationModel } from "@mui/x-data-grid";
 import { fetchWithCookie } from "@/utils/apiClient2";
 import { apiRoutesPortalMasters } from "@/utils/api";
 import IndexWrapper from "@/components/ui/IndexWrapper";
+import CreateJuteQuality from "./createJuteQuality";
+import type { MuiFormMode } from "@/components/ui/muiform";
 
 /**
  * Type definition for a Jute Quality row in the data grid
@@ -41,6 +43,11 @@ export default function JuteQualityMasterPage() {
     message: string;
     severity: "success" | "error";
   }>({ open: false, message: "", severity: "success" });
+
+  // Dialog state
+  const [dialogOpen, setDialogOpen] = useState(false);
+  const [selectedId, setSelectedId] = useState<number | undefined>(undefined);
+  const [dialogMode, setDialogMode] = useState<MuiFormMode>("create");
 
   /**
    * Fetch jute qualities from the API
@@ -122,6 +129,48 @@ export default function JuteQualityMasterPage() {
   };
 
   /**
+   * Handle create button click
+   */
+  const handleCreate = useCallback(() => {
+    setSelectedId(undefined);
+    setDialogMode("create");
+    setDialogOpen(true);
+  }, []);
+
+  /**
+   * Handle view action - opens view dialog
+   */
+  const handleView = useCallback((row: JuteQualityRow) => {
+    setSelectedId(row.jute_qlty_id);
+    setDialogMode("view");
+    setDialogOpen(true);
+  }, []);
+
+  /**
+   * Handle edit action - opens edit dialog
+   */
+  const handleEdit = useCallback((row: JuteQualityRow) => {
+    setSelectedId(row.jute_qlty_id);
+    setDialogMode("edit");
+    setDialogOpen(true);
+  }, []);
+
+  /**
+   * Handle dialog close
+   */
+  const handleDialogClose = useCallback(() => {
+    setDialogOpen(false);
+    setSelectedId(undefined);
+  }, []);
+
+  /**
+   * Handle successful save - refresh list
+   */
+  const handleSaved = useCallback(() => {
+    fetchJuteQualities();
+  }, [fetchJuteQualities]);
+
+  /**
    * Column definitions for the data grid
    */
   const columns = useMemo<GridColDef<JuteQualityRow>[]>(
@@ -170,7 +219,20 @@ export default function JuteQualityMasterPage() {
         placeholder: "Search by quality or item name",
         debounceDelayMs: 500,
       }}
+      createAction={{
+        label: "Create Jute Quality",
+        onClick: handleCreate,
+      }}
+      onView={handleView}
+      onEdit={handleEdit}
     >
+      <CreateJuteQuality
+        open={dialogOpen}
+        onClose={handleDialogClose}
+        onSaved={handleSaved}
+        editId={selectedId}
+        initialMode={dialogMode}
+      />
       <Snackbar
         open={snackbar.open}
         autoHideDuration={4000}

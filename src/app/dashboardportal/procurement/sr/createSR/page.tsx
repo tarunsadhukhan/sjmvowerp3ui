@@ -72,7 +72,8 @@ function SRTransactionPageContent() {
 		mapRawToCharges,
 		getChargesToSave,
 		totalChargesAmount,
-	} = useSRAdditionalCharges({ mode });
+		chargesTotals,
+	} = useSRAdditionalCharges({ mode, header });
 
 	// Fetch SR data
 	const fetchSRData = React.useCallback(async () => {
@@ -300,7 +301,7 @@ function SRTransactionPageContent() {
 						onRemoveCharge={removeCharge}
 						onChargeChange={updateCharge}
 					/>
-					<SRTotalsDisplay totals={totals} additionalChargesTotal={totalChargesAmount} />
+					<SRTotalsDisplay totals={totals} chargesTotals={chargesTotals} />
 				</Box>
 			}
 			preview={

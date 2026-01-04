@@ -120,7 +120,7 @@ function SRTransactionPageContent() {
 			const mappedItems = mapSRLineItems(result.line_items, mappedHeader);
 			setLineItems(mappedItems);
 
-			// Map warehouse options (filter by branch if needed)
+			// Map warehouse options (filter by branch if needed, dedupe by warehouse_id)
 			const warehouseData = result.warehouses ?? [];
 			const branchId = mappedHeader.branch_id;
 			console.log("Branch ID for warehouse filtering:", branchId);
@@ -128,7 +128,17 @@ function SRTransactionPageContent() {
 				? warehouseData.filter((wh) => !wh.branch_id || wh.branch_id === branchId)
 				: warehouseData;
 			console.log("Filtered warehouses:", filteredWarehouses);
-			const mappedWarehouses: WarehouseOption[] = filteredWarehouses.map((wh) => ({
+			
+			// Dedupe by warehouse_id to avoid duplicate key errors
+			const seenIds = new Set<string>();
+			const uniqueWarehouses = filteredWarehouses.filter((wh) => {
+				const id = String(wh.warehouse_id);
+				if (seenIds.has(id)) return false;
+				seenIds.add(id);
+				return true;
+			});
+			
+			const mappedWarehouses: WarehouseOption[] = uniqueWarehouses.map((wh) => ({
 				label: wh.warehouse_name,
 				value: String(wh.warehouse_id),
 				branchId: wh.branch_id,

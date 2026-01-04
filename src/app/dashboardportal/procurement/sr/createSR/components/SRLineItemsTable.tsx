@@ -192,6 +192,14 @@ export const useSRLineItemColumns = ({
 							}}
 							getOptionLabel={(opt) => opt.label}
 							isOptionEqualToValue={(opt, val) => opt.value === val.value}
+							renderOption={(props, option) => {
+								const { key, ...rest } = props;
+								return (
+									<li key={`wh-${option.value}-${item.id}`} {...rest}>
+										{option.label}
+									</li>
+								);
+							}}
 							renderInput={(params) => (
 								<TextField
 									{...params}

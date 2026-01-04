@@ -180,6 +180,13 @@ const apiRoutesPortalMasters = {
     JUTE_QUALITY_CREATE: `${API_URL}/juteQualityMaster/jute_quality_create`,
     JUTE_QUALITY_EDIT: `${API_URL}/juteQualityMaster/jute_quality_edit`,
 
+    // Jute PO endpoints
+    JUTE_PO_TABLE: `${API_URL}/jutePO/get_jute_po_table`,
+    JUTE_PO_BY_ID: `${API_URL}/jutePO/get_jute_po_by_id`,
+    JUTE_PO_CREATE_SETUP: `${API_URL}/jutePO/jute_po_create_setup`,
+    JUTE_PO_CREATE: `${API_URL}/jutePO/jute_po_create`,
+    JUTE_PO_EDIT: `${API_URL}/jutePO/jute_po_edit`,
+
     GET_INDENT_SETUP_1: `${API_URL}/procurementIndent/get_indent_setup_1`,
     GET_INDENT_SETUP_2: `${API_URL}/procurementIndent/get_indent_setup_2`,
     INDENT_CREATE: `${API_URL}/procurementIndent/create_indent`,

@@ -218,26 +218,27 @@ function IssueTransactionPageContent() {
 	}, [mode, setLineItems]);
 
 	// Map API line response to editable line item
+	// Handles both camelCase keys (from getIssueById transform) and snake_case keys (raw API)
 	const mapLineToEditable = React.useCallback(
 		(apiLine: Record<string, unknown>): EditableLineItem => ({
 			id: String(apiLine.issue_li_id ?? apiLine.id ?? ""),
 			// From inventory (read-only)
-			grnNo: String(apiLine.sr_no ?? apiLine.inward_no ?? ""),
-			inwardDtlId: String(apiLine.inward_dtl_id ?? ""),
-			itemId: String(apiLine.item_id ?? ""),
-			itemName: String(apiLine.item_name ?? ""),
-			itemCode: String(apiLine.item_code ?? ""),
-			itemGrpId: String(apiLine.item_grp_id ?? apiLine.item_group_id ?? ""),
-			itemGrpName: String(apiLine.item_grp_name ?? apiLine.item_group_name ?? ""),
-			uomId: String(apiLine.uom_id ?? ""),
-			uomName: String(apiLine.uom_name ?? ""),
+			grnNo: String(apiLine.srNo ?? apiLine.sr_no ?? apiLine.inward_no ?? ""),
+			inwardDtlId: String(apiLine.inwardDtlId ?? apiLine.inward_dtl_id ?? ""),
+			itemId: String(apiLine.itemId ?? apiLine.item_id ?? ""),
+			itemName: String(apiLine.itemName ?? apiLine.item_name ?? ""),
+			itemCode: String(apiLine.itemCode ?? apiLine.item_code ?? ""),
+			itemGrpId: String(apiLine.itemGroupId ?? apiLine.item_grp_id ?? apiLine.item_group_id ?? ""),
+			itemGrpName: String(apiLine.itemGroupName ?? apiLine.item_grp_name ?? apiLine.item_group_name ?? ""),
+			uomId: String(apiLine.uomId ?? apiLine.uom_id ?? ""),
+			uomName: String(apiLine.uomName ?? apiLine.uom_name ?? ""),
 			rate: String(apiLine.rate ?? ""),
 			availableQty: "", // Not available from saved records
 			// Editable
 			quantity: String(apiLine.issue_qty ?? apiLine.qty ?? ""),
-			expenseType: String(apiLine.expense_type_id ?? apiLine.expense_id ?? ""),
-			costFactor: String(apiLine.cost_factor_id ?? ""),
-			machine: String(apiLine.machine_id ?? ""),
+			expenseType: String(apiLine.expenseId ?? apiLine.expense_type_id ?? apiLine.expense_id ?? ""),
+			costFactor: String(apiLine.costFactorId ?? apiLine.cost_factor_id ?? ""),
+			machine: String(apiLine.machineId ?? apiLine.machine_id ?? ""),
 			remarks: String(apiLine.remarks ?? ""),
 		}),
 		[]

@@ -1,4 +1,17 @@
 import React from "react";
+import type { AdditionalChargesTotals } from "../types/poTypes";
+
+/**
+ * Format currency for display.
+ */
+const formatCurrency = (value?: number): string => {
+  if (value === undefined || value === null) return "₹0.00";
+  return new Intl.NumberFormat("en-IN", {
+    style: "currency",
+    currency: "INR",
+    minimumFractionDigits: 2,
+  }).format(value);
+};
 
 type Totals = {
   netAmount: number;
@@ -12,41 +25,87 @@ type Totals = {
 type POTotalsDisplayProps = {
   totals: Totals;
   showGSTBreakdown: boolean;
+  /** Detailed breakdown of additional charges including tax split */
+  chargesTotals?: AdditionalChargesTotals;
 };
 
-/** Displays the computed PO totals in a compact grid. */
-export function POTotalsDisplay({ totals, showGSTBreakdown }: POTotalsDisplayProps) {
+/**
+ * Displays the computed PO totals.
+ * Additional charges tax is combined with line items tax.
+ */
+export function POTotalsDisplay({ totals, showGSTBreakdown, chargesTotals }: POTotalsDisplayProps) {
+  // Use detailed chargesTotals if available
+  const chargesBase = chargesTotals?.baseAmount ?? 0;
+  const chargesIGST = chargesTotals?.totalIGST ?? 0;
+  const chargesCGST = chargesTotals?.totalCGST ?? 0;
+  const chargesSGST = chargesTotals?.totalSGST ?? 0;
+  const chargesTax = chargesTotals?.totalTax ?? 0;
+
+  // Combined taxes (line items + additional charges)
+  const combinedIGST = totals.totalIGST + chargesIGST;
+  const combinedCGST = totals.totalCGST + chargesCGST;
+  const combinedSGST = totals.totalSGST + chargesSGST;
+
+  // Grand total = line items total + additional charges (base + tax)
+  const grandTotalWithCharges = totals.totalAmount + chargesBase + chargesTax;
+
   return (
-    <div className="grid grid-cols-2 gap-4 pt-4 border-t">
-      <div>
-        <div className="text-sm font-medium">Net Amount</div>
-        <div className="text-lg">{totals.netAmount.toFixed(2)}</div>
-      </div>
+    <div className="flex justify-end">
+      <div className="min-w-70 space-y-1">
+        {/* Net Amount (line items only) */}
+        <div className="flex justify-between text-sm">
+          <span className="text-slate-600">Net Amount:</span>
+          <span>{formatCurrency(totals.netAmount)}</span>
+        </div>
 
-      {showGSTBreakdown && (
-        <>
-          <div>
-            <div className="text-sm font-medium">Total IGST</div>
-            <div className="text-lg">{totals.totalIGST.toFixed(2)}</div>
+        {/* Additional Charges (base amount before tax) */}
+        {chargesBase > 0 && (
+          <div className="flex justify-between text-sm">
+            <span className="text-slate-600">Additional Charges:</span>
+            <span>{formatCurrency(chargesBase)}</span>
           </div>
-          <div>
-            <div className="text-sm font-medium">Total SGST</div>
-            <div className="text-lg">{totals.totalSGST.toFixed(2)}</div>
-          </div>
-          <div>
-            <div className="text-sm font-medium">Total CGST</div>
-            <div className="text-lg">{totals.totalCGST.toFixed(2)}</div>
-          </div>
-        </>
-      )}
+        )}
 
-      <div>
-        <div className="text-sm font-medium">Total Amount</div>
-        <div className="text-lg font-bold">{totals.totalAmount.toFixed(2)}</div>
-      </div>
-      <div>
-        <div className="text-sm font-medium">Advance Amount</div>
-        <div className="text-lg">{totals.advanceAmount.toFixed(2)}</div>
+        {/* GST Breakdown - combined from line items and additional charges */}
+        {showGSTBreakdown && (
+          <>
+            {combinedIGST > 0 && (
+              <div className="flex justify-between text-sm">
+                <span className="text-slate-600">IGST:</span>
+                <span>{formatCurrency(combinedIGST)}</span>
+              </div>
+            )}
+            {(combinedCGST > 0 || combinedSGST > 0) && (
+              <>
+                <div className="flex justify-between text-sm">
+                  <span className="text-slate-600">CGST:</span>
+                  <span>{formatCurrency(combinedCGST)}</span>
+                </div>
+                <div className="flex justify-between text-sm">
+                  <span className="text-slate-600">SGST:</span>
+                  <span>{formatCurrency(combinedSGST)}</span>
+                </div>
+              </>
+            )}
+          </>
+        )}
+
+        {/* Divider */}
+        <div className="border-t border-slate-300 my-1" />
+
+        {/* Grand Total */}
+        <div className="flex justify-between text-base font-semibold">
+          <span>Grand Total:</span>
+          <span className="text-primary">{formatCurrency(grandTotalWithCharges)}</span>
+        </div>
+
+        {/* Advance Amount */}
+        {totals.advanceAmount > 0 && (
+          <div className="flex justify-between text-sm">
+            <span className="text-slate-600">Advance Amount:</span>
+            <span>{formatCurrency(totals.advanceAmount)}</span>
+          </div>
+        )}
       </div>
     </div>
   );

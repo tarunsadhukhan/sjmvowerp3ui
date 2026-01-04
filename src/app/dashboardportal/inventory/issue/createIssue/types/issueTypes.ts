@@ -14,22 +14,29 @@ export type Option = {
 
 /**
  * Normalized representation of an Issue line item used in the UI.
- * Includes inward_dtl_id for SR-wise inventory tracking.
+ * Items come from InventorySearchTable (pre-populated from inventory view).
+ * Item group/item are read-only display fields, not selectable.
  */
 export type EditableLineItem = {
 	id: string;
-	itemGroup: string;
-	item: string;
-	uom: string;
-	quantity: string;
-	expenseType: string;
-	costFactor: string;
-	machine: string;
-	inwardDtlId: string; // SR line item reference for price tracking
-	rate: string; // Rate from inward for reference
-	availableQty: string; // Available qty from selected SR
-	srNo: string; // SR number for display
-	remarks: string;
+	// From inventory - read-only display fields
+	grnNo: string; // GRN number for display (inward_no)
+	inwardDtlId: string; // Inward detail ID for backend reference
+	itemId: string; // Item ID for backend
+	itemName: string; // Item name for display (read-only)
+	itemCode: string; // Item code for display (read-only)
+	itemGrpId: string; // Item group ID for backend
+	itemGrpName: string; // Item group name for display (read-only)
+	uomId: string; // UOM ID for backend
+	uomName: string; // UOM name for display (read-only)
+	rate: string; // Rate from inward (read-only)
+	availableQty: string; // Available qty from inventory (read-only)
+	// Editable fields
+	quantity: string; // Issue quantity (editable)
+	expenseType: string; // Expense type ID
+	costFactor: string; // Cost factor ID
+	machine: string; // Machine ID
+	remarks: string; // Remarks
 };
 
 /**
@@ -59,14 +66,6 @@ export type ExpenseRecord = {
 };
 
 /**
- * Item group option displayed in line items table.
- */
-export type ItemGroupRecord = {
-	id: string;
-	label: string;
-};
-
-/**
  * Cost factor record for cost allocation.
  */
 export type CostFactorRecord = {
@@ -78,6 +77,7 @@ export type CostFactorRecord = {
 
 /**
  * Machine record for machine-based consumption tracking.
+ * Includes departmentId for frontend filtering by selected department.
  */
 export type MachineRecord = {
 	id: string;
@@ -87,12 +87,12 @@ export type MachineRecord = {
 };
 
 /**
- * Available inventory item from inward details.
+ * Available inventory item from inward details (used by InventorySearchTable).
  */
 export type AvailableInventoryItem = {
 	inwardDtlId: string;
 	inwardId: string;
-	srNo: string; // Stores Receipt number
+	grnNo: string; // GRN number (inward_no)
 	inwardDate: string;
 	branchId: string;
 	branchName: string;
@@ -113,58 +113,25 @@ export type AvailableInventoryItem = {
 };
 
 /**
- * Item option metadata including default UOM info.
- */
-export type ItemOption = Option & {
-	defaultUomId?: string;
-	defaultUomLabel?: string;
-};
-
-/**
- * Cached metadata for an item group to avoid redundant network calls.
- */
-export type ItemGroupCacheEntry = {
-	items: ItemOption[];
-	makes: Option[];
-	uomsByItemId: Record<string, Option[]>;
-	itemLabelById: Record<string, string>;
-	makeLabelById: Record<string, string>;
-	uomLabelByItemId: Record<string, Record<string, string>>;
-};
-
-/**
- * Cache key for SR data: branchId-itemId combination
- */
-export type SRCacheKey = string;
-
-/**
- * Cached SR data for an item in a branch.
- */
-export type SRCacheEntry = {
-	srOptions: Option[];
-	srDataById: Record<string, AvailableInventoryItem>;
-};
-
-/**
  * Normalized setup data returned by `fetchIssueSetup1`.
+ * Note: item_groups removed - items now come from inventory search table.
+ * cost_factors and machines are included for line item dropdowns.
  */
 export type IssueSetupData = {
 	departments: DepartmentRecord[];
 	projects: ProjectRecord[];
 	expenses: ExpenseRecord[];
-	itemGroups: ItemGroupRecord[];
+	costFactors: CostFactorRecord[];
+	machines: MachineRecord[];
 };
 
 /**
- * Label resolvers used in the Issue UI.
+ * Label resolvers used in the Issue UI (simplified - no item group/item lookups).
  */
 export type IssueLabelResolvers = {
 	department: (id: string) => string;
 	project: (id: string) => string;
 	expense: (id: string) => string;
-	itemGroup: (id: string) => string;
-	item: (groupId: string, itemId: string) => string;
-	uom: (groupId: string, itemId: string, uomId: string) => string;
 	costFactor: (id: string) => string;
 	machine: (id: string) => string;
 };

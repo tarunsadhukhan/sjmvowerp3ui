@@ -173,6 +173,11 @@ const apiRoutesPortalMasters = {
     COSTFACTOR_EDIT_SETUP: `${API_URL}/costFactorMaster/cost_factor_edit_setup`,
     COSTFACTOR_EDIT: `${API_URL}/costFactorMaster/cost_factor_edit`,
 
+    JUTE_QUALITY_TABLE: `${API_URL}/juteQualityMaster/get_jute_quality_table`,
+    JUTE_QUALITY_BY_ID: `${API_URL}/juteQualityMaster/get_jute_quality_by_id`,
+    JUTE_QUALITY_CREATE: `${API_URL}/juteQualityMaster/jute_quality_create`,
+    JUTE_QUALITY_EDIT: `${API_URL}/juteQualityMaster/jute_quality_edit`,
+
     GET_INDENT_SETUP_1: `${API_URL}/procurementIndent/get_indent_setup_1`,
     GET_INDENT_SETUP_2: `${API_URL}/procurementIndent/get_indent_setup_2`,
     INDENT_CREATE: `${API_URL}/procurementIndent/create_indent`,
@@ -249,6 +254,7 @@ const apiRoutesPortalMasters = {
     ISSUE_UPDATE: `${API_URL}/inventoryIssue/update_issue`,
     ISSUE_UPDATE_STATUS: `${API_URL}/inventoryIssue/update_issue_status`,
     ISSUE_AVAILABLE_INVENTORY: `${API_URL}/inventoryIssue/get_available_inventory`,
+    ISSUE_INVENTORY_LIST: `${API_URL}/inventoryIssue/get_inventory_list`,
     ISSUE_COST_FACTORS: `${API_URL}/inventoryIssue/get_cost_factors`,
     ISSUE_MACHINES: `${API_URL}/inventoryIssue/get_machines`,
 

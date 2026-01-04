@@ -6,7 +6,6 @@ import TransactionWrapper, {
 	type TransactionAction,
 } from "@/components/ui/TransactionWrapper";
 import {
-	useDeferredOptionCache,
 	useTransactionSetup,
 	useTransactionPreview,
 } from "@/components/ui/transaction";
@@ -14,16 +13,11 @@ import { useBranchOptions } from "@/utils/branchUtils";
 import {
 	createIssue,
 	fetchIssueSetup1,
-	fetchIssueSetup2,
-	fetchAvailableInventory,
-	fetchCostFactors,
-	fetchMachines,
 	getIssueById,
 	updateIssue,
 	updateIssueStatus,
 	type IssueDetails,
-	type CostFactorResponse,
-	type MachineResponse,
+	type InventoryListItem,
 } from "@/utils/issueService";
 import { toast } from "@/hooks/use-toast";
 import useSelectedCompanyCoId from "@/hooks/use-selected-company-coid";
@@ -34,10 +28,6 @@ import type { MuiFormMode } from "@/components/ui/muiform";
 import type {
 	EditableLineItem,
 	IssueSetupData,
-	ItemGroupCacheEntry,
-	CostFactorRecord,
-	MachineRecord,
-	SRCacheEntry,
 } from "./types/issueTypes";
 
 // Utils
@@ -46,7 +36,6 @@ import {
 	ISSUE_STATUS_LABELS,
 	EMPTY_DEPARTMENTS,
 	EMPTY_EXPENSES,
-	EMPTY_ITEM_GROUPS,
 	EMPTY_PROJECTS,
 	EMPTY_COST_FACTORS,
 	EMPTY_MACHINES,
@@ -55,14 +44,12 @@ import {
 import {
 	buildDefaultFormValues,
 	createBlankLine,
+	createLineFromInventory,
 	lineIsComplete,
+	lineHasAnyData,
 } from "./utils/issueFactories";
 import {
 	mapIssueSetupResponse,
-	mapItemGroupDetailResponse,
-	mapCostFactorRecords,
-	mapMachineRecords,
-	mapSRCacheEntry,
 } from "./utils/issueMappers";
 
 // Hooks
@@ -75,6 +62,7 @@ import { useIssueSelectOptions } from "./hooks/useIssueSelectOptions";
 import { IssueHeaderForm } from "./components/IssueHeaderForm";
 import { useIssueLineItemColumns } from "./components/IssueLineItemsTable";
 import { IssuePreview } from "./components/IssuePreview";
+import { InventorySearchTable } from "./components/InventorySearchTable";
 
 // Loading fallback for Suspense
 function IssuePageLoading() {
@@ -185,90 +173,21 @@ function IssueTransactionPageContent() {
 	const [saving, setSaving] = React.useState(false);
 	const [pageError, setPageError] = React.useState<string | null>(null);
 
-	// Cost factors and machines state
-	const [costFactors, setCostFactors] =
-		React.useState<readonly CostFactorRecord[]>(EMPTY_COST_FACTORS);
-	const [machines, setMachines] =
-		React.useState<readonly MachineRecord[]>(EMPTY_MACHINES);
+	// Hydration mount state - prevents MUI ID mismatch between SSR and client
+	const [isMounted, setIsMounted] = React.useState(false);
+	React.useEffect(() => {
+		setIsMounted(true);
+	}, []);
 
-	// Item group cache
-	const {
-		cache: itemGroupCache,
-		loading: itemGroupLoading,
-		ensure: ensureItemGroupData,
-		reset: resetItemGroupCache,
-	} = useDeferredOptionCache<string, ItemGroupCacheEntry>({
-		fetcher: async (itemGroupId: string) => {
-			if (!itemGroupId || !/^\d+$/.test(itemGroupId)) {
-				throw new Error(
-					`Invalid item group ID: ${itemGroupId}. Expected numeric ID.`
-				);
-			}
-			const response = await fetchIssueSetup2(itemGroupId, coId);
-			return mapItemGroupDetailResponse(response);
-		},
-		onError: (error) => {
-			const message =
-				error instanceof Error
-					? error.message
-					: "Unable to load item options.";
-			toast({
-				variant: "destructive",
-				title: "Item data not available",
-				description: message,
-			});
-		},
-	});
-
-	// SR (Stores Receipt) cache - per-item available inventory
-	const {
-		cache: srCache,
-		loading: srLoading,
-		ensure: ensureSRData,
-		reset: resetSRCache,
-	} = useDeferredOptionCache<string, SRCacheEntry>({
-		fetcher: async (cacheKey: string) => {
-			// cacheKey format: "branchId-itemId"
-			const [branchId, itemId] = cacheKey.split("-");
-			if (!branchId || !itemId) {
-				throw new Error(`Invalid SR cache key: ${cacheKey}`);
-			}
-			const response = await fetchAvailableInventory(coId, {
-				branchId,
-				itemId,
-			});
-			return mapSRCacheEntry(response);
-		},
-		onError: (error) => {
-			const message =
-				error instanceof Error
-					? error.message
-					: "Unable to load available inventory.";
-			toast({
-				variant: "destructive",
-				title: "SR data not available",
-				description: message,
-			});
-		},
-	});
-
-	// Line items hook
+	// Line items hook (simplified - no item group cache needed)
 	const {
 		lineItems,
 		setLineItems,
 		replaceItems,
 		removeLineItems,
 		handleLineFieldChange,
-		updateLineFields,
 	} = useIssueLineItems({
 		mode,
-		itemGroupCache,
-		itemGroupLoading,
-		ensureItemGroupData,
-		srCache,
-		srLoading,
-		ensureSRData,
-		branchId: branchIdForSetup,
 	});
 
 	// Branch options prefill for create mode
@@ -286,16 +205,6 @@ function IssueTransactionPageContent() {
 		});
 	}, [mode, branchOptions, setFormValues, setInitialValues, bumpFormKey]);
 
-	// Reset item group cache on company change
-	React.useEffect(() => {
-		resetItemGroupCache();
-	}, [coId, resetItemGroupCache]);
-
-	// Reset SR cache when company or branch changes
-	React.useEffect(() => {
-		resetSRCache();
-	}, [coId, branchIdForSetup, resetSRCache]);
-
 	// Initialize blank line for create mode
 	const initialLineSeededRef = React.useRef(false);
 	React.useEffect(() => {
@@ -312,17 +221,23 @@ function IssueTransactionPageContent() {
 	const mapLineToEditable = React.useCallback(
 		(apiLine: Record<string, unknown>): EditableLineItem => ({
 			id: String(apiLine.issue_li_id ?? apiLine.id ?? ""),
-			itemGroup: String(apiLine.item_group_id ?? ""),
-			item: String(apiLine.item_id ?? ""),
-			quantity: String(apiLine.qty ?? ""),
-			uom: String(apiLine.uom_id ?? ""),
+			// From inventory (read-only)
+			grnNo: String(apiLine.sr_no ?? apiLine.inward_no ?? ""),
+			inwardDtlId: String(apiLine.inward_dtl_id ?? ""),
+			itemId: String(apiLine.item_id ?? ""),
+			itemName: String(apiLine.item_name ?? ""),
+			itemCode: String(apiLine.item_code ?? ""),
+			itemGrpId: String(apiLine.item_grp_id ?? apiLine.item_group_id ?? ""),
+			itemGrpName: String(apiLine.item_grp_name ?? apiLine.item_group_name ?? ""),
+			uomId: String(apiLine.uom_id ?? ""),
+			uomName: String(apiLine.uom_name ?? ""),
 			rate: String(apiLine.rate ?? ""),
-			expenseType: String(apiLine.expense_id ?? ""),
+			availableQty: "", // Not available from saved records
+			// Editable
+			quantity: String(apiLine.issue_qty ?? apiLine.qty ?? ""),
+			expenseType: String(apiLine.expense_type_id ?? apiLine.expense_id ?? ""),
 			costFactor: String(apiLine.cost_factor_id ?? ""),
 			machine: String(apiLine.machine_id ?? ""),
-			inwardDtlId: String(apiLine.inward_dtl_id ?? ""),
-			srNo: String(apiLine.sr_no ?? ""),
-			availableQty: "",
 			remarks: String(apiLine.remarks ?? ""),
 		}),
 		[]
@@ -372,32 +287,6 @@ function IssueTransactionPageContent() {
 				);
 				replaceItems(mappedLines.length ? mappedLines : [createBlankLine()]);
 				setPageError(null);
-
-				// Pre-fetch item group cache for existing lines
-				const uniqueGroups = [
-					...new Set(
-						mappedLines.map((line) => line.itemGroup).filter(Boolean)
-					),
-				];
-				uniqueGroups.forEach((groupId) => {
-					if (groupId && !itemGroupCache[groupId] && !itemGroupLoading[groupId]) {
-						void ensureItemGroupData(groupId);
-					}
-				});
-
-				// Pre-fetch SR cache for existing line items
-				const issueBranchId = String(detail.branchId ?? "");
-				if (issueBranchId) {
-					const uniqueItems = [
-						...new Set(mappedLines.map((line) => line.item).filter(Boolean)),
-					];
-					uniqueItems.forEach((itemId) => {
-						const cacheKey = `${issueBranchId}-${itemId}`;
-						if (!srCache[cacheKey] && !srLoading[cacheKey]) {
-							void ensureSRData(cacheKey);
-						}
-					});
-				}
 			})
 			.catch((error) => {
 				if (cancelled) return;
@@ -426,12 +315,6 @@ function IssueTransactionPageContent() {
 		setFormValues,
 		bumpFormKey,
 		replaceItems,
-		itemGroupCache,
-		itemGroupLoading,
-		ensureItemGroupData,
-		srCache,
-		srLoading,
-		ensureSRData,
 	]);
 
 	// Setup data
@@ -459,77 +342,31 @@ function IssueTransactionPageContent() {
 	const departments = setupData?.departments ?? EMPTY_DEPARTMENTS;
 	const projects = setupData?.projects ?? EMPTY_PROJECTS;
 	const expenses = setupData?.expenses ?? EMPTY_EXPENSES;
-	const itemGroups = setupData?.itemGroups ?? EMPTY_ITEM_GROUPS;
+	const costFactors = setupData?.costFactors ?? EMPTY_COST_FACTORS;
+	const machines = setupData?.machines ?? EMPTY_MACHINES;
 
-	// Load cost factors when branch changes
-	React.useEffect(() => {
-		if (!coId || !branchIdForSetup) {
-			setCostFactors(EMPTY_COST_FACTORS);
-			return;
-		}
-
-		let cancelled = false;
-		fetchCostFactors(coId, branchIdForSetup)
-			.then((response: CostFactorResponse[]) => {
-				if (cancelled) return;
-				setCostFactors(mapCostFactorRecords(response));
-			})
-			.catch(() => {
-				if (!cancelled) setCostFactors(EMPTY_COST_FACTORS);
-			});
-
-		return () => {
-			cancelled = true;
-		};
-	}, [coId, branchIdForSetup]);
-
-	// Load machines when department changes
+	// Get selected department for filtering machines
 	const departmentValue = React.useMemo(
 		() => String(formValues.department ?? ""),
 		[formValues.department]
 	);
-	React.useEffect(() => {
-		if (!coId || !departmentValue) {
-			setMachines(EMPTY_MACHINES);
-			return;
-		}
 
-		let cancelled = false;
-		fetchMachines(coId, departmentValue)
-			.then((response: MachineResponse[]) => {
-				if (cancelled) return;
-				setMachines(mapMachineRecords(response));
-			})
-			.catch(() => {
-				if (!cancelled) setMachines(EMPTY_MACHINES);
-			});
-
-		return () => {
-			cancelled = true;
-		};
-	}, [coId, departmentValue]);
-
-	// Select options hook
+	// Select options hook - filters machines by selected department
 	const {
 		departmentOptions,
 		projectOptions,
 		expenseOptions,
-		itemGroupOptions,
 		costFactorOptions,
 		machineOptions,
 		labelResolvers,
-		getItemOptions,
-		getUomOptions,
 	} = useIssueSelectOptions({
 		departments,
 		projects,
 		expenses,
-		itemGroups,
 		costFactors,
 		machines,
 		branchIdForSetup,
 		departmentIdForMachines: departmentValue,
-		itemGroupCache,
 	});
 
 	// Form schema
@@ -569,20 +406,11 @@ function IssueTransactionPageContent() {
 	// Line item columns
 	const lineItemColumns = useIssueLineItemColumns({
 		canEdit,
-		mode,
-		itemGroupOptions,
-		itemGroupLoading,
 		expenseOptions,
 		costFactorOptions,
 		machineOptions,
 		labelResolvers,
-		getItemOptions,
-		getUomOptions,
 		handleLineFieldChange,
-		updateLineFields,
-		srCache,
-		srLoading,
-		branchId: branchIdForSetup,
 	});
 
 	// Form submit handler
@@ -601,10 +429,11 @@ function IssueTransactionPageContent() {
 			}
 
 			const lineItemsPayload = filledLineItems.map((item) => ({
-				item_id: item.item ? Number(item.item) : undefined,
-				item_group_id: item.itemGroup ? Number(item.itemGroup) : undefined,
-				qty: Number(item.quantity) || 0,
-				uom_id: item.uom ? Number(item.uom) : undefined,
+				item_id: item.itemId ? Number(item.itemId) : undefined,
+				item_group_id: item.itemGrpId ? Number(item.itemGrpId) : undefined,
+				issue_qty: Number(item.quantity) || 0,
+				uom_id: item.uomId ? Number(item.uomId) : undefined,
+				rate: item.rate ? Number(item.rate) : undefined,
 				expense_id: item.expenseType ? Number(item.expenseType) : undefined,
 				cost_factor_id: item.costFactor ? Number(item.costFactor) : undefined,
 				machine_id: item.machine ? Number(item.machine) : undefined,
@@ -622,7 +451,7 @@ function IssueTransactionPageContent() {
 				internal_note: values.internal_note
 					? String(values.internal_note)
 					: undefined,
-				line_items: lineItemsPayload,
+				lines: lineItemsPayload,
 			};
 
 			setSaving(true);
@@ -897,6 +726,42 @@ function IssueTransactionPageContent() {
 		[]
 	);
 
+	// Handle inserting items from inventory search table
+	const handleInsertFromInventory = React.useCallback(
+		(items: InventoryListItem[]) => {
+			if (mode === "view" || !items.length) return;
+
+			// Map inventory items to editable line items using factory function
+			const newLines: EditableLineItem[] = items.map((item) =>
+				createLineFromInventory(item)
+			);
+
+			// Add new lines to existing line items (before the trailing blank)
+			setLineItems((prev) => {
+				// Filter out empty trailing lines
+				const filledLines = prev.filter((line) => lineHasAnyData(line));
+				// Add new lines plus a trailing blank
+				return [...filledLines, ...newLines, createBlankLine()];
+			});
+
+			toast({
+				title: `Added ${newLines.length} item${newLines.length > 1 ? "s" : ""} to issue`,
+				description: "Enter quantities for each item.",
+			});
+		},
+		[mode, setLineItems]
+	);
+
+	// Wait for client-side hydration to complete before rendering MUI forms
+	// This prevents React hydration mismatch errors caused by MUI's useId() hook
+	if (!isMounted) {
+		return (
+			<div className="flex items-center justify-center min-h-100">
+				<div className="animate-spin h-8 w-8 border-4 border-primary border-t-transparent rounded-full" />
+			</div>
+		);
+	}
+
 	return (
 		<TransactionWrapper
 			title={pageTitle}
@@ -925,15 +790,26 @@ function IssueTransactionPageContent() {
 				selectionColumnWidth: "28px",
 			}}
 		>
-			<IssueHeaderForm
-				schema={schema}
-				formKey={formKey}
-				initialValues={initialValues}
-				mode={mode}
-				formRef={formRef}
-				onSubmit={handleFormSubmit}
-				onValuesChange={setFormValues}
-			/>
+			<div className="space-y-6">
+				<IssueHeaderForm
+					schema={schema}
+					formKey={formKey}
+					initialValues={initialValues}
+					mode={mode}
+					formRef={formRef}
+					onSubmit={handleFormSubmit}
+					onValuesChange={setFormValues}
+				/>
+				{/* Inventory Search Table - only show in create/edit mode */}
+				{canEdit && branchIdForSetup ? (
+					<InventorySearchTable
+						coId={coId}
+						branchId={branchIdForSetup}
+						disabled={!canEdit}
+						onInsertItems={handleInsertFromInventory}
+					/>
+				) : null}
+			</div>
 		</TransactionWrapper>
 	);
 }

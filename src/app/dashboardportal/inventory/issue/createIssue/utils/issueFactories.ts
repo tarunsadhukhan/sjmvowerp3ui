@@ -1,4 +1,5 @@
 import type { EditableLineItem } from "../types/issueTypes";
+import type { InventoryListItem } from "@/utils/issueService";
 
 let lineIdSeed = 0;
 
@@ -12,20 +13,54 @@ export const generateLineId = (): string => {
 
 /**
  * Creates a blank line item with default empty values.
+ * Note: In simplified workflow, items come from InventorySearchTable,
+ * so blank lines are rarely used except for trailing blank.
  */
 export const createBlankLine = (): EditableLineItem => ({
 	id: generateLineId(),
-	itemGroup: "",
-	item: "",
-	uom: "",
+	// From inventory (read-only)
+	grnNo: "",
+	inwardDtlId: "",
+	itemId: "",
+	itemName: "",
+	itemCode: "",
+	itemGrpId: "",
+	itemGrpName: "",
+	uomId: "",
+	uomName: "",
+	rate: "",
+	availableQty: "",
+	// Editable
 	quantity: "",
 	expenseType: "",
 	costFactor: "",
 	machine: "",
-	inwardDtlId: "",
-	rate: "",
-	availableQty: "",
-	srNo: "",
+	remarks: "",
+});
+
+/**
+ * Creates a line item from an inventory selection.
+ * Used when inserting items from InventorySearchTable.
+ */
+export const createLineFromInventory = (inv: InventoryListItem): EditableLineItem => ({
+	id: generateLineId(),
+	// From inventory (read-only)
+	grnNo: inv.inward_no ?? "",
+	inwardDtlId: String(inv.inward_dtl_id ?? ""),
+	itemId: String(inv.item_id ?? ""),
+	itemName: inv.item_name ?? "",
+	itemCode: inv.item_code ?? "",
+	itemGrpId: String(inv.item_grp_id ?? ""),
+	itemGrpName: inv.item_grp_name ?? "",
+	uomId: String(inv.uom_id ?? ""),
+	uomName: inv.uom_name ?? "",
+	rate: String(inv.rate ?? ""),
+	availableQty: String(inv.available_qty ?? ""),
+	// Editable - default quantity to available
+	quantity: String(inv.available_qty ?? ""),
+	expenseType: "",
+	costFactor: "",
+	machine: "",
 	remarks: "",
 });
 
@@ -45,14 +80,13 @@ export const buildDefaultFormValues = (): Record<string, unknown> => ({
 
 /**
  * Checks if a line item has any user-entered data.
+ * Lines from inventory always have data if inwardDtlId is set.
  */
 export const lineHasAnyData = (line: EditableLineItem): boolean =>
 	Boolean(
-		line.itemGroup ||
-		line.item ||
-		line.uom ||
-		line.quantity ||
 		line.inwardDtlId ||
+		line.itemId ||
+		line.quantity ||
 		line.remarks
 	);
 
@@ -61,5 +95,5 @@ export const lineHasAnyData = (line: EditableLineItem): boolean =>
  */
 export const lineIsComplete = (line: EditableLineItem): boolean => {
 	const qty = Number(line.quantity);
-	return Boolean(line.item && line.uom && Number.isFinite(qty) && qty > 0);
+	return Boolean(line.itemId && line.uomId && Number.isFinite(qty) && qty > 0);
 };

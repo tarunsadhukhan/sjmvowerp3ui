@@ -54,12 +54,15 @@ export type IssueDetails = {
 
 /**
  * Issue setup data from API
+ * Note: item_groups removed as items now come from inventory search table.
+ * cost_factors and machines are included (machines filtered by dept on frontend).
  */
 export type IssueSetupResponse = {
 	departments?: unknown[];
 	projects?: unknown[];
 	expense_types?: unknown[];
-	item_groups?: unknown[];
+	cost_factors?: unknown[];
+	machines?: unknown[];
 };
 
 /**
@@ -79,6 +82,35 @@ export type AvailableInventoryResponse = {
 };
 
 /**
+ * Inventory list item from searchable inventory endpoint
+ */
+export type InventoryListItem = {
+	inward_dtl_id: number;
+	inward_id: number;
+	inward_sequence_no: number;
+	inward_no: string;
+	inward_date: string;
+	branch_id: number;
+	branch_name: string;
+	item_id: number;
+	item_name: string;
+	item_code: string;
+	item_grp_id: number;
+	item_grp_name: string;
+	item_grp_code?: string;
+	item_make_id?: number;
+	item_make_name?: string;
+	uom_id: number;
+	uom_name: string;
+	approved_qty: number;
+	issue_qty: number;
+	available_qty: number;
+	rate: number;
+	warehouse_id?: number;
+	warehouse_name?: string;
+};
+
+/**
  * Cost factor from API
  */
 export type CostFactorResponse = {
@@ -88,12 +120,14 @@ export type CostFactorResponse = {
 };
 
 /**
- * Machine from API
+ * Machine from API (includes dept_id for frontend filtering by department)
  */
 export type MachineResponse = {
 	machine_id: number;
 	machine_name: string;
 	dept_id?: number;
+	dept_name?: string;
+	mech_code?: string;
 };
 
 /**
@@ -402,4 +436,38 @@ export const updateIssueStatus = async (
 	}
 
 	return response.data ?? response;
+};
+/**
+ * Fetch paginated searchable inventory list for the issue page
+ */
+export const fetchInventoryList = async (
+	coId: string,
+	params: {
+		branchId: string;
+		page?: number;
+		limit?: number;
+		search?: string;
+	}
+): Promise<{ data: InventoryListItem[]; total: number; page: number; limit: number }> => {
+	const searchParams = new URLSearchParams();
+	searchParams.append("co_id", coId);
+	searchParams.append("branch_id", params.branchId);
+	if (params.page) searchParams.append("page", String(params.page));
+	if (params.limit) searchParams.append("limit", String(params.limit));
+	if (params.search) searchParams.append("search", params.search);
+
+	const url = `${apiRoutesPortalMasters.ISSUE_INVENTORY_LIST}?${searchParams.toString()}`;
+	const response = await fetchWithCookie(url, "GET");
+	
+	if (!response || response.error) {
+		throw new Error(response?.error ?? "Failed to fetch inventory list");
+	}
+
+	const result = response.data as Record<string, unknown> | null;
+	return {
+		data: (result?.data as InventoryListItem[]) ?? [],
+		total: (result?.total as number) ?? 0,
+		page: (result?.page as number) ?? 1,
+		limit: (result?.limit as number) ?? 10,
+	};
 };

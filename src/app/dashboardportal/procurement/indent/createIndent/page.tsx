@@ -323,12 +323,25 @@ function IndentTransactionPageContent() {
 		}
 	}, [formValues.indent_type, formValues.expense_type, mode, setFormValues]);
 
+	// Check if header fields are complete for line item entry
+	const headerFieldsComplete = React.useMemo(() => {
+		const indentType = String(formValues.indent_type ?? "").trim();
+		const expenseType = String(formValues.expense_type ?? "").trim();
+		return Boolean(indentType && expenseType);
+	}, [formValues.indent_type, formValues.expense_type]);
+
+	// Check if any line item has data entered (to lock indent_type and expense_type)
+	const hasLineItemData = React.useMemo(() => {
+		return filledLineItems.length > 0;
+	}, [filledLineItems]);
+
 	// Form schema
 	const schema = useIndentFormSchema({
 		mode,
 		branchOptions,
 		expenseOptions,
 		projectOptions,
+		hasLineItemData,
 	});
 
 	// Approval hook
@@ -356,8 +369,8 @@ function IndentTransactionPageContent() {
 		setFormValues,
 	});
 
-	// Line item columns
-	const canEdit = mode !== "view";
+	// Line item columns - only allow editing if header fields are complete
+	const canEdit = mode !== "view" && headerFieldsComplete;
 	const lineItemColumns = useIndentLineItemColumns({
 		canEdit,
 		departmentOptions,
@@ -693,13 +706,19 @@ function IndentTransactionPageContent() {
 			}
 			lineItems={{
 				title: "Line Items",
-				subtitle: "List the materials or services you intend to procure.",
+				subtitle: mode !== "view" && !headerFieldsComplete
+					? "Please select Indent Type and Expense Type above before adding line items."
+					: "List the materials or services you intend to procure.",
 				items: lineItems,
 				getItemId: getLineItemId,
 				canEdit,
 				columns: lineItemColumns,
 				onRemoveSelected: handleBulkRemoveLines,
-				placeholder: canEdit ? "Add items to build the indent." : "No line items available.",
+				placeholder: mode !== "view" && !headerFieldsComplete
+					? "Select Indent Type and Expense Type to enable line item entry."
+					: canEdit
+						? "Add items to build the indent."
+						: "No line items available.",
 				selectionColumnWidth: "28px",
 			}}
 		>

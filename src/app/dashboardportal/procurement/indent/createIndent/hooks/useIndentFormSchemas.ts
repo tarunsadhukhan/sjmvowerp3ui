@@ -8,6 +8,8 @@ type UseIndentFormSchemaParams = {
 	branchOptions: readonly Option[];
 	expenseOptions: readonly Option[];
 	projectOptions: readonly Option[];
+	/** When true, indent_type and expense_type are disabled to prevent changes after line item entry */
+	hasLineItemData?: boolean;
 };
 
 /**
@@ -18,6 +20,7 @@ export const useIndentFormSchema = ({
 	branchOptions,
 	expenseOptions,
 	projectOptions,
+	hasLineItemData = false,
 }: UseIndentFormSchemaParams): Schema => {
 	return React.useMemo(
 		() => ({
@@ -37,6 +40,8 @@ export const useIndentFormSchema = ({
 					type: "select",
 					required: true,
 					options: INDENT_TYPE_OPTIONS as Option[],
+					disabled: mode === "view" || hasLineItemData,
+					helperText: hasLineItemData ? "Cannot change after line item entry" : undefined,
 					grid: { xs: 12, md: 4 },
 				},
 				{
@@ -45,6 +50,8 @@ export const useIndentFormSchema = ({
 					type: "select",
 					required: true,
 					options: expenseOptions as Option[],
+					disabled: mode === "view" || hasLineItemData,
+					helperText: hasLineItemData ? "Cannot change after line item entry" : undefined,
 					customValidate: (value: unknown, values: Record<string, unknown>) => {
 						const indentType = String(values.indent_type ?? "").toLowerCase();
 						if (indentType !== "open") return null;
@@ -94,6 +101,6 @@ export const useIndentFormSchema = ({
 				},
 			],
 		}),
-		[branchOptions, mode, expenseOptions, projectOptions]
+		[branchOptions, mode, expenseOptions, projectOptions, hasLineItemData]
 	);
 };

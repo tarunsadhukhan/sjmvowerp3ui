@@ -33,7 +33,7 @@ export function JutePOTotalsDisplay({
         {/* Total Weight */}
         <div className="flex flex-col">
           <span className="text-xs text-gray-500">Total Weight</span>
-          <span className="text-lg font-medium text-gray-900">{formatWeight(totalWeight)} Kg</span>
+          <span className="text-lg font-medium text-gray-900">{formatWeight(totalWeight)} Qtl</span>
         </div>
 
         {/* Total Amount */}

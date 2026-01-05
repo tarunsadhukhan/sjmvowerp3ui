@@ -187,12 +187,12 @@ export function useJutePOLineItemColumns({
       },
       {
         id: "weight",
-        header: "Weight (Kg)",
+        header: "Weight (Qtl)",
         width: "0.9fr",
         renderCell: ({ item }: { item: JutePOLineItem }) => (
           <span className="text-xs text-right font-medium">{formatWeight(parseFloat(item.weight) || 0)}</span>
         ),
-        getTooltip: ({ item }: { item: JutePOLineItem }) => `Calculated weight: ${formatWeight(parseFloat(item.weight) || 0)} Kg`,
+        getTooltip: ({ item }: { item: JutePOLineItem }) => `Calculated weight: ${formatWeight(parseFloat(item.weight) || 0)} Qtl`,
       },
       {
         id: "amount",

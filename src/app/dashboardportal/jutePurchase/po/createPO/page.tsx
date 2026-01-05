@@ -178,23 +178,34 @@ export default function JutePOCreatePage() {
     setDetails,
   });
 
-  // Column definitions for line items
-  const lineItemColumns = useJutePOLineItemColumns({
-    canEdit: mode !== "view",
-    itemOptions: (setupData?.jute_items ?? EMPTY_JUTE_ITEMS).map((i: { item_id: number; item_desc: string }) => ({
-      label: i.item_desc,
-      value: String(i.item_id),
-    })),
-    getQualityOptions,
-    labelResolvers,
-    handleLineFieldChange,
-  });
-
   // Calculate totals
   const { totalWeight, totalAmount, validLineCount } = React.useMemo(
     () => calculateTotals(lineItems),
     [lineItems]
   );
+
+  // Check if mandatory header fields are filled (required before line item entry)
+  const areMandatoryFieldsFilled = React.useMemo(() => {
+    const mandatoryFields: (keyof JutePOFormValues)[] = [
+      "branch",
+      "poDate",
+      "mukam",
+      "juteUnit",
+      "supplier",
+      "vehicleType",
+      "vehicleQty",
+      "channelType",
+      "creditTerm",
+      "deliveryTimeline",
+    ];
+    return mandatoryFields.every((field) => {
+      const value = formValues[field];
+      return value !== undefined && value !== null && value !== "";
+    });
+  }, [formValues]);
+
+  // Line items can be edited only if mode is not view AND mandatory fields are filled
+  const canEditLineItems = mode !== "view" && areMandatoryFieldsFilled;
 
   // ========== Data Fetching ==========
 
@@ -323,9 +334,11 @@ export default function JutePOCreatePage() {
           "GET"
         );
         if (response?.data) {
-          const mapped = (response.data as Array<{ quality_id: string; quality_desc: string }>).map(
+          // API returns { qualities: [...] } with quality_id and quality_name
+          const qualitiesData = response.data.qualities ?? response.data;
+          const mapped = (qualitiesData as Array<{ quality_id: number | string; quality_name: string }>).map(
             (q) => ({
-              label: q.quality_desc ?? q.quality_id,
+              label: q.quality_name ?? String(q.quality_id),
               value: String(q.quality_id),
             })
           );
@@ -337,6 +350,41 @@ export default function JutePOCreatePage() {
     },
     [coId, qualitiesByItem]
   );
+
+  // Handle item selection in line items - fetches qualities for the selected item
+  const handleItemSelect = React.useCallback(
+    (itemId: string) => {
+      if (itemId) {
+        void fetchQualitiesForItem(itemId);
+      }
+    },
+    [fetchQualitiesForItem]
+  );
+
+  // Wrapped handleLineFieldChange that also triggers quality fetch on item change
+  const handleLineFieldChangeWithQualityFetch = React.useCallback(
+    (id: string, field: keyof JutePOLineItem, value: string) => {
+      handleLineFieldChange(id, field, value);
+      
+      // When item changes, fetch qualities for the new item
+      if (field === "itemId" && value) {
+        handleItemSelect(value);
+      }
+    },
+    [handleLineFieldChange, handleItemSelect]
+  );
+
+  // Column definitions for line items
+  const lineItemColumns = useJutePOLineItemColumns({
+    canEdit: canEditLineItems,
+    itemOptions: (setupData?.jute_items ?? EMPTY_JUTE_ITEMS).map((i: { item_id: number; item_desc: string }) => ({
+      label: i.item_desc,
+      value: String(i.item_id),
+    })),
+    getQualityOptions,
+    labelResolvers,
+    handleLineFieldChange: handleLineFieldChangeWithQualityFetch,
+  });
 
   // ========== Form Handlers ==========
 
@@ -441,7 +489,16 @@ export default function JutePOCreatePage() {
         title={mode === "create" ? "Create Jute PO" : mode === "edit" ? "Edit Jute PO" : "View Jute PO"}
         subtitle={details?.po_num ? `PO #${details.po_num}` : undefined}
         loading={loading || saving}
-        alerts={pageError ? <div className="text-red-600 p-2">{pageError}</div> : undefined}
+        alerts={
+          <>
+            {pageError && <div className="text-red-600 p-2">{pageError}</div>}
+            {mode !== "view" && !areMandatoryFieldsFilled && (
+              <div className="text-amber-600 bg-amber-50 border border-amber-200 rounded p-2 text-sm">
+                Please fill all mandatory header fields before adding line items.
+              </div>
+            )}
+          </>
+        }
         primaryActions={primaryActions}
         statusChip={
           mode !== "create" && approvalInfo
@@ -451,9 +508,9 @@ export default function JutePOCreatePage() {
         lineItems={{
           items: lineItems as unknown[],
           getItemId: (item: unknown) => (item as JutePOLineItem).id,
-          canEdit: mode !== "view",
+          canEdit: canEditLineItems,
           columns: lineItemColumns as unknown as { id: string; header: React.ReactNode; width?: string; renderCell: (context: { item: unknown; index: number; canEdit: boolean }) => React.ReactNode }[],
-          onRemoveSelected: mode !== "view" ? removeLineItems : undefined,
+          onRemoveSelected: canEditLineItems ? removeLineItems : undefined,
         }}
         footer={
           <>

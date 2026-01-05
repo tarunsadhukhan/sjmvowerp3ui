@@ -188,7 +188,7 @@ export function JutePOPreview({
           {/* Totals */}
           <div className="mt-4 text-right">
             <p className="text-sm">
-              <span className="font-semibold">Total Weight:</span> {formatWeight(totalWeight)} Kg
+              <span className="font-semibold">Total Weight:</span> {formatWeight(totalWeight)} Qtl
             </p>
             <p className="text-lg font-bold text-green-700">
               <span className="font-semibold">Total Amount:</span> ₹ {formatAmount(totalAmount)}

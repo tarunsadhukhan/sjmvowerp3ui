@@ -35,11 +35,11 @@ export const calculateWeight = (
   }
 
   if (unitType === "BALE") {
-    // For bale: 150 kg per bale * quantity (number of bales)
-    return 150 * quantity;
+    // For bale: 1.5 quintals per bale (150 kg / 100) * quantity
+    return 1.5 * quantity;
   }
 
-  // For loose: percentage-based calculation
+  // For loose: percentage-based calculation (result already in quintals)
   const totalVehicleWeight = vehicleCapacityWeight * vehicleQty;
   if (!Number.isFinite(totalVehicleWeight) || totalVehicleWeight <= 0) {
     return 0;
@@ -170,7 +170,7 @@ export const formatCurrency = (value: number): string => {
 
 /**
  * Format weight value.
- * @param value - Weight in kg
+ * @param value - Weight in quintals
  * @returns Formatted weight string
  */
 export const formatWeight = (value: number): string => {

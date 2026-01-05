@@ -20,7 +20,6 @@ type JutePORow = {
 	po_date: string;
 	po_date_raw?: string;
 	supplier_name: string;
-	broker_name: string;
 	mukam: string;
 	vehicle_type: string;
 	vehicle_qty: number | null;
@@ -97,17 +96,6 @@ export default function JutePOIndexPage() {
 				headerName: "Supplier Name",
 				flex: 1,
 				minWidth: 160,
-			},
-			{
-				field: "broker_name",
-				headerName: "Broker Name",
-				flex: 1,
-				minWidth: 140,
-				renderCell: (params: GridRenderCellParams<JutePORow, string>) => (
-					<Typography component="span" variant="body2">
-						{params.value || "-"}
-					</Typography>
-				),
 			},
 			{
 				field: "mukam",
@@ -200,7 +188,6 @@ export default function JutePOIndexPage() {
 					po_date_raw: normalizedRaw,
 					po_date: formatDate(normalizedRaw),
 					supplier_name: (r.supplier_name ?? r.supp_name ?? r.supplierName ?? "") as string,
-					broker_name: (r.broker_name ?? r.brokerName ?? "") as string,
 					mukam: (r.mukam ?? r.mukam_name ?? "") as string,
 					vehicle_type: (r.vehicle_type ?? r.vehicleType ?? "") as string,
 					vehicle_qty: (r.vehicle_qty ?? r.vehicleQty ?? r.no_of_vehicles ?? null) as number | null,
@@ -271,7 +258,7 @@ export default function JutePOIndexPage() {
 			search={{
 				value: searchValue,
 				onChange: handleSearchChange,
-				placeholder: "Search by PO number, supplier, or broker",
+				placeholder: "Search by PO number, supplier, or mukam",
 				debounceDelayMs: 500,
 			}}
 			createAction={{ onClick: handleCreateJutePO, label: "Create Jute PO" }}

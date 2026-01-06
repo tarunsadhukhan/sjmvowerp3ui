@@ -53,8 +53,8 @@ export const useIndentFormSchema = ({
 					disabled: mode === "view" || hasLineItemData,
 					helperText: hasLineItemData ? "Cannot change after line item entry" : undefined,
 					customValidate: (value: unknown, values: Record<string, unknown>) => {
-						const indentType = String(values.indent_type ?? "").toLowerCase();
-						if (indentType !== "open") return null;
+						const indentType = String(values.indent_type ?? "");
+						if (indentType !== "Open") return null;
 						const expense = String(value ?? "");
 						if (!expense) return "Required";
 						return OPEN_INDENT_ALLOWED_EXPENSE_IDS.has(expense)

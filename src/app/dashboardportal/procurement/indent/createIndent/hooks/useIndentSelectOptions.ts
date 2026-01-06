@@ -53,10 +53,9 @@ export const useIndentSelectOptions = ({
 
 	// Expense options filtered by indent type
 	const expenseOptions = React.useMemo<Option[]>(() => {
-		const type = indentType.toLowerCase();
 		return expenses
 			.filter((exp) => {
-				if (type !== "open") return true;
+				if (indentType !== "Open") return true;
 				return OPEN_INDENT_ALLOWED_EXPENSE_IDS.has(String(exp.id));
 			})
 			.map((exp) => ({

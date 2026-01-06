@@ -314,8 +314,8 @@ function IndentTransactionPageContent() {
 	// Expense type validation on indent type change
 	React.useEffect(() => {
 		if (mode === "view") return;
-		const indentType = String(formValues.indent_type ?? "").toLowerCase();
-		if (indentType !== "open") return;
+		const indentType = String(formValues.indent_type ?? "");
+		if (indentType !== "Open") return;
 		const allowed = new Set(["3", "5", "6"]);
 		const current = String(formValues.expense_type ?? "");
 		if (current && !allowed.has(current)) {
@@ -397,9 +397,9 @@ function IndentTransactionPageContent() {
 				return;
 			}
 
-			const indentType = String(values.indent_type ?? "").toLowerCase();
+			const indentType = String(values.indent_type ?? "");
 			const expenseType = String(values.expense_type ?? "");
-			if (indentType === "open" && expenseType && !["3", "5", "6"].includes(expenseType)) {
+			if (indentType === "Open" && expenseType && !["3", "5", "6"].includes(expenseType)) {
 				toast({
 					variant: "destructive",
 					title: "Select allowed expense type",
@@ -506,9 +506,9 @@ function IndentTransactionPageContent() {
 	const indentTypeLabel = React.useMemo(() => {
 		const value = String(formValues.indent_type ?? "");
 		const options = [
-			{ label: "Regular Indent", value: "regular" },
-			{ label: "Open Indent", value: "open" },
-			{ label: "BOM", value: "bom" },
+			{ label: "Regular", value: "Regular" },
+			{ label: "Open", value: "Open" },
+			{ label: "BOM", value: "BOM" },
 		];
 		return options.find((opt) => opt.value === value)?.label || indentDetails?.indentType || "";
 	}, [formValues.indent_type, indentDetails?.indentType]);

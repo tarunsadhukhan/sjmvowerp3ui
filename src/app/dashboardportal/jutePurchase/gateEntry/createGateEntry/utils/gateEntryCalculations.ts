@@ -1,0 +1,98 @@
+/**
+ * @file gateEntryCalculations.ts
+ * @description Calculation functions for Jute Gate Entry.
+ */
+
+import type { GateEntryLineItem } from "../types/gateEntryTypes";
+
+/**
+ * Calculate net weight from gross and tare weights.
+ */
+export const calculateNetWeight = (grossWeight: number, tareWeight: number): number => {
+	const net = grossWeight - tareWeight;
+	return Math.max(0, net);
+};
+
+/**
+ * Calculate challan weight for a line item based on proportion.
+ * Formula: (header challan weight / total challan qty) * line challan qty
+ */
+export const calculateChallanWeight = (
+	headerChallanWeight: number,
+	totalChallanQty: number,
+	lineChallanQty: number
+): number => {
+	if (!totalChallanQty || totalChallanQty === 0) return 0;
+	return (headerChallanWeight / totalChallanQty) * lineChallanQty;
+};
+
+/**
+ * Calculate actual weight for a line item based on proportion.
+ * Uses net weight from header and actual qty proportions.
+ */
+export const calculateActualWeight = (
+	headerNetWeight: number,
+	totalActualQty: number,
+	lineActualQty: number
+): number => {
+	if (!totalActualQty || totalActualQty === 0) return 0;
+	return (headerNetWeight / totalActualQty) * lineActualQty;
+};
+
+/**
+ * Get total challan quantity from all line items.
+ */
+export const getTotalChallanQty = (lineItems: GateEntryLineItem[]): number =>
+	lineItems.reduce((sum, li) => sum + (parseFloat(li.challanQty) || 0), 0);
+
+/**
+ * Get total actual quantity from all line items.
+ */
+export const getTotalActualQty = (lineItems: GateEntryLineItem[]): number =>
+	lineItems.reduce((sum, li) => sum + (parseFloat(li.actualQty) || 0), 0);
+
+/**
+ * Get total challan weight from all line items.
+ */
+export const getTotalChallanWeight = (lineItems: GateEntryLineItem[]): number =>
+	lineItems.reduce((sum, li) => sum + (parseFloat(li.challanWeight) || 0), 0);
+
+/**
+ * Get total actual weight from all line items.
+ */
+export const getTotalActualWeight = (lineItems: GateEntryLineItem[]): number =>
+	lineItems.reduce((sum, li) => sum + (parseFloat(li.actualWeight) || 0), 0);
+
+/**
+ * Recalculate all line item weights based on header values and quantities.
+ */
+export const recalculateLineItemWeights = (
+	lineItems: GateEntryLineItem[],
+	headerChallanWeight: number,
+	headerNetWeight: number
+): GateEntryLineItem[] => {
+	const totalChallanQty = getTotalChallanQty(lineItems);
+	const totalActualQty = getTotalActualQty(lineItems);
+
+	return lineItems.map((li) => {
+		const lineChallanQty = parseFloat(li.challanQty) || 0;
+		const lineActualQty = parseFloat(li.actualQty) || 0;
+
+		return {
+			...li,
+			challanWeight: lineChallanQty > 0 ? String(calculateChallanWeight(headerChallanWeight, totalChallanQty, lineChallanQty).toFixed(2)) : "",
+			actualWeight: lineActualQty > 0 ? String(calculateActualWeight(headerNetWeight, totalActualQty, lineActualQty).toFixed(2)) : "",
+		};
+	});
+};
+
+/**
+ * Calculate line item totals summary.
+ */
+export const calculateLineItemTotals = (lineItems: GateEntryLineItem[]) => ({
+	totalChallanQty: getTotalChallanQty(lineItems),
+	totalChallanWeight: getTotalChallanWeight(lineItems),
+	totalActualQty: getTotalActualQty(lineItems),
+	totalActualWeight: getTotalActualWeight(lineItems),
+	validLineCount: lineItems.filter((li) => li.challanItem || li.actualItem).length,
+});

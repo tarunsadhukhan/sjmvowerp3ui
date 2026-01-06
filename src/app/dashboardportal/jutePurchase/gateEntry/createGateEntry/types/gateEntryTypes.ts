@@ -1,0 +1,215 @@
+/**
+ * @file gateEntryTypes.ts
+ * @description Type definitions for Jute Gate Entry module.
+ */
+
+// =============================================================================
+// BASIC TYPES
+// =============================================================================
+
+export type MuiFormMode = "create" | "edit" | "view";
+
+export type Option = { label: string; value: string };
+
+// =============================================================================
+// RECORD TYPES
+// =============================================================================
+
+export type BranchRecord = {
+	branch_id: number;
+	branch_name: string;
+};
+
+export type SupplierRecord = {
+	supplier_id: number;
+	supplier_name: string;
+};
+
+export type PartyRecord = {
+	party_id: number;
+	party_name: string;
+};
+
+export type MukamRecord = {
+	mukam_id: number;
+	mukam_name: string;
+};
+
+export type JuteItemRecord = {
+	item_id: number;
+	item_code: string;
+	item_name: string;
+	item_grp_id?: number;
+	item_grp_name?: string;
+	default_uom_id?: number;
+	default_uom?: string;
+};
+
+export type JuteQualityRecord = {
+	quality_id: number;
+	quality_name: string;
+	item_id: number;
+};
+
+export type OpenPORecord = {
+	jute_po_id: number;
+	po_num: string;
+	po_date: string;
+	supplier_id?: number;
+	supplier_name?: string;
+	mukam_name?: string;
+	total_weight?: number;
+	jute_uom?: string;
+};
+
+// =============================================================================
+// SETUP DATA
+// =============================================================================
+
+export type GateEntrySetupData = {
+	branches: BranchRecord[];
+	mukams: MukamRecord[];
+	suppliers: SupplierRecord[];
+	jute_items: JuteItemRecord[];
+	open_pos: OpenPORecord[];
+	uom_options: Option[];
+};
+
+// =============================================================================
+// FORM VALUES
+// =============================================================================
+
+export type GateEntryFormValues = {
+	branch: string;
+	entryDate: string;
+	entryTime: string;
+	challanNo: string;
+	challanDate: string;
+	vehicleNo: string;
+	driverName: string;
+	transporter: string;
+	poId: string;
+	juteUom: string;
+	mukam: string;
+	supplier: string;
+	party: string;
+	grossWeight: string;
+	tareWeight: string;
+	challanWeight: string;
+	netWeight: string;
+	remarks: string;
+	outDate: string;
+	outTime: string;
+};
+
+// =============================================================================
+// LINE ITEM TYPES
+// =============================================================================
+
+export type GateEntryLineItem = {
+	id: string;
+	challanItem: string;
+	challanQuality: string;
+	challanQty: string;
+	challanWeight: string;
+	actualItem: string;
+	actualQuality: string;
+	actualQty: string;
+	actualWeight: string;
+	remarks: string;
+};
+
+// =============================================================================
+// DETAILS (from API)
+// =============================================================================
+
+export type GateEntryDetails = {
+	jute_gate_entry_id: number;
+	entry_branch_seq: number | null;
+	branch_id: number;
+	branch_name: string;
+	jute_gate_entry_date: string;
+	in_time: string;
+	out_date: string | null;
+	out_time: string | null;
+	challan_no: string;
+	challan_date: string;
+	challan_weight: number;
+	vehicle_no: string;
+	driver_name: string;
+	transporter: string;
+	po_id: number | null;
+	po_num: string | null;
+	jute_supplier_id: number;
+	supplier_name: string;
+	party_id: number | null;
+	party_name: string | null;
+	mukam: string;
+	jute_uom: string;
+	gross_weight: number;
+	tare_weight: number;
+	net_weight: number;
+	actual_weight: number;
+	remarks: string | null;
+	status_id: number;
+	status: string;
+	line_items: GateEntryLineItemAPI[];
+};
+
+export type GateEntryLineItemAPI = {
+	jute_gate_entry_li_id: number;
+	jute_gate_entry_id: number;
+	challan_item_name_id: number | null;
+	challan_item_name: string | null;
+	challan_jute_quality_id: number | null;
+	challan_quality_name: string | null;
+	challan_quantity: number | null;
+	challan_weight: number | null;
+	actual_item_id: number | null;
+	actual_item_name: string | null;
+	actual_jute_quality_id: number | null;
+	actual_quality_name: string | null;
+	actual_quantity: number | null;
+	actual_weight: number | null;
+	jute_uom: string | null;
+	remarks: string | null;
+};
+
+// =============================================================================
+// PO DETAILS FOR AUTO-FILL
+// =============================================================================
+
+export type PODetailsForGateEntry = {
+	jute_po_id: number;
+	po_num: string;
+	po_date: string;
+	supplier_id: number;
+	supplier_name: string;
+	mukam_id: number | null;
+	mukam_name: string | null;
+	jute_uom: string;
+	branch_id: number;
+	line_items: POLineItemForGateEntry[];
+};
+
+export type POLineItemForGateEntry = {
+	jute_po_li_id: number;
+	item_id: number | null;
+	item_name: string | null;
+	quality_id: number | null;
+	quality_name: string | null;
+	quantity: number | null;
+	weight: number | null;
+	uom: string | null;
+};
+
+// =============================================================================
+// STATUS CONSTANTS
+// =============================================================================
+
+export const GATE_ENTRY_STATUS = {
+	IN: 1, // Vehicle entered
+	OUT: 5, // Vehicle exited (Closed)
+} as const;
+
+export type GateEntryStatusId = (typeof GATE_ENTRY_STATUS)[keyof typeof GATE_ENTRY_STATUS];

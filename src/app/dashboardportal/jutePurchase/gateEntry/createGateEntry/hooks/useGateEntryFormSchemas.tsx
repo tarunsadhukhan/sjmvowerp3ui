@@ -1,0 +1,268 @@
+/**
+ * @file useGateEntryFormSchemas.ts
+ * @description Hook for generating MuiForm schema for gate entry.
+ */
+
+import * as React from "react";
+import { TextField } from "@mui/material";
+import type { MuiFormMode, Option } from "../types/gateEntryTypes";
+import { calculateNetWeight } from "../utils/gateEntryCalculations";
+
+type UseGateEntryFormSchemasParams = {
+	mode: MuiFormMode;
+	branchOptions: Option[];
+	mukamOptions: Option[];
+	supplierOptions: Option[];
+	partyOptions: Option[];
+	poOptions: Option[];
+	uomOptions: Option[];
+	hasSupplierSelected: boolean;
+	isSingleBranch: boolean;
+	isEditMode: boolean;
+};
+
+export function useGateEntryFormSchemas({
+	mode,
+	branchOptions,
+	mukamOptions,
+	supplierOptions,
+	partyOptions,
+	poOptions,
+	uomOptions,
+	hasSupplierSelected,
+	isSingleBranch,
+	isEditMode,
+}: UseGateEntryFormSchemasParams) {
+	const isViewMode = mode === "view";
+
+	return React.useMemo(
+		() => ({
+			fields: [
+				// Row 1: Branch, Date, Time
+				{
+					name: "branch",
+					label: "Branch",
+					type: "select" as const,
+					required: true,
+					options: branchOptions,
+					disabled: isViewMode || isSingleBranch,
+					grid: { xs: 12, md: 4 },
+				},
+				{
+					name: "entryDate",
+					label: "Entry Date",
+					type: "date" as const,
+					required: true,
+					disabled: isViewMode,
+					grid: { xs: 12, md: 4 },
+				},
+				{
+					name: "entryTime",
+					label: "Entry Time",
+					type: "time" as const,
+					required: true,
+					disabled: isViewMode,
+					grid: { xs: 12, md: 4 },
+				},
+
+				// Row 2: Challan No, Challan Date, Vehicle No
+				{
+					name: "challanNo",
+					label: "Challan No",
+					type: "text" as const,
+					required: true,
+					disabled: isViewMode,
+					grid: { xs: 12, md: 4 },
+				},
+				{
+					name: "challanDate",
+					label: "Challan Date",
+					type: "date" as const,
+					required: true,
+					disabled: isViewMode,
+					grid: { xs: 12, md: 4 },
+				},
+				{
+					name: "vehicleNo",
+					label: "Vehicle No",
+					type: "text" as const,
+					required: true,
+					disabled: isViewMode,
+					grid: { xs: 12, md: 4 },
+				},
+
+				// Row 3: Driver Name, Transporter, PO (optional)
+				{
+					name: "driverName",
+					label: "Driver Name",
+					type: "text" as const,
+					required: true,
+					disabled: isViewMode,
+					grid: { xs: 12, md: 4 },
+				},
+				{
+					name: "transporter",
+					label: "Transporter",
+					type: "text" as const,
+					required: true,
+					disabled: isViewMode,
+					grid: { xs: 12, md: 4 },
+				},
+				{
+					name: "poId",
+					label: "PO Number",
+					type: "select" as const,
+					required: false,
+					options: poOptions,
+					disabled: isViewMode,
+					grid: { xs: 12, md: 4 },
+					placeholder: "Select PO (Optional)",
+				},
+
+				// Row 4: Jute UOM, Mukam, Supplier
+				{
+					name: "juteUom",
+					label: "Jute UOM",
+					type: "select" as const,
+					required: true,
+					options: uomOptions,
+					disabled: isViewMode,
+					grid: { xs: 12, md: 4 },
+				},
+				{
+					name: "mukam",
+					label: "Mukam",
+					type: "select" as const,
+					required: true,
+					options: mukamOptions,
+					disabled: isViewMode,
+					grid: { xs: 12, md: 4 },
+				},
+				{
+					name: "supplier",
+					label: "Supplier",
+					type: "select" as const,
+					required: true,
+					options: supplierOptions,
+					disabled: isViewMode,
+					grid: { xs: 12, md: 4 },
+				},
+
+				// Row 5: Party
+				{
+					name: "party",
+					label: "Party",
+					type: "select" as const,
+					required: false,
+					options: partyOptions,
+					disabled: isViewMode || !hasSupplierSelected,
+					grid: { xs: 12, md: 4 },
+					placeholder: hasSupplierSelected ? "Select Party" : "Select Supplier first",
+				},
+
+				// Row 6: Weights - Gross, Tare, Challan Weight
+				{
+					name: "grossWeight",
+					label: "Gross Weight (Kg)",
+					type: "number" as const,
+					required: true,
+					disabled: isViewMode,
+					grid: { xs: 12, md: 3 },
+				},
+				{
+					name: "tareWeight",
+					label: "Tare Weight (Kg)",
+					type: "number" as const,
+					required: false,
+					disabled: isViewMode,
+					grid: { xs: 12, md: 3 },
+					customValidate: (value: unknown, values: Record<string, unknown>) => {
+						const tare = parseFloat(String(value)) || 0;
+						const gross = parseFloat(String(values.grossWeight)) || 0;
+						if (tare > 0 && gross > 0 && tare >= gross) {
+							return "Tare weight must be less than gross weight";
+						}
+						return null;
+					},
+				},
+				{
+					name: "challanWeight",
+					label: "Challan Weight (Kg)",
+					type: "number" as const,
+					required: true,
+					disabled: isViewMode,
+					grid: { xs: 12, md: 3 },
+				},
+				{
+					name: "netWeight",
+					label: "", // Empty label - the TextField inside render has its own label
+					type: "custom" as const,
+					required: false,
+					grid: { xs: 12, md: 3 },
+					render: ({ values }: { values: Record<string, unknown> }) => {
+						const gross = parseFloat(String(values.grossWeight)) || 0;
+						const tare = parseFloat(String(values.tareWeight)) || 0;
+						const net = gross > 0 && tare > 0 && gross > tare ? calculateNetWeight(gross, tare) : 0;
+						return (
+							<TextField
+								label="Net Weight (Kg)"
+								value={net > 0 ? net.toFixed(2) : ""}
+								disabled
+								fullWidth
+								size="small"
+								InputProps={{ readOnly: true }}
+							/>
+						);
+					},
+				},
+
+				// Row 7: Remarks (smaller)
+				{
+					name: "remarks",
+					label: "Remarks",
+					type: "text" as const,
+					required: false,
+					disabled: isViewMode,
+					grid: { xs: 12, md: 12 },
+					multiline: true,
+					rows: 2,
+				},
+
+				// Row 8: Out Date/Time - only visible in edit mode
+				...(isEditMode
+					? [
+							{
+								name: "outDate",
+								label: "Out Date",
+								type: "date" as const,
+								required: false,
+								disabled: isViewMode,
+								grid: { xs: 12, md: 4 },
+							},
+							{
+								name: "outTime",
+								label: "Out Time",
+								type: "time" as const,
+								required: false,
+								disabled: isViewMode,
+								grid: { xs: 12, md: 4 },
+							},
+					  ]
+					: []),
+			],
+		}),
+		[
+			mode,
+			branchOptions,
+			mukamOptions,
+			supplierOptions,
+			partyOptions,
+			poOptions,
+			uomOptions,
+			hasSupplierSelected,
+			isSingleBranch,
+			isEditMode,
+			isViewMode,
+		]
+	);
+}

@@ -20,6 +20,7 @@ export type FieldType =
 	| "multiselect"
 	| "checkbox"
 	| "date"
+	| "time"
 	| "custom";
 
 export type CustomFieldRenderProps = {
@@ -326,12 +327,12 @@ export const MuiForm = React.forwardRef(function MuiForm(
 						</Typography>
 						<Typography variant="body1">{displayValue(field, value)}</Typography>
 					</Box>
-				) : field.type === "text" || field.type === "number" || field.type === "date" ? (
+				) : field.type === "text" || field.type === "number" || field.type === "date" || field.type === "time" ? (
 					<TextField
-						type={field.type === "text" ? "text" : field.type === "number" ? "number" : "date"}
+						type={field.type === "text" ? "text" : field.type === "number" ? "number" : field.type === "time" ? "time" : "date"}
 						value={value ?? ""}
 						onChange={(e) => handleChange(field.name, e.target.value)}
-						InputLabelProps={field.type === "date" ? { shrink: true } : undefined}
+						InputLabelProps={field.type === "date" || field.type === "time" ? { shrink: true } : undefined}
 						inputProps={mode === "view" ? { readOnly: true } : undefined}
 						{...commonTextProps}
 					/>

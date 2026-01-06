@@ -242,7 +242,7 @@ export default function JutePOCreatePage() {
     const fetchDetails = async () => {
       setLoading(true);
       try {
-        // Fetch PO details
+        // Fetch PO details (includes line_items)
         const detailsResponse = await fetchWithCookie(
           `${apiRoutesPortalMasters.JUTE_PO_BY_ID}/${jutePOId}?co_id=${coId}`,
           "GET"
@@ -261,21 +261,17 @@ export default function JutePOCreatePage() {
           if (formVals.supplier) {
             await handleSupplierChange(formVals.supplier);
           }
-        }
 
-        // Fetch line items
-        const lineItemsResponse = await fetchWithCookie(
-          `${apiRoutesPortalMasters.JUTE_PO_LINE_ITEMS}/${jutePOId}?co_id=${coId}`,
-          "GET"
-        );
-        if (lineItemsResponse?.data) {
-          const mappedLines = mapLineItemsFromAPI(lineItemsResponse.data);
-          replaceLineItems(mappedLines);
+          // Map line items from the same response
+          if (mappedDetails.line_items && mappedDetails.line_items.length > 0) {
+            const mappedLines = mapLineItemsFromAPI(mappedDetails.line_items);
+            replaceLineItems(mappedLines);
 
-          // Fetch qualities for each unique item
-          const uniqueItems = [...new Set(mappedLines.map((l) => l.itemId).filter(Boolean))];
-          for (const itemId of uniqueItems) {
-            await fetchQualitiesForItem(itemId);
+            // Fetch qualities for each unique item
+            const uniqueItems = [...new Set(mappedLines.map((l) => l.itemId).filter(Boolean))];
+            for (const itemId of uniqueItems) {
+              await fetchQualitiesForItem(itemId);
+            }
           }
         }
       } catch (error) {
@@ -308,10 +304,10 @@ export default function JutePOCreatePage() {
           `${apiRoutesPortalMasters.JUTE_PO_PARTIES_BY_SUPPLIER}/${supplierId}?co_id=${coId}`,
           "GET"
         );
-        if (response?.data) {
-          const mapped = (response.data as Array<{ party_id: string; party_name: string }>).map(
+        if (response?.data?.parties) {
+          const mapped = (response.data.parties as Array<{ party_id: number; party_name: string }>).map(
             (p) => ({
-              label: p.party_name ?? p.party_id,
+              label: p.party_name ?? String(p.party_id),
               value: String(p.party_id),
             })
           );

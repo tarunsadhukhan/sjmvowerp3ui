@@ -152,6 +152,7 @@ export type JutePODetails = {
   mukam_id: number;
   mukam?: string;
   jute_unit: string;
+  supplier_id: number;
   supp_code: string;
   supplier_name?: string;
   party_id?: number;
@@ -168,6 +169,7 @@ export type JutePODetails = {
   po_val_wo_tax?: number;
   created_by?: number;
   updated_date_time?: string;
+  line_items?: JutePOLineItemDetails[];
 };
 
 export type JutePOLineItemDetails = {

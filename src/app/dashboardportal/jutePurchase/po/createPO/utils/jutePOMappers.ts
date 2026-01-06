@@ -210,7 +210,7 @@ export const mapPODetailsToFormValues = (
   poDate: details.po_date ? details.po_date.slice(0, 10) : defaults.poDate,
   mukam: details.mukam_id ? String(details.mukam_id) : defaults.mukam,
   juteUnit: details.jute_unit || defaults.juteUnit,
-  supplier: details.supp_code || defaults.supplier,
+  supplier: details.supplier_id ? String(details.supplier_id) : defaults.supplier,
   partyName: details.party_id ? String(details.party_id) : defaults.partyName,
   vehicleType: details.vehicle_type_id ? String(details.vehicle_type_id) : defaults.vehicleType,
   vehicleQty: details.vehicle_qty ? String(details.vehicle_qty) : defaults.vehicleQty,
@@ -334,6 +334,7 @@ export const mapJutePODetailsResponse = (data: unknown): JutePODetails => {
     mukam_id: Number(raw?.mukam_id ?? 0),
     mukam: raw?.mukam ? String(raw.mukam) : undefined,
     jute_unit: String(raw?.jute_unit ?? "LOOSE"),
+    supplier_id: Number(raw?.supplier_id ?? 0),
     supp_code: String(raw?.supp_code ?? ""),
     supplier_name: raw?.supplier_name ? String(raw.supplier_name) : undefined,
     party_id: raw?.party_id ? Number(raw.party_id) : undefined,
@@ -350,6 +351,7 @@ export const mapJutePODetailsResponse = (data: unknown): JutePODetails => {
     po_val_wo_tax: raw?.po_val_wo_tax ? Number(raw.po_val_wo_tax) : undefined,
     created_by: raw?.created_by ? Number(raw.created_by) : undefined,
     updated_date_time: raw?.updated_date_time ? String(raw.updated_date_time) : undefined,
+    line_items: Array.isArray(raw?.line_items) ? (raw.line_items as JutePOLineItemDetails[]) : undefined,
   } satisfies JutePODetails;
 };
 

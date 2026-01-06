@@ -54,6 +54,8 @@ export function JutePOHeaderForm({
       mode={mode}
       onSubmit={onSubmit}
       onValuesChange={handleValuesChange}
+      hideModeToggle
+      hideSubmit
     />
   );
 }

@@ -17,6 +17,7 @@ type FieldSchema = {
   options?: Option[];
   grid?: { xs?: number; sm?: number; md?: number };
   placeholder?: string;
+  customValidate?: (value: unknown, values: Record<string, unknown>) => string | undefined;
 };
 
 type Schema = {
@@ -89,7 +90,7 @@ export function useJutePOFormSchemas({
         grid: { xs: 12, sm: 6, md: 3 },
       },
 
-      // Row 2: Mukam, Unit, Supplier
+      // Row 2: Mukam, Unit, Supplier, Party
       {
         name: "mukam",
         label: "Mukam",
@@ -97,7 +98,7 @@ export function useJutePOFormSchemas({
         required: true,
         disabled: isViewMode,
         options: mukamOptions,
-        grid: { xs: 12, sm: 6, md: 4 },
+        grid: { xs: 12, sm: 6, md: 3 },
       },
       {
         name: "juteUnit",
@@ -106,7 +107,7 @@ export function useJutePOFormSchemas({
         required: true,
         disabled: isViewMode,
         options: unitOptions,
-        grid: { xs: 12, sm: 6, md: 4 },
+        grid: { xs: 12, sm: 6, md: 3 },
       },
       {
         name: "supplier",
@@ -115,22 +116,19 @@ export function useJutePOFormSchemas({
         required: true,
         disabled: isViewMode,
         options: supplierOptions,
-        grid: { xs: 12, sm: 6, md: 4 },
+        grid: { xs: 12, sm: 6, md: 3 },
+      },
+      {
+        name: "partyName",
+        label: "Party Name",
+        type: "select",
+        disabled: isViewMode || !hasSupplierSelected, // Disabled until supplier is selected
+        options: partyOptions,
+        grid: { xs: 12, sm: 6, md: 3 },
+        placeholder: hasSupplierSelected ? "Select party" : "Select supplier first",
       },
 
-      // Row 3: Party Name (conditional), Vehicle Type, Vehicle Qty
-      ...(hasSupplierSelected
-        ? [
-            {
-              name: "partyName",
-              label: "Party Name",
-              type: "select" as const,
-              disabled: isViewMode,
-              options: partyOptions,
-              grid: { xs: 12, sm: 6, md: 3 },
-            },
-          ]
-        : []),
+      // Row 3: Vehicle Type, Vehicle Qty, Channel Type, Credit Term
       {
         name: "vehicleType",
         label: "Vehicle Type",
@@ -138,7 +136,7 @@ export function useJutePOFormSchemas({
         required: true,
         disabled: isViewMode,
         options: vehicleTypeOptions,
-        grid: { xs: 12, sm: 6, md: hasSupplierSelected ? 3 : 4 },
+        grid: { xs: 12, sm: 6, md: 3 },
       },
       {
         name: "vehicleQty",
@@ -146,7 +144,14 @@ export function useJutePOFormSchemas({
         type: "number",
         required: true,
         disabled: isViewMode,
-        grid: { xs: 12, sm: 6, md: hasSupplierSelected ? 3 : 4 },
+        grid: { xs: 12, sm: 6, md: 3 },
+        customValidate: (value) => {
+          const num = Number(value);
+          if (!Number.isFinite(num) || num <= 0) {
+            return "Vehicle Qty must be greater than 0";
+          }
+          return undefined;
+        },
       },
       {
         name: "channelType",
@@ -155,10 +160,8 @@ export function useJutePOFormSchemas({
         required: true,
         disabled: isViewMode,
         options: channelOptions,
-        grid: { xs: 12, sm: 6, md: hasSupplierSelected ? 3 : 4 },
+        grid: { xs: 12, sm: 6, md: 3 },
       },
-
-      // Row 4: Credit Term, Delivery Timeline, Expected Date, Freight
       {
         name: "creditTerm",
         label: "Credit Term (Days)",
@@ -167,6 +170,8 @@ export function useJutePOFormSchemas({
         disabled: isViewMode,
         grid: { xs: 12, sm: 6, md: 3 },
       },
+
+      // Row 4: Delivery Timeline, Expected Date, Freight Charges, Remarks
       {
         name: "deliveryTimeline",
         label: "Delivery Timeline (Days)",
@@ -190,14 +195,13 @@ export function useJutePOFormSchemas({
         grid: { xs: 12, sm: 6, md: 3 },
         placeholder: "Optional",
       },
-
-      // Row 5: Remarks
       {
         name: "remarks",
         label: "Remarks",
         type: "text",
         disabled: isViewMode,
-        grid: { xs: 12 },
+        grid: { xs: 12, sm: 6, md: 3 },
+        placeholder: "Optional",
       },
     ];
 

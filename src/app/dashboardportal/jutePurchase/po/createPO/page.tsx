@@ -79,6 +79,12 @@ export default function JutePOCreatePage() {
   const [saving, setSaving] = React.useState(false);
   const [pageError, setPageError] = React.useState<string | null>(null);
   const [previewOpen, setPreviewOpen] = React.useState(false);
+  const [isMounted, setIsMounted] = React.useState(false);
+
+  // Prevent hydration mismatch by rendering form only after client mount
+  React.useEffect(() => {
+    setIsMounted(true);
+  }, []);
 
   // Setup data state
   const [setupData, setSetupData] = React.useState<JutePOSetupData | null>(null);
@@ -320,6 +326,25 @@ export default function JutePOCreatePage() {
     [coId, setFormValues]
   );
 
+  // Track previous supplier to detect changes and fetch parties
+  const prevSupplierRef = React.useRef<string | null>(null);
+  React.useEffect(() => {
+    const currentSupplier = formValues.supplier;
+    
+    // Only call API if supplier actually changed (not on initial mount with empty value)
+    if (currentSupplier !== prevSupplierRef.current) {
+      prevSupplierRef.current = currentSupplier;
+      
+      // Fetch parties when supplier changes to a valid value
+      if (currentSupplier) {
+        void handleSupplierChange(currentSupplier);
+      } else {
+        // Clear parties if supplier is cleared
+        setParties([]);
+      }
+    }
+  }, [formValues.supplier, handleSupplierChange]);
+
   const fetchQualitiesForItem = React.useCallback(
     async (itemId: string) => {
       if (!itemId || !coId || qualitiesByItem[itemId]) return;
@@ -392,9 +417,30 @@ export default function JutePOCreatePage() {
       setPageError(null);
 
       try {
+        // Validate line items
+        const linesWithData = lineItems.filter(lineHasAnyData);
+        if (linesWithData.length === 0) {
+          setPageError("Please add at least one line item");
+          setSaving(false);
+          return;
+        }
+
+        // Check for invalid line items (qty or rate <= 0)
+        const invalidLines = linesWithData.filter((line) => {
+          const qty = Number(line.quantity);
+          const rate = Number(line.rate);
+          return !Number.isFinite(qty) || qty <= 0 || !Number.isFinite(rate) || rate <= 0;
+        });
+
+        if (invalidLines.length > 0) {
+          setPageError("Line items must have Quantity and Rate greater than 0");
+          setSaving(false);
+          return;
+        }
+
         const validLines = lineItems.filter(lineIsComplete);
         if (validLines.length === 0) {
-          setPageError("Please add at least one complete line item");
+          setPageError("Please complete at least one line item (Item, Quantity, Rate required)");
           setSaving(false);
           return;
         }
@@ -466,16 +512,8 @@ export default function JutePOCreatePage() {
       variant: "outline",
     });
 
-    if (mode !== "create") {
-      actions.push({
-        label: "Back to List",
-        onClick: () => router.push("/dashboardportal/jutePurchase/po"),
-        variant: "ghost",
-      });
-    }
-
     return actions;
-  }, [mode, approvalPermissions, saving, handleSave, router]);
+  }, [mode, approvalPermissions, saving, handleSave]);
 
   // ========== Render ==========
 
@@ -485,6 +523,10 @@ export default function JutePOCreatePage() {
         title={mode === "create" ? "Create Jute PO" : mode === "edit" ? "Edit Jute PO" : "View Jute PO"}
         subtitle={details?.po_num ? `PO #${details.po_num}` : undefined}
         loading={loading || saving}
+        backAction={{
+          label: "Back to Jute PO List",
+          onClick: () => router.push("/dashboardportal/jutePurchase/po"),
+        }}
         alerts={
           <>
             {pageError && <div className="text-red-600 p-2">{pageError}</div>}
@@ -530,16 +572,24 @@ export default function JutePOCreatePage() {
           </>
         }
       >
-        <JutePOHeaderForm
-          schema={formSchema}
-          formKey={formKey}
-          initialValues={initialValues}
-          mode={mode}
-          formRef={formRef}
-          onSubmit={handleFormSubmit}
-          onValuesChange={(values) => setFormValues(values as unknown as JutePOFormValues)}
-          onSupplierChange={handleSupplierChange}
-        />
+        {isMounted ? (
+          <JutePOHeaderForm
+            schema={formSchema}
+            formKey={formKey}
+            initialValues={initialValues}
+            mode={mode}
+            formRef={formRef}
+            onSubmit={handleFormSubmit}
+            onValuesChange={(values) => setFormValues(values as unknown as JutePOFormValues)}
+            onSupplierChange={handleSupplierChange}
+          />
+        ) : (
+          <div className="animate-pulse space-y-4 p-4">
+            <div className="h-10 bg-gray-200 rounded w-full" />
+            <div className="h-10 bg-gray-200 rounded w-full" />
+            <div className="h-10 bg-gray-200 rounded w-full" />
+          </div>
+        )}
       </TransactionWrapper>
 
       <JutePOPreview

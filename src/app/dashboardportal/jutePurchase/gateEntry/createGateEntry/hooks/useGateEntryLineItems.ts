@@ -12,14 +12,14 @@ import { recalculateLineItemWeights } from "../utils/gateEntryCalculations";
 type UseGateEntryLineItemsParams = {
 	mode: MuiFormMode;
 	headerChallanWeight: number;
-	headerNetWeight: number;
+	headerActualWeight: number;
 	getQualityOptions: (itemId: string) => Option[];
 };
 
 export function useGateEntryLineItems({
 	mode,
 	headerChallanWeight,
-	headerNetWeight,
+	headerActualWeight,
 	getQualityOptions,
 }: UseGateEntryLineItemsParams) {
 	const {
@@ -37,15 +37,15 @@ export function useGateEntryLineItems({
 	// Recalculate weights when header values change
 	React.useEffect(() => {
 		if (mode === "view") return;
-		if (headerChallanWeight <= 0 && headerNetWeight <= 0) return;
+		if (headerChallanWeight <= 0 && headerActualWeight <= 0) return;
 
 		setLineItems((prev) => {
 			const hasDataItems = prev.filter(lineHasAnyData);
 			if (hasDataItems.length === 0) return prev;
 
-			return recalculateLineItemWeights(prev, headerChallanWeight, headerNetWeight);
+			return recalculateLineItemWeights(prev, headerChallanWeight, headerActualWeight);
 		});
-	}, [headerChallanWeight, headerNetWeight, mode, setLineItems]);
+	}, [headerChallanWeight, headerActualWeight, mode, setLineItems]);
 
 	/**
 	 * Handle field changes with cascading logic.
@@ -85,7 +85,7 @@ export function useGateEntryLineItems({
 						item.id === id ? { ...item, [field]: rawValue } : item
 					);
 					// Recalculate weights after qty change
-					return recalculateLineItemWeights(updated, headerChallanWeight, headerNetWeight);
+					return recalculateLineItemWeights(updated, headerChallanWeight, headerActualWeight);
 				});
 				return;
 			}
@@ -95,7 +95,7 @@ export function useGateEntryLineItems({
 				prev.map((item) => (item.id === id ? { ...item, [field]: rawValue } : item))
 			);
 		},
-		[mode, setLineItems, headerChallanWeight, headerNetWeight]
+		[mode, setLineItems, headerChallanWeight, headerActualWeight]
 	);
 
 	return {

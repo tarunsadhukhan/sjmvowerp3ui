@@ -62,6 +62,12 @@ export type OpenPORecord = {
 	jute_uom?: string;
 };
 
+export type VehicleTypeRecord = {
+	vehicle_type_id: number;
+	vehicle_type: string;
+	capacity_weight?: number;
+};
+
 // =============================================================================
 // SETUP DATA
 // =============================================================================
@@ -73,6 +79,7 @@ export type GateEntrySetupData = {
 	jute_items: JuteItemRecord[];
 	open_pos: OpenPORecord[];
 	uom_options: Option[];
+	vehicle_types: VehicleTypeRecord[];
 };
 
 // =============================================================================
@@ -86,6 +93,7 @@ export type GateEntryFormValues = {
 	challanNo: string;
 	challanDate: string;
 	vehicleNo: string;
+	vehicleType: string;
 	driverName: string;
 	transporter: string;
 	poId: string;
@@ -97,6 +105,9 @@ export type GateEntryFormValues = {
 	tareWeight: string;
 	challanWeight: string;
 	netWeight: string;
+	variableShortage: string;
+	actualWeight: string;
+	marketingSlip: boolean;
 	remarks: string;
 	outDate: string;
 	outTime: string;
@@ -149,7 +160,10 @@ export type GateEntryDetails = {
 	gross_weight: number;
 	tare_weight: number;
 	net_weight: number;
+	variable_shortage: number | null;
 	actual_weight: number;
+	vehicle_type_id: number | null;
+	marketing_slip: number | null;
 	remarks: string | null;
 	status_id: number;
 	status: string;
@@ -159,7 +173,7 @@ export type GateEntryDetails = {
 export type GateEntryLineItemAPI = {
 	jute_gate_entry_li_id: number;
 	jute_gate_entry_id: number;
-	challan_item_name_id: number | null;
+	challan_item_id: number | null;
 	challan_item_name: string | null;
 	challan_jute_quality_id: number | null;
 	challan_quality_name: string | null;

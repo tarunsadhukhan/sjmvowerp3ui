@@ -15,6 +15,7 @@ import type {
 	MukamRecord,
 	JuteItemRecord,
 	OpenPORecord,
+	VehicleTypeRecord,
 } from "../types/gateEntryTypes";
 import { generateLineId } from "./gateEntryFactories";
 
@@ -78,6 +79,16 @@ export const mapOpenPOs = (raw: unknown[]): OpenPORecord[] =>
 		};
 	});
 
+export const mapVehicleTypes = (raw: unknown[]): VehicleTypeRecord[] =>
+	raw.map((r) => {
+		const data = r as Record<string, unknown>;
+		return {
+			vehicle_type_id: Number(data.vehicle_type_id ?? 0),
+			vehicle_type: String(data.vehicle_type ?? ""),
+			capacity_weight: data.capacity_weight ? Number(data.capacity_weight) : undefined,
+		};
+	});
+
 export const mapGateEntrySetupResponse = (response: unknown): GateEntrySetupData => {
 	const data = response as Record<string, unknown>;
 	return {
@@ -90,6 +101,7 @@ export const mapGateEntrySetupResponse = (response: unknown): GateEntrySetupData
 			const opt = o as Record<string, unknown>;
 			return { label: String(opt.label ?? ""), value: String(opt.value ?? "") };
 		}),
+		vehicle_types: mapVehicleTypes((data.vehicle_types as unknown[]) ?? []),
 	};
 };
 
@@ -125,6 +137,12 @@ export const buildPOOptions = (pos: OpenPORecord[]): Option[] =>
 	pos.map((p) => ({
 		label: `${p.po_num} (${p.supplier_name ?? "Unknown"})`,
 		value: String(p.jute_po_id),
+	}));
+
+export const buildVehicleTypeOptions = (vehicleTypes: VehicleTypeRecord[]): Option[] =>
+	vehicleTypes.map((v) => ({
+		label: v.vehicle_type,
+		value: String(v.vehicle_type_id),
 	}));
 
 // =============================================================================
@@ -163,6 +181,7 @@ export const extractFormValuesFromDetails = (details: GateEntryDetails): GateEnt
 		challanNo: details.challan_no ?? "",
 		challanDate: details.challan_date?.split(" ")[0] ?? details.challan_date?.slice(0, 10) ?? "",
 		vehicleNo: details.vehicle_no ?? "",
+		vehicleType: details.vehicle_type_id ? String(details.vehicle_type_id) : "",
 		driverName: details.driver_name ?? "",
 		transporter: details.transporter ?? "",
 		poId: details.po_id ? String(details.po_id) : "",
@@ -174,6 +193,9 @@ export const extractFormValuesFromDetails = (details: GateEntryDetails): GateEnt
 		tareWeight: String(details.tare_weight ?? ""),
 		challanWeight: String(details.challan_weight ?? ""),
 		netWeight: String(details.net_weight ?? ""),
+		variableShortage: String(details.variable_shortage ?? ""),
+		actualWeight: String(details.actual_weight ?? ""),
+		marketingSlip: details.marketing_slip === 1,
 		remarks: details.remarks ?? "",
 		outDate,
 		outTime,
@@ -187,7 +209,7 @@ export const extractFormValuesFromDetails = (details: GateEntryDetails): GateEnt
 export const mapLineItemsFromAPI = (lineItems: GateEntryLineItemAPI[]): GateEntryLineItem[] =>
 	lineItems.map((li) => ({
 		id: generateLineId(),
-		challanItem: li.challan_item_name_id ? String(li.challan_item_name_id) : "",
+		challanItem: li.challan_item_id ? String(li.challan_item_id) : "",
 		challanQuality: li.challan_jute_quality_id ? String(li.challan_jute_quality_id) : "",
 		challanQty: li.challan_quantity ? String(li.challan_quantity) : "",
 		challanWeight: li.challan_weight ? String(li.challan_weight) : "",
@@ -225,15 +247,18 @@ export const mapFormToCreatePayload = (
 		transporter: formValues.transporter,
 		po_id: formValues.poId ? parseInt(formValues.poId, 10) : null,
 		jute_uom: formValues.juteUom,
-		mukam: formValues.mukam,
+		mukam_id: formValues.mukam,
 		jute_supplier_id: parseInt(formValues.supplier, 10),
 		party_id: formValues.party ? parseInt(formValues.party, 10) : null,
 		gross_weight: parseFloat(formValues.grossWeight) || 0,
 		tare_weight: parseFloat(formValues.tareWeight) || 0,
 		net_weight: parseFloat(formValues.netWeight) || 0,
+		variable_shortage: formValues.variableShortage ? parseFloat(formValues.variableShortage) : 0,
+		vehicle_type_id: formValues.vehicleType ? parseInt(formValues.vehicleType, 10) : null,
+		marketing_slip: formValues.marketingSlip ? 1 : 0,
 		remarks: formValues.remarks || null,
 		line_items: validLineItems.map((li) => ({
-			challan_item_name_id: li.challanItem ? parseInt(li.challanItem, 10) : null,
+			challan_item_id: li.challanItem ? parseInt(li.challanItem, 10) : null,
 			challan_jute_quality_id: li.challanQuality ? parseInt(li.challanQuality, 10) : null,
 			challan_quantity: li.challanQty ? parseFloat(li.challanQty) : null,
 			challan_weight: li.challanWeight ? parseFloat(li.challanWeight) : null,
@@ -270,16 +295,19 @@ export const mapFormToUpdatePayload = (
 		transporter: formValues.transporter || null,
 		po_id: formValues.poId ? parseInt(formValues.poId, 10) : null,
 		jute_uom: formValues.juteUom || null,
-		mukam: formValues.mukam || null,
+		mukam_id: formValues.mukam || null,
 		jute_supplier_id: formValues.supplier ? parseInt(formValues.supplier, 10) : null,
 		party_id: formValues.party ? parseInt(formValues.party, 10) : null,
 		gross_weight: formValues.grossWeight ? parseFloat(formValues.grossWeight) : null,
 		tare_weight: formValues.tareWeight ? parseFloat(formValues.tareWeight) : null,
 		net_weight: formValues.netWeight ? parseFloat(formValues.netWeight) : null,
+		variable_shortage: formValues.variableShortage ? parseFloat(formValues.variableShortage) : null,
+		vehicle_type_id: formValues.vehicleType ? parseInt(formValues.vehicleType, 10) : null,
+		marketing_slip: formValues.marketingSlip ? 1 : 0,
 		remarks: formValues.remarks || null,
 		action: action || null,
 		line_items: validLineItems.map((li) => ({
-			challan_item_name_id: li.challanItem ? parseInt(li.challanItem, 10) : null,
+			challan_item_id: li.challanItem ? parseInt(li.challanItem, 10) : null,
 			challan_jute_quality_id: li.challanQuality ? parseInt(li.challanQuality, 10) : null,
 			challan_quantity: li.challanQty ? parseFloat(li.challanQty) : null,
 			challan_weight: li.challanWeight ? parseFloat(li.challanWeight) : null,

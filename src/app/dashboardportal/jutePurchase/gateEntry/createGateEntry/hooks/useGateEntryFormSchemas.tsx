@@ -6,7 +6,7 @@
 import * as React from "react";
 import { TextField } from "@mui/material";
 import type { MuiFormMode, Option } from "../types/gateEntryTypes";
-import { calculateNetWeight } from "../utils/gateEntryCalculations";
+import { calculateNetWeight, calculateActualWeight } from "../utils/gateEntryCalculations";
 
 type UseGateEntryFormSchemasParams = {
 	mode: MuiFormMode;
@@ -16,6 +16,7 @@ type UseGateEntryFormSchemasParams = {
 	partyOptions: Option[];
 	poOptions: Option[];
 	uomOptions: Option[];
+	vehicleTypeOptions: Option[];
 	hasSupplierSelected: boolean;
 	isSingleBranch: boolean;
 	isEditMode: boolean;
@@ -29,6 +30,7 @@ export function useGateEntryFormSchemas({
 	partyOptions,
 	poOptions,
 	uomOptions,
+	vehicleTypeOptions,
 	hasSupplierSelected,
 	isSingleBranch,
 	isEditMode,
@@ -88,7 +90,17 @@ export function useGateEntryFormSchemas({
 					type: "text" as const,
 					required: true,
 					disabled: isViewMode,
-					grid: { xs: 12, md: 4 },
+					grid: { xs: 12, md: 3 },
+				},
+				{
+					name: "vehicleType",
+					label: "Vehicle Type",
+					type: "select" as const,
+					required: false,
+					options: vehicleTypeOptions,
+					disabled: isViewMode,
+					grid: { xs: 12, md: 3 },
+					placeholder: "Select Vehicle Type",
 				},
 
 				// Row 3: Driver Name, Transporter, PO (optional)
@@ -159,15 +171,23 @@ export function useGateEntryFormSchemas({
 					grid: { xs: 12, md: 4 },
 					placeholder: hasSupplierSelected ? "Select Party" : "Select Supplier first",
 				},
+				{
+					name: "marketingSlip",
+					label: "Marketing Slip",
+					type: "checkbox" as const,
+					required: false,
+					disabled: isViewMode,
+					grid: { xs: 12, md: 4 },
+				},
 
-				// Row 6: Weights - Gross, Tare, Challan Weight
+				// Row 6: Weights - Gross, Tare, Challan, Net (auto), Variable Shortage, Actual (auto)
 				{
 					name: "grossWeight",
 					label: "Gross Weight (Kg)",
 					type: "number" as const,
 					required: true,
 					disabled: isViewMode,
-					grid: { xs: 12, md: 3 },
+					grid: { xs: 12, md: 2 },
 				},
 				{
 					name: "tareWeight",
@@ -175,7 +195,7 @@ export function useGateEntryFormSchemas({
 					type: "number" as const,
 					required: false,
 					disabled: isViewMode,
-					grid: { xs: 12, md: 3 },
+					grid: { xs: 12, md: 2 },
 					customValidate: (value: unknown, values: Record<string, unknown>) => {
 						const tare = parseFloat(String(value)) || 0;
 						const gross = parseFloat(String(values.grossWeight)) || 0;
@@ -191,14 +211,14 @@ export function useGateEntryFormSchemas({
 					type: "number" as const,
 					required: true,
 					disabled: isViewMode,
-					grid: { xs: 12, md: 3 },
+					grid: { xs: 12, md: 2 },
 				},
 				{
 					name: "netWeight",
 					label: "", // Empty label - the TextField inside render has its own label
 					type: "custom" as const,
 					required: false,
-					grid: { xs: 12, md: 3 },
+					grid: { xs: 12, md: 2 },
 					render: ({ values }: { values: Record<string, unknown> }) => {
 						const gross = parseFloat(String(values.grossWeight)) || 0;
 						const tare = parseFloat(String(values.tareWeight)) || 0;
@@ -207,6 +227,38 @@ export function useGateEntryFormSchemas({
 							<TextField
 								label="Net Weight (Kg)"
 								value={net > 0 ? net.toFixed(2) : ""}
+								disabled
+								fullWidth
+								size="small"
+								InputProps={{ readOnly: true }}
+							/>
+						);
+					},
+				},
+				{
+					name: "variableShortage",
+					label: "Variable Shortage (Kg)",
+					type: "number" as const,
+					required: false,
+					disabled: isViewMode,
+					grid: { xs: 12, md: 2 },
+				},
+				{
+					name: "actualWeight",
+					label: "", // Empty label - the TextField inside render has its own label
+					type: "custom" as const,
+					required: false,
+					grid: { xs: 12, md: 2 },
+					render: ({ values }: { values: Record<string, unknown> }) => {
+						const gross = parseFloat(String(values.grossWeight)) || 0;
+						const tare = parseFloat(String(values.tareWeight)) || 0;
+						const shortage = parseFloat(String(values.variableShortage)) || 0;
+						const net = gross > 0 && tare > 0 && gross > tare ? calculateNetWeight(gross, tare) : 0;
+						const actual = net > 0 ? calculateActualWeight(net, shortage) : 0;
+						return (
+							<TextField
+								label="Actual Weight (Kg)"
+								value={actual > 0 ? actual.toFixed(2) : ""}
 								disabled
 								fullWidth
 								size="small"
@@ -259,6 +311,7 @@ export function useGateEntryFormSchemas({
 			partyOptions,
 			poOptions,
 			uomOptions,
+			vehicleTypeOptions,
 			hasSupplierSelected,
 			isSingleBranch,
 			isEditMode,

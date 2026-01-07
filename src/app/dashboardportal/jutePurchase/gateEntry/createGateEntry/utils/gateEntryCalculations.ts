@@ -14,6 +14,15 @@ export const calculateNetWeight = (grossWeight: number, tareWeight: number): num
 };
 
 /**
+ * Calculate actual weight from net weight and variable shortage.
+ * actual_weight = net_weight - variable_shortage
+ */
+export const calculateActualWeight = (netWeight: number, variableShortage: number): number => {
+	const actual = netWeight - variableShortage;
+	return Math.max(0, actual);
+};
+
+/**
  * Calculate challan weight for a line item based on proportion.
  * Formula: (header challan weight / total challan qty) * line challan qty
  */
@@ -27,16 +36,16 @@ export const calculateChallanWeight = (
 };
 
 /**
- * Calculate actual weight for a line item based on proportion.
- * Uses net weight from header and actual qty proportions.
+ * Calculate line item actual weight based on proportion of header actual weight.
+ * Uses header actual_weight (net - variable_shortage) and actual qty proportions.
  */
-export const calculateActualWeight = (
-	headerNetWeight: number,
+export const calculateLineActualWeight = (
+	headerActualWeight: number,
 	totalActualQty: number,
 	lineActualQty: number
 ): number => {
 	if (!totalActualQty || totalActualQty === 0) return 0;
-	return (headerNetWeight / totalActualQty) * lineActualQty;
+	return (headerActualWeight / totalActualQty) * lineActualQty;
 };
 
 /**
@@ -65,11 +74,13 @@ export const getTotalActualWeight = (lineItems: GateEntryLineItem[]): number =>
 
 /**
  * Recalculate all line item weights based on header values and quantities.
+ * Line item actual weight is based on header actual_weight (net - variable_shortage)
+ * distributed proportionally by actual quantity.
  */
 export const recalculateLineItemWeights = (
 	lineItems: GateEntryLineItem[],
 	headerChallanWeight: number,
-	headerNetWeight: number
+	headerActualWeight: number
 ): GateEntryLineItem[] => {
 	const totalChallanQty = getTotalChallanQty(lineItems);
 	const totalActualQty = getTotalActualQty(lineItems);
@@ -81,7 +92,7 @@ export const recalculateLineItemWeights = (
 		return {
 			...li,
 			challanWeight: lineChallanQty > 0 ? String(calculateChallanWeight(headerChallanWeight, totalChallanQty, lineChallanQty).toFixed(2)) : "",
-			actualWeight: lineActualQty > 0 ? String(calculateActualWeight(headerNetWeight, totalActualQty, lineActualQty).toFixed(2)) : "",
+			actualWeight: lineActualQty > 0 ? String(calculateLineActualWeight(headerActualWeight, totalActualQty, lineActualQty).toFixed(2)) : "",
 		};
 	});
 };

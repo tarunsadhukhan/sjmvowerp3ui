@@ -48,6 +48,7 @@ import {
 	buildSupplierOptions,
 	buildMukamOptions,
 	buildPOOptions,
+	buildVehicleTypeOptions,
 	extractFormValuesFromDetails,
 	mapLineItemsFromAPI,
 	mapFormToCreatePayload,
@@ -115,6 +116,11 @@ export default function JuteGateEntryCreatePage() {
 		[setupData]
 	);
 
+	const vehicleTypeOptions = React.useMemo(
+		() => (setupData ? buildVehicleTypeOptions(setupData.vehicle_types) : []),
+		[setupData]
+	);
+
 	// Form state hook
 	const {
 		initialValues,
@@ -126,12 +132,18 @@ export default function JuteGateEntryCreatePage() {
 		formRef,
 	} = useGateEntryFormState({ mode });
 
-	// Calculate header weights - derive net weight directly from gross and tare
+	// Calculate header weights:
+	// net_weight = gross_weight - tare_weight
+	// actual_weight = net_weight - variable_shortage (used for line item distribution)
 	const headerChallanWeight = parseFloat(formValues.challanWeight) || 0;
 	const grossWeight = parseFloat(formValues.grossWeight) || 0;
 	const tareWeight = parseFloat(formValues.tareWeight) || 0;
+	const variableShortage = parseFloat(formValues.variableShortage) || 0;
 	const headerNetWeight = grossWeight > 0 && tareWeight > 0 && grossWeight > tareWeight 
 		? calculateNetWeight(grossWeight, tareWeight) 
+		: 0;
+	const headerActualWeight = headerNetWeight > 0 
+		? Math.max(0, headerNetWeight - variableShortage)
 		: 0;
 
 	// Line items hook
@@ -144,7 +156,7 @@ export default function JuteGateEntryCreatePage() {
 	} = useGateEntryLineItems({
 		mode,
 		headerChallanWeight,
-		headerNetWeight,
+		headerActualWeight,
 		getQualityOptions: (itemId) =>
 			(qualitiesByItem[itemId] ?? []).map((q) => ({
 				label: q.quality_name,
@@ -179,6 +191,7 @@ export default function JuteGateEntryCreatePage() {
 		partyOptions: parties,
 		poOptions,
 		uomOptions: UOM_OPTIONS,
+		vehicleTypeOptions,
 		hasSupplierSelected: Boolean(formValues.supplier),
 		isSingleBranch,
 		isEditMode: Boolean(isEditMode),

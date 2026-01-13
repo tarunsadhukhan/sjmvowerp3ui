@@ -1,7 +1,7 @@
 import '@testing-library/jest-dom';
 import { TextEncoder, TextDecoder } from 'util';
 
-// Polyfill TextEncoder/TextDecoder for Jest environment (required by MUI X components)
+// Polyfill TextEncoder/TextDecoder for jsdom environment (required by MUI X components)
 if (typeof global.TextEncoder === 'undefined') {
   global.TextEncoder = TextEncoder;
 }

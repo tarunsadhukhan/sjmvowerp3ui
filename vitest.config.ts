@@ -26,6 +26,7 @@ export default defineConfig({
           globals: true,
           include: ['src/**/*.test.{ts,tsx}'],
           exclude: ['src/stories/**'],
+          setupFiles: ['./vitest.setup.ts'],
         },
       },
       // Storybook tests project

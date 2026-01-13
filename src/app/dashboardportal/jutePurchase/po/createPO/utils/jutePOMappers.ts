@@ -19,6 +19,7 @@ import type {
   Option,
 } from "../types/jutePOTypes";
 import { buildDefaultFormValues, generateLineId } from "./jutePOFactories";
+import { calculateWeight, formatNumber } from "./jutePOCalculations";
 
 // =============================================================================
 // RECORD MAPPERS (API -> UI Types)
@@ -222,25 +223,48 @@ export const mapPODetailsToFormValues = (
   remarks: details.remarks || defaults.remarks,
 });
 
+export type WeightCalcParams = {
+  vehicleCapacity: number;
+  vehicleQty: number;
+  juteUnit: string;
+};
+
 export const mapLineItemDetailsToLineItem = (
-  details: JutePOLineItemDetails
-): JutePOLineItem => ({
-  id: generateLineId(),
-  itemId: String(details.item_id),
-  itemName: details.item_name || undefined,
-  quality: details.quality ? String(details.quality) : "",
-  qualityName: details.quality_name || undefined,
-  cropYear: details.crop_year ? `${details.crop_year}-${(details.crop_year % 100) + 1}` : "",
-  marka: details.marka || "",
-  quantity: String(details.quantity),
-  uom: details.uom || "",
-  rate: String(details.rate),
-  allowableMoisture: details.allowable_moisture_percentage
-    ? String(details.allowable_moisture_percentage)
-    : "",
-  weight: String(details.weight),
-  amount: String(details.amount),
-});
+  details: JutePOLineItemDetails,
+  calcParams?: WeightCalcParams
+): JutePOLineItem => {
+  const quantity = details.quantity ?? 0;
+  const rate = details.rate ?? 0;
+  
+  // Calculate weight if params provided, otherwise use 0
+  let weight = 0;
+  if (calcParams) {
+    weight = calculateWeight(
+      quantity,
+      calcParams.vehicleCapacity,
+      calcParams.vehicleQty,
+      calcParams.juteUnit
+    );
+  }
+  
+  return {
+    id: generateLineId(),
+    itemId: String(details.item_id),
+    itemName: details.item_name || undefined,
+    quality: details.jute_quality_id ? String(details.jute_quality_id) : "",
+    qualityName: details.quality_name || undefined,
+    cropYear: details.crop_year ? `${details.crop_year}-${(details.crop_year % 100) + 1}` : "",
+    marka: details.marka || "",
+    quantity: String(quantity),
+    uom: details.uom || "",
+    rate: String(rate),
+    allowableMoisture: details.allowable_moisture
+      ? String(details.allowable_moisture)
+      : "",
+    weight: weight > 0 ? formatNumber(weight, 2) : "",
+    amount: details.amount ? String(details.amount) : "",
+  };
+};
 
 // =============================================================================
 // PAYLOAD MAPPERS (UI -> API)
@@ -269,13 +293,12 @@ export const mapFormValuesToCreatePayload = (
     .filter((li) => li.itemId && Number(li.quantity) > 0)
     .map((li) => ({
       item_id: Number(li.itemId),
-      quality: li.quality ? Number(li.quality) : null,
+      jute_quality_id: li.quality ? Number(li.quality) : null,
       crop_year: li.cropYear || null,
       marka: li.marka || null,
       quantity: Number(li.quantity),
-      uom: li.uom || null,
       rate: Number(li.rate),
-      allowable_moisture_percentage: li.allowableMoisture
+      allowable_moisture: li.allowableMoisture
         ? Number(li.allowableMoisture)
         : null,
     })),
@@ -308,13 +331,12 @@ export const mapFormToUpdatePayload = (
     .filter((li) => li.itemId && Number(li.quantity) > 0)
     .map((li) => ({
       item_id: Number(li.itemId),
-      quality: li.quality ? Number(li.quality) : null,
+      jute_quality_id: li.quality ? Number(li.quality) : null,
       crop_year: li.cropYear || null,
       marka: li.marka || null,
       quantity: Number(li.quantity),
-      uom: li.uom || null,
       rate: Number(li.rate),
-      allowable_moisture_percentage: li.allowableMoisture
+      allowable_moisture: li.allowableMoisture
         ? Number(li.allowableMoisture)
         : null,
     })),
@@ -339,6 +361,7 @@ export const mapJutePODetailsResponse = (data: unknown): JutePODetails => {
     supplier_name: raw?.supplier_name ? String(raw.supplier_name) : undefined,
     party_id: raw?.party_id ? Number(raw.party_id) : undefined,
     vehicle_type_id: Number(raw?.vehicle_type_id ?? 0),
+    vehicle_capacity: raw?.vehicle_capacity ? Number(raw.vehicle_capacity) : undefined,
     vehicle_qty: Number(raw?.vehicle_qty ?? 1),
     channel_code: String(raw?.channel_code ?? ""),
     credit_term: raw?.credit_term ? String(raw.credit_term) : undefined,
@@ -367,10 +390,13 @@ export const extractFormValuesFromDetails = (details: JutePODetails): JutePOForm
 // LINE ITEMS FROM API MAPPER
 // =============================================================================
 
-export const mapLineItemsFromAPI = (data: unknown[]): JutePOLineItem[] => {
+export const mapLineItemsFromAPI = (
+  data: unknown[],
+  calcParams?: WeightCalcParams
+): JutePOLineItem[] => {
   if (!Array.isArray(data)) return [];
   return data.map((item) => {
     const li = item as JutePOLineItemDetails;
-    return mapLineItemDetailsToLineItem(li);
+    return mapLineItemDetailsToLineItem(li, calcParams);
   });
 };

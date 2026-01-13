@@ -157,6 +157,7 @@ export type JutePODetails = {
   supplier_name?: string;
   party_id?: number;
   vehicle_type_id: number;
+  vehicle_capacity?: number; // From jute_lorry_mst.weight
   vehicle_qty: number;
   channel_code: string;
   credit_term?: string;
@@ -177,14 +178,14 @@ export type JutePOLineItemDetails = {
   jute_po_id: number;
   item_id: number;
   item_name?: string;
-  quality?: number;
+  jute_quality_id?: number;
   quality_name?: string;
   crop_year?: number;
   marka?: string;
   quantity: number;
   uom?: string;
   rate: number;
-  allowable_moisture_percentage?: number;
+  allowable_moisture?: number;
   weight: number;
   amount: number;
 };

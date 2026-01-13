@@ -147,7 +147,7 @@ export function useJutePOLineItemColumns({
       },
       {
         id: "rate",
-        header: "Rate",
+        header: "Rate (per Qtl)",
         width: "0.8fr",
         renderCell: ({ item }: { item: JutePOLineItem }) => {
           if (!canEdit) {

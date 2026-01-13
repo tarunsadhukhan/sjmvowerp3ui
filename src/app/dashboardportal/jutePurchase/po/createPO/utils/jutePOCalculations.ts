@@ -4,30 +4,42 @@
  */
 
 // =============================================================================
+// CONSTANTS
+// =============================================================================
+
+/** Weight per bale in kg */
+export const WEIGHT_PER_BALE_KG = 150;
+/** Weight per bale in quintals */
+export const WEIGHT_PER_BALE_QTL = 1.5;
+
+/** Weight per loose unit in kg */
+export const WEIGHT_PER_LOOSE_KG = 48;
+/** Weight per loose unit in quintals */
+export const WEIGHT_PER_LOOSE_QTL = 0.48;
+
+/** Allowed variance percentage for vehicle weight validation */
+export const VEHICLE_WEIGHT_TOLERANCE_PERCENT = 5;
+
+// =============================================================================
 // WEIGHT CALCULATION
 // =============================================================================
 
 /**
  * Calculate weight based on unit type (LOOSE or BALE).
  * 
- * For LOOSE: weight = (totalVehicleWeight * quantity%) / 100
- *   - quantity is a percentage of total vehicle capacity
- *   - totalVehicleWeight = vehicleCapacity * vehicleQty
+ * For BALE: weight = 1.5 quintals (150 kg) per bale
+ * For LOOSE: weight = 0.48 quintals (48 kg) per unit
  * 
- * For BALE: weight = 150 * quantity
- *   - 150 kg per bale standard weight
- *   - quantity is number of bales
- * 
- * @param quantity - The quantity value (percentage for LOOSE, count for BALE)
- * @param vehicleCapacityWeight - Weight capacity of one vehicle (in quintals/kg)
- * @param vehicleQty - Number of vehicles
+ * @param quantity - The quantity value (number of bales or loose units)
+ * @param _vehicleCapacityWeight - (Unused) Kept for API compatibility
+ * @param _vehicleQty - (Unused) Kept for API compatibility
  * @param unitType - "LOOSE" or "BALE"
- * @returns Calculated weight
+ * @returns Calculated weight in quintals
  */
 export const calculateWeight = (
   quantity: number,
-  vehicleCapacityWeight: number,
-  vehicleQty: number,
+  _vehicleCapacityWeight: number,
+  _vehicleQty: number,
   unitType: "LOOSE" | "BALE" | string
 ): number => {
   if (!Number.isFinite(quantity) || quantity <= 0) {
@@ -35,17 +47,80 @@ export const calculateWeight = (
   }
 
   if (unitType === "BALE") {
-    // For bale: 1.5 quintals per bale (150 kg / 100) * quantity
-    return 1.5 * quantity;
+    // 1.5 quintals (150 kg) per bale
+    return WEIGHT_PER_BALE_QTL * quantity;
   }
 
-  // For loose: percentage-based calculation (result already in quintals)
-  const totalVehicleWeight = vehicleCapacityWeight * vehicleQty;
-  if (!Number.isFinite(totalVehicleWeight) || totalVehicleWeight <= 0) {
-    return 0;
+  // LOOSE: 0.48 quintals (48 kg) per unit
+  return WEIGHT_PER_LOOSE_QTL * quantity;
+};
+
+// =============================================================================
+// VEHICLE WEIGHT VALIDATION
+// =============================================================================
+
+export type VehicleWeightValidation = {
+  isValid: boolean;
+  totalLineWeight: number;
+  expectedVehicleWeight: number;
+  variancePercent: number;
+  message: string;
+};
+
+/**
+ * Validate that total line item weight is within ±5% of vehicle capacity.
+ * 
+ * @param totalLineWeight - Total weight of all line items in quintals
+ * @param vehicleCapacityQtl - Weight capacity of one vehicle in quintals
+ * @param vehicleQty - Number of vehicles
+ * @returns Validation result with details
+ */
+export const validateVehicleWeight = (
+  totalLineWeight: number,
+  vehicleCapacityQtl: number,
+  vehicleQty: number
+): VehicleWeightValidation => {
+  const expectedVehicleWeight = vehicleCapacityQtl * vehicleQty;
+  
+  if (expectedVehicleWeight <= 0) {
+    return {
+      isValid: false,
+      totalLineWeight,
+      expectedVehicleWeight,
+      variancePercent: 0,
+      message: "Vehicle capacity not configured",
+    };
   }
 
-  return (totalVehicleWeight * quantity) / 100;
+  if (totalLineWeight <= 0) {
+    return {
+      isValid: false,
+      totalLineWeight,
+      expectedVehicleWeight,
+      variancePercent: 0,
+      message: "No line items with weight",
+    };
+  }
+
+  const variance = totalLineWeight - expectedVehicleWeight;
+  const variancePercent = (variance / expectedVehicleWeight) * 100;
+  const absVariancePercent = Math.abs(variancePercent);
+
+  const isValid = absVariancePercent <= VEHICLE_WEIGHT_TOLERANCE_PERCENT;
+
+  let message = "";
+  if (!isValid) {
+    const direction = variancePercent > 0 ? "exceeds" : "is below";
+    message = `Total weight (${totalLineWeight.toFixed(2)} Qtl) ${direction} vehicle capacity (${expectedVehicleWeight.toFixed(2)} Qtl) by ${absVariancePercent.toFixed(1)}%. Must be within ±${VEHICLE_WEIGHT_TOLERANCE_PERCENT}%.`;
+  }
+
+  return {
+    isValid,
+    totalLineWeight,
+    expectedVehicleWeight,
+    variancePercent,
+    message,
+  };
 };
 
 // =============================================================================

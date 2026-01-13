@@ -37,7 +37,7 @@ import {
   UNIT_OPTIONS,
 } from "./utils/jutePOConstants";
 import { createBlankLine, lineHasAnyData, lineIsComplete } from "./utils/jutePOFactories";
-import { calculateTotals } from "./utils/jutePOCalculations";
+import { calculateTotals, validateVehicleWeight } from "./utils/jutePOCalculations";
 import {
   mapJutePOSetupResponse,
   mapJutePODetailsResponse,
@@ -121,6 +121,23 @@ export default function JutePOCreatePage() {
     formRef,
   } = useJutePOFormState({ mode });
 
+  // Early status-based edit check (before hooks that need mode)
+  // This allows us to treat non-editable statuses as "view" mode
+  const isStatusEditableEarly = React.useMemo(() => {
+    if (mode === "create") return true;
+    const editableStatuses = [JUTE_PO_STATUS_IDS.DRAFT, JUTE_PO_STATUS_IDS.OPEN];
+    const currentStatusId = details?.status_id;
+    if (currentStatusId === undefined || currentStatusId === null) return true; // Default to editable if no status yet
+    return editableStatuses.includes(currentStatusId as typeof editableStatuses[number]);
+  }, [mode, details]);
+
+  // Effective mode for hooks - treat as view if status is not editable
+  const effectiveModeForHooks = React.useMemo(() => {
+    if (mode === "create") return "create";
+    if (!isStatusEditableEarly) return "view";
+    return mode;
+  }, [mode, isStatusEditableEarly]);
+
   // Line items hook
   const {
     lineItems,
@@ -129,7 +146,7 @@ export default function JutePOCreatePage() {
     removeLineItems,
     handleLineFieldChange,
   } = useJutePOLineItems({
-    mode,
+    mode: effectiveModeForHooks,
     juteUnit: formValues.juteUnit,
     vehicleCapacity: parseFloat(
       (setupData?.vehicle_types ?? []).find((v) => String(v.vehicle_type_id) === formValues.vehicleType)?.capacity_weight?.toString() ?? "0"
@@ -210,8 +227,8 @@ export default function JutePOCreatePage() {
     });
   }, [formValues]);
 
-  // Line items can be edited only if mode is not view AND mandatory fields are filled
-  const canEditLineItems = mode !== "view" && areMandatoryFieldsFilled;
+  // Line items can be edited only if mode is not view AND mandatory fields are filled AND status is editable
+  const canEditLineItems = mode !== "view" && areMandatoryFieldsFilled && isStatusEditableEarly;
 
   // ========== Data Fetching ==========
 
@@ -268,9 +285,14 @@ export default function JutePOCreatePage() {
             await handleSupplierChange(formVals.supplier);
           }
 
-          // Map line items from the same response
+          // Map line items from the same response with weight calculation params
           if (mappedDetails.line_items && mappedDetails.line_items.length > 0) {
-            const mappedLines = mapLineItemsFromAPI(mappedDetails.line_items);
+            const calcParams = {
+              vehicleCapacity: mappedDetails.vehicle_capacity ?? 0,
+              vehicleQty: mappedDetails.vehicle_qty ?? 1,
+              juteUnit: mappedDetails.jute_unit ?? "LOOSE",
+            };
+            const mappedLines = mapLineItemsFromAPI(mappedDetails.line_items, calcParams);
             replaceLineItems(mappedLines);
 
             // Fetch qualities for each unique item
@@ -445,6 +467,21 @@ export default function JutePOCreatePage() {
           return;
         }
 
+        // Validate vehicle weight tolerance (±5%)
+        const vehicleCapacityQtl = parseFloat(
+          (setupData?.vehicle_types ?? []).find(
+            (v) => String(v.vehicle_type_id) === (values as JutePOFormValues).vehicleType
+          )?.capacity_weight?.toString() ?? "0"
+        );
+        const vehicleQty = parseInt((values as JutePOFormValues).vehicleQty, 10) || 1;
+        const weightValidation = validateVehicleWeight(totalWeight, vehicleCapacityQtl, vehicleQty);
+        
+        if (!weightValidation.isValid) {
+          setPageError(weightValidation.message);
+          setSaving(false);
+          return;
+        }
+
         if (mode === "create") {
           const payload = mapFormToCreatePayload(values as unknown as JutePOFormValues, validLines);
           const response = await fetchWithCookie(
@@ -483,7 +520,7 @@ export default function JutePOCreatePage() {
         setSaving(false);
       }
     },
-    [coId, mode, jutePOId, lineItems, router, bumpFormKey]
+    [coId, mode, jutePOId, lineItems, router, bumpFormKey, setupData, totalWeight]
   );
 
   const handleSave = React.useCallback(async () => {
@@ -497,7 +534,8 @@ export default function JutePOCreatePage() {
   const primaryActions = React.useMemo((): TransactionAction[] => {
     const actions: TransactionAction[] = [];
 
-    if (mode !== "view" && approvalPermissions.canSave) {
+    // Only show Save button if we're in an editable mode (effectiveModeForHooks) and have permission
+    if (effectiveModeForHooks !== "view" && approvalPermissions.canSave) {
       actions.push({
         label: "Save",
         onClick: handleSave,
@@ -513,7 +551,7 @@ export default function JutePOCreatePage() {
     });
 
     return actions;
-  }, [mode, approvalPermissions, saving, handleSave]);
+  }, [effectiveModeForHooks, approvalPermissions, saving, handleSave]);
 
   // ========== Render ==========
 
@@ -533,6 +571,11 @@ export default function JutePOCreatePage() {
             {mode !== "view" && !areMandatoryFieldsFilled && (
               <div className="text-amber-600 bg-amber-50 border border-amber-200 rounded p-2 text-sm">
                 Please fill all mandatory header fields before adding line items.
+              </div>
+            )}
+            {mode !== "create" && !isStatusEditableEarly && (
+              <div className="text-blue-600 bg-blue-50 border border-blue-200 rounded p-2 text-sm">
+                This PO is in <strong>{approvalInfo?.statusLabel || "Approved"}</strong> status and cannot be edited.
               </div>
             )}
           </>
@@ -568,6 +611,12 @@ export default function JutePOCreatePage() {
               totalWeight={totalWeight}
               totalAmount={totalAmount}
               lineCount={validLineCount}
+              vehicleCapacityQtl={parseFloat(
+                (setupData?.vehicle_types ?? []).find(
+                  (v) => String(v.vehicle_type_id) === formValues.vehicleType
+                )?.capacity_weight?.toString() ?? "0"
+              )}
+              vehicleQty={parseInt(formValues.vehicleQty, 10) || 1}
             />
           </>
         }
@@ -577,7 +626,7 @@ export default function JutePOCreatePage() {
             schema={formSchema}
             formKey={formKey}
             initialValues={initialValues}
-            mode={mode}
+            mode={effectiveModeForHooks}
             formRef={formRef}
             onSubmit={handleFormSubmit}
             onValuesChange={(values) => setFormValues(values as unknown as JutePOFormValues)}

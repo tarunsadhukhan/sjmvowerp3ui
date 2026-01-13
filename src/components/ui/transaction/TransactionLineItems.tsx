@@ -58,6 +58,14 @@ export function TransactionLineItems<TItem>({
     return parts.join(" ");
   }, [columns, allowSelection, selectionColumnWidth]);
 
+  // Calculate minimum width for horizontal scrolling
+  // Estimate: each column needs at least 100px, plus selection column if present
+  const estimatedMinWidth = React.useMemo(() => {
+    const baseWidth = columns.length * 100;
+    const selectionWidth = allowSelection ? 48 : 0;
+    return Math.max(800, baseWidth + selectionWidth); // Minimum 800px, or calculated width
+  }, [columns.length, allowSelection]);
+
   const handleRemoveSelected = React.useCallback(() => {
     if (!onRemoveSelected || !selection.hasSelection) return;
     onRemoveSelected(selection.selectedIds);
@@ -88,8 +96,11 @@ export function TransactionLineItems<TItem>({
         ) : null}
       </div>
 
-      <div className="overflow-x-auto">
-        <div className="min-w-280 transaction-grid-container">
+      <div className="overflow-x-auto" style={{ width: "100%" }}>
+        <div 
+          className="transaction-grid-container"
+          style={{ minWidth: `${estimatedMinWidth}px` }}
+        >
           <div
             className="transaction-grid-header"
             style={{ gridTemplateColumns }}

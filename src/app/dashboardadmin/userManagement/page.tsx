@@ -1,109 +1,119 @@
 "use client";
 
-import { SearchablePaginatedTable } from "@/components/ui/searchablePaginatedTable";
-import { Column } from "@/components/ui/datatablewithedit";
-import { Button } from "@/components/ui/button";
-import { PencilIcon } from "lucide-react";
+import React, { useMemo, useCallback } from "react";
+import { useRouter } from "next/navigation";
+import { Snackbar, Alert } from "@mui/material";
+import { GridColDef } from "@mui/x-data-grid";
+import IndexWrapper from "@/components/ui/IndexWrapper";
+import { useUserList } from "./hooks/useUserList";
+import type { User } from "./types";
 
+export default function UserManagementPage() {
+  const router = useRouter();
+  const {
+    rows,
+    totalRows,
+    loading,
+    error,
+    paginationModel,
+    handlePaginationModelChange,
+    searchValue,
+    handleSearchChange,
+  } = useUserList();
 
-import { apiRoutes } from "@/utils/api";
+  const [snackbar, setSnackbar] = React.useState<{
+    open: boolean;
+    message: string;
+    severity: "success" | "error";
+  }>({ open: false, message: "", severity: "success" });
 
+  // Show error in snackbar when it occurs
+  React.useEffect(() => {
+    if (error) {
+      setSnackbar({
+        open: true,
+        message: error,
+        severity: "error",
+      });
+    }
+  }, [error]);
 
-import { fetchWithCookie } from "@/utils/apiClient2";
-
-// Sample User type
-type User = {
-  user_id: number;
-  email_id: string;
-  name: string;
-  active: boolean;
-};
-
-// Real API fetch function with pagination and search
-const fetchUsers = async (page: number, search?: string) => {
-  const limit = 20;
-  const queryParams = new URLSearchParams({
-    page: page.toString(),
-    limit: limit.toString(),
-    user_id: localStorage.getItem('user_id') || '', // Ensure user_id is not null
-  });
-  if (search) {
-    queryParams.append('search', search);
-  }
-
-  const { data, error } = await fetchWithCookie(
-    apiRoutes.USERS_PORTAL,
-    "GET"
+  const handleEdit = useCallback(
+    (row: User) => {
+      router.push(`/dashboardadmin/userManagement/CreateUser?userId=${row.user_id}`);
+    },
+    [router]
   );
 
-  if (error || !data) {
-    throw new Error(error || 'Failed to fetch users');
-  }
-  return data;
-};
+  const handleCreate = useCallback(() => {
+    router.push("/dashboardadmin/userManagement/CreateUser");
+  }, [router]);
 
-// Table columns
-const columns: Column<User>[] = [
-  {
-    key: "name",
-    label: "Name",
-    className: "bg-[#3ea6da] text-white font-medium",
-  },
-  {
-    key: "email_id",
-    label: "username",
-    className: "bg-[#3ea6da] text-white font-medium",
-  },
-  {
-    key: "active",
-    label: "Active",
-    className: "bg-[#3ea6da] text-white",
-    render: (val) => (val === 1 ? "Yes" : "No"),
-  },
-  {
-    key: "actions",
-    label: "Actions",
-    className: "bg-[#3ea6da] text-white",
-    render: (_val, row) => (
-      <Button
-        variant="ghost"
-        size="icon"
-        onClick={() => {
-          const UserId = row.user_id;
+  const columns = useMemo<GridColDef<User>[]>(
+    () => [
+      {
+        field: "name",
+        headerName: "Name",
+        flex: 1,
+        minWidth: 150,
+      },
+      {
+        field: "email_id",
+        headerName: "Username",
+        flex: 1,
+        minWidth: 200,
+      },
+      {
+        field: "active",
+        headerName: "Active",
+        width: 100,
+        valueGetter: (value: number) => (value === 1 ? "Yes" : "No"),
+      },
+    ],
+    []
+  );
 
+  const handleCloseSnackbar = useCallback(() => {
+    setSnackbar((prev) => ({ ...prev, open: false }));
+  }, []);
 
-          window.location.href = `/dashboardadmin/userManagement/CreateUser?userId=${UserId}`;
-
-        }}
-      >
-        <PencilIcon className="h-4 w-4" />
-      </Button>
-    ),
-  },
-];
-
-export default function UserTenantAdmin() {
   return (
-    <div className="min-h-screen bg-gray-50 p-8">
-      <div className="mx-auto max-w-7xl">
-        <div className="mb-8 flex items-center justify-between">
-          <h1 className="text-2xl font-bold text-[#0C3C60]">User Management Portal</h1>
-            <Button
-            className="btn-primary"
-            onClick={() => {
-
-
-              window.location.href = "/dashboardadmin/userManagement/CreateUser";
-
-
-            }}
-            >
-            + Create User
-            </Button>
-        </div>
-
-        <SearchablePaginatedTable columns={columns} fetchFn={fetchUsers} />
-      </div>
-    </div>
+    <IndexWrapper
+      title="User Management Portal"
+      subtitle="Manage portal users and their branch/role assignments"
+      rows={rows}
+      columns={columns}
+      rowCount={totalRows}
+      paginationModel={paginationModel}
+      onPaginationModelChange={handlePaginationModelChange}
+      loading={loading}
+      showLoadingUntilLoaded
+      search={{
+        value: searchValue,
+        onChange: handleSearchChange,
+        placeholder: "Search users...",
+        debounceDelayMs: 1000,
+      }}
+      createAction={{
+        label: "+ Create User",
+        onClick: handleCreate,
+      }}
+      onEdit={handleEdit}
+    >
+      <Snackbar
+        open={snackbar.open}
+        autoHideDuration={4000}
+        onClose={handleCloseSnackbar}
+        anchorOrigin={{ vertical: "bottom", horizontal: "right" }}
+      >
+        <Alert
+          severity={snackbar.severity}
+          onClose={handleCloseSnackbar}
+          sx={{ width: "100%" }}
+        >
+          {snackbar.message}
+        </Alert>
+      </Snackbar>
+    </IndexWrapper>
   );
 }

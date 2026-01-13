@@ -180,6 +180,13 @@ const apiRoutesPortalMasters = {
     JUTE_QUALITY_CREATE: `${API_URL}/juteQualityMaster/jute_quality_create`,
     JUTE_QUALITY_EDIT: `${API_URL}/juteQualityMaster/jute_quality_edit`,
 
+    // Jute Supplier Master endpoints (global - not company-specific)
+    JUTE_SUPPLIER_TABLE: `${API_URL}/juteSupplierMaster/get_jute_supplier_table`,
+    JUTE_SUPPLIER_BY_ID: `${API_URL}/juteSupplierMaster/get_jute_supplier_by_id`,
+    JUTE_SUPPLIER_EDIT_SETUP: `${API_URL}/juteSupplierMaster/jute_supplier_edit_setup`,
+    JUTE_SUPPLIER_CREATE: `${API_URL}/juteSupplierMaster/jute_supplier_create`,
+    JUTE_SUPPLIER_EDIT: `${API_URL}/juteSupplierMaster/jute_supplier_edit`,
+
     // Jute PO endpoints
     JUTE_PO_TABLE: `${API_URL}/jutePO/get_jute_po_table`,
     JUTE_PO_BY_ID: `${API_URL}/jutePO/get_jute_po_by_id`,

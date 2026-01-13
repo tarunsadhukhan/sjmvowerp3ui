@@ -71,6 +71,7 @@ export const mapOpenPOs = (raw: unknown[]): OpenPORecord[] =>
 			jute_po_id: Number(data.jute_po_id ?? 0),
 			po_num: String(data.po_num ?? ""),
 			po_date: String(data.po_date ?? ""),
+			branch_id: data.branch_id ? Number(data.branch_id) : undefined,
 			supplier_id: data.supplier_id ? Number(data.supplier_id) : undefined,
 			supplier_name: data.supplier_name ? String(data.supplier_name) : undefined,
 			mukam_name: data.mukam_name ? String(data.mukam_name) : undefined,
@@ -124,7 +125,7 @@ export const buildSupplierOptions = (suppliers: SupplierRecord[]): Option[] =>
 export const buildMukamOptions = (mukams: MukamRecord[]): Option[] =>
 	mukams.map((m) => ({
 		label: m.mukam_name,
-		value: m.mukam_name, // Use mukam_name as value since DB stores text
+		value: String(m.mukam_id), // Use mukam_id as value (DB stores integer FK)
 	}));
 
 export const buildItemOptions = (items: JuteItemRecord[]): Option[] =>
@@ -135,7 +136,7 @@ export const buildItemOptions = (items: JuteItemRecord[]): Option[] =>
 
 export const buildPOOptions = (pos: OpenPORecord[]): Option[] =>
 	pos.map((p) => ({
-		label: `${p.po_num} (${p.supplier_name ?? "Unknown"})`,
+		label: p.po_num,
 		value: String(p.jute_po_id),
 	}));
 
@@ -247,7 +248,7 @@ export const mapFormToCreatePayload = (
 		transporter: formValues.transporter,
 		po_id: formValues.poId ? parseInt(formValues.poId, 10) : null,
 		jute_uom: formValues.juteUom,
-		mukam_id: formValues.mukam,
+		mukam_id: formValues.mukam ? parseInt(formValues.mukam, 10) : null,
 		jute_supplier_id: parseInt(formValues.supplier, 10),
 		party_id: formValues.party ? parseInt(formValues.party, 10) : null,
 		gross_weight: parseFloat(formValues.grossWeight) || 0,
@@ -295,7 +296,7 @@ export const mapFormToUpdatePayload = (
 		transporter: formValues.transporter || null,
 		po_id: formValues.poId ? parseInt(formValues.poId, 10) : null,
 		jute_uom: formValues.juteUom || null,
-		mukam_id: formValues.mukam || null,
+		mukam_id: formValues.mukam ? parseInt(formValues.mukam, 10) : null,
 		jute_supplier_id: formValues.supplier ? parseInt(formValues.supplier, 10) : null,
 		party_id: formValues.party ? parseInt(formValues.party, 10) : null,
 		gross_weight: formValues.grossWeight ? parseFloat(formValues.grossWeight) : null,

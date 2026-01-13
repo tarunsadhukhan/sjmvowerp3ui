@@ -55,6 +55,7 @@ export type OpenPORecord = {
 	jute_po_id: number;
 	po_num: string;
 	po_date: string;
+	branch_id?: number;
 	supplier_id?: number;
 	supplier_name?: string;
 	mukam_name?: string;

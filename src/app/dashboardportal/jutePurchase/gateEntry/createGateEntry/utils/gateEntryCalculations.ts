@@ -92,7 +92,7 @@ export const recalculateLineItemWeights = (
 		return {
 			...li,
 			challanWeight: lineChallanQty > 0 ? String(calculateChallanWeight(headerChallanWeight, totalChallanQty, lineChallanQty).toFixed(2)) : "",
-			actualWeight: lineActualQty > 0 ? String(calculateLineActualWeight(headerActualWeight, totalActualQty, lineActualQty).toFixed(2)) : "",
+			actualWeight: lineActualQty > 0 ? String(Math.round(calculateLineActualWeight(headerActualWeight, totalActualQty, lineActualQty))) : "",
 		};
 	});
 };

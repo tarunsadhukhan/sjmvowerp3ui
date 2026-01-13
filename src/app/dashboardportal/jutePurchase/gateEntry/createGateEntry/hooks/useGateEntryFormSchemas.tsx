@@ -120,6 +120,8 @@ export function useGateEntryFormSchemas({
 					disabled: isViewMode,
 					grid: { xs: 12, md: 4 },
 				},
+
+				// Row 4: PO Number (optional), Supplier (auto-filled from PO), Party
 				{
 					name: "poId",
 					label: "PO Number",
@@ -130,8 +132,27 @@ export function useGateEntryFormSchemas({
 					grid: { xs: 12, md: 4 },
 					placeholder: "Select PO (Optional)",
 				},
+				{
+					name: "supplier",
+					label: "Supplier",
+					type: "select" as const,
+					required: true,
+					options: supplierOptions,
+					disabled: isViewMode,
+					grid: { xs: 12, md: 4 },
+				},
+				{
+					name: "party",
+					label: "Party",
+					type: "select" as const,
+					required: false,
+					options: partyOptions,
+					disabled: isViewMode || !hasSupplierSelected,
+					grid: { xs: 12, md: 4 },
+					placeholder: hasSupplierSelected ? "Select Party" : "Select Supplier first",
+				},
 
-				// Row 4: Jute UOM, Mukam, Supplier
+				// Row 5: Jute UOM, Mukam, Marketing Slip
 				{
 					name: "juteUom",
 					label: "Jute UOM",
@@ -151,27 +172,6 @@ export function useGateEntryFormSchemas({
 					grid: { xs: 12, md: 4 },
 				},
 				{
-					name: "supplier",
-					label: "Supplier",
-					type: "select" as const,
-					required: true,
-					options: supplierOptions,
-					disabled: isViewMode,
-					grid: { xs: 12, md: 4 },
-				},
-
-				// Row 5: Party
-				{
-					name: "party",
-					label: "Party",
-					type: "select" as const,
-					required: false,
-					options: partyOptions,
-					disabled: isViewMode || !hasSupplierSelected,
-					grid: { xs: 12, md: 4 },
-					placeholder: hasSupplierSelected ? "Select Party" : "Select Supplier first",
-				},
-				{
 					name: "marketingSlip",
 					label: "Marketing Slip",
 					type: "checkbox" as const,
@@ -180,7 +180,15 @@ export function useGateEntryFormSchemas({
 					grid: { xs: 12, md: 4 },
 				},
 
-				// Row 6: Weights - Gross, Tare, Challan, Net (auto), Variable Shortage, Actual (auto)
+				// Row 6: Weights - Challan, Gross, Tare, Net (auto), Variable Shortage, Actual (auto)
+				{
+					name: "challanWeight",
+					label: "Challan Weight (Kg)",
+					type: "number" as const,
+					required: true,
+					disabled: isViewMode,
+					grid: { xs: 12, md: 2 },
+				},
 				{
 					name: "grossWeight",
 					label: "Gross Weight (Kg)",
@@ -206,14 +214,6 @@ export function useGateEntryFormSchemas({
 					},
 				},
 				{
-					name: "challanWeight",
-					label: "Challan Weight (Kg)",
-					type: "number" as const,
-					required: true,
-					disabled: isViewMode,
-					grid: { xs: 12, md: 2 },
-				},
-				{
 					name: "netWeight",
 					label: "", // Empty label - the TextField inside render has its own label
 					type: "custom" as const,
@@ -226,7 +226,7 @@ export function useGateEntryFormSchemas({
 						return (
 							<TextField
 								label="Net Weight (Kg)"
-								value={net > 0 ? net.toFixed(2) : ""}
+								value={net > 0 ? Math.round(net) : ""}
 								disabled
 								fullWidth
 								size="small"
@@ -258,7 +258,7 @@ export function useGateEntryFormSchemas({
 						return (
 							<TextField
 								label="Actual Weight (Kg)"
-								value={actual > 0 ? actual.toFixed(2) : ""}
+								value={actual > 0 ? Math.round(actual) : ""}
 								disabled
 								fullWidth
 								size="small"

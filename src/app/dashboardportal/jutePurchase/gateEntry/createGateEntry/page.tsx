@@ -111,11 +111,6 @@ export default function JuteGateEntryCreatePage() {
 		[setupData]
 	);
 
-	const poOptions = React.useMemo(
-		() => (setupData ? buildPOOptions(setupData.open_pos) : []),
-		[setupData]
-	);
-
 	const vehicleTypeOptions = React.useMemo(
 		() => (setupData ? buildVehicleTypeOptions(setupData.vehicle_types) : []),
 		[setupData]
@@ -131,6 +126,23 @@ export default function JuteGateEntryCreatePage() {
 		bumpFormKey,
 		formRef,
 	} = useGateEntryFormState({ mode });
+
+	// PO options - filtered by selected branch only (must be after formValues is available)
+	const poOptions = React.useMemo(() => {
+		if (!setupData) return [];
+		const selectedBranchId = formValues.branch;
+		
+		// Filter POs by selected branch only
+		let filteredPOs = setupData.open_pos;
+		
+		if (selectedBranchId) {
+			filteredPOs = filteredPOs.filter(
+				(po) => String(po.branch_id) === selectedBranchId
+			);
+		}
+		
+		return buildPOOptions(filteredPOs);
+	}, [setupData, formValues.branch]);
 
 	// Calculate header weights:
 	// net_weight = gross_weight - tare_weight
@@ -253,7 +265,7 @@ export default function JuteGateEntryCreatePage() {
 		if (supplierId === prevSupplierRef.current) return;
 		prevSupplierRef.current = supplierId;
 
-		// Clear party when supplier changes
+		// Clear party when supplier changes (don't clear PO - supplier is auto-filled from PO)
 		setFormValues((prev) => ({ ...prev, party: "" }));
 
 		if (!supplierId || !coId) {
@@ -350,7 +362,7 @@ export default function JuteGateEntryCreatePage() {
 				setFormValues((prev) => ({
 					...prev,
 					supplier: String(poData.supplier_id ?? prev.supplier),
-					mukam: poData.mukam_name ?? prev.mukam,
+					mukam: poData.mukam_id ? String(poData.mukam_id) : prev.mukam,
 					juteUom: poData.jute_uom ?? prev.juteUom,
 					party: "", // Clear party - will need to re-select
 				}));

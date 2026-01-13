@@ -131,7 +131,7 @@ export function useGateEntryLineItemColumns({
 				width: "0.8fr",
 				renderCell: ({ item }) => (
 					<span className="text-xs text-slate-600">
-						{item.challanWeight ? parseFloat(item.challanWeight).toFixed(2) : "-"}
+						{item.challanWeight ? Math.round(parseFloat(item.challanWeight)) : "-"}
 					</span>
 				),
 			},
@@ -217,7 +217,7 @@ export function useGateEntryLineItemColumns({
 				width: "0.8fr",
 				renderCell: ({ item }) => (
 					<span className="text-xs text-slate-600">
-						{item.actualWeight ? parseFloat(item.actualWeight).toFixed(2) : "-"}
+						{item.actualWeight ? Math.round(parseFloat(item.actualWeight)) : "-"}
 					</span>
 				),
 			},

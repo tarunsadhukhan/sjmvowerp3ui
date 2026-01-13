@@ -273,11 +273,17 @@ export default function JuteMREditPage() {
 		);
 	}
 
-	const actions = [
+	const actions: Array<{
+		label: string;
+		onClick: () => void;
+		variant: "default" | "outline";
+		disabled?: boolean;
+		loading?: boolean;
+	}> = [
 		{
 			label: "Back",
 			onClick: () => router.push("/dashboardportal/jutePurchase/mr"),
-			variant: "outline" as const,
+			variant: "outline",
 		},
 	];
 
@@ -287,7 +293,7 @@ export default function JuteMREditPage() {
 			onClick: handleSave,
 			disabled: saving,
 			loading: saving,
-			variant: "default" as const,
+			variant: "default",
 		});
 	}
 

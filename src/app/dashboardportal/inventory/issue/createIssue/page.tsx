@@ -432,9 +432,8 @@ function IssueTransactionPageContent() {
 			const lineItemsPayload = filledLineItems.map((item) => ({
 				item_id: item.itemId ? Number(item.itemId) : undefined,
 				item_group_id: item.itemGrpId ? Number(item.itemGrpId) : undefined,
-				issue_qty: Number(item.quantity) || 0,
+				qty: Number(item.quantity) || 0,
 				uom_id: item.uomId ? Number(item.uomId) : undefined,
-				rate: item.rate ? Number(item.rate) : undefined,
 				expense_id: item.expenseType ? Number(item.expenseType) : undefined,
 				cost_factor_id: item.costFactor ? Number(item.costFactor) : undefined,
 				machine_id: item.machine ? Number(item.machine) : undefined,
@@ -452,7 +451,7 @@ function IssueTransactionPageContent() {
 				internal_note: values.internal_note
 					? String(values.internal_note)
 					: undefined,
-				lines: lineItemsPayload,
+				line_items: lineItemsPayload,
 			};
 
 			setSaving(true);

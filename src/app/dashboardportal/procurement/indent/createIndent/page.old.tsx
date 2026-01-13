@@ -1069,7 +1069,7 @@ export default function IndentTransactionPage() {
 
           return (
             <textarea
-              className="h-auto min-h-[24px] w-full resize-none border-0 bg-transparent px-1 py-0.5 text-xs focus:outline-none focus:ring-1 focus:ring-blue-500"
+              className="h-auto min-h-6 w-full resize-none border-0 bg-transparent px-1 py-0.5 text-xs focus:outline-none focus:ring-1 focus:ring-blue-500"
               rows={1}
               value={item.remarks}
               placeholder="Notes"

@@ -1,6 +1,4 @@
-/**
- * @jest-environment jsdom
- */
+
 import {
 	createBlankLine,
 	buildDefaultFormValues,

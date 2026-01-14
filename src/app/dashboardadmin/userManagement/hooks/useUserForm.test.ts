@@ -1,6 +1,4 @@
-/**
- * @jest-environment jsdom
- */
+
 import "@testing-library/jest-dom";
 import { vi } from "vitest";
 import { renderHook, act, waitFor } from "@testing-library/react";

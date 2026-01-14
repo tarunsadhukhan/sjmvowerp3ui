@@ -61,6 +61,8 @@ export type JuteMRLineItemAPI = {
 	remarks: string | null;
 	status: string | null;
 	active: number | null;
+	warehouse_id: number | null;
+	warehouse_path: string | null;
 };
 
 // UI line item type used in the MR page
@@ -84,4 +86,6 @@ export type MRLineItem = {
 	waterDamageAmount: number | null;
 	premiumAmount: number | null;
 	remarks: string | null;
+	warehouseId: number | null;
+	warehousePath: string | null;
 };

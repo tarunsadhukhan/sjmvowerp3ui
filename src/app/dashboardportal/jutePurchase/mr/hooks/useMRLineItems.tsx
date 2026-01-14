@@ -1,16 +1,21 @@
 import * as React from "react";
 import { TextField } from "@mui/material";
 import type { TransactionLineColumn } from "@/components/ui/transaction";
+import { SearchableSelect } from "@/components/ui/transaction";
 import type { MRLineItem } from "../types/mrTypes";
+
+type WarehouseOption = { value: number; label: string };
 
 type UseMRLineItemsParams = {
 	canEdit: boolean;
 	handleLineFieldChange: (id: string, field: keyof MRLineItem, value: string | number | null) => void;
+	warehouseOptions: WarehouseOption[];
 };
 
 export function useMRLineItems({
 	canEdit,
 	handleLineFieldChange,
+	warehouseOptions,
 }: UseMRLineItemsParams): TransactionLineColumn<MRLineItem>[] {
 	return React.useMemo(
 		(): TransactionLineColumn<MRLineItem>[] => [
@@ -409,7 +414,32 @@ export function useMRLineItems({
 				getTooltip: ({ item }) =>
 					item.premiumAmount != null ? `Premium Amount: ${item.premiumAmount.toFixed(2)}` : undefined,
 			},
+			{
+				id: "warehouse",
+				header: "Warehouse",
+				width: "1.4fr",
+				renderCell: ({ item }) => {
+					if (!canEdit) {
+						return (
+							<span className="text-xs">{item.warehousePath || "-"}</span>
+						);
+					}
+					const selectedOption = warehouseOptions.find((opt) => opt.value === item.warehouseId) ?? null;
+					return (
+						<SearchableSelect
+							options={warehouseOptions}
+							value={selectedOption}
+							onChange={(next) => handleLineFieldChange(item.id, "warehouseId", next?.value ?? null)}
+							getOptionLabel={(opt) => opt.label}
+							isOptionEqualToValue={(a, b) => a.value === b.value}
+							placeholder="Select warehouse"
+							textFieldProps={{ size: "small" }}
+						/>
+					);
+				},
+				getTooltip: ({ item }) => item.warehousePath || undefined,
+			},
 		],
-		[canEdit, handleLineFieldChange]
+		[canEdit, handleLineFieldChange, warehouseOptions]
 	);
 }

@@ -243,6 +243,7 @@ const apiRoutesPortalMasters = {
     JUTE_MR_BY_ID: `${API_URL}/juteMR/get_mr_by_id`,
     JUTE_MR_UPDATE: `${API_URL}/juteMR/update_mr`,
     JUTE_MR_AGENT_OPTIONS: `${API_URL}/juteMR/get_agent_options`,
+    JUTE_MR_WAREHOUSE_OPTIONS: `${API_URL}/juteMR/get_warehouse_options`,
     JUTE_MATERIAL_INSPECTION_UPDATE_LINE: `${API_URL}/juteMaterialInspection/update_line_item`,
 
     GET_INDENT_SETUP_1: `${API_URL}/procurementIndent/get_indent_setup_1`,

@@ -1,6 +1,4 @@
-/**
- * @jest-environment jsdom
- */
+
 import "@testing-library/jest-dom";
 import { describe, it, expect, vi, beforeEach, type Mock } from "vitest";
 import { render, screen, fireEvent, waitFor } from "@testing-library/react";
@@ -228,13 +226,14 @@ describe("InventorySearchTable", () => {
 				expect(screen.getByText("Test Item 1")).toBeInTheDocument();
 			});
 
+			// Get all checkboxes - first one is header
 			const checkboxes = screen.getAllByRole("checkbox");
 
-			// Select all
+			// Click header checkbox to select all (same pattern as passing test)
 			fireEvent.click(checkboxes[0]);
 			expect(screen.getByText(/Insert to Issue \(2\)/)).toBeInTheDocument();
 
-			// Deselect all
+			// Click header checkbox again to deselect all
 			fireEvent.click(checkboxes[0]);
 			expect(screen.getByText(/Insert to Issue \(0\)/)).toBeInTheDocument();
 		});

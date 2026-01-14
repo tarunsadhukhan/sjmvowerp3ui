@@ -69,6 +69,7 @@ export default function JuteMREditPage() {
 	const [lineItems, setLineItems] = React.useState<MRLineItem[]>([]);
 	const [saving, setSaving] = React.useState(false);
 	const [agentOptions, setAgentOptions] = React.useState<Array<{ value: number; label: string }>>([]);
+	const [warehouseOptions, setWarehouseOptions] = React.useState<Array<{ value: number; label: string }>>([]);
 
 	const handleHeaderChange = React.useCallback(
 		(field: keyof JuteMRHeader, value: string | number | null) => {
@@ -113,6 +114,7 @@ export default function JuteMREditPage() {
 	const lineItemColumns = useMRLineItems({
 		canEdit: mode !== "view",
 		handleLineFieldChange,
+		warehouseOptions,
 	});
 
 	// Calculate total accepted weight (MR weight)
@@ -143,6 +145,22 @@ export default function JuteMREditPage() {
 			console.error("Error loading agent options:", err);
 		}
 	}, [coId]);
+
+	const loadWarehouseOptions = React.useCallback(async (branchId: number) => {
+		try {
+			const url = `${apiRoutesPortalMasters.JUTE_MR_WAREHOUSE_OPTIONS}?branch_id=${branchId}`;
+			const { data, error } = await fetchWithCookie<{ warehouses: Array<{ warehouse_id: number; warehouse_name: string; warehouse_path: string }> }>(url, "GET");
+			if (error || !data) return;
+			
+			const options = data.warehouses.map((w) => ({
+				value: w.warehouse_id,
+				label: w.warehouse_path || w.warehouse_name,
+			}));
+			setWarehouseOptions(options);
+		} catch (err) {
+			console.error("Error loading warehouse options:", err);
+		}
+	}, []);
 
 	const loadData = React.useCallback(async () => {
 		if (!coId || !mrIdParam) return;
@@ -197,6 +215,8 @@ export default function JuteMREditPage() {
 					waterDamageAmount: li.water_damage_amount,
 					premiumAmount: li.premium_amount,
 					remarks: li.remarks,
+					warehouseId: li.warehouse_id,
+					warehousePath: li.warehouse_path,
 				};
 			});
 
@@ -212,6 +232,13 @@ export default function JuteMREditPage() {
 		void loadData();
 		void loadAgentOptions();
 	}, [loadData, loadAgentOptions]);
+
+	// Load warehouse options when header is available
+	React.useEffect(() => {
+		if (header?.branch_id) {
+			void loadWarehouseOptions(header.branch_id);
+		}
+	}, [header?.branch_id, loadWarehouseOptions]);
 
 	const handleSave = React.useCallback(async () => {
 		if (!coId || !header) return;
@@ -241,6 +268,7 @@ export default function JuteMREditPage() {
 					water_damage_amount: li.waterDamageAmount,
 					premium_amount: li.premiumAmount,
 					remarks: li.remarks,
+					warehouse_id: li.warehouseId,
 				})),
 			};
 

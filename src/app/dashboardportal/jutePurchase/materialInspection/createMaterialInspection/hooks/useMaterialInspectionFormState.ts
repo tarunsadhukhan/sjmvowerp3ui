@@ -4,8 +4,8 @@
  */
 
 import * as React from "react";
-import type { MuiFormMode, GateEntryFormValues } from "../types/gateEntryTypes";
-import { buildDefaultFormValues } from "../utils/gateEntryFactories";
+import type { MuiFormMode, GateEntryFormValues } from "../types/MaterialInspectionTypes";
+import { buildDefaultFormValues } from "../utils/MaterialInspectionFactories";
 
 type UseGateEntryFormStateParams = {
 	mode: MuiFormMode;

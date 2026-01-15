@@ -5,9 +5,9 @@
 
 import * as React from "react";
 import { useLineItems } from "@/components/ui/transaction";
-import type { MuiFormMode, GateEntryLineItem, Option } from "../types/gateEntryTypes";
-import { createBlankLine, lineHasAnyData } from "../utils/gateEntryFactories";
-import { recalculateLineItemWeights } from "../utils/gateEntryCalculations";
+import type { MuiFormMode, GateEntryLineItem, Option } from "../types/MaterialInspectionTypes";
+import { createBlankLine, lineHasAnyData } from "../utils/MaterialInspectionFactories";
+import { recalculateLineItemWeights } from "../utils/MaterialInspectionCalculations";
 
 type UseGateEntryLineItemsParams = {
 	mode: MuiFormMode;

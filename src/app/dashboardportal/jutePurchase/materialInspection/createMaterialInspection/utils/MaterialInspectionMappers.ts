@@ -16,8 +16,8 @@ import type {
 	JuteItemRecord,
 	OpenPORecord,
 	VehicleTypeRecord,
-} from "../types/gateEntryTypes";
-import { generateLineId } from "./gateEntryFactories";
+} from "../types/MaterialInspectionTypes";
+import { generateLineId } from "./MaterialInspectionFactories";
 
 // =============================================================================
 // SETUP DATA MAPPERS

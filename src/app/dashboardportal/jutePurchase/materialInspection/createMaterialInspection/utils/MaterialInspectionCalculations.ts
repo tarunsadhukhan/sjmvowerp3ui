@@ -3,7 +3,7 @@
  * @description Calculation functions for Jute Gate Entry.
  */
 
-import type { GateEntryLineItem } from "../types/gateEntryTypes";
+import type { GateEntryLineItem } from "../types/MaterialInspectionTypes";
 
 /**
  * Calculate net weight from gross and tare weights.

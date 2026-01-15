@@ -3,7 +3,7 @@
  * @description Constants for Jute Gate Entry module.
  */
 
-import type { BranchRecord, SupplierRecord, MukamRecord, JuteItemRecord, OpenPORecord, Option } from "../types/gateEntryTypes";
+import type { BranchRecord, SupplierRecord, MukamRecord, JuteItemRecord, OpenPORecord, Option } from "../types/MaterialInspectionTypes";
 
 // =============================================================================
 // STATUS CONSTANTS

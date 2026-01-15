@@ -7,7 +7,7 @@
 
 import * as React from "react";
 import MuiForm from "@/components/ui/muiform";
-import type { MuiFormMode, GateEntryFormValues } from "../types/gateEntryTypes";
+import type { MuiFormMode, GateEntryFormValues } from "../types/MaterialInspectionTypes";
 
 type GateEntryHeaderFormProps = {
 	schema: { fields: unknown[] };

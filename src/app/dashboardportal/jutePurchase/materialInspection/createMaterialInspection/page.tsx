@@ -30,15 +30,15 @@ import type {
 	Option,
 	JuteQualityRecord,
 	PODetailsForGateEntry,
-} from "./types/gateEntryTypes";
-import { GATE_ENTRY_STATUS } from "./types/gateEntryTypes";
+} from "./types/MaterialInspectionTypes";
+import { GATE_ENTRY_STATUS } from "./types/MaterialInspectionTypes";
 
 // Constants and Utils
 import {
 	GATE_ENTRY_STATUS_LABELS,
 	UOM_OPTIONS,
-} from "./utils/gateEntryConstants";
-import { calculateNetWeight, calculateLineItemTotals } from "./utils/gateEntryCalculations";
+} from "./utils/MaterialInspectionConstants";
+import { calculateNetWeight, calculateLineItemTotals } from "./utils/MaterialInspectionCalculations";
 import {
 	mapGateEntrySetupResponse,
 	buildBranchOptions,
@@ -49,13 +49,13 @@ import {
 	mapLineItemsFromAPI,
 	mapFormToCreatePayload,
 	mapFormToUpdatePayload,
-} from "./utils/gateEntryMappers";
+} from "./utils/MaterialInspectionMappers";
 
 // Hooks
-import { useGateEntryFormState } from "./hooks/useGateEntryFormState";
-import { useGateEntryLineItems } from "./hooks/useGateEntryLineItems";
-import { useGateEntryFormSchemas } from "./hooks/useGateEntryFormSchemas";
-import { useGateEntryLineItemColumns } from "./hooks/useGateEntryLineItemColumns";
+import { useGateEntryFormState } from "./hooks/useMaterialInspectionFormState";
+import { useGateEntryLineItems } from "./hooks/useMaterialInspectionLineItems";
+import { useGateEntryFormSchemas } from "./hooks/useMaterialInspectionFormSchemas";
+import { useGateEntryLineItemColumns } from "./hooks/useMaterialInspectionLineItemColumns";
 
 // Components
 import { GateEntryHeaderForm } from "./components";

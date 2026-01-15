@@ -5,8 +5,8 @@
 
 import * as React from "react";
 import { TextField } from "@mui/material";
-import type { MuiFormMode, Option } from "../types/gateEntryTypes";
-import { calculateNetWeight, calculateActualWeight } from "../utils/gateEntryCalculations";
+import type { MuiFormMode, Option } from "../types/MaterialInspectionTypes";
+import { calculateNetWeight, calculateActualWeight } from "../utils/MaterialInspectionCalculations";
 
 type UseGateEntryFormSchemasParams = {
 	mode: MuiFormMode;

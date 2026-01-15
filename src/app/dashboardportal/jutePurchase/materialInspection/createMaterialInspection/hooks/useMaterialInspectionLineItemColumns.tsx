@@ -7,7 +7,7 @@ import * as React from "react";
 import { SearchableSelect } from "@/components/ui/transaction";
 import { TextField } from "@mui/material";
 import type { TransactionLineColumn } from "@/components/ui/transaction";
-import type { GateEntryLineItem, Option, JuteItemRecord, JuteQualityRecord } from "../types/gateEntryTypes";
+import type { GateEntryLineItem, Option, JuteItemRecord, JuteQualityRecord } from "../types/MaterialInspectionTypes";
 
 type UseGateEntryLineItemColumnsParams = {
 	canEdit: boolean;

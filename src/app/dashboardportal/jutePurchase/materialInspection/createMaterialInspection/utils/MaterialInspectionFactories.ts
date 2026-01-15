@@ -3,7 +3,7 @@
  * @description Factory functions for creating default values and blank items.
  */
 
-import type { GateEntryFormValues, GateEntryLineItem } from "../types/gateEntryTypes";
+import type { GateEntryFormValues, GateEntryLineItem } from "../types/MaterialInspectionTypes";
 
 let lineIdSeed = 0;
 

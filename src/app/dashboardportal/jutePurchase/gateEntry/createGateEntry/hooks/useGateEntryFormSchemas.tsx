@@ -16,7 +16,6 @@ type UseGateEntryFormSchemasParams = {
 	partyOptions: Option[];
 	poOptions: Option[];
 	uomOptions: Option[];
-	vehicleTypeOptions: Option[];
 	hasSupplierSelected: boolean;
 	isSingleBranch: boolean;
 	isEditMode: boolean;
@@ -30,7 +29,6 @@ export function useGateEntryFormSchemas({
 	partyOptions,
 	poOptions,
 	uomOptions,
-	vehicleTypeOptions,
 	hasSupplierSelected,
 	isSingleBranch,
 	isEditMode,
@@ -72,7 +70,7 @@ export function useGateEntryFormSchemas({
 					name: "challanNo",
 					label: "Challan No",
 					type: "text" as const,
-					required: true,
+					required: false,
 					disabled: isViewMode,
 					grid: { xs: 12, md: 4 },
 				},
@@ -80,7 +78,7 @@ export function useGateEntryFormSchemas({
 					name: "challanDate",
 					label: "Challan Date",
 					type: "date" as const,
-					required: true,
+					required: false,
 					disabled: isViewMode,
 					grid: { xs: 12, md: 4 },
 				},
@@ -90,17 +88,7 @@ export function useGateEntryFormSchemas({
 					type: "text" as const,
 					required: true,
 					disabled: isViewMode,
-					grid: { xs: 12, md: 3 },
-				},
-				{
-					name: "vehicleType",
-					label: "Vehicle Type",
-					type: "select" as const,
-					required: false,
-					options: vehicleTypeOptions,
-					disabled: isViewMode,
-					grid: { xs: 12, md: 3 },
-					placeholder: "Select Vehicle Type",
+					grid: { xs: 12, md: 4 },
 				},
 
 				// Row 3: Driver Name, Transporter, PO (optional)
@@ -136,7 +124,7 @@ export function useGateEntryFormSchemas({
 					name: "supplier",
 					label: "Supplier",
 					type: "select" as const,
-					required: true,
+					required: false,
 					options: supplierOptions,
 					disabled: isViewMode,
 					grid: { xs: 12, md: 4 },
@@ -157,7 +145,7 @@ export function useGateEntryFormSchemas({
 					name: "juteUom",
 					label: "Jute UOM",
 					type: "select" as const,
-					required: true,
+					required: false,
 					options: uomOptions,
 					disabled: isViewMode,
 					grid: { xs: 12, md: 4 },
@@ -166,7 +154,7 @@ export function useGateEntryFormSchemas({
 					name: "mukam",
 					label: "Mukam",
 					type: "select" as const,
-					required: true,
+					required: false,
 					options: mukamOptions,
 					disabled: isViewMode,
 					grid: { xs: 12, md: 4 },
@@ -185,7 +173,7 @@ export function useGateEntryFormSchemas({
 					name: "challanWeight",
 					label: "Challan Weight (Kg)",
 					type: "number" as const,
-					required: true,
+					required: false,
 					disabled: isViewMode,
 					grid: { xs: 12, md: 2 },
 				},
@@ -311,7 +299,6 @@ export function useGateEntryFormSchemas({
 			partyOptions,
 			poOptions,
 			uomOptions,
-			vehicleTypeOptions,
 			hasSupplierSelected,
 			isSingleBranch,
 			isEditMode,

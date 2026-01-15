@@ -35,12 +35,9 @@ import { GATE_ENTRY_STATUS } from "./types/gateEntryTypes";
 
 // Constants and Utils
 import {
-	GATE_ENTRY_STATUS_IDS,
 	GATE_ENTRY_STATUS_LABELS,
-	EMPTY_OPTIONS,
 	UOM_OPTIONS,
 } from "./utils/gateEntryConstants";
-import { createBlankLine, lineHasAnyData, buildDefaultFormValues } from "./utils/gateEntryFactories";
 import { calculateNetWeight, calculateLineItemTotals } from "./utils/gateEntryCalculations";
 import {
 	mapGateEntrySetupResponse,
@@ -48,7 +45,6 @@ import {
 	buildSupplierOptions,
 	buildMukamOptions,
 	buildPOOptions,
-	buildVehicleTypeOptions,
 	extractFormValuesFromDetails,
 	mapLineItemsFromAPI,
 	mapFormToCreatePayload,
@@ -111,10 +107,7 @@ export default function JuteGateEntryCreatePage() {
 		[setupData]
 	);
 
-	const vehicleTypeOptions = React.useMemo(
-		() => (setupData ? buildVehicleTypeOptions(setupData.vehicle_types) : []),
-		[setupData]
-	);
+
 
 	// Form state hook
 	const {
@@ -203,7 +196,6 @@ export default function JuteGateEntryCreatePage() {
 		partyOptions: parties,
 		poOptions,
 		uomOptions: UOM_OPTIONS,
-		vehicleTypeOptions,
 		hasSupplierSelected: Boolean(formValues.supplier),
 		isSingleBranch,
 		isEditMode: Boolean(isEditMode),
@@ -459,22 +451,17 @@ export default function JuteGateEntryCreatePage() {
 	const handleFormSubmit = React.useCallback(async () => {
 		if (!coId) return;
 
-		// Validate required fields
+		// Validate required fields for IN action
+		// Only branch, entryDate, entryTime, vehicleNo, driverName, transporter, grossWeight are mandatory
+		// Other fields (supplier, challanNo, challanDate, juteUom, mukam, challanWeight) are optional at IN time
 		const requiredFields = [
 			"branch",
 			"entryDate",
 			"entryTime",
-			"challanNo",
-			"challanDate",
 			"vehicleNo",
 			"driverName",
 			"transporter",
-			"juteUom",
-			"mukam",
-			"supplier",
 			"grossWeight",
-			"tareWeight",
-			"challanWeight",
 		] as const;
 
 		for (const field of requiredFields) {
@@ -487,31 +474,18 @@ export default function JuteGateEntryCreatePage() {
 		// Validate weights are positive
 		const grossWeight = parseFloat(formValues.grossWeight) || 0;
 		const tareWeight = parseFloat(formValues.tareWeight) || 0;
-		const challanWeight = parseFloat(formValues.challanWeight) || 0;
 
 		if (grossWeight <= 0) {
 			setPageError("Gross weight must be greater than 0");
 			return;
 		}
-		if (tareWeight <= 0) {
-			setPageError("Tare weight must be greater than 0");
-			return;
-		}
-		if (challanWeight <= 0) {
-			setPageError("Challan weight must be greater than 0");
-			return;
-		}
-		if (grossWeight <= tareWeight) {
+		// Only validate gross > tare if tare weight is provided
+		if (tareWeight > 0 && grossWeight <= tareWeight) {
 			setPageError("Gross weight must be greater than tare weight");
 			return;
 		}
 
-		// Validate at least one line item
-		const validLineItems = lineItems.filter(lineHasAnyData);
-		if (validLineItems.length === 0) {
-			setPageError("Please add at least one line item");
-			return;
-		}
+		// Line items are optional for IN action
 
 		setSaving(true);
 		setPageError(null);

@@ -210,6 +210,7 @@ export const extractFormValuesFromDetails = (details: GateEntryDetails): GateEnt
 export const mapLineItemsFromAPI = (lineItems: GateEntryLineItemAPI[]): GateEntryLineItem[] =>
 	lineItems.map((li) => ({
 		id: generateLineId(),
+		jutePoLiId: li.jute_po_li_id ? String(li.jute_po_li_id) : "",
 		challanItem: li.challan_item_id ? String(li.challan_item_id) : "",
 		challanQuality: li.challan_jute_quality_id ? String(li.challan_jute_quality_id) : "",
 		challanQty: li.challan_quantity ? String(li.challan_quantity) : "",
@@ -218,6 +219,7 @@ export const mapLineItemsFromAPI = (lineItems: GateEntryLineItemAPI[]): GateEntr
 		actualQuality: li.actual_jute_quality_id ? String(li.actual_jute_quality_id) : "",
 		actualQty: li.actual_quantity ? String(li.actual_quantity) : "",
 		actualWeight: li.actual_weight ? String(li.actual_weight) : "",
+		allowableMoisture: li.allowable_moisture != null ? String(li.allowable_moisture) : "",
 		remarks: li.remarks ?? "",
 	}));
 
@@ -259,6 +261,7 @@ export const mapFormToCreatePayload = (
 		marketing_slip: formValues.marketingSlip ? 1 : 0,
 		remarks: formValues.remarks || null,
 		line_items: validLineItems.map((li) => ({
+			jute_po_li_id: li.jutePoLiId ? parseInt(li.jutePoLiId, 10) : null,
 			challan_item_id: li.challanItem ? parseInt(li.challanItem, 10) : null,
 			challan_jute_quality_id: li.challanQuality ? parseInt(li.challanQuality, 10) : null,
 			challan_quantity: li.challanQty ? parseFloat(li.challanQty) : null,
@@ -267,6 +270,7 @@ export const mapFormToCreatePayload = (
 			actual_jute_quality_id: li.actualQuality ? parseInt(li.actualQuality, 10) : null,
 			actual_quantity: li.actualQty ? parseFloat(li.actualQty) : null,
 			actual_weight: li.actualWeight ? parseFloat(li.actualWeight) : null,
+			allowable_moisture: li.allowableMoisture ? parseFloat(li.allowableMoisture) : null,
 			jute_uom: formValues.juteUom,
 			remarks: li.remarks || null,
 		})),
@@ -308,6 +312,7 @@ export const mapFormToUpdatePayload = (
 		remarks: formValues.remarks || null,
 		action: action || null,
 		line_items: validLineItems.map((li) => ({
+			jute_po_li_id: li.jutePoLiId ? parseInt(li.jutePoLiId, 10) : null,
 			challan_item_id: li.challanItem ? parseInt(li.challanItem, 10) : null,
 			challan_jute_quality_id: li.challanQuality ? parseInt(li.challanQuality, 10) : null,
 			challan_quantity: li.challanQty ? parseFloat(li.challanQty) : null,
@@ -316,6 +321,7 @@ export const mapFormToUpdatePayload = (
 			actual_jute_quality_id: li.actualQuality ? parseInt(li.actualQuality, 10) : null,
 			actual_quantity: li.actualQty ? parseFloat(li.actualQty) : null,
 			actual_weight: li.actualWeight ? parseFloat(li.actualWeight) : null,
+			allowable_moisture: li.allowableMoisture ? parseFloat(li.allowableMoisture) : null,
 			jute_uom: formValues.juteUom,
 			remarks: li.remarks || null,
 		})),

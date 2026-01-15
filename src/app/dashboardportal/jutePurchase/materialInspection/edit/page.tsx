@@ -41,9 +41,25 @@ export default function JuteMaterialInspectionEditPage() {
 	const [dialogOpenFor, setDialogOpenFor] = React.useState<string | null>(null);
 	const [saving, setSaving] = React.useState(false);
 
+	// Determine if allowable moisture can be edited (only when no PO is referenced)
+	const allowEditAllowableMoisture = React.useMemo(() => {
+		return header?.po_id == null && mode !== "view";
+	}, [header?.po_id, mode]);
+
+	// Handler to update allowable moisture for a line item
+	const handleAllowableMoistureEdit = React.useCallback((lineItemId: string, value: number | null) => {
+		setLineItems((prev) =>
+			prev.map((li) =>
+				li.id === lineItemId ? { ...li, allowableMoisture: value } : li,
+			),
+		);
+	}, []);
+
 	// Build line item columns
 	const lineItemColumns = useMaterialInspectionLineItems({
 		onOpenMoistureDialog: (lineItemId) => setDialogOpenFor(lineItemId),
+		allowEditMoisture: allowEditAllowableMoisture,
+		onMoistureEdit: handleAllowableMoistureEdit,
 	});
 
 	const loadData = React.useCallback(async () => {
@@ -73,6 +89,7 @@ export default function JuteMaterialInspectionEditPage() {
 				return {
 					id: `insp-li-${li.jute_gate_entry_li_id}`,
 					gateEntryLineItemId: li.jute_gate_entry_li_id,
+					jutePoLiId: li.jute_po_li_id,
 					actualItemId: li.actual_item_id,
 					actualItemName: actualName,
 					actualQualityId: li.actual_jute_quality_id,

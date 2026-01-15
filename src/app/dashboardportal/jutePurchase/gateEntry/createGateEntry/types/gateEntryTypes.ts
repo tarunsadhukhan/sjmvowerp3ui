@@ -120,6 +120,7 @@ export type GateEntryFormValues = {
 
 export type GateEntryLineItem = {
 	id: string;
+	jutePoLiId: string;  // Reference to PO line item (empty if no PO)
 	challanItem: string;
 	challanQuality: string;
 	challanQty: string;
@@ -128,6 +129,7 @@ export type GateEntryLineItem = {
 	actualQuality: string;
 	actualQty: string;
 	actualWeight: string;
+	allowableMoisture: string;  // From PO or manually entered
 	remarks: string;
 };
 
@@ -174,6 +176,7 @@ export type GateEntryDetails = {
 export type GateEntryLineItemAPI = {
 	jute_gate_entry_li_id: number;
 	jute_gate_entry_id: number;
+	jute_po_li_id: number | null;
 	challan_item_id: number | null;
 	challan_item_name: string | null;
 	challan_jute_quality_id: number | null;
@@ -186,6 +189,7 @@ export type GateEntryLineItemAPI = {
 	actual_quality_name: string | null;
 	actual_quantity: number | null;
 	actual_weight: number | null;
+	allowable_moisture: number | null;
 	jute_uom: string | null;
 	remarks: string | null;
 };
@@ -216,6 +220,7 @@ export type POLineItemForGateEntry = {
 	quantity: number | null;
 	weight: number | null;
 	uom: string | null;
+	allowable_moisture: number | null;
 };
 
 // =============================================================================

@@ -39,7 +39,7 @@ export type JuteMaterialInspectionHeader = {
 export type JuteMaterialInspectionLineItemAPI = {
 	jute_gate_entry_li_id: number;
 	jute_gate_entry_id: number;
-	po_line_item_num: number | null;
+	jute_po_li_id: number | null;
 
 	// Challan details
 	challan_item_id: number | null;
@@ -67,6 +67,7 @@ export type JuteMaterialInspectionLineItemAPI = {
 export type InspectionLineItem = {
 	id: string;
 	gateEntryLineItemId: number;
+	jutePoLiId: number | null;  // Reference to PO line item (null if no PO)
 	actualItemId: number | null;
 	actualItemName: string;
 	actualQualityId: number | null;

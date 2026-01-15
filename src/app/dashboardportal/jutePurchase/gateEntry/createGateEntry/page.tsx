@@ -371,6 +371,7 @@ export default function JuteGateEntryCreatePage() {
 				if (poData.line_items && poData.line_items.length > 0) {
 					const newLineItems: GateEntryLineItem[] = poData.line_items.map((poli) => ({
 						id: `ge-line-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+						jutePoLiId: String(poli.jute_po_li_id),  // Link to PO line item
 						challanItem: poli.item_id ? String(poli.item_id) : "",
 						challanQuality: poli.quality_id ? String(poli.quality_id) : "",
 						challanQty: poli.quantity ? String(poli.quantity) : "",
@@ -379,6 +380,7 @@ export default function JuteGateEntryCreatePage() {
 						actualQuality: poli.quality_id ? String(poli.quality_id) : "",
 						actualQty: poli.quantity ? String(poli.quantity) : "",
 						actualWeight: "",
+						allowableMoisture: poli.allowable_moisture != null ? String(poli.allowable_moisture) : "",  // Copy from PO
 						remarks: "",
 					}));
 					replaceLineItems(newLineItems);

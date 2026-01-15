@@ -2,13 +2,18 @@ import * as React from "react";
 import type { TransactionLineColumn } from "@/components/ui/transaction";
 import { MoistureButton } from "../components/MoistureReadingDialog";
 import type { InspectionLineItem } from "../types/materialInspectionTypes";
+import { TextField } from "@mui/material";
 
 type UseMaterialInspectionLineItemsParams = {
 	onOpenMoistureDialog: (lineItemId: string) => void;
+	allowEditMoisture?: boolean;
+	onMoistureEdit?: (lineItemId: string, value: number | null) => void;
 };
 
 export function useMaterialInspectionLineItems({
 	onOpenMoistureDialog,
+	allowEditMoisture = false,
+	onMoistureEdit,
 }: UseMaterialInspectionLineItemsParams): TransactionLineColumn<InspectionLineItem>[] {
 	return React.useMemo(
 		(): TransactionLineColumn<InspectionLineItem>[] => [
@@ -55,11 +60,28 @@ export function useMaterialInspectionLineItems({
 				header: "Allowable Moisture (%)",
 				width: "1fr",
 				align: "right",
-				renderCell: ({ item }) => (
-					<span className="text-xs">
-						{item.allowableMoisture != null ? item.allowableMoisture.toFixed(2) : "-"}
-					</span>
-				),
+				renderCell: ({ item }) => {
+					if (allowEditMoisture && onMoistureEdit) {
+						return (
+							<TextField
+								size="small"
+								type="number"
+								value={item.allowableMoisture ?? ""}
+								onChange={(e) => {
+									const val = e.target.value === "" ? null : Number(e.target.value);
+									onMoistureEdit(item.id, val);
+								}}
+								inputProps={{ min: 0, max: 100, step: 0.1 }}
+								sx={{ width: "100px" }}
+							/>
+						);
+					}
+					return (
+						<span className="text-xs">
+							{item.allowableMoisture != null ? item.allowableMoisture.toFixed(2) : "-"}
+						</span>
+					);
+				},
 			},
 			{
 				id: "averageMoisture",
@@ -81,7 +103,7 @@ export function useMaterialInspectionLineItems({
 				),
 			},
 		],
-		[onOpenMoistureDialog],
+		[onOpenMoistureDialog, allowEditMoisture, onMoistureEdit],
 	);
 }
 

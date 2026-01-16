@@ -212,9 +212,11 @@ export default function JuteGateEntryCreatePage() {
 	});
 
 	// Status info
+	// Note: status_id remains in draft/IN state. out_time presence determines OUT state.
 	const statusId = details?.status_id ?? (mode === "create" ? null : GATE_ENTRY_STATUS.IN);
 	const isVehicleIn = statusId === GATE_ENTRY_STATUS.IN;
-	const isVehicleOut = statusId === GATE_ENTRY_STATUS.OUT;
+	// OUT is determined by out_time presence, NOT status_id
+	const isVehicleOut = Boolean(details?.out_time);
 
 	// Calculate net weight when gross/tare changes
 	// Only calculate when both values are provided and valid

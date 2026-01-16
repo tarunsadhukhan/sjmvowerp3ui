@@ -1,8 +1,9 @@
 "use client";
 
 import * as React from "react";
-import { Alert, Chip, Typography } from "@mui/material";
+import { Alert, Chip, IconButton, Stack, Tooltip, Typography } from "@mui/material";
 import type { GridColDef, GridPaginationModel, GridRenderCellParams } from "@mui/x-data-grid";
+import { Edit, Eye } from "lucide-react";
 import { fetchWithCookie } from "@/utils/apiClient2";
 import { apiRoutesPortalMasters } from "@/utils/api";
 import IndexWrapper from "@/components/ui/IndexWrapper";
@@ -12,8 +13,7 @@ import { useRouter } from "next/navigation";
  * @component JuteGateEntryIndexPage
  * @description Index page displaying list of Jute Gate Entries with pagination and search.
  * Uses jute_mr table (merged gate entry + MR).
- * Columns: Action (via IndexWrapper), Gate Entry No, Gate Entry Date, In Time, Out Time,
- * Challan No, Vehicle No, Challan Weight, Gross Weight
+ * If OUT is completed, user can only view (not edit) the entry.
  */
 
 type JuteGateEntryRow = {
@@ -29,6 +29,7 @@ type JuteGateEntryRow = {
 	challan_weight: number | null;
 	gross_weight: number | null;
 	status: string;
+	isOutCompleted: boolean;
 };
 
 /**
@@ -86,23 +87,18 @@ const formatTime = (value?: string | null): string => {
 };
 
 /**
- * Returns MUI Chip color based on status
- */
-const getStatusColor = (status: string): "success" | "error" | "warning" | "info" | "default" => {
-	const normalized = status?.toLowerCase() ?? "";
-	if (normalized.includes("out") || normalized.includes("closed")) return "success";
-	if (normalized.includes("cancelled")) return "error";
-	if (normalized.includes("in") || normalized.includes("open")) return "warning";
-	if (normalized.includes("draft")) return "info";
-	return "default";
-};
-
-/**
  * Formats weight values with proper number formatting
  */
 const formatWeight = (value?: number | null): string => {
 	if (value === null || value === undefined) return "-";
 	return value.toLocaleString("en-IN", { maximumFractionDigits: 2 });
+};
+
+/**
+ * Checks if OUT is completed (has out_time)
+ */
+const isOutComplete = (outTime: string | null | undefined): boolean => {
+	return Boolean(outTime && outTime.trim() !== "");
 };
 
 export default function JuteGateEntryIndexPage() {
@@ -116,6 +112,59 @@ export default function JuteGateEntryIndexPage() {
 
 	const columns = React.useMemo<GridColDef<JuteGateEntryRow>[]>(
 		() => [
+			{
+				field: "__actions",
+				headerName: "Actions",
+				width: 90,
+				sortable: false,
+				filterable: false,
+				align: "center",
+				headerAlign: "center",
+				renderCell: (params: GridRenderCellParams<JuteGateEntryRow>) => {
+					const row = params.row;
+					const outCompleted = row.isOutCompleted;
+
+					// If OUT completed, only show View button
+					if (outCompleted) {
+						return (
+							<Stack direction="row" spacing={0.5} justifyContent="center" alignItems="center">
+								<Tooltip title="View">
+									<IconButton
+										size="small"
+										onClick={() => {
+											const id = row.jute_mr_id ?? row.id;
+											if (id) {
+												router.push(`/dashboardportal/jutePurchase/gateEntry/createGateEntry?mode=view&id=${encodeURIComponent(String(id))}`);
+											}
+										}}
+									>
+										<Eye size={16} />
+									</IconButton>
+								</Tooltip>
+							</Stack>
+						);
+					}
+
+					// Otherwise show Edit button
+					return (
+						<Stack direction="row" spacing={0.5} justifyContent="center" alignItems="center">
+							<Tooltip title="Edit">
+								<IconButton
+									size="small"
+									onClick={() => {
+										const id = row.jute_mr_id ?? row.id;
+										if (id) {
+											router.push(`/dashboardportal/jutePurchase/gateEntry/createGateEntry?mode=edit&id=${encodeURIComponent(String(id))}`);
+										}
+									}}
+								>
+									<Edit size={16} />
+								</IconButton>
+							</Tooltip>
+						</Stack>
+					);
+				},
+			},
 			{
 				field: "gate_entry_num",
 				headerName: "Gate Entry No",
@@ -204,15 +253,22 @@ export default function JuteGateEntryIndexPage() {
 				),
 			},
 			{
-				field: "status",
-				headerName: "Status",
-				minWidth: 100,
-				renderCell: (params: GridRenderCellParams<JuteGateEntryRow, string>) => (
-					<Chip size="small" color={getStatusColor(params.value ?? "")} label={params.value || "IN"} />
+				field: "isOutCompleted",
+				headerName: "OUT Completed",
+				minWidth: 120,
+				align: "center",
+				headerAlign: "center",
+				renderCell: (params: GridRenderCellParams<JuteGateEntryRow, boolean>) => (
+					<Chip
+						size="small"
+						color={params.value ? "success" : "warning"}
+						label={params.value ? "Yes" : "No"}
+						variant={params.value ? "filled" : "outlined"}
+					/>
 				),
 			},
 		],
-		[]
+		[router]
 	);
 
 	const fetchGateEntries = React.useCallback(async () => {
@@ -268,6 +324,7 @@ export default function JuteGateEntryIndexPage() {
 
 			const mappedRows: JuteGateEntryRow[] = rawRows.map((row: unknown) => {
 				const r = row as Record<string, unknown>;
+				const outTime = (r.out_time ?? null) as string | null;
 
 				return {
 					id: (r.jute_mr_id ?? r.id ?? `ge-${Math.random().toString(36).slice(2, 8)}`) as string | number,
@@ -276,12 +333,13 @@ export default function JuteGateEntryIndexPage() {
 					jute_gate_entry_no: (r.jute_gate_entry_no ?? null) as number | null,
 					jute_gate_entry_date: (r.jute_gate_entry_date ?? "") as string,
 					in_time: (r.in_time ?? null) as string | null,
-					out_time: (r.out_time ?? null) as string | null,
+					out_time: outTime,
 					challan_no: (r.challan_no ?? null) as string | null,
 					vehicle_no: (r.vehicle_no ?? null) as string | null,
 					challan_weight: (r.challan_weight ?? null) as number | null,
 					gross_weight: (r.gross_weight ?? null) as number | null,
 					status: (r.status ?? "IN") as string,
+					isOutCompleted: isOutComplete(outTime),
 				};
 			});
 
@@ -316,24 +374,6 @@ export default function JuteGateEntryIndexPage() {
 		router.push("/dashboardportal/jutePurchase/gateEntry/createGateEntry");
 	}, [router]);
 
-	const handleView = React.useCallback(
-		(row: JuteGateEntryRow) => {
-			const id = row.jute_mr_id ?? row.id;
-			if (!id) return;
-			router.push(`/dashboardportal/jutePurchase/gateEntry/createGateEntry?mode=view&id=${encodeURIComponent(String(id))}`);
-		},
-		[router]
-	);
-
-	const handleEdit = React.useCallback(
-		(row: JuteGateEntryRow) => {
-			const id = row.jute_mr_id ?? row.id;
-			if (!id) return;
-			router.push(`/dashboardportal/jutePurchase/gateEntry/createGateEntry?mode=edit&id=${encodeURIComponent(String(id))}`);
-		},
-		[router]
-	);
-
 	return (
 		<IndexWrapper
 			title="Jute Gate Entry"
@@ -352,8 +392,6 @@ export default function JuteGateEntryIndexPage() {
 				debounceDelayMs: 500,
 			}}
 			createAction={{ onClick: handleCreateGateEntry, label: "Create Gate Entry" }}
-			onView={handleView}
-			onEdit={handleEdit}
 		>
 			{errorMessage ? (
 				<Alert severity="error" sx={{ mt: 2 }}>

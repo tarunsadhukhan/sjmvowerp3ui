@@ -9,14 +9,17 @@ import type { BranchRecord, SupplierRecord, MukamRecord, JuteItemRecord, OpenPOR
 // STATUS CONSTANTS
 // =============================================================================
 
+// Note: status_id remains in draft/IN state throughout the gate entry flow.
+// The out_time field is used to restrict further editing in gate entry pages.
+// For material inspection, qc_complete (qc_check flag) determines if QC is done.
 export const GATE_ENTRY_STATUS_IDS = {
 	IN: 1,
-	OUT: 5,
+	// OUT: 5, // Not used - out_time presence determines OUT state
 } as const;
 
 export const GATE_ENTRY_STATUS_LABELS: Record<number, string> = {
 	[GATE_ENTRY_STATUS_IDS.IN]: "IN",
-	[GATE_ENTRY_STATUS_IDS.OUT]: "OUT",
+	// 5: "OUT", // Not used - out_time presence determines OUT state
 };
 
 // =============================================================================

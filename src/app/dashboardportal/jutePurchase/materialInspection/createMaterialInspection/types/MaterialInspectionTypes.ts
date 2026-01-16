@@ -227,9 +227,12 @@ export type POLineItemForGateEntry = {
 // STATUS CONSTANTS
 // =============================================================================
 
+// Note: status_id remains in draft/IN state throughout the gate entry flow.
+// The out_time field is used to restrict further editing in gate entry pages.
+// For material inspection, qc_complete (qc_check flag) determines if QC is done.
 export const GATE_ENTRY_STATUS = {
 	IN: 1, // Vehicle entered
-	OUT: 5, // Vehicle exited (Closed)
+	// OUT: 5, // Not used - out_time presence determines OUT state
 } as const;
 
 export type GateEntryStatusId = (typeof GATE_ENTRY_STATUS)[keyof typeof GATE_ENTRY_STATUS];

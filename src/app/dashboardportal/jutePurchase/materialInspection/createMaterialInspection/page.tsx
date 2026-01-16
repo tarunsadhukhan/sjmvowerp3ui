@@ -613,11 +613,11 @@ export default function JuteGateEntryCreatePage() {
 	const handleQCComplete = React.useCallback(async () => {
 		if (!coId || !gateEntryId) return;
 
-		// Filter to only include line items that exist in database (have jute_mr_li_id)
-		// and have been filled with actual data
-		const existingLines = lineItems.filter((li) => li.jute_mr_li_id != null && li.jute_mr_li_id > 0);
-		const filledLines = existingLines.filter((li) => li.actualItem);
+		// Filter line items that have actual data (actualItem is filled)
+		// We check both existing database records and new records
+		const filledLines = lineItems.filter((li) => li.actualItem);
 		
+		// Validate that filled lines have quality and qty (weights are optional)
 		const incompleteLines = filledLines.filter(
 			(li) => !li.actualQuality || !li.actualQty
 		);
@@ -627,7 +627,7 @@ export default function JuteGateEntryCreatePage() {
 		}
 
 		if (filledLines.length === 0) {
-			setPageError("Please ensure line items have actual data before completing QC");
+			setPageError("Please fill in at least one line item with actual data before completing QC");
 			return;
 		}
 
@@ -636,13 +636,13 @@ export default function JuteGateEntryCreatePage() {
 
 		try {
 			// Build line items payload for the complete_inspection endpoint
-			// Only include lines with valid jute_mr_li_id (existing database records)
+			// Include jute_mr_li_id if available (existing records), otherwise send 0 for new lines
 			const lineItemsPayload = filledLines.map((li) => ({
-				jute_mr_li_id: Number(li.jute_mr_li_id),
+				jute_mr_li_id: li.jute_mr_li_id ? Number(li.jute_mr_li_id) : 0,
 				actual_item_id: li.actualItem ? Number(li.actualItem) : null,
 				actual_quality_id: li.actualQuality ? Number(li.actualQuality) : null,
 				actual_qty: li.actualQty ? parseFloat(li.actualQty) : null,
-				actual_weight: li.actualWeight ? parseFloat(li.actualWeight) : null,
+				actual_weight: li.actualWeight ? parseFloat(li.actualWeight) : null,  // Optional
 				allowable_moisture: li.allowableMoisture ? parseFloat(li.allowableMoisture) : null,
 				moisture_readings: (li.moistureReadings ?? []).map((r) => ({
 					moisture_percentage: r,

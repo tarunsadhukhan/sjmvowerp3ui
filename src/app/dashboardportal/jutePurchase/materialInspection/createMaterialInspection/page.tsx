@@ -14,7 +14,7 @@
 import * as React from "react";
 import { useSearchParams, useRouter } from "next/navigation";
 import { Alert, CircularProgress } from "@mui/material";
-import { ArrowLeft, Save, LogIn, LogOut } from "lucide-react";
+import { ArrowLeft, Save, LogIn, CheckCircle } from "lucide-react";
 import TransactionWrapper from "@/components/ui/TransactionWrapper";
 import useSelectedCompanyCoId from "@/hooks/use-selected-company-coid";
 import { fetchWithCookie } from "@/utils/apiClient2";
@@ -58,7 +58,7 @@ import { useGateEntryFormSchemas } from "./hooks/useMaterialInspectionFormSchema
 import { useGateEntryLineItemColumns } from "./hooks/useMaterialInspectionLineItemColumns";
 
 // Components
-import { GateEntryHeaderForm } from "./components";
+import { GateEntryHeaderForm, MoistureReadingDialog } from "./components";
 
 export default function JuteGateEntryCreatePage() {
 	const searchParams = useSearchParams();
@@ -187,6 +187,40 @@ export default function JuteGateEntryCreatePage() {
 		[qualitiesByItem]
 	);
 
+	// Moisture dialog state
+	const [moistureDialogOpen, setMoistureDialogOpen] = React.useState<string | null>(null);
+
+	// Handler to open moisture dialog for a line item
+	const handleOpenMoistureDialog = React.useCallback((lineItemId: string) => {
+		setMoistureDialogOpen(lineItemId);
+	}, []);
+
+	// Handler to close moisture dialog
+	const handleCloseMoistureDialog = React.useCallback(() => {
+		setMoistureDialogOpen(null);
+	}, []);
+
+	// Handler to update moisture readings for a line item
+	const handleMoistureChange = React.useCallback(
+		(readings: number[], average: number | null) => {
+			if (!moistureDialogOpen) return;
+			setLineItems((prev) =>
+				prev.map((li) =>
+					li.id === moistureDialogOpen
+						? { ...li, moistureReadings: readings, averageMoisture: average }
+						: li
+				)
+			);
+		},
+		[moistureDialogOpen, setLineItems]
+	);
+
+	// Get current line item for moisture dialog
+	const currentMoistureLineItem = React.useMemo(
+		() => lineItems.find((li) => li.id === moistureDialogOpen),
+		[lineItems, moistureDialogOpen]
+	);
+
 	// Form schema hook
 	const formSchema = useGateEntryFormSchemas({
 		mode,
@@ -209,6 +243,7 @@ export default function JuteGateEntryCreatePage() {
 		handleLineFieldChange,
 		getItemLabel,
 		getQualityLabel,
+		onOpenMoistureDialog: handleOpenMoistureDialog,
 	});
 
 	// Status info
@@ -252,6 +287,11 @@ export default function JuteGateEntryCreatePage() {
 		}
 	}, [mode, isSingleBranch, formValues.branch, branchOptions, setFormValues]);
 
+	// Flag to track when we're filling from PO selection (prevents supplier change from clearing party)
+	const isFillingFromPORef = React.useRef(false);
+	// Store pending party from PO selection to set after parties are loaded
+	const pendingPartyFromPORef = React.useRef<string | null>(null);
+
 	// Fetch parties when supplier changes
 	const prevSupplierRef = React.useRef<string>("");
 	React.useEffect(() => {
@@ -259,8 +299,11 @@ export default function JuteGateEntryCreatePage() {
 		if (supplierId === prevSupplierRef.current) return;
 		prevSupplierRef.current = supplierId;
 
-		// Clear party when supplier changes (don't clear PO - supplier is auto-filled from PO)
-		setFormValues((prev) => ({ ...prev, party: "" }));
+		// Only clear party if NOT coming from a PO selection
+		// When PO is selected, party is set together with supplier
+		if (!isFillingFromPORef.current) {
+			setFormValues((prev) => ({ ...prev, party: "" }));
+		}
 
 		if (!supplierId || !coId) {
 			setParties([]);
@@ -283,13 +326,27 @@ export default function JuteGateEntryCreatePage() {
 						value: String(p.party_id ?? ""),
 					}))
 				);
+
+				// If there's a pending party from PO selection, set it now that parties are loaded
+				if (pendingPartyFromPORef.current) {
+					const pendingParty = pendingPartyFromPORef.current;
+					// Check if the party exists in the fetched list
+					const partyExists = partyList.some((p) => String(p.party_id) === pendingParty);
+					if (partyExists) {
+						setFormValues((prev) => ({ ...prev, party: pendingParty }));
+						setInitialValues((prev) => ({ ...prev, party: pendingParty }));
+						bumpFormKey();
+					}
+					pendingPartyFromPORef.current = null;
+					isFillingFromPORef.current = false;
+				}
 			} catch (err) {
 				console.error("Error fetching parties:", err);
 			}
 		};
 
 		void fetchParties();
-	}, [formValues.supplier, coId, setFormValues]);
+	}, [formValues.supplier, coId, setFormValues, setInitialValues, bumpFormKey]);
 
 	// Fetch qualities when item is selected in line items
 	const fetchQualitiesForItem = React.useCallback(
@@ -351,20 +408,31 @@ export default function JuteGateEntryCreatePage() {
 				}
 				const poData = data as PODetailsForGateEntry;
 
+				// Set flag before updating to prevent supplier useEffect from clearing party
+				isFillingFromPORef.current = true;
+				
+				// Store the party from PO to set after parties are loaded
+				if (poData.party_id) {
+					pendingPartyFromPORef.current = String(poData.party_id);
+				}
+
 				// Auto-fill supplier, mukam, and uom from PO
-				// Clear party since supplier is changing - will be refetched by useEffect
-				setFormValues((prev) => ({
-					...prev,
-					supplier: String(poData.supplier_id ?? prev.supplier),
-					mukam: poData.mukam_id ? String(poData.mukam_id) : prev.mukam,
-					juteUom: poData.jute_uom ?? prev.juteUom,
-					party: "", // Clear party - will need to re-select
-				}));
+				// Party will be set after parties dropdown is loaded (handled in fetchParties)
+				const newValues = {
+					supplier: String(poData.supplier_id ?? ""),
+					mukam: poData.mukam_id ? String(poData.mukam_id) : "",
+					juteUom: poData.jute_uom ?? "",
+				};
+				
+				setFormValues((prev) => ({ ...prev, ...newValues }));
+				setInitialValues((prev) => ({ ...prev, ...newValues }));
+				bumpFormKey();
 
 				// Auto-fill line items from PO
 				if (poData.line_items && poData.line_items.length > 0) {
 					const newLineItems: GateEntryLineItem[] = poData.line_items.map((poli) => ({
 						id: `ge-line-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+						jute_mr_li_id: null,  // New lines from PO don't have a database ID yet
 						jutePoLiId: String(poli.jute_po_li_id),  // Link to PO line item
 						challanItem: poli.item_id ? String(poli.item_id) : "",
 						challanQuality: poli.quality_id ? String(poli.quality_id) : "",
@@ -376,6 +444,8 @@ export default function JuteGateEntryCreatePage() {
 						actualWeight: "",
 						allowableMoisture: poli.allowable_moisture != null ? String(poli.allowable_moisture) : "",  // Copy from PO
 						remarks: "",
+						moistureReadings: [],  // Initialize empty moisture readings
+						averageMoisture: null,
 					}));
 					replaceLineItems(newLineItems);
 				}
@@ -385,7 +455,7 @@ export default function JuteGateEntryCreatePage() {
 		};
 
 		void fetchPODetails();
-	}, [formValues.poId, coId, mode, setFormValues, replaceLineItems]);
+	}, [formValues.poId, coId, mode, setFormValues, setInitialValues, bumpFormKey, replaceLineItems]);
 
 	// Fetch setup data
 	React.useEffect(() => {
@@ -453,13 +523,11 @@ export default function JuteGateEntryCreatePage() {
 	const handleFormSubmit = React.useCallback(async () => {
 		if (!coId) return;
 
-		// Validate required fields for IN action
-		// Only branch, entryDate, entryTime, vehicleNo, driverName, transporter, grossWeight are mandatory
-		// Other fields (supplier, challanNo, challanDate, juteUom, mukam, challanWeight) are optional at IN time
+		// Validate required fields for save action
+		// For material inspection, entryTime is not required as it comes from gate entry
 		const requiredFields = [
 			"branch",
 			"entryDate",
-			"entryTime",
 			"vehicleNo",
 			"driverName",
 			"transporter",
@@ -541,29 +609,25 @@ export default function JuteGateEntryCreatePage() {
 		await handleFormSubmit();
 	}, [handleFormSubmit]);
 
-	// Handle OUT action (edit mode)
-	const handleOutAction = React.useCallback(async () => {
+	// Handle QC Complete action (edit mode)
+	const handleQCComplete = React.useCallback(async () => {
 		if (!coId || !gateEntryId) return;
 
-		// Validate tare weight is filled
-		const tareWeight = parseFloat(formValues.tareWeight as string) || 0;
-		if (tareWeight <= 0) {
-			setPageError("Please fill in Tare Weight before marking as OUT");
+		// Filter to only include line items that exist in database (have jute_mr_li_id)
+		// and have been filled with actual data
+		const existingLines = lineItems.filter((li) => li.jute_mr_li_id != null && li.jute_mr_li_id > 0);
+		const filledLines = existingLines.filter((li) => li.actualItem);
+		
+		const incompleteLines = filledLines.filter(
+			(li) => !li.actualQuality || !li.actualQty
+		);
+		if (incompleteLines.length > 0) {
+			setPageError("Please fill in Actual Quality and Actual Qty for all line items");
 			return;
 		}
 
-		// Validate out date/time
-		if (!formValues.outDate || !formValues.outTime) {
-			setPageError("Please fill in Out Date and Out Time before marking as OUT");
-			return;
-		}
-
-		// Validate out time > in time
-		const inDateTime = new Date(`${formValues.entryDate}T${formValues.entryTime}`);
-		const outDateTime = new Date(`${formValues.outDate}T${formValues.outTime}`);
-
-		if (outDateTime <= inDateTime) {
-			setPageError("Out date/time must be after entry date/time");
+		if (filledLines.length === 0) {
+			setPageError("Please ensure line items have actual data before completing QC");
 			return;
 		}
 
@@ -571,15 +635,32 @@ export default function JuteGateEntryCreatePage() {
 		setPageError(null);
 
 		try {
+			// Build line items payload for the complete_inspection endpoint
+			// Only include lines with valid jute_mr_li_id (existing database records)
+			const lineItemsPayload = filledLines.map((li) => ({
+				jute_mr_li_id: Number(li.jute_mr_li_id),
+				actual_item_id: li.actualItem ? Number(li.actualItem) : null,
+				actual_quality_id: li.actualQuality ? Number(li.actualQuality) : null,
+				actual_qty: li.actualQty ? parseFloat(li.actualQty) : null,
+				actual_weight: li.actualWeight ? parseFloat(li.actualWeight) : null,
+				allowable_moisture: li.allowableMoisture ? parseFloat(li.allowableMoisture) : null,
+				moisture_readings: (li.moistureReadings ?? []).map((r) => ({
+					moisture_percentage: r,
+				})),
+				remarks: li.remarks || null,
+			}));
+
 			const payload = {
-				out_date: formValues.outDate,
-				out_time: formValues.outTime,
-				action: "OUT",
+				jute_mr_id: Number(gateEntryId),
+				net_weight: formValues.netWeight ? parseFloat(String(formValues.netWeight)) : null,
+				tare_weight: formValues.tareWeight ? parseFloat(String(formValues.tareWeight)) : null,
+				remarks: formValues.remarks ? String(formValues.remarks) : null,
+				line_items: lineItemsPayload,
 			};
 
 			const { error } = await fetchWithCookie(
-				`${apiRoutesPortalMasters.JUTE_GATE_ENTRY_UPDATE}/${gateEntryId}?co_id=${coId}`,
-				"PUT",
+				`${apiRoutesPortalMasters.JUTE_MATERIAL_INSPECTION_COMPLETE}?co_id=${coId}`,
+				"POST",
 				payload
 			);
 
@@ -589,20 +670,18 @@ export default function JuteGateEntryCreatePage() {
 				return;
 			}
 
-			// Redirect to view mode
-			router.push(
-				`/dashboardportal/jutePurchase/gateEntry/createGateEntry?mode=view&id=${gateEntryId}`
-			);
+			// Redirect to material inspection index page
+			router.push("/dashboardportal/jutePurchase/materialInspection");
 		} catch (err) {
-			setPageError(err instanceof Error ? err.message : "Failed to mark as OUT");
+			setPageError(err instanceof Error ? err.message : "Failed to mark QC as complete");
 		} finally {
 			setSaving(false);
 		}
-	}, [coId, gateEntryId, formValues, router]);
+	}, [coId, gateEntryId, lineItems, formValues, router]);
 
 	// Handle back button
 	const handleBack = React.useCallback(() => {
-		router.push("/dashboardportal/jutePurchase/gateEntry");
+		router.push("/dashboardportal/jutePurchase/materialInspection");
 	}, [router]);
 
 	// Line item totals
@@ -646,7 +725,7 @@ export default function JuteGateEntryCreatePage() {
 				startIcon: <LogIn className="h-4 w-4" />,
 			});
 		} else if (mode === "edit") {
-			// Edit mode - Save and OUT buttons
+			// Edit mode - Save and QC Complete buttons
 			actionButtons.push({
 				label: "Save",
 				onClick: handleFormSubmit,
@@ -656,21 +735,19 @@ export default function JuteGateEntryCreatePage() {
 				startIcon: <Save className="h-4 w-4" />,
 			});
 
-			// OUT button - only enabled if out time and tare weight are filled
-			const tareWeight = parseFloat(formValues.tareWeight as string) || 0;
-			const canMarkOut = Boolean(formValues.outDate && formValues.outTime && tareWeight > 0);
+			// QC Complete button
 			actionButtons.push({
-				label: "OUT",
-				onClick: handleOutAction,
-				disabled: saving || !canMarkOut,
+				label: "QC Complete",
+				onClick: handleQCComplete,
+				disabled: saving,
 				loading: saving,
 				variant: "default",
-				startIcon: <LogOut className="h-4 w-4" />,
+				startIcon: <CheckCircle className="h-4 w-4" />,
 			});
 		}
 
 		return actionButtons;
-	}, [mode, saving, formValues.outDate, formValues.outTime, formValues.tareWeight, handleBack, handleInAction, handleFormSubmit, handleOutAction]);
+	}, [mode, saving, handleBack, handleInAction, handleFormSubmit, handleQCComplete]);
 
 	// Status chip - using object format expected by TransactionWrapper
 	type StatusChipType = { label: string; color?: "default" | "primary" | "secondary" | "success" | "error" | "warning" | "info" };
@@ -690,9 +767,9 @@ export default function JuteGateEntryCreatePage() {
 
 	// Title
 	const pageTitle = React.useMemo(() => {
-		if (mode === "create") return "New Gate Entry";
-		if (mode === "edit") return `Edit Gate Entry #${details?.entry_branch_seq ?? gateEntryId}`;
-		return `Gate Entry #${details?.entry_branch_seq ?? gateEntryId}`;
+		if (mode === "create") return "Quality Check";
+		if (mode === "edit") return `Edit Quality Check #${details?.entry_branch_seq ?? gateEntryId}`;
+		return `Quality Check #${details?.entry_branch_seq ?? gateEntryId}`;
 	}, [mode, details, gateEntryId]);
 
 	// Loading state
@@ -746,6 +823,17 @@ export default function JuteGateEntryCreatePage() {
 					formRef={formRef}
 					onSubmit={handleFormSubmit}
 					onValuesChange={setFormValues}
+				/>
+			)}
+
+			{/* Moisture Reading Dialog */}
+			{currentMoistureLineItem && (
+				<MoistureReadingDialog
+					open={Boolean(moistureDialogOpen)}
+					onClose={handleCloseMoistureDialog}
+					readings={currentMoistureLineItem.moistureReadings ?? []}
+					onChange={handleMoistureChange}
+					lineItemLabel={`${getItemLabel(currentMoistureLineItem.actualItem || currentMoistureLineItem.challanItem)} - ${getQualityLabel(currentMoistureLineItem.actualQuality || currentMoistureLineItem.challanQuality)}`}
 				/>
 			)}
 		</TransactionWrapper>

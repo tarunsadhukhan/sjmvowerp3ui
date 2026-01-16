@@ -120,6 +120,7 @@ export type GateEntryFormValues = {
 
 export type GateEntryLineItem = {
 	id: string;
+	jute_mr_li_id: number | null;  // Database ID from jute_mr_li table (null for new lines)
 	jutePoLiId: string;  // Reference to PO line item (empty if no PO)
 	challanItem: string;
 	challanQuality: string;
@@ -131,6 +132,16 @@ export type GateEntryLineItem = {
 	actualWeight: string;
 	allowableMoisture: string;  // From PO or manually entered
 	remarks: string;
+	// Moisture reading fields for QC
+	moistureReadings: number[];  // Array of individual moisture readings
+	averageMoisture: number | null;  // Calculated average of readings
+};
+
+// Moisture reading state for tracking per line item
+export type MoistureReadingState = {
+	lineItemId: string;
+	readings: number[];
+	average: number | null;
 };
 
 // =============================================================================
@@ -174,23 +185,23 @@ export type GateEntryDetails = {
 };
 
 export type GateEntryLineItemAPI = {
-	jute_gate_entry_li_id: number;
-	jute_gate_entry_id: number;
+	jute_mr_li_id: number;  // Line item ID from jute_mr_li table
+	jute_mr_id: number;  // Parent jute_mr ID
 	jute_po_li_id: number | null;
 	challan_item_id: number | null;
 	challan_item_name: string | null;
-	challan_jute_quality_id: number | null;
+	challan_quality_id: number | null;  // Backend returns this (not challan_jute_quality_id)
 	challan_quality_name: string | null;
 	challan_quantity: number | null;
 	challan_weight: number | null;
 	actual_item_id: number | null;
 	actual_item_name: string | null;
-	actual_jute_quality_id: number | null;
+	actual_quality_id: number | null;  // Backend returns this (aliased from actual_quality)
 	actual_quality_name: string | null;
-	actual_quantity: number | null;
+	actual_qty: number | null;  // Backend returns actual_qty (not actual_quantity)
 	actual_weight: number | null;
 	allowable_moisture: number | null;
-	jute_uom: string | null;
+	unit_conversion: string | null;  // Backend returns unit_conversion (not jute_uom)
 	remarks: string | null;
 };
 
@@ -204,6 +215,8 @@ export type PODetailsForGateEntry = {
 	po_date: string;
 	supplier_id: number;
 	supplier_name: string;
+	party_id: number | null;
+	party_name: string | null;
 	mukam_id: number | null;
 	mukam_name: string | null;
 	jute_uom: string;

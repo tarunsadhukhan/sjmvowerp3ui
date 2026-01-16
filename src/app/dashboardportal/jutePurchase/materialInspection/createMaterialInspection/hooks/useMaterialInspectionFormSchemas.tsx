@@ -38,7 +38,7 @@ export function useGateEntryFormSchemas({
 	return React.useMemo(
 		() => ({
 			fields: [
-				// Row 1: Branch, Date, Time
+				// Row 1: Branch, Date
 				{
 					name: "branch",
 					label: "Branch",
@@ -53,15 +53,7 @@ export function useGateEntryFormSchemas({
 					label: "Entry Date",
 					type: "date" as const,
 					required: true,
-					disabled: isViewMode,
-					grid: { xs: 12, md: 4 },
-				},
-				{
-					name: "entryTime",
-					label: "Entry Time",
-					type: "time" as const,
-					required: true,
-					disabled: isViewMode,
+					disabled: true, // Always disabled - set from gate entry
 					grid: { xs: 12, md: 4 },
 				},
 
@@ -190,7 +182,7 @@ export function useGateEntryFormSchemas({
 					label: "Tare Weight (Kg)",
 					type: "number" as const,
 					required: false,
-					disabled: isViewMode,
+					disabled: true, // Always disabled - set from gate entry
 					grid: { xs: 12, md: 2 },
 					customValidate: (value: unknown, values: Record<string, unknown>) => {
 						const tare = parseFloat(String(value)) || 0;
@@ -268,27 +260,7 @@ export function useGateEntryFormSchemas({
 					rows: 2,
 				},
 
-				// Row 8: Out Date/Time - only visible in edit mode
-				...(isEditMode
-					? [
-							{
-								name: "outDate",
-								label: "Out Date",
-								type: "date" as const,
-								required: false,
-								disabled: isViewMode,
-								grid: { xs: 12, md: 4 },
-							},
-							{
-								name: "outTime",
-								label: "Out Time",
-								type: "time" as const,
-								required: false,
-								disabled: isViewMode,
-								grid: { xs: 12, md: 4 },
-							},
-					  ]
-					: []),
+				
 			],
 		}),
 		[
@@ -301,7 +273,6 @@ export function useGateEntryFormSchemas({
 			uomOptions,
 			hasSupplierSelected,
 			isSingleBranch,
-			isEditMode,
 			isViewMode,
 		]
 	);

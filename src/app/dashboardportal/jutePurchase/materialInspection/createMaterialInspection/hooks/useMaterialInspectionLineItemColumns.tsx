@@ -8,6 +8,7 @@ import { SearchableSelect } from "@/components/ui/transaction";
 import { TextField } from "@mui/material";
 import type { TransactionLineColumn } from "@/components/ui/transaction";
 import type { GateEntryLineItem, Option, JuteItemRecord, JuteQualityRecord } from "../types/MaterialInspectionTypes";
+import { MoistureButton } from "../components/MoistureReadingDialog";
 
 type UseGateEntryLineItemColumnsParams = {
 	canEdit: boolean;
@@ -16,6 +17,8 @@ type UseGateEntryLineItemColumnsParams = {
 	handleLineFieldChange: (id: string, field: keyof GateEntryLineItem, value: string) => void;
 	getItemLabel: (itemId: string) => string;
 	getQualityLabel: (qualityId: string) => string;
+	// Moisture dialog handler
+	onOpenMoistureDialog?: (lineItemId: string) => void;
 };
 
 export function useGateEntryLineItemColumns({
@@ -25,6 +28,7 @@ export function useGateEntryLineItemColumns({
 	handleLineFieldChange,
 	getItemLabel,
 	getQualityLabel,
+	onOpenMoistureDialog,
 }: UseGateEntryLineItemColumnsParams): TransactionLineColumn<GateEntryLineItem>[] {
 	// Build item options
 	const itemOptions = React.useMemo<Option[]>(
@@ -221,6 +225,65 @@ export function useGateEntryLineItemColumns({
 					</span>
 				),
 			},
+			// Allowable Moisture column
+			{
+				id: "allowableMoisture",
+				header: "Allow. Moist %",
+				width: "0.8fr",
+				renderCell: ({ item }) => {
+					if (!canEdit) {
+						return (
+							<span className="text-xs">
+								{item.allowableMoisture || "-"}
+							</span>
+						);
+					}
+					return (
+						<TextField
+							type="number"
+							size="small"
+							value={item.allowableMoisture}
+							onChange={(e) =>
+								handleLineFieldChange(item.id, "allowableMoisture", e.target.value)
+							}
+							placeholder="%"
+							inputProps={{ min: 0, max: 100, step: 0.1 }}
+							sx={{ "& .MuiInputBase-input": { fontSize: "0.75rem", py: 0.5 } }}
+							fullWidth
+						/>
+					);
+				},
+			},
+			// Moisture Reading button column
+			{
+				id: "moistureReading",
+				header: "Moisture",
+				width: "0.7fr",
+				renderCell: ({ item }) => {
+					const hasReadings = item.moistureReadings && item.moistureReadings.length > 0;
+					
+					if (!canEdit && !hasReadings) {
+						return <span className="text-xs text-slate-400">-</span>;
+					}
+					
+					if (!canEdit && hasReadings) {
+						return (
+							<span className="text-xs font-medium text-green-600">
+								{item.averageMoisture != null ? `${item.averageMoisture.toFixed(1)}%` : "-"}
+							</span>
+						);
+					}
+					
+					return (
+						<MoistureButton
+							onClick={() => onOpenMoistureDialog?.(item.id)}
+							hasReadings={hasReadings}
+							averageMoisture={item.averageMoisture}
+							disabled={!canEdit}
+						/>
+					);
+				},
+			},
 		],
 		[
 			canEdit,
@@ -229,6 +292,7 @@ export function useGateEntryLineItemColumns({
 			handleLineFieldChange,
 			getItemLabel,
 			getQualityLabel,
+			onOpenMoistureDialog,
 		]
 	);
 }

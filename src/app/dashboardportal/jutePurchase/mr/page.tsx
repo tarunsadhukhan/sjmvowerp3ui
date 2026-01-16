@@ -23,6 +23,7 @@ type JuteMRRow = {
 	supplier_name: string;
 	party_name: string | null;
 	challan_no: string | null;
+	gate_entry_no: string | null;
 	mukam: string | null;
 	mr_weight: number | null;
 	status: string;
@@ -128,6 +129,16 @@ export default function JuteMRIndexPage() {
 				),
 			},
 			{
+				field: "gate_entry_no",
+				headerName: "Gate Entry No",
+				minWidth: 120,
+				renderCell: (params: GridRenderCellParams<JuteMRRow, string | null>) => (
+					<Typography component="span" variant="body2">
+						{params.value || "-"}
+					</Typography>
+				),
+			},
+			{
 				field: "mukam",
 				headerName: "Mukam",
 				minWidth: 120,
@@ -207,6 +218,7 @@ export default function JuteMRIndexPage() {
 					supplier_name: (r.supplier_name ?? "") as string,
 					party_name: (r.party_name ?? null) as string | null,
 					challan_no: (r.challan_no ?? null) as string | null,
+					gate_entry_no: (r.gate_entry_no ?? null) as string | null,
 					mukam: (r.mukam ?? null) as string | null,
 					mr_weight: (r.mr_weight ?? null) as number | null,
 					status: (r.status ?? "Open") as string,

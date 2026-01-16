@@ -210,17 +210,20 @@ export const extractFormValuesFromDetails = (details: GateEntryDetails): GateEnt
 export const mapLineItemsFromAPI = (lineItems: GateEntryLineItemAPI[]): GateEntryLineItem[] =>
 	lineItems.map((li) => ({
 		id: generateLineId(),
+		jute_mr_li_id: li.jute_mr_li_id ?? null,
 		jutePoLiId: li.jute_po_li_id ? String(li.jute_po_li_id) : "",
 		challanItem: li.challan_item_id ? String(li.challan_item_id) : "",
-		challanQuality: li.challan_jute_quality_id ? String(li.challan_jute_quality_id) : "",
+		challanQuality: li.challan_quality_id ? String(li.challan_quality_id) : "",
 		challanQty: li.challan_quantity ? String(li.challan_quantity) : "",
 		challanWeight: li.challan_weight ? String(li.challan_weight) : "",
 		actualItem: li.actual_item_id ? String(li.actual_item_id) : "",
-		actualQuality: li.actual_jute_quality_id ? String(li.actual_jute_quality_id) : "",
-		actualQty: li.actual_quantity ? String(li.actual_quantity) : "",
+		actualQuality: li.actual_quality_id ? String(li.actual_quality_id) : "",
+		actualQty: li.actual_qty ? String(li.actual_qty) : "",
 		actualWeight: li.actual_weight ? String(li.actual_weight) : "",
 		allowableMoisture: li.allowable_moisture != null ? String(li.allowable_moisture) : "",
 		remarks: li.remarks ?? "",
+		moistureReadings: [],  // Populated from separate moisture readings API if available
+		averageMoisture: null,
 	}));
 
 // =============================================================================

@@ -20,6 +20,7 @@ export const generateLineId = (): string => {
  */
 export const createBlankLine = (): GateEntryLineItem => ({
 	id: generateLineId(),
+	jute_mr_li_id: null,  // New lines don't have a database ID yet
 	jutePoLiId: "",
 	challanItem: "",
 	challanQuality: "",
@@ -31,6 +32,8 @@ export const createBlankLine = (): GateEntryLineItem => ({
 	actualWeight: "",
 	allowableMoisture: "",
 	remarks: "",
+	moistureReadings: [],
+	averageMoisture: null,
 });
 
 /**

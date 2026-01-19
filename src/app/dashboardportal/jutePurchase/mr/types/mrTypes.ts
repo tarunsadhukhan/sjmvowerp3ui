@@ -41,7 +41,7 @@ export type JuteMRHeader = {
 export type JuteMRLineItemAPI = {
 	jute_mr_li_id: number;
 	jute_mr_id: number;
-	jute_gate_entry_lineitem_id: number | null;
+	jute_po_li_id: number | null;
 	actual_item_id: number | null;
 	actual_item_name: string | null;
 	actual_quality: number | null;
@@ -54,6 +54,7 @@ export type JuteMRLineItemAPI = {
 	shortage_kgs: number | null;
 	accepted_weight: number | null;
 	rate: number | null;
+	po_rate: number | null;
 	claim_rate: number | null;
 	claim_quality: string | null;
 	water_damage_amount: number | null;

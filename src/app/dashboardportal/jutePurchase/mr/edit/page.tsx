@@ -42,14 +42,14 @@ function calculateShortageAndAcceptedWeight(
 	const deductionPercentage = moistureDiff + dust;
 
 	if (deductionPercentage <= 0) {
-		return { shortageKgs: 0, acceptedWeight: actualWeight };
+		return { shortageKgs: 0, acceptedWeight: Math.round(actualWeight) };
 	}
 
 	// Formula: shortage_kgs = actual_weight * (moisture diff % + claim_dust%)
-	const shortageKgs = actualWeight * deductionPercentage / 100.0;
+	const shortageKgs = Math.round(actualWeight * deductionPercentage / 100.0);
 	
 	// Formula: accepted_weight = actual_weight - shortage_kgs
-	const acceptedWeight = Math.max(0, actualWeight - shortageKgs); // Ensure non-negative
+	const acceptedWeight = Math.round(Math.max(0, actualWeight - shortageKgs)); // Ensure non-negative
 	
 	return { shortageKgs, acceptedWeight };
 }
@@ -68,7 +68,6 @@ export default function JuteMREditPage() {
 	const [header, setHeader] = React.useState<JuteMRHeader | null>(null);
 	const [lineItems, setLineItems] = React.useState<MRLineItem[]>([]);
 	const [saving, setSaving] = React.useState(false);
-	const [agentOptions, setAgentOptions] = React.useState<Array<{ value: number; label: string }>>([]);
 	const [warehouseOptions, setWarehouseOptions] = React.useState<Array<{ value: number; label: string }>>([]);
 
 	const handleHeaderChange = React.useCallback(
@@ -128,23 +127,6 @@ export default function JuteMREditPage() {
 			setHeader((prev) => (prev ? { ...prev, mr_weight: totalAcceptedWeight } : null));
 		}
 	}, [totalAcceptedWeight, mode]);
-
-	const loadAgentOptions = React.useCallback(async () => {
-		if (!coId) return;
-		try {
-			const url = `${apiRoutesPortalMasters.JUTE_MR_AGENT_OPTIONS}?co_id=${coId}`;
-			const { data, error } = await fetchWithCookie<{ branches: Array<{ branch_id: number; company_name: string; branch_name: string }> }>(url, "GET");
-			if (error || !data) return;
-			
-			const options = data.branches.map((b) => ({
-				value: b.branch_id,
-				label: `${b.company_name} - ${b.branch_name}`,
-			}));
-			setAgentOptions(options);
-		} catch (err) {
-			console.error("Error loading agent options:", err);
-		}
-	}, [coId]);
 
 	const loadWarehouseOptions = React.useCallback(async (branchId: number) => {
 		try {
@@ -230,8 +212,7 @@ export default function JuteMREditPage() {
 
 	React.useEffect(() => {
 		void loadData();
-		void loadAgentOptions();
-	}, [loadData, loadAgentOptions]);
+	}, [loadData]);
 
 	// Load warehouse options when header is available
 	React.useEffect(() => {
@@ -355,7 +336,7 @@ export default function JuteMREditPage() {
 			contentClassName="max-w-full"
 		>
 			<Box sx={{ maxHeight: "calc(100vh - 300px)", overflowY: "auto", pr: 1 }}>
-				<MRHeaderForm header={header} mode={mode} onHeaderChange={handleHeaderChange} agentOptions={agentOptions} />
+				<MRHeaderForm header={header} mode={mode} onHeaderChange={handleHeaderChange} />
 			</Box>
 		</TransactionWrapper>
 	);

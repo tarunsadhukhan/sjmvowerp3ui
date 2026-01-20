@@ -373,7 +373,9 @@ export default function JuteGateEntryCreatePage() {
 
   // Build payload from form values
   const buildPayload = React.useCallback(() => {
-    return {
+    const tareWeightNum = parseFloat(formValues.tareWeight) || 0;
+    
+    const payload: any = {
       co_id: parseInt(coId ?? "0", 10),
       branch_id: parseInt(formValues.branch, 10),
       jute_gate_entry_date: formValues.entryDate,
@@ -384,22 +386,20 @@ export default function JuteGateEntryCreatePage() {
       vehicle_no: formValues.vehicleNo,
       driver_name: formValues.driverName,
       transporter: formValues.transporter,
-      po_id: null,
-      jute_uom: "LOOSE", // Default
-      mukam_id: 1, // Default - TODO: Make this a dropdown if needed
-      jute_supplier_id: 1, // Default - TODO: Make this a dropdown if needed
-      party_id: null,
       gross_weight: parseFloat(formValues.grossWeight) || 0,
-      tare_weight: parseFloat(formValues.tareWeight) || 0,
-      net_weight: parseFloat(formValues.netWeight) || 0,
+      tare_weight: tareWeightNum,
       variable_shortage: parseFloat(formValues.variableShortage) || 0,
-      vehicle_type_id: null,
-      marketing_slip: 0,
       remarks: formValues.remarks || null,
       out_date: formValues.outDate || null,
       out_time: formValues.outTime || null,
-      line_items: [], // No line items for gate entry
     };
+
+    // net_weight should not be sent if no tare weight is entered
+    if (tareWeightNum > 0) {
+      payload.net_weight = parseFloat(formValues.netWeight) || 0;
+    }
+
+    return payload;
   }, [coId, formValues]);
 
   // Handle IN submission (Create new entry)

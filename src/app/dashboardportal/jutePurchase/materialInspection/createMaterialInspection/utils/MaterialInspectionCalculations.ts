@@ -85,14 +85,34 @@ export const recalculateLineItemWeights = (
 	const totalChallanQty = getTotalChallanQty(lineItems);
 	const totalActualQty = getTotalActualQty(lineItems);
 
-	return lineItems.map((li) => {
+	return lineItems.map((li, index) => {
 		const lineChallanQty = parseFloat(li.challanQty) || 0;
 		const lineActualQty = parseFloat(li.actualQty) || 0;
 
+		let challanWeightValue = "";
+		if (totalChallanQty > 0) {
+			if (lineChallanQty > 0) {
+				challanWeightValue = String(calculateChallanWeight(headerChallanWeight, totalChallanQty, lineChallanQty).toFixed(2));
+			}
+		} else if (index === 0 && lineItems.length === 1 && headerChallanWeight > 0) {
+			// If only one line exists and no qty yet, assign full weight
+			challanWeightValue = String(headerChallanWeight.toFixed(2));
+		}
+
+		let actualWeightValue = "";
+		if (totalActualQty > 0) {
+			if (lineActualQty > 0) {
+				actualWeightValue = String(Math.round(calculateLineActualWeight(headerActualWeight, totalActualQty, lineActualQty)));
+			}
+		} else if (index === 0 && lineItems.length === 1 && headerActualWeight > 0) {
+			// If only one line exists and no qty yet, assign full weight
+			actualWeightValue = String(Math.round(headerActualWeight));
+		}
+
 		return {
 			...li,
-			challanWeight: lineChallanQty > 0 ? String(calculateChallanWeight(headerChallanWeight, totalChallanQty, lineChallanQty).toFixed(2)) : "",
-			actualWeight: lineActualQty > 0 ? String(Math.round(calculateLineActualWeight(headerActualWeight, totalActualQty, lineActualQty))) : "",
+			challanWeight: challanWeightValue,
+			actualWeight: actualWeightValue,
 		};
 	});
 };

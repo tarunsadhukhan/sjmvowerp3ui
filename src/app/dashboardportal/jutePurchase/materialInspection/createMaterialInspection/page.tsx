@@ -38,7 +38,7 @@ import {
 	GATE_ENTRY_STATUS_LABELS,
 	UOM_OPTIONS,
 } from "./utils/MaterialInspectionConstants";
-import { calculateNetWeight, calculateLineItemTotals } from "./utils/MaterialInspectionCalculations";
+import { calculateNetWeight, calculateLineItemTotals, recalculateLineItemWeights } from "./utils/MaterialInspectionCalculations";
 import {
 	mapGateEntrySetupResponse,
 	buildBranchOptions,
@@ -447,7 +447,17 @@ export default function JuteGateEntryCreatePage() {
 						moistureReadings: [],  // Initialize empty moisture readings
 						averageMoisture: null,
 					}));
-					replaceLineItems(newLineItems);
+					
+					// Recalculate weights based on header values before replacing
+					const currentChallanWeight = parseFloat(formValues.challanWeight) || 0;
+					const currentGross = parseFloat(formValues.grossWeight) || 0;
+					const currentTare = parseFloat(formValues.tareWeight) || 0;
+					const currentVariableShortage = parseFloat(formValues.variableShortage) || 0;
+					const currentNetWeight = currentGross > 0 && currentTare > 0 ? currentGross - currentTare : 0;
+					const currentActualWeight = currentNetWeight > 0 ? Math.max(0, currentNetWeight - currentVariableShortage) : 0;
+					
+					const lineItemsWithWeights = recalculateLineItemWeights(newLineItems, currentChallanWeight, currentActualWeight);
+					replaceLineItems(lineItemsWithWeights);
 				}
 			} catch (err) {
 				console.error("Error fetching PO details:", err);
@@ -455,6 +465,7 @@ export default function JuteGateEntryCreatePage() {
 		};
 
 		void fetchPODetails();
+	// eslint-disable-next-line react-hooks/exhaustive-deps
 	}, [formValues.poId, coId, mode, setFormValues, setInitialValues, bumpFormKey, replaceLineItems]);
 
 	// Fetch setup data
@@ -635,14 +646,21 @@ export default function JuteGateEntryCreatePage() {
 		setPageError(null);
 
 		try {
-			// Build line items payload for the complete_inspection endpoint
-			// Include jute_mr_li_id if available (existing records), otherwise send 0 for new lines
+			// Build complete line items payload with all challan and actual fields
 			const lineItemsPayload = filledLines.map((li) => ({
 				jute_mr_li_id: li.jute_mr_li_id ? Number(li.jute_mr_li_id) : 0,
+				jute_po_li_id: li.jutePoLiId ? Number(li.jutePoLiId) : null,
+				// Challan data
+				challan_item_id: li.challanItem ? Number(li.challanItem) : null,
+				challan_quality_id: li.challanQuality ? Number(li.challanQuality) : null,
+				challan_quantity: li.challanQty ? parseFloat(li.challanQty) : null,
+				challan_weight: li.challanWeight ? parseFloat(li.challanWeight) : null,
+				// Actual data
 				actual_item_id: li.actualItem ? Number(li.actualItem) : null,
 				actual_quality_id: li.actualQuality ? Number(li.actualQuality) : null,
 				actual_qty: li.actualQty ? parseFloat(li.actualQty) : null,
-				actual_weight: li.actualWeight ? parseFloat(li.actualWeight) : null,  // Optional
+				actual_weight: li.actualWeight ? parseFloat(li.actualWeight) : null,
+				// Moisture
 				allowable_moisture: li.allowableMoisture ? parseFloat(li.allowableMoisture) : null,
 				moisture_readings: (li.moistureReadings ?? []).map((r) => ({
 					moisture_percentage: r,
@@ -650,13 +668,46 @@ export default function JuteGateEntryCreatePage() {
 				remarks: li.remarks || null,
 			}));
 
-			const payload = {
+			// Parse weight values
+			const grossWeightNum = formValues.grossWeight ? parseFloat(String(formValues.grossWeight)) : null;
+			const tareWeightNum = formValues.tareWeight ? parseFloat(String(formValues.tareWeight)) : null;
+			const challanWeightNum = formValues.challanWeight ? parseFloat(String(formValues.challanWeight)) : null;
+			const variableShortageNum = formValues.variableShortage ? parseFloat(String(formValues.variableShortage)) : null;
+
+			// Build complete header payload with all form values
+			const payload: Record<string, unknown> = {
 				jute_mr_id: Number(gateEntryId),
-				net_weight: formValues.netWeight ? parseFloat(String(formValues.netWeight)) : null,
-				tare_weight: formValues.tareWeight ? parseFloat(String(formValues.tareWeight)) : null,
-				remarks: formValues.remarks ? String(formValues.remarks) : null,
+				// Header fields
+				branch_id: formValues.branch ? parseInt(String(formValues.branch), 10) : null,
+				jute_gate_entry_date: formValues.entryDate || null,
+				in_time: formValues.entryTime || null,
+				out_date: formValues.outDate || null,
+				out_time: formValues.outTime || null,
+				challan_no: formValues.challanNo || null,
+				challan_date: formValues.challanDate || null,
+				challan_weight: challanWeightNum,
+				vehicle_no: formValues.vehicleNo || null,
+				vehicle_type_id: formValues.vehicleType ? parseInt(String(formValues.vehicleType), 10) : null,
+				driver_name: formValues.driverName || null,
+				transporter: formValues.transporter || null,
+				po_id: formValues.poId ? parseInt(String(formValues.poId), 10) : null,
+				jute_uom: formValues.juteUom || null,
+				mukam_id: formValues.mukam ? parseInt(String(formValues.mukam), 10) : null,
+				jute_supplier_id: formValues.supplier ? parseInt(String(formValues.supplier), 10) : null,
+				party_id: formValues.party ? parseInt(String(formValues.party), 10) : null,
+				gross_weight: grossWeightNum,
+				tare_weight: tareWeightNum,
+				variable_shortage: variableShortageNum,
+				marketing_slip: formValues.marketingSlip ? 1 : 0,
+				remarks: formValues.remarks || null,
+				// Line items
 				line_items: lineItemsPayload,
 			};
+
+			// Only include net_weight if tare_weight is entered
+			if (tareWeightNum !== null && tareWeightNum > 0) {
+				payload.net_weight = formValues.netWeight ? parseFloat(String(formValues.netWeight)) : null;
+			}
 
 			const { error } = await fetchWithCookie(
 				`${apiRoutesPortalMasters.JUTE_MATERIAL_INSPECTION_COMPLETE}?co_id=${coId}`,

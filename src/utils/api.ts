@@ -244,6 +244,7 @@ const apiRoutesPortalMasters = {
     JUTE_MR_UPDATE: `${API_URL}/juteMR/update_mr`,
     JUTE_MR_AGENT_OPTIONS: `${API_URL}/juteMR/get_agent_options`,
     JUTE_MR_WAREHOUSE_OPTIONS: `${API_URL}/juteMR/get_warehouse_options`,
+    JUTE_MR_PARTY_BRANCHES: `${API_URL}/juteMR/get_party_branches`,
     JUTE_MATERIAL_INSPECTION_UPDATE_LINE: `${API_URL}/juteMaterialInspection/update_line_item`,
 
     // Jute Bill Pass endpoints

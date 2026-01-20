@@ -27,6 +27,7 @@ export type JuteMRHeader = {
 	mukam: string | null;
 	vehicle_no: string | null;
 	unit_conversion: string | null;
+	actual_weight: number | null;
 	mr_weight: number | null;
 	remarks: string | null;
 	status_id: number | null;
@@ -35,6 +36,16 @@ export type JuteMRHeader = {
 	jute_gate_entry_date: string | null;
 	updated_by: number | null;
 	updated_date_time: string | null;
+};
+
+// Party branch option type
+export type PartyBranchOption = {
+	party_mst_branch_id: number;
+	party_id: number;
+	address: string | null;
+	gst_no: string | null;
+	party_name: string | null;
+	display: string;
 };
 
 // Line item from get_jute_mr_line_items_query

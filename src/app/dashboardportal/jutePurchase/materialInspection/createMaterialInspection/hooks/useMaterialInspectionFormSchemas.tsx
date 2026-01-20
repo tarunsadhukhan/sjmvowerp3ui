@@ -45,7 +45,7 @@ export function useGateEntryFormSchemas({
 					type: "select" as const,
 					required: true,
 					options: branchOptions,
-					disabled: isViewMode || isSingleBranch,
+					disabled: true, // Always disabled - branch is set from gate entry and cannot be changed
 					grid: { xs: 12, md: 4 },
 				},
 				{

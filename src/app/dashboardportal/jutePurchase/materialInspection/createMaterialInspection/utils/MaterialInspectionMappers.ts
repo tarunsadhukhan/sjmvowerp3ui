@@ -235,12 +235,9 @@ export const mapFormToCreatePayload = (
 	lineItems: GateEntryLineItem[],
 	coId: number
 ) => {
-	// Filter out empty line items
-	const validLineItems = lineItems.filter(
-		(li) => li.challanItem || li.actualItem || li.challanQty || li.actualQty
-	);
+	const tareWeightNum = parseFloat(formValues.tareWeight) || 0;
 
-	return {
+	const payload: any = {
 		co_id: coId,
 		branch_id: parseInt(formValues.branch, 10),
 		jute_gate_entry_date: formValues.entryDate,
@@ -251,33 +248,18 @@ export const mapFormToCreatePayload = (
 		vehicle_no: formValues.vehicleNo,
 		driver_name: formValues.driverName,
 		transporter: formValues.transporter,
-		po_id: formValues.poId ? parseInt(formValues.poId, 10) : null,
-		jute_uom: formValues.juteUom,
-		mukam_id: formValues.mukam ? parseInt(formValues.mukam, 10) : null,
-		jute_supplier_id: parseInt(formValues.supplier, 10),
-		party_id: formValues.party ? parseInt(formValues.party, 10) : null,
 		gross_weight: parseFloat(formValues.grossWeight) || 0,
-		tare_weight: parseFloat(formValues.tareWeight) || 0,
-		net_weight: parseFloat(formValues.netWeight) || 0,
+		tare_weight: tareWeightNum,
 		variable_shortage: formValues.variableShortage ? parseFloat(formValues.variableShortage) : 0,
-		vehicle_type_id: formValues.vehicleType ? parseInt(formValues.vehicleType, 10) : null,
-		marketing_slip: formValues.marketingSlip ? 1 : 0,
 		remarks: formValues.remarks || null,
-		line_items: validLineItems.map((li) => ({
-			jute_po_li_id: li.jutePoLiId ? parseInt(li.jutePoLiId, 10) : null,
-			challan_item_id: li.challanItem ? parseInt(li.challanItem, 10) : null,
-			challan_jute_quality_id: li.challanQuality ? parseInt(li.challanQuality, 10) : null,
-			challan_quantity: li.challanQty ? parseFloat(li.challanQty) : null,
-			challan_weight: li.challanWeight ? parseFloat(li.challanWeight) : null,
-			actual_item_id: li.actualItem ? parseInt(li.actualItem, 10) : null,
-			actual_jute_quality_id: li.actualQuality ? parseInt(li.actualQuality, 10) : null,
-			actual_quantity: li.actualQty ? parseFloat(li.actualQty) : null,
-			actual_weight: li.actualWeight ? parseFloat(li.actualWeight) : null,
-			allowable_moisture: li.allowableMoisture ? parseFloat(li.allowableMoisture) : null,
-			jute_uom: formValues.juteUom,
-			remarks: li.remarks || null,
-		})),
 	};
+
+	// Only send net_weight if tare_weight is entered
+	if (tareWeightNum > 0) {
+		payload.net_weight = parseFloat(formValues.netWeight) || 0;
+	}
+
+	return payload;
 };
 
 export const mapFormToUpdatePayload = (
@@ -285,11 +267,9 @@ export const mapFormToUpdatePayload = (
 	lineItems: GateEntryLineItem[],
 	action?: string
 ) => {
-	const validLineItems = lineItems.filter(
-		(li) => li.challanItem || li.actualItem || li.challanQty || li.actualQty
-	);
+	const tareWeightNum = formValues.tareWeight ? parseFloat(formValues.tareWeight) : null;
 
-	return {
+	const payload: any = {
 		branch_id: formValues.branch ? parseInt(formValues.branch, 10) : null,
 		jute_gate_entry_date: formValues.entryDate || null,
 		in_time: formValues.entryTime || null,
@@ -301,32 +281,17 @@ export const mapFormToUpdatePayload = (
 		vehicle_no: formValues.vehicleNo || null,
 		driver_name: formValues.driverName || null,
 		transporter: formValues.transporter || null,
-		po_id: formValues.poId ? parseInt(formValues.poId, 10) : null,
-		jute_uom: formValues.juteUom || null,
-		mukam_id: formValues.mukam ? parseInt(formValues.mukam, 10) : null,
-		jute_supplier_id: formValues.supplier ? parseInt(formValues.supplier, 10) : null,
-		party_id: formValues.party ? parseInt(formValues.party, 10) : null,
 		gross_weight: formValues.grossWeight ? parseFloat(formValues.grossWeight) : null,
-		tare_weight: formValues.tareWeight ? parseFloat(formValues.tareWeight) : null,
-		net_weight: formValues.netWeight ? parseFloat(formValues.netWeight) : null,
+		tare_weight: tareWeightNum,
 		variable_shortage: formValues.variableShortage ? parseFloat(formValues.variableShortage) : null,
-		vehicle_type_id: formValues.vehicleType ? parseInt(formValues.vehicleType, 10) : null,
-		marketing_slip: formValues.marketingSlip ? 1 : 0,
 		remarks: formValues.remarks || null,
 		action: action || null,
-		line_items: validLineItems.map((li) => ({
-			jute_po_li_id: li.jutePoLiId ? parseInt(li.jutePoLiId, 10) : null,
-			challan_item_id: li.challanItem ? parseInt(li.challanItem, 10) : null,
-			challan_jute_quality_id: li.challanQuality ? parseInt(li.challanQuality, 10) : null,
-			challan_quantity: li.challanQty ? parseFloat(li.challanQty) : null,
-			challan_weight: li.challanWeight ? parseFloat(li.challanWeight) : null,
-			actual_item_id: li.actualItem ? parseInt(li.actualItem, 10) : null,
-			actual_jute_quality_id: li.actualQuality ? parseInt(li.actualQuality, 10) : null,
-			actual_quantity: li.actualQty ? parseFloat(li.actualQty) : null,
-			actual_weight: li.actualWeight ? parseFloat(li.actualWeight) : null,
-			allowable_moisture: li.allowableMoisture ? parseFloat(li.allowableMoisture) : null,
-			jute_uom: formValues.juteUom,
-			remarks: li.remarks || null,
-		})),
 	};
+
+	// Only send net_weight if tare_weight is entered
+	if (tareWeightNum !== null && tareWeightNum > 0) {
+		payload.net_weight = formValues.netWeight ? parseFloat(formValues.netWeight) : null;
+	}
+
+	return payload;
 };

@@ -40,8 +40,7 @@ export function useGateEntryLineItems({
 		if (headerChallanWeight <= 0 && headerActualWeight <= 0) return;
 
 		setLineItems((prev) => {
-			const hasDataItems = prev.filter(lineHasAnyData);
-			if (hasDataItems.length === 0) return prev;
+			if (prev.length === 0) return prev;
 
 			return recalculateLineItemWeights(prev, headerChallanWeight, headerActualWeight);
 		});

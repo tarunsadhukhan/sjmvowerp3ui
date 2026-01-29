@@ -8,7 +8,11 @@ import { fetchWithCookie } from "@/utils/apiClient2";
 import { apiRoutesPortalMasters } from "@/utils/api";
 import useSelectedCompanyCoId from "@/hooks/use-selected-company-coid";
 import { MRHeaderForm } from "../components/MRHeaderForm";
+import { MRApprovalBar } from "../components/MRApprovalBar";
+import { MRApprovalDialog } from "../components/MRApprovalDialog";
 import { useMRLineItems } from "../hooks/useMRLineItems";
+import { useMRApproval } from "../hooks/useMRApproval";
+import { MR_STATUS_IDS } from "../utils/mrConstants";
 import type { JuteMRHeader, JuteMRLineItemAPI, MRLineItem, MuiFormMode, PartyBranchOption } from "../types/mrTypes";
 
 type JuteMRDetailsResponse = {
@@ -131,6 +135,7 @@ export default function JuteMREditPage() {
 	const [warehouseOptions, setWarehouseOptions] = React.useState<Array<{ value: number; label: string }>>([]);
 	const [partyBranchOptions, setPartyBranchOptions] = React.useState<PartyBranchOption[]>([]);
 	const [partyBranchLoading, setPartyBranchLoading] = React.useState(false);
+	const [partyBranchesLoaded, setPartyBranchesLoaded] = React.useState(false);
 
 	const handleHeaderChange = React.useCallback(
 		(field: keyof JuteMRHeader, value: string | number | null) => {
@@ -218,20 +223,24 @@ export default function JuteMREditPage() {
 	const loadPartyBranches = React.useCallback(async (partyId: string, currentPartyBranchId: number | null) => {
 		if (!partyId) {
 			setPartyBranchOptions([]);
+			setPartyBranchesLoaded(false);
 			return;
 		}
 		
 		setPartyBranchLoading(true);
+		setPartyBranchesLoaded(false);
 		try {
 			const url = `${apiRoutesPortalMasters.JUTE_MR_PARTY_BRANCHES}?party_id=${partyId}`;
 			const { data, error } = await fetchWithCookie<{ branches: PartyBranchOption[] }>(url, "GET");
 			if (error || !data) {
 				setPartyBranchOptions([]);
+				setPartyBranchesLoaded(true);
 				return;
 			}
 			
 			const branches = data.branches || [];
 			setPartyBranchOptions(branches);
+			setPartyBranchesLoaded(true);
 			
 			// Auto-select if only 1 branch and no branch is currently selected
 			if (branches.length === 1 && !currentPartyBranchId) {
@@ -244,6 +253,7 @@ export default function JuteMREditPage() {
 		} catch (err) {
 			console.error("Error loading party branches:", err);
 			setPartyBranchOptions([]);
+			setPartyBranchesLoaded(true);
 		} finally {
 			setPartyBranchLoading(false);
 		}
@@ -344,14 +354,44 @@ export default function JuteMREditPage() {
 	}, [header?.party_id, loadPartyBranches]);
 	// Note: We intentionally don't include party_branch_id in deps to avoid re-fetching on selection
 
+	// Approval workflow hook
+	const {
+		approvalLoading,
+		approvalInfo,
+		approvalPermissions,
+		statusChipProps,
+		statusId,
+		canSetPending,
+		partyHasNoBranches,
+		// Approval dialog state
+		approvalDialogOpen,
+		handleApprovalDialogClose,
+		handleApproveConfirm,
+		// Action handlers
+		handlePending,
+		handleApprove,
+		handleReject,
+		handleCancel,
+		handleViewApprovalLog,
+	} = useMRApproval({
+		mode,
+		mrId: mrIdParam ?? "",
+		header,
+		coId,
+		partyBranchesLoaded,
+		partyBranchOptions,
+		onRefresh: loadData,
+	});
+
+	// Determine if editing is allowed based on status
+	const canEdit = React.useMemo(() => {
+		if (mode === "view") return false;
+		// Allow editing in Draft and Open status
+		return statusId === MR_STATUS_IDS.DRAFT || statusId === MR_STATUS_IDS.OPEN;
+	}, [mode, statusId]);
+
 	const handleSave = React.useCallback(async () => {
 		if (!coId || !header) return;
-
-		// Validate party branch is selected (mandatory)
-		if (header.party_id && !header.party_branch_id && partyBranchOptions.length > 0) {
-			setPageError("Party Branch is required");
-			return;
-		}
 
 		setSaving(true);
 		setPageError(null);
@@ -398,7 +438,7 @@ export default function JuteMREditPage() {
 		} finally {
 			setSaving(false);
 		}
-	}, [coId, header, lineItems, loadData, partyBranchOptions]);
+	}, [coId, header, lineItems, loadData]);
 
 	if (!mrIdParam) {
 		return <Alert severity="error">MR id is required in URL.</Alert>;
@@ -426,32 +466,28 @@ export default function JuteMREditPage() {
 		},
 	];
 
-	if (mode === "edit") {
+	// Show Save button only if editing is allowed
+	if (canEdit && approvalPermissions.canSave) {
 		actions.push({
 			label: "Save",
 			onClick: handleSave,
-			disabled: saving,
+			disabled: saving || approvalLoading,
 			loading: saving,
 			variant: "default",
 		});
 	}
 
-	const statusChip = {
-		label: header.status || "Open",
-		color: (header.status_id === 3 ? "success" : "info") as "success" | "info",
-	};
-
 	return (
 		<TransactionWrapper
 			title={`Material Receipt - MR #${header.branch_mr_no ?? header.jute_mr_id}`}
 			loading={loading}
-			statusChip={statusChip}
+			statusChip={statusChipProps}
 			primaryActions={actions}
 			lineItems={{
 				items: lineItems,
 				columns: lineItemColumns,
 				getItemId: (item: MRLineItem) => item.id,
-				canEdit: mode !== "view",
+				canEdit: canEdit,
 				onRemoveSelected: () => {},
 				title: "Line Items",
 				subtitle: `${lineItems.length} items | Total Accepted Weight: ${totalAcceptedWeight.toFixed(2)}`,
@@ -464,17 +500,41 @@ export default function JuteMREditPage() {
 				) : null
 			}
 			contentClassName="max-w-full"
+			footer={
+				<MRApprovalBar
+					approvalInfo={approvalInfo}
+					permissions={approvalPermissions}
+					loading={approvalLoading}
+					canSetPending={canSetPending}
+					partyHasNoBranches={partyHasNoBranches}
+					onApprove={handleApprove}
+					onReject={handleReject}
+					onPending={handlePending}
+					onCancel={handleCancel}
+					onViewApprovalLog={handleViewApprovalLog}
+				/>
+			}
 		>
 			<Box sx={{ maxHeight: "calc(100vh - 300px)", overflowY: "auto", pr: 1 }}>
 				<MRHeaderForm 
 					header={header} 
-					mode={mode} 
+					mode={canEdit ? mode : "view"} 
 					onHeaderChange={handleHeaderChange}
 					partyBranchOptions={partyBranchOptions}
 					partyBranchLoading={partyBranchLoading}
+					partyBranchesLoaded={partyBranchesLoaded}
 					totalAcceptedWeight={totalAcceptedWeight}
 				/>
 			</Box>
+			
+			{/* MR Approval Dialog - for entering MR date before final approval */}
+			<MRApprovalDialog
+				open={approvalDialogOpen}
+				loading={approvalLoading}
+				onClose={handleApprovalDialogClose}
+				onConfirm={handleApproveConfirm}
+				defaultDate={header?.jute_mr_date ? String(header.jute_mr_date).slice(0, 10) : undefined}
+			/>
 		</TransactionWrapper>
 	);
 }

@@ -203,6 +203,21 @@ const apiRoutesPortalMasters = {
     JUTE_AGENT_MAP_CREATE: `${API_URL}/juteAgentMap/jute_agent_map_create`,
     JUTE_AGENT_MAP_DELETE: `${API_URL}/juteAgentMap/jute_agent_map_delete`,
 
+    // Yarn Type Master endpoints
+    YARN_TYPE_TABLE: `${API_URL}/yarnTypeMaster/get_yarn_type_table`,
+    YARN_TYPE_BY_ID: `${API_URL}/yarnTypeMaster/get_yarn_type_by_id`,
+    YARN_TYPE_EDIT_SETUP: `${API_URL}/yarnTypeMaster/yarn_type_edit_setup`,
+    YARN_TYPE_CREATE: `${API_URL}/yarnTypeMaster/yarn_type_create`,
+    YARN_TYPE_EDIT: `${API_URL}/yarnTypeMaster/yarn_type_edit`,
+
+    // Yarn Master endpoints (jute_yarn_mst)
+    YARN_TABLE: `${API_URL}/yarnMaster/get_yarn_table`,
+    YARN_BY_ID: `${API_URL}/yarnMaster/get_yarn_by_id`,
+    YARN_CREATE_SETUP: `${API_URL}/yarnMaster/yarn_create_setup`,
+    YARN_EDIT_SETUP: `${API_URL}/yarnMaster/yarn_edit_setup`,
+    YARN_CREATE: `${API_URL}/yarnMaster/yarn_create`,
+    YARN_EDIT: `${API_URL}/yarnMaster/yarn_edit`,
+
     // Jute PO endpoints
     JUTE_PO_TABLE: `${API_URL}/jutePO/get_jute_po_table`,
     JUTE_PO_BY_ID: `${API_URL}/jutePO/get_jute_po_by_id`,

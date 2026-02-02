@@ -218,6 +218,15 @@ const apiRoutesPortalMasters = {
     YARN_CREATE: `${API_URL}/yarnMaster/yarn_create`,
     YARN_EDIT: `${API_URL}/yarnMaster/yarn_edit`,
 
+    // Batch Plan Master endpoints (jute_batch_plan)
+    BATCH_PLAN_TABLE: `${API_URL}/batchPlanMaster/get_batch_plan_table`,
+    BATCH_PLAN_BY_ID: `${API_URL}/batchPlanMaster/get_batch_plan_by_id`,
+    BATCH_PLAN_CREATE_SETUP: `${API_URL}/batchPlanMaster/batch_plan_create_setup`,
+    BATCH_PLAN_EDIT_SETUP: `${API_URL}/batchPlanMaster/batch_plan_edit_setup`,
+    BATCH_PLAN_CREATE: `${API_URL}/batchPlanMaster/batch_plan_create`,
+    BATCH_PLAN_EDIT: `${API_URL}/batchPlanMaster/batch_plan_edit`,
+    BATCH_PLAN_QUALITIES_FOR_ITEM: `${API_URL}/batchPlanMaster/get_qualities_for_item`,
+
     // Jute PO endpoints
     JUTE_PO_TABLE: `${API_URL}/jutePO/get_jute_po_table`,
     JUTE_PO_BY_ID: `${API_URL}/jutePO/get_jute_po_by_id`,
@@ -271,6 +280,10 @@ const apiRoutesPortalMasters = {
     JUTE_BILL_PASS_BY_ID: `${API_URL}/juteBillPass/get_bill_pass_by_id`,
     JUTE_BILL_PASS_LINE_ITEMS: `${API_URL}/juteBillPass/get_bill_pass_line_items`,
     JUTE_BILL_PASS_UPDATE: `${API_URL}/juteBillPass/update_bill_pass`,
+
+    // Jute Issue endpoints
+    JUTE_ISSUE_TABLE: `${API_URL}/juteIssue/get_issue_table`,
+    JUTE_ISSUE_BY_ID: `${API_URL}/juteIssue/get_issue_by_id`,
 
     GET_INDENT_SETUP_1: `${API_URL}/procurementIndent/get_indent_setup_1`,
     GET_INDENT_SETUP_2: `${API_URL}/procurementIndent/get_indent_setup_2`,

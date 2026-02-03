@@ -896,7 +896,7 @@ export default function JuteGateEntryCreatePage() {
 	return (
 		<Suspense
 			fallback={
-				<div className="flex justify-center items-center min-h-[400px]">
+				<div className="flex justify-center items-center min-h-100">
 					<CircularProgress />
 				</div>
 			}

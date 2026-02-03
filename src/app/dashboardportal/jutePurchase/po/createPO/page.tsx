@@ -7,7 +7,9 @@
  */
 
 import * as React from "react";
+import { Suspense } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
+import { CircularProgress, Box } from "@mui/material";
 import TransactionWrapper, { type TransactionAction } from "@/components/ui/TransactionWrapper";
 import { useLineItems, SearchableSelect } from "@/components/ui/transaction";
 import useSelectedCompanyCoId from "@/hooks/use-selected-company-coid";
@@ -64,7 +66,7 @@ import {
   JutePOPreview,
 } from "./components";
 
-export default function JutePOCreatePage() {
+function JutePOCreatePageContent() {
   const searchParams = useSearchParams();
   const router = useRouter();
   const { coId } = useSelectedCompanyCoId();
@@ -653,5 +655,19 @@ export default function JutePOCreatePage() {
         totalAmount={totalAmount}
       />
     </>
+  );
+}
+
+export default function JutePOCreatePage() {
+  return (
+    <Suspense
+      fallback={
+        <Box display="flex" justifyContent="center" alignItems="center" minHeight="400px">
+          <CircularProgress />
+        </Box>
+      }
+    >
+      <JutePOCreatePageContent />
+    </Suspense>
   );
 }

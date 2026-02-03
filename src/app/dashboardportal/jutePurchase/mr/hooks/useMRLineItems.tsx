@@ -41,7 +41,6 @@ export function useMRLineItems({
 				id: "actualQty",
 				header: "Actual Qty",
 				width: "0.9fr",
-				align: "right",
 				renderCell: ({ item }) => {
 					if (!canEdit) {
 						return (
@@ -75,7 +74,6 @@ export function useMRLineItems({
 				id: "actualWeight",
 				header: "Actual Weight",
 				width: "1fr",
-				align: "right",
 				renderCell: ({ item }) => {
 					if (!canEdit) {
 						return (
@@ -109,7 +107,6 @@ export function useMRLineItems({
 				id: "allowableMoisture",
 				header: "Allowable Moisture (%)",
 				width: "1.1fr",
-				align: "right",
 				renderCell: ({ item }) => {
 					if (!canEdit) {
 						return (
@@ -145,7 +142,6 @@ export function useMRLineItems({
 				id: "actualMoisture",
 				header: "Actual Moisture (%)",
 				width: "1.1fr",
-				align: "right",
 				renderCell: ({ item }) => {
 					if (!canEdit) {
 						return (
@@ -179,7 +175,6 @@ export function useMRLineItems({
 				id: "claimDust",
 				header: "Claim Dust (%)",
 				width: "1fr",
-				align: "right",
 				renderCell: ({ item }) => {
 					if (!canEdit) {
 						return (
@@ -213,7 +208,6 @@ export function useMRLineItems({
 				id: "shortageKgs",
 				header: "Shortage (kgs)",
 				width: "1fr",
-				align: "right",
 				renderCell: ({ item }) => {
 					if (!canEdit) {
 						return (
@@ -247,7 +241,6 @@ export function useMRLineItems({
 				id: "acceptedWeight",
 				header: "Accepted Weight",
 				width: "1.1fr",
-				align: "right",
 				renderCell: ({ item }) => (
 					<span className="text-xs font-semibold">
 						{item.acceptedWeight != null ? item.acceptedWeight.toFixed(2) : "-"}
@@ -260,7 +253,6 @@ export function useMRLineItems({
 				id: "rate",
 				header: "Rate",
 				width: "0.9fr",
-				align: "right",
 				renderCell: ({ item }) => {
 					if (!canEdit) {
 						return (
@@ -293,7 +285,6 @@ export function useMRLineItems({
 				id: "claimRate",
 				header: "Claim Rate",
 				width: "1fr",
-				align: "right",
 				renderCell: ({ item }) => {
 					if (!canEdit) {
 						return (
@@ -348,7 +339,6 @@ export function useMRLineItems({
 				id: "waterDamageAmount",
 				header: "Water Damage Amount",
 				width: "1.2fr",
-				align: "right",
 				renderCell: ({ item }) => {
 					if (!canEdit) {
 						return (
@@ -384,7 +374,6 @@ export function useMRLineItems({
 				id: "premiumAmount",
 				header: "Premium Amount",
 				width: "1.1fr",
-				align: "right",
 				renderCell: ({ item }) => {
 					if (!canEdit) {
 						return (

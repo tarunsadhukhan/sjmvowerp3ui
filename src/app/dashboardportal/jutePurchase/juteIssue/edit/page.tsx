@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useId } from "react";
+import React, { useId, Suspense } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
 import {
   Box,
@@ -90,7 +90,21 @@ const formatDate = (value?: string) => {
   return trimmed;
 };
 
-export default function JuteIssueEditPage() {
+export default function JuteIssueEditPageWrapper() {
+  return (
+    <Suspense
+      fallback={
+        <Box display="flex" justifyContent="center" alignItems="center" minHeight="400px">
+          <CircularProgress />
+        </Box>
+      }
+    >
+      <JuteIssueEditPage />
+    </Suspense>
+  );
+}
+
+function JuteIssueEditPage() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const { coId } = useSelectedCompanyCoId();

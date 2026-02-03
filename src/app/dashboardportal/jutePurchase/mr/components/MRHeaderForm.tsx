@@ -25,7 +25,7 @@ export function MRHeaderForm({ header, mode, onHeaderChange, partyBranchOptions 
 	const partyBranchError = !header.party_branch_id && header.party_id && partyBranchOptions.length > 0;
 	
 	// Check if party has no branches at all (after loading completed)
-	const partyHasNoBranches = partyBranchesLoaded && !partyBranchLoading && header.party_id && partyBranchOptions.length === 0;
+	const partyHasNoBranches = Boolean(partyBranchesLoaded && !partyBranchLoading && header.party_id && partyBranchOptions.length === 0);
 
 	return (
 		<Card variant="outlined">
@@ -39,7 +39,7 @@ export function MRHeaderForm({ header, mode, onHeaderChange, partyBranchOptions 
 					</Alert>
 				)}
 				<Grid container spacing={2}>
-					<Grid item xs={12} md={4}>
+					<Grid size={{ xs: 12, md: 4 }}>
 						<TextField
 							label="Branch"
 							fullWidth
@@ -47,7 +47,7 @@ export function MRHeaderForm({ header, mode, onHeaderChange, partyBranchOptions 
 							InputProps={{ readOnly: true }}
 						/>
 					</Grid>
-					<Grid item xs={12} md={4}>
+					<Grid size={{ xs: 12, md: 4 }}>
 						<TextField
 							label="Supplier"
 							fullWidth
@@ -55,7 +55,7 @@ export function MRHeaderForm({ header, mode, onHeaderChange, partyBranchOptions 
 							InputProps={{ readOnly: true }}
 						/>
 					</Grid>
-					<Grid item xs={12} md={4}>
+					<Grid size={{ xs: 12, md: 4 }}>
 						<TextField
 							label="Party"
 							fullWidth
@@ -63,7 +63,7 @@ export function MRHeaderForm({ header, mode, onHeaderChange, partyBranchOptions 
 							InputProps={{ readOnly: true }}
 						/>
 					</Grid>
-					<Grid item xs={12} md={4}>
+					<Grid size={{ xs: 12, md: 4 }}>
 						{readOnly || partyBranchOptions.length <= 1 ? (
 							<TextField
 								label="Party Branch"
@@ -93,7 +93,7 @@ export function MRHeaderForm({ header, mode, onHeaderChange, partyBranchOptions 
 							</FormControl>
 						)}
 					</Grid>
-					<Grid item xs={12} md={4}>
+					<Grid size={{ xs: 12, md: 4 }}>
 						<TextField
 							label="PO No"
 							fullWidth
@@ -101,7 +101,7 @@ export function MRHeaderForm({ header, mode, onHeaderChange, partyBranchOptions 
 							InputProps={{ readOnly: true }}
 						/>
 					</Grid>
-					<Grid item xs={12} md={4}>
+					<Grid size={{ xs: 12, md: 4 }}>
 						<TextField
 							label="PO Date"
 							fullWidth
@@ -109,7 +109,7 @@ export function MRHeaderForm({ header, mode, onHeaderChange, partyBranchOptions 
 							InputProps={{ readOnly: true }}
 						/>
 					</Grid>
-					<Grid item xs={12} md={4}>
+					<Grid size={{ xs: 12, md: 4 }}>
 						<TextField
 							label="Challan No"
 							fullWidth
@@ -117,7 +117,7 @@ export function MRHeaderForm({ header, mode, onHeaderChange, partyBranchOptions 
 							InputProps={{ readOnly: true }}
 						/>
 					</Grid>
-					<Grid item xs={12} md={4}>
+					<Grid size={{ xs: 12, md: 4 }}>
 						<TextField
 							label="Challan Date"
 							fullWidth
@@ -125,7 +125,7 @@ export function MRHeaderForm({ header, mode, onHeaderChange, partyBranchOptions 
 							InputProps={{ readOnly: true }}
 						/>
 					</Grid>
-					<Grid item xs={12} md={4}>
+					<Grid size={{ xs: 12, md: 4 }}>
 						<TextField
 							label="MR No"
 							fullWidth
@@ -133,7 +133,7 @@ export function MRHeaderForm({ header, mode, onHeaderChange, partyBranchOptions 
 							InputProps={{ readOnly: true }}
 						/>
 					</Grid>
-					<Grid item xs={12} md={4}>
+					<Grid size={{ xs: 12, md: 4 }}>
 						<TextField
 							label="MR Date"
 							fullWidth
@@ -141,7 +141,7 @@ export function MRHeaderForm({ header, mode, onHeaderChange, partyBranchOptions 
 							InputProps={{ readOnly: true }}
 						/>
 					</Grid>
-					<Grid item xs={12} md={4}>
+					<Grid size={{ xs: 12, md: 4 }}>
 						<TextField
 							label="Mukam"
 							fullWidth
@@ -149,7 +149,7 @@ export function MRHeaderForm({ header, mode, onHeaderChange, partyBranchOptions 
 							InputProps={{ readOnly: true }}
 						/>
 					</Grid>
-					<Grid item xs={12} md={4}>
+					<Grid size={{ xs: 12, md: 4 }}>
 						<TextField
 							label="Vehicle No"
 							fullWidth
@@ -157,7 +157,7 @@ export function MRHeaderForm({ header, mode, onHeaderChange, partyBranchOptions 
 							InputProps={{ readOnly: true }}
 						/>
 					</Grid>
-					<Grid item xs={12} md={4}>
+					<Grid size={{ xs: 12, md: 4 }}>
 						<TextField
 							label="Unit Conversion"
 							fullWidth
@@ -165,7 +165,7 @@ export function MRHeaderForm({ header, mode, onHeaderChange, partyBranchOptions 
 							InputProps={{ readOnly: true }}
 						/>
 					</Grid>
-					<Grid item xs={12} md={4}>
+					<Grid size={{ xs: 12, md: 4 }}>
 						<TextField
 							label="Actual Weight (Gate Entry)"
 							fullWidth
@@ -175,7 +175,7 @@ export function MRHeaderForm({ header, mode, onHeaderChange, partyBranchOptions 
 							helperText="Auto-distributed to line items by quantity"
 						/>
 					</Grid>
-					<Grid item xs={12} md={4}>
+					<Grid size={{ xs: 12, md: 4 }}>
 						<TextField
 							label="MR Weight (Sum of Accepted)"
 							fullWidth
@@ -186,7 +186,7 @@ export function MRHeaderForm({ header, mode, onHeaderChange, partyBranchOptions 
 						/>
 					</Grid>
 					{showGateEntryDate && (
-						<Grid item xs={12} md={4}>
+						<Grid size={{ xs: 12, md: 4 }}>
 							<TextField
 								label="Gate Entry Date"
 								fullWidth
@@ -195,7 +195,7 @@ export function MRHeaderForm({ header, mode, onHeaderChange, partyBranchOptions 
 							/>
 						</Grid>
 					)}
-					<Grid item xs={12}>
+					<Grid size={{ xs: 12 }}>
 						<TextField
 							label="Remarks"
 							fullWidth

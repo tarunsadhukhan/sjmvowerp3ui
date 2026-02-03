@@ -12,6 +12,7 @@
  */
 
 import * as React from "react";
+import { Suspense } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
 import { Alert, CircularProgress } from "@mui/material";
 import { ArrowLeft, Save, LogIn, CheckCircle } from "lucide-react";
@@ -60,7 +61,7 @@ import { useGateEntryLineItemColumns } from "./hooks/useMaterialInspectionLineIt
 // Components
 import { GateEntryHeaderForm, MoistureReadingDialog } from "./components";
 
-export default function JuteGateEntryCreatePage() {
+function JuteGateEntryCreatePageContent() {
 	const searchParams = useSearchParams();
 	const router = useRouter();
 	const { coId } = useSelectedCompanyCoId();
@@ -888,5 +889,19 @@ export default function JuteGateEntryCreatePage() {
 				/>
 			)}
 		</TransactionWrapper>
+	);
+}
+
+export default function JuteGateEntryCreatePage() {
+	return (
+		<Suspense
+			fallback={
+				<div className="flex justify-center items-center min-h-[400px]">
+					<CircularProgress />
+				</div>
+			}
+		>
+			<JuteGateEntryCreatePageContent />
+		</Suspense>
 	);
 }

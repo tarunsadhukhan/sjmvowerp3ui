@@ -1,6 +1,7 @@
 "use client";
 
 import * as React from "react";
+import { Suspense } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
 import { Alert, CircularProgress, Box } from "@mui/material";
 import TransactionWrapper from "@/components/ui/TransactionWrapper";
@@ -118,7 +119,7 @@ function distributeActualWeightToLineItems(
 	});
 }
 
-export default function JuteMREditPage() {
+function JuteMREditPageContent() {
 	const searchParams = useSearchParams();
 	const router = useRouter();
 	const { coId } = useSelectedCompanyCoId();
@@ -536,5 +537,19 @@ export default function JuteMREditPage() {
 				defaultDate={header?.jute_mr_date ? String(header.jute_mr_date).slice(0, 10) : undefined}
 			/>
 		</TransactionWrapper>
+	);
+}
+
+export default function JuteMREditPage() {
+	return (
+		<Suspense
+			fallback={
+				<Box display="flex" justifyContent="center" alignItems="center" minHeight="400px">
+					<CircularProgress />
+				</Box>
+			}
+		>
+			<JuteMREditPageContent />
+		</Suspense>
 	);
 }

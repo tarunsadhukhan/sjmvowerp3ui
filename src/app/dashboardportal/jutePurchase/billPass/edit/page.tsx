@@ -1,6 +1,7 @@
 "use client";
 
 import * as React from "react";
+import { Suspense } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
 import {
 	Alert,
@@ -148,7 +149,7 @@ const calculateClaimAmount = (lineItems: BillPassLineItem[]): number => {
 	}, 0);
 };
 
-export default function BillPassEditPage() {
+function BillPassEditPageContent() {
 	const router = useRouter();
 	const searchParams = useSearchParams();
 	const billPassIdParam = searchParams.get("id");
@@ -786,5 +787,19 @@ export default function BillPassEditPage() {
 				</Alert>
 			</Snackbar>
 		</Box>
+	);
+}
+
+export default function BillPassEditPage() {
+	return (
+		<Suspense
+			fallback={
+				<Box display="flex" justifyContent="center" alignItems="center" minHeight="400px">
+					<CircularProgress />
+				</Box>
+			}
+		>
+			<BillPassEditPageContent />
+		</Suspense>
 	);
 }

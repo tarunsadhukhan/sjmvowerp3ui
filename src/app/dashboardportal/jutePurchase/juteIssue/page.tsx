@@ -218,7 +218,7 @@ export default function JuteIssueIndexPage() {
 	);
 
 	const handleCreate = React.useCallback(() => {
-		router.push("/dashboardportal/jutePurchase/juteIssue/create");
+		router.push("/dashboardportal/jutePurchase/juteIssue/edit?mode=create");
 	}, [router]);
 
 	return (

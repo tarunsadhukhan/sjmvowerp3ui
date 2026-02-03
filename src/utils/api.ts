@@ -287,6 +287,7 @@ const apiRoutesPortalMasters = {
     JUTE_ISSUE_CREATE_SETUP: `${API_URL}/juteIssue/get_issue_create_setup`,
     JUTE_ISSUE_STOCK_OUTSTANDING: `${API_URL}/juteIssue/get_stock_outstanding`,
     JUTE_ISSUES_BY_DATE: `${API_URL}/juteIssue/get_issues_by_date`,
+    JUTE_ISSUE_MAX_DATE: `${API_URL}/juteIssue/get_max_issue_date`,
     JUTE_ISSUE_CREATE: `${API_URL}/juteIssue/create_issue`,
     JUTE_ISSUE_UPDATE: `${API_URL}/juteIssue/update_issue`,
     JUTE_ISSUE_DELETE: `${API_URL}/juteIssue/delete_issue`,

@@ -184,6 +184,16 @@ function JuteIssueEditPage() {
     coId,
   });
 
+  // Line items management - must be before stockItems filter that uses lineItems
+  const {
+    lineItems,
+    addLineFromStock,
+    removeLineItem,
+    updateLineItem,
+    replaceItems,
+    calculateTotals,
+  } = useJuteIssueLineItems({ mode });
+
   // Stock data - fetch when branch is selected (filtered client-side by item/quality)
   const { stockItems: allStockItems, loading: stockLoading, refetch: refetchStock } = useStockOutstanding({
     coId,
@@ -191,9 +201,14 @@ function JuteIssueEditPage() {
     itemId: undefined, // Fetch all, filter client-side
   });
 
-  // Filter stock items by selected jute type and quality
+  // Filter stock items by selected jute type and quality, and exclude already added items
   const stockItems = React.useMemo(() => {
+    // Get set of already added MR line item IDs
+    const addedMrLiIds = new Set(lineItems.map((l) => l.jute_mr_li_id));
+    
     let filtered = allStockItems;
+    // Exclude stock items that are already added to line items
+    filtered = filtered.filter((s) => !addedMrLiIds.has(String(s.jute_mr_li_id)));
     if (filterItemId) {
       filtered = filtered.filter((s) => String(s.item_id) === filterItemId.value);
     }
@@ -201,7 +216,7 @@ function JuteIssueEditPage() {
       filtered = filtered.filter((s) => String(s.actual_quality) === filterQualityId.value);
     }
     return filtered;
-  }, [allStockItems, filterItemId, filterQualityId]);
+  }, [allStockItems, filterItemId, filterQualityId, lineItems]);
 
   // Extract unique qualities from stock for filter dropdown
   const qualityOptions = React.useMemo(() => {
@@ -213,16 +228,6 @@ function JuteIssueEditPage() {
     });
     return Array.from(seen.entries()).map(([id, name]) => ({ value: id, label: name }));
   }, [allStockItems]);
-
-  // Line items management
-  const {
-    lineItems,
-    addLineFromStock,
-    removeLineItem,
-    updateLineItem,
-    replaceItems,
-    calculateTotals,
-  } = useJuteIssueLineItems({ mode });
 
   // Get selectable lines (saved items that are not draft - i.e., Open status for approve/reject)
   const selectableOpenLines = React.useMemo(
@@ -297,9 +302,43 @@ function JuteIssueEditPage() {
     }
   }, [selectedBranchId, sidebarBranches, branchIdParam]);
 
-  // Load existing issues when viewing/editing
+  // Fetch max date and set default date to max+1 for create mode
   React.useEffect(() => {
-    if (isCreateMode || !coId || !selectedBranchId || !issueDate) return;
+    if (!isCreateMode || !coId || !selectedBranchId || dateParam) return;
+
+    const fetchMaxDate = async () => {
+      try {
+        const params = new URLSearchParams({
+          co_id: coId,
+          branch_id: selectedBranchId,
+        });
+        const url = `${apiRoutesPortalMasters.JUTE_ISSUE_MAX_DATE}?${params.toString()}`;
+        const { data, error: fetchError } = await fetchWithCookie(url, "GET");
+
+        if (fetchError) {
+          console.warn("Failed to fetch max date:", fetchError);
+          return;
+        }
+
+        const response = data as { max_date: string | null };
+        if (response.max_date) {
+          // Set date to max_date + 1 day
+          const maxDate = new Date(response.max_date);
+          maxDate.setDate(maxDate.getDate() + 1);
+          setIssueDate(maxDate.toISOString().slice(0, 10));
+        }
+        // If no max_date, keep the current date (today)
+      } catch (err) {
+        console.warn("Error fetching max date:", err);
+      }
+    };
+
+    fetchMaxDate();
+  }, [isCreateMode, coId, selectedBranchId, dateParam]);
+
+  // Load existing issues for any mode when date/branch changes
+  React.useEffect(() => {
+    if (!coId || !selectedBranchId || !issueDate) return;
 
     const fetchIssues = async () => {
       setLoading(true);
@@ -335,7 +374,7 @@ function JuteIssueEditPage() {
     };
 
     fetchIssues();
-  }, [isCreateMode, coId, selectedBranchId, issueDate, replaceItems, refreshCounter]);
+  }, [coId, selectedBranchId, issueDate, replaceItems, refreshCounter]);
 
   // Handle stock selection dialog
   const handleOpenStockDialog = () => {
@@ -600,7 +639,14 @@ function JuteIssueEditPage() {
   }
 
   const statusId = summary?.status_id || JUTE_ISSUE_STATUS_IDS.DRAFT;
+  // Allow adding items in create mode OR edit mode (not view mode)
+  const canAddItems = !isViewMode;
   const canEdit = !isViewMode && selectableDraftLines.length > 0;
+  // Check if there are unsaved items that need to be saved
+  const unsavedLines = lineItems.filter((l) => !l.jute_issue_id);
+  const hasUnsavedItems = unsavedLines.length > 0;
+  // Show Save button if there are unsaved items (in create or edit mode)
+  const canSave = !isViewMode && hasUnsavedItems;
   // Show Open button if there are any draft items that can be opened
   const canOpen = selectableDraftLines.length > 0;
   // Show Approve/Reject buttons if there are any open items that can be approved
@@ -690,7 +736,7 @@ function JuteIssueEditPage() {
           />
 
           {/* Add Stock Button */}
-          {canEdit && selectedBranchId && (
+          {canAddItems && selectedBranchId && (
             <Button
               variant="contained"
               startIcon={<Plus size={18} />}
@@ -844,7 +890,7 @@ function JuteIssueEditPage() {
             {selectedLineIds.size} item(s) selected
           </Typography>
         )}
-        {canEdit && (
+        {canSave && (
           <Button
             variant="contained"
             color="primary"

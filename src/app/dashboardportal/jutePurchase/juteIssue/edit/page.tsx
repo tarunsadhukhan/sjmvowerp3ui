@@ -184,6 +184,16 @@ function JuteIssueEditPage() {
     coId,
   });
 
+  // Line items management - must be before stockItems filter that uses lineItems
+  const {
+    lineItems,
+    addLineFromStock,
+    removeLineItem,
+    updateLineItem,
+    replaceItems,
+    calculateTotals,
+  } = useJuteIssueLineItems({ mode });
+
   // Stock data - fetch when branch is selected (filtered client-side by item/quality)
   const { stockItems: allStockItems, loading: stockLoading, refetch: refetchStock } = useStockOutstanding({
     coId,
@@ -218,16 +228,6 @@ function JuteIssueEditPage() {
     });
     return Array.from(seen.entries()).map(([id, name]) => ({ value: id, label: name }));
   }, [allStockItems]);
-
-  // Line items management
-  const {
-    lineItems,
-    addLineFromStock,
-    removeLineItem,
-    updateLineItem,
-    replaceItems,
-    calculateTotals,
-  } = useJuteIssueLineItems({ mode });
 
   // Get selectable lines (saved items that are not draft - i.e., Open status for approve/reject)
   const selectableOpenLines = React.useMemo(

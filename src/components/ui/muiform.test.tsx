@@ -1,14 +1,15 @@
 /**
- * @jest-environment jsdom
+ * @vitest-environment jsdom
  */
 import React from 'react';
 import { render, screen, waitFor } from '@testing-library/react';
 import '@testing-library/jest-dom';
+import { vi } from 'vitest';
 import MuiForm, { type Schema } from '@/components/ui/muiform';
 
 // Mock MUI components to avoid complex setup
-jest.mock('@mui/material', () => {
-  const actual = jest.requireActual('@mui/material');
+vi.mock('@mui/material', async () => {
+  const actual = await vi.importActual('@mui/material');
   return {
     ...actual,
     // Keep actual implementations

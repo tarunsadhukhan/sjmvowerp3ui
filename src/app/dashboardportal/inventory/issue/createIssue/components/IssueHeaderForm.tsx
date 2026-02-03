@@ -30,14 +30,26 @@ export const IssueHeaderForm: React.FC<IssueHeaderFormProps> = ({
 	onValuesChange,
 }) => {
 	return (
-		<MuiForm
-			key={formKey}
-			schema={schema}
-			initialValues={initialValues}
-			mode={mode}
-			ref={formRef}
-			onSubmit={onSubmit}
-			onValuesChange={onValuesChange}
-		/>
+		<div className="space-y-6">
+			<MuiForm
+				key={formKey}
+				ref={formRef}
+				schema={schema}
+				initialValues={initialValues}
+				mode={mode}
+				hideModeToggle
+				hideSubmit
+				onSubmit={onSubmit}
+				onValuesChange={onValuesChange}
+			/>
+
+			{mode !== "view" && (
+				<p className="text-xs text-slate-500">
+					Tip: Ensure all required fields are filled and quantities are correct before saving.
+				</p>
+			)}
+		</div>
 	);
 };
+
+export default IssueHeaderForm;

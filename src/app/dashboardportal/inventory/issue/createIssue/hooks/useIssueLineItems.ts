@@ -1,6 +1,6 @@
 import React from "react";
 import { useLineItems } from "@/components/ui/transaction";
-import type { EditableLineItem, ItemGroupCacheEntry } from "../types/issueTypes";
+import type { EditableLineItem } from "../types/issueTypes";
 import {
 	createBlankLine,
 	lineHasAnyData,
@@ -9,21 +9,15 @@ import type { MuiFormMode } from "@/components/ui/muiform";
 
 type UseIssueLineItemsParams = {
 	mode: MuiFormMode;
-	itemGroupCache: Partial<Record<string, ItemGroupCacheEntry>>;
-	itemGroupLoading: Partial<Record<string, boolean>>;
-	ensureItemGroupData: (groupId: string) => Promise<void>;
 };
 
 /**
- * Hook for managing issue line items with CRUD operations
- * and cascading field resets when parent fields change.
+ * Hook for managing issue line items with CRUD operations.
+ * Items are pre-populated from InventorySearchTable, so only
+ * editable fields (quantity, expenseType, costFactor, machine, remarks)
+ * can be changed via handleLineFieldChange.
  */
-export const useIssueLineItems = ({
-	mode,
-	itemGroupCache,
-	itemGroupLoading,
-	ensureItemGroupData,
-}: UseIssueLineItemsParams) => {
+export const useIssueLineItems = ({ mode }: UseIssueLineItemsParams) => {
 	const {
 		items: lineItems,
 		setItems: setLineItems,
@@ -38,7 +32,7 @@ export const useIssueLineItems = ({
 
 	/**
 	 * Handles field changes on a single line item.
-	 * Cascades resets: itemGroup → item/uom cleared, item → uom auto-select
+	 * Only editable fields are: quantity, expenseType, costFactor, machine, remarks
 	 */
 	const handleLineFieldChange = React.useCallback(
 		(id: string, field: keyof EditableLineItem, rawValue: string | number) => {
@@ -46,80 +40,23 @@ export const useIssueLineItems = ({
 
 			const value = String(rawValue);
 
-			// ItemGroup changed → reset item, uom, rate, inwardDtlId
-			if (field === "itemGroup") {
-				setLineItems((prev) =>
-					prev.map((item) =>
-						item.id === id
-							? {
-									...item,
-									itemGroup: value,
-									item: "",
-									uom: "",
-									rate: "",
-									inwardDtlId: "",
-									availableQty: "",
-								}
-							: item
-					)
-				);
-				// Pre-fetch item group options if not cached
-				if (value && !itemGroupCache[value] && !itemGroupLoading[value]) {
-					void ensureItemGroupData(value);
-				}
+			// Only allow changes to editable fields
+			const editableFields: (keyof EditableLineItem)[] = [
+				"quantity",
+				"expenseType",
+				"costFactor",
+				"machine",
+				"remarks",
+			];
+
+			if (!editableFields.includes(field)) {
+				// Read-only fields cannot be changed via handleLineFieldChange
 				return;
 			}
 
-			// Item changed → reset uom (item-based defaults would be applied via available inventory)
-			if (field === "item") {
-				setLineItems((prev) =>
-					prev.map((item) =>
-						item.id === id
-							? {
-									...item,
-									item: value,
-									uom: "",
-									rate: "",
-									inwardDtlId: "",
-									availableQty: "",
-								}
-							: item
-					)
-				);
-				return;
-			}
-
-			// inwardDtlId changed → set rate and availableQty from available inventory
-			if (field === "inwardDtlId") {
-				setLineItems((prev) =>
-					prev.map((line) => {
-						if (line.id !== id) return line;
-						// Rate and availableQty will be set by the component when selecting inward
-						return { ...line, inwardDtlId: value };
-					})
-				);
-				return;
-			}
-
-			// Generic field update
 			setLineItems((prev) =>
 				prev.map((item) =>
 					item.id === id ? { ...item, [field]: value } : item
-				)
-			);
-		},
-		[mode, setLineItems, itemGroupCache, itemGroupLoading, ensureItemGroupData]
-	);
-
-	/**
-	 * Updates multiple fields on a line item at once (e.g., when selecting an inward line).
-	 */
-	const updateLineFields = React.useCallback(
-		(id: string, updates: Partial<EditableLineItem>) => {
-			if (mode === "view") return;
-			setLineItems((prev) =>
-				prev.map((item) =>
-					item.id === id ? { ...item, ...updates } : item
 				)
 			);
 		},
@@ -132,6 +69,5 @@ export const useIssueLineItems = ({
 		replaceItems,
 		removeLineItems,
 		handleLineFieldChange,
-		updateLineFields,
 	};
 };

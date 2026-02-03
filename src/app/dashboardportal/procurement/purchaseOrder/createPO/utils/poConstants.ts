@@ -1,5 +1,6 @@
 import type { ApprovalStatusId } from "@/components/ui/transaction";
 import type {
+	AdditionalChargeOption,
 	BranchAddressRecord,
 	EditableLineItem,
 	ExpenseRecord,
@@ -57,6 +58,7 @@ export const EMPTY_EXPENSES: ReadonlyArray<ExpenseRecord> = Object.freeze([]);
 export const EMPTY_ITEM_GROUPS: ReadonlyArray<ItemGroupRecord> = Object.freeze([]);
 export const EMPTY_OPTIONS: ReadonlyArray<Option> = Object.freeze([]);
 export const EMPTY_LINE_ITEMS: ReadonlyArray<EditableLineItem> = Object.freeze([]);
+export const EMPTY_ADDITIONAL_CHARGE_OPTIONS: ReadonlyArray<AdditionalChargeOption> = Object.freeze([]);
 
 /**
  * Default empty params used by setup hooks to prevent needless re-renders.

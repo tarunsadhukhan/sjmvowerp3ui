@@ -179,6 +179,7 @@ export const SRPreview: React.FC<SRPreviewProps> = ({
 							<th style={{ border: "1px solid #ddd", padding: "8px" }}>UOM</th>
 							<th style={{ border: "1px solid #ddd", padding: "8px", textAlign: "right" }}>Qty</th>
 							<th style={{ border: "1px solid #ddd", padding: "8px", textAlign: "right" }}>Rate</th>
+							<th style={{ border: "1px solid #ddd", padding: "8px" }}>Warehouse</th>
 							<th style={{ border: "1px solid #ddd", padding: "8px", textAlign: "right" }}>Amount</th>
 							<th style={{ border: "1px solid #ddd", padding: "8px", textAlign: "right" }}>Tax %</th>
 							<th style={{ border: "1px solid #ddd", padding: "8px", textAlign: "right" }}>Tax Amt</th>
@@ -203,6 +204,9 @@ export const SRPreview: React.FC<SRPreviewProps> = ({
 								</td>
 								<td style={{ border: "1px solid #ddd", padding: "8px", textAlign: "right" }}>
 									{item.accepted_rate.toFixed(2)}
+								</td>
+								<td style={{ border: "1px solid #ddd", padding: "8px" }}>
+									{item.warehouse_name || "-"}
 								</td>
 								<td style={{ border: "1px solid #ddd", padding: "8px", textAlign: "right" }}>
 									{item.amount.toFixed(2)}

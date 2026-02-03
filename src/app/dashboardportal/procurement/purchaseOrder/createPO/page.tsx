@@ -27,6 +27,7 @@ import { POHeaderForm } from "./components/POHeaderForm";
 import { POFooterForm } from "./components/POFooterForm";
 import { POTotalsDisplay } from "./components/POTotalsDisplay";
 import { POApprovalBar } from "./components/POApprovalBar";
+import { POAdditionalCharges } from "./components/POAdditionalCharges";
 import POPreview from "./components/POPreview";
 import { usePOLineItemColumns, shouldAllowManualLineEntry } from "./components/POLineItemsTable";
 import { usePOFormState } from "./hooks/usePOFormState";
@@ -37,7 +38,8 @@ import { usePOHeaderSchema, usePOFooterSchema } from "./hooks/usePOFormSchemas";
 import { usePOFormSubmission } from "./hooks/usePOFormSubmission";
 import { usePOApproval } from "./hooks/usePOApproval";
 import { usePOLineItems } from "./hooks/usePOLineItems";
-import type { ItemGroupCacheEntry, POSetupData } from "./types/poTypes";
+import { usePOAdditionalCharges } from "./hooks/usePOAdditionalCharges";
+import type { ItemGroupCacheEntry, POAdditionalChargeRaw, POSetupData } from "./types/poTypes";
 
 import { mapItemGroupDetailResponse, mapPOSetupResponse, mapPODetailsToFormValues } from "./utils/poMappers";
 import { calculateExpectedDate, calculateTotals } from "./utils/poCalculations";
@@ -49,6 +51,7 @@ import {
   EMPTY_PROJECTS,
   EMPTY_SETUP_PARAMS,
   EMPTY_SUPPLIERS,
+  EMPTY_ADDITIONAL_CHARGE_OPTIONS,
   DISCOUNT_MODE,
 } from "./utils/poConstants";
 
@@ -221,6 +224,7 @@ function POTransactionPageContent() {
     [mode, coConfig?.indent_required],
   );
   const branchAddresses = setupData?.branchAddresses ?? EMPTY_BRANCH_ADDRESSES;
+  const additionalChargeOptions = setupData?.additionalChargeOptions ?? EMPTY_ADDITIONAL_CHARGE_OPTIONS;
 
   const fetchItemGroupDetail = React.useCallback(async (itemGroupId: string) => {
     if (!itemGroupId || !/^\d+$/.test(itemGroupId)) {
@@ -284,6 +288,23 @@ function POTransactionPageContent() {
     ensureItemGroupData,
     itemGroups,
     allowManualEntry: manualEntryAllowed,
+  });
+
+  // Additional charges hook
+  const {
+    charges: additionalCharges,
+    addCharge,
+    removeCharge,
+    updateCharge,
+    replaceCharges,
+    mapRawToCharges,
+    getChargesToSave,
+    chargesTotals,
+  } = usePOAdditionalCharges({
+    mode,
+    supplierBranchState,
+    shippingState,
+    indiaGst: Boolean(coConfig?.india_gst),
   });
 
   const initialLineSeededRef = React.useRef(false);
@@ -383,6 +404,14 @@ function POTransactionPageContent() {
 
         const normalizedLines = (details.lines ?? []).map((line) => mapLineToEditable(line));
         replaceItems(normalizedLines);
+
+        // Map additional charges if present
+        const rawAdditionalCharges = (details as unknown as { additionalCharges?: POAdditionalChargeRaw[] })?.additionalCharges ?? [];
+        if (rawAdditionalCharges.length > 0) {
+          const mappedCharges = mapRawToCharges(rawAdditionalCharges);
+          replaceCharges(mappedCharges);
+        }
+
         setPageError(null);
       } catch (error) {
         if (cancelled) return;
@@ -416,6 +445,8 @@ function POTransactionPageContent() {
     bumpFormKey,
     replaceItems,
     mapLineToEditable,
+    mapRawToCharges,
+    replaceCharges,
     setupEnabled,
     setupLoading,
     setupData,
@@ -737,6 +768,7 @@ function POTransactionPageContent() {
     filledLineItems,
     isLineItemsReady,
     requestedId,
+    getChargesToSave,
   });
 
   const primaryActionLabel = mode === "create" ? "Create" : "Save";
@@ -790,7 +822,15 @@ function POTransactionPageContent() {
             onSubmit={handleFormSubmit}
             onValuesChange={handleFooterFormValuesChange}
           />
-          <POTotalsDisplay totals={totals} showGSTBreakdown={Boolean(coConfig?.india_gst)} />
+          <POAdditionalCharges
+            charges={additionalCharges}
+            options={[...additionalChargeOptions]}
+            canEdit={canEdit}
+            onAddCharge={addCharge}
+            onRemoveCharge={removeCharge}
+            onChargeChange={updateCharge}
+          />
+          <POTotalsDisplay totals={totals} showGSTBreakdown={Boolean(coConfig?.india_gst)} chargesTotals={chargesTotals} />
           <POApprovalBar
             approvalInfo={approvalInfo}
             permissions={approvalPermissions}

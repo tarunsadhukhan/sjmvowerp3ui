@@ -3,7 +3,7 @@ import { useRouter } from "next/navigation";
 import { fetchWithCookie } from "@/utils/apiClient2";
 import { apiRoutesPortalMasters } from "@/utils/api";
 import { toast } from "@/hooks/use-toast";
-import type { SRHeader, SRLineItem } from "../types/srTypes";
+import type { SRHeader, SRLineItem, SRAdditionalCharge } from "../types/srTypes";
 import { SR_STATUS_IDS } from "../utils/srConstants";
 
 type UseSRApprovalParams = {
@@ -12,6 +12,8 @@ type UseSRApprovalParams = {
 	srDate: string;
 	srRemarks: string;
 	lineItems: SRLineItem[];
+	additionalCharges?: SRAdditionalCharge[];
+	getChargesToSave?: () => SRAdditionalCharge[];
 	onRefresh: () => Promise<void>;
 };
 
@@ -35,6 +37,8 @@ export const useSRApproval = ({
 	srDate,
 	srRemarks,
 	lineItems,
+	additionalCharges,
+	getChargesToSave,
 	onRefresh,
 }: UseSRApprovalParams): UseSRApprovalReturn => {
 	const router = useRouter();
@@ -53,6 +57,17 @@ export const useSRApproval = ({
 	const handleSave = React.useCallback(async () => {
 		if (!inwardId) return;
 
+		// Validate warehouse_id is set for all line items
+		const missingWarehouse = lineItems.filter((item) => item.warehouse_id === null || item.warehouse_id === undefined);
+		if (missingWarehouse.length > 0) {
+			toast({
+				title: "Validation Error",
+				description: `Warehouse is required for all line items. ${missingWarehouse.length} item(s) missing warehouse.`,
+				variant: "destructive",
+			});
+			return;
+		}
+
 		setSaving(true);
 		try {
 			const lineItemsPayload = lineItems.map((item) => ({
@@ -62,7 +77,33 @@ export const useSRApproval = ({
 				discount_mode: item.discount_mode,
 				discount_value: item.discount_value,
 				discount_amount: item.discount_amount,
+				warehouse_id: item.warehouse_id,
 			}));
+
+			// Prepare additional charges payload
+			const chargesToSave = getChargesToSave ? getChargesToSave() : [];
+			const additionalChargesPayload = chargesToSave.map((charge) => ({
+				inward_additional_id: charge.inward_additional_id,
+				additional_charges_id: charge.additional_charges_id,
+				qty: charge.qty,
+				rate: charge.rate,
+				net_amount: charge.net_amount,
+				remarks: charge.remarks,
+				apply_tax: charge.apply_tax,
+				tax_pct: charge.tax_pct,
+				igst_amount: charge.igst_amount,
+				sgst_amount: charge.sgst_amount,
+				cgst_amount: charge.cgst_amount,
+				tax_amount: charge.tax_amount,
+			}));
+
+			// Debug: Log payload being sent to API
+			console.log("SR Save Payload:", { 
+				inward_id: Number(inwardId), 
+				sr_date: srDate, 
+				line_items: lineItemsPayload,
+				additional_charges: additionalChargesPayload,
+			});
 
 			const url = apiRoutesPortalMasters.SR_SAVE;
 			const { error } = await fetchWithCookie(url, "POST", {
@@ -70,6 +111,7 @@ export const useSRApproval = ({
 				sr_date: srDate,
 				sr_remarks: srRemarks,
 				line_items: lineItemsPayload,
+				additional_charges: additionalChargesPayload,
 			});
 
 			if (error) {
@@ -93,7 +135,7 @@ export const useSRApproval = ({
 		} finally {
 			setSaving(false);
 		}
-	}, [inwardId, srDate, srRemarks, lineItems, onRefresh]);
+	}, [inwardId, srDate, srRemarks, lineItems, getChargesToSave, onRefresh]);
 
 	/**
 	 * Open SR for approval.

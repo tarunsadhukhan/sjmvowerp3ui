@@ -145,7 +145,13 @@ export type CreatePORequest = {
     additional_charges_id?: string;
     qty?: number;
     rate?: number;
+    net_amount?: number;
     remarks?: string;
+    tax_pct?: number;
+    igst_amount?: number;
+    cgst_amount?: number;
+    sgst_amount?: number;
+    tax_amount?: number;
   }>;
 };
 

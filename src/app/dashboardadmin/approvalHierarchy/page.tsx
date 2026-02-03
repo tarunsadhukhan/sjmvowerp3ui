@@ -1,267 +1,239 @@
-"use client"
+"use client";
 
-import { useState, useEffect, useCallback } from "react"
-import { useRouter } from "next/navigation"
-import ApprovalDropdowns, { DropdownField } from "@/components/ui/ApprovalDropdowns"
-import ApprovalLevelsTable, { ApprovalLevelRow } from "./ApprovalLevelsTable";
-// Import commented out but kept for reference
-// import { approvalLevelsDataByMenu } from "./data";
-import { fetchWithCookie } from "@/utils/apiClient2";
+import React, { useMemo, useCallback } from "react";
+import {
+  Box,
+  Typography,
+  Paper,
+  CircularProgress,
+  Alert,
+  Snackbar,
+} from "@mui/material";
+import { Button } from "@/components/ui/button";
+import { MuiForm, type Schema, type Option } from "@/components/ui/muiform";
+import ApprovalLevelsTable from "./ApprovalLevelsTable";
+import { useApprovalHierarchy } from "./hooks/useApprovalHierarchy";
+import type { DropdownField, DropdownItem } from "./types";
 
-import { apiRoutes } from "@/utils/api";
+// Helper to convert DropdownItem[] to Option[]
+function toOptions(items: DropdownItem[]): Option[] {
+  return items.map((item) => ({
+    label: item.name,
+    value: item.id,
+  }));
+}
 
+// Helper to get items for a dropdown based on parent selection
+function getItemsForField(
+  field: DropdownField,
+  selections: { company: string; branch: string; menu: string }
+): Option[] {
+  if (!field.dependsOn || Array.isArray(field.items)) {
+    return toOptions(field.items as DropdownItem[]);
+  }
 
-export default function CreateApproval() {
-  const router = useRouter()
-  const [selections, setSelections] = useState<Record<string, string>>({})
-  const [dropdownFields, setDropdownFields] = useState<DropdownField[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
-  const [approvalLevelsLoading, setApprovalLevelsLoading] = useState(false);
-  const [approvalLevelsData, setApprovalLevelsData] = useState<{
-    maxLevel: number;
-    userOptions: { id: string; name: string }[];
-    data: ApprovalLevelRow[];
-  } | undefined>(undefined);
+  const parentKey = field.dependsOn as keyof typeof selections;
+  const parentSelection = selections[parentKey];
+  if (!parentSelection) {
+    return [];
+  }
 
-  // Fetch dropdown data from API
-  useEffect(() => {
-    const fetchDropdownData = async () => {
-      setIsLoading(true);
-      try {
-        const result = await fetchWithCookie(apiRoutes.PORTAL_CO_BRANCH_SUBMENU, "GET");
-        
-        if (result.data && !result.error) {
-          // If the API returns an array of dropdown fields directly
-          if (Array.isArray(result.data)) {
-            console.log("API returned array of dropdown fields:", result.data);
-            // Use the API response directly as it already matches our expected format
-            setDropdownFields(result.data);
-          } else {
-            // Handle the old expected format with separate properties
-            console.log("API returned object format:", result.data);
-            const apiDropdownFields: DropdownField[] = [
-              {
-                id: "company",
-                label: "Company",
-                items: result.data.companies || []
-              },
-              {
-                id: "branch",
-                label: "Branch",
-                dependsOn: "company",
-                items: result.data.branchesByCompany || {}
-              },
-              {
-                id: "menu",
-                label: "Menu",
-                dependsOn: "branch",
-                items: result.data.menusByBranch || {}
-              }
-            ];
-            
-            setDropdownFields(apiDropdownFields);
-          }
-        } else {
-          console.error("Failed to fetch dropdown data:", result.error);
-          
-          // Fallback to empty structure if API fails
-          setDropdownFields([
-            { id: "company", label: "Company", items: [] },
-            { id: "branch", label: "Branch", dependsOn: "company", items: {} },
-            { id: "menu", label: "Menu", dependsOn: "branch", items: {} }
-          ]);
-        }
-      } catch (error) {
-        console.error("Error fetching dropdown data:", error);
-      } finally {
-        setIsLoading(false);
-      }
+  const itemsMap = field.items as Record<string, DropdownItem[]>;
+  return toOptions(itemsMap[parentSelection] || []);
+}
+
+export default function ApprovalHierarchyPage() {
+  const {
+    dropdownFields,
+    isDropdownLoading,
+    selections,
+    handleSelectionChange,
+    approvalLevelsData,
+    isApprovalLevelsLoading,
+    updateApprovalRows,
+    handleSubmit,
+    isSubmitting,
+    canShowTable,
+  } = useApprovalHierarchy();
+
+  const [snackbar, setSnackbar] = React.useState<{
+    open: boolean;
+    message: string;
+    severity: "success" | "error";
+  }>({ open: false, message: "", severity: "success" });
+
+  // Build MuiForm schema from dropdown fields
+  const formSchema = useMemo((): Schema => {
+    const companyField = dropdownFields.find((f) => f.id === "company");
+    const branchField = dropdownFields.find((f) => f.id === "branch");
+    const menuField = dropdownFields.find((f) => f.id === "menu");
+
+    return {
+      fields: [
+        {
+          name: "company",
+          label: "Company",
+          type: "select",
+          required: true,
+          options: companyField ? toOptions(companyField.items as DropdownItem[]) : [],
+          grid: { xs: 12, sm: 4 },
+        },
+        {
+          name: "branch",
+          label: "Branch",
+          type: "select",
+          required: true,
+          options: branchField
+            ? getItemsForField(branchField, selections)
+            : [],
+          disabled: !selections.company,
+          grid: { xs: 12, sm: 4 },
+        },
+        {
+          name: "menu",
+          label: "Menu",
+          type: "select",
+          required: true,
+          options: menuField
+            ? getItemsForField(menuField, selections)
+            : [],
+          disabled: !selections.branch,
+          grid: { xs: 12, sm: 4 },
+        },
+      ],
     };
+  }, [dropdownFields, selections]);
 
-    fetchDropdownData();
-  }, []);
+  // Form values for MuiForm
+  const formValues = useMemo(
+    () => ({
+      company: selections.company,
+      branch: selections.branch,
+      menu: selections.menu,
+    }),
+    [selections]
+  );
 
-  const handleSelectionChange = (newSelections: Record<string, string>) => {
-    console.log("Selections updated:", newSelections);
-    setSelections(newSelections);
-    
-    // Reset approval levels data when selections change
-    setApprovalLevelsData(undefined);
+  // Handle form value changes
+  const handleFormValuesChange = useCallback(
+    (values: Record<string, unknown>) => {
+      // Determine which field changed
+      const newCompany = String(values.company || "");
+      const newBranch = String(values.branch || "");
+      const newMenu = String(values.menu || "");
+
+      if (newCompany !== selections.company) {
+        handleSelectionChange("company", newCompany);
+      } else if (newBranch !== selections.branch) {
+        handleSelectionChange("branch", newBranch);
+      } else if (newMenu !== selections.menu) {
+        handleSelectionChange("menu", newMenu);
+      }
+    },
+    [selections, handleSelectionChange]
+  );
+
+  // Handle submit button click
+  const onSubmitClick = useCallback(async () => {
+    const result = await handleSubmit();
+    setSnackbar({
+      open: true,
+      message: result.message || (result.success ? "Saved successfully" : "Failed to save"),
+      severity: result.success ? "success" : "error",
+    });
+  }, [handleSubmit]);
+
+  const handleCloseSnackbar = () => {
+    setSnackbar((prev) => ({ ...prev, open: false }));
   };
-
-  // Fetch approval levels data when menu and branch are selected
-  useEffect(() => {
-    const fetchApprovalLevelsData = async () => {
-      const { menu: menuId, branch: branchId } = selections;
-      
-      if (!menuId || !branchId) {
-        return; // Exit if we don't have both menuId and branchId
-      }
-      
-      setApprovalLevelsLoading(true);
-      
-      const requestData = {
-        menuId,
-        branchId
-      };
-      
-      console.log("Fetching approval levels data with:", requestData);
-      
-      try {
-        const result = await fetchWithCookie(
-          apiRoutes.PORTAL_APPROVAL_LEVELS_DATA,
-          "POST",
-          requestData
-        );
-        
-        if (result.data && !result.error) {
-          console.log("Approval levels data from API:", result.data);
-          
-          // Check if the response has a menu ID as the top-level key
-          const menuData = result.data[menuId];
-          
-          if (menuData) {
-            console.log(`Found data for menu ${menuId}:`, menuData);
-            
-            // Use the data structure directly from the API
-            const formattedData = {
-              maxLevel: menuData.maxLevel || 0,
-              userOptions: menuData.userOptions || [],
-              data: menuData.data || [] // API returns "data" not "approvalLevels"
-            };
-            
-            setApprovalLevelsData(formattedData);
-          } else {
-            console.warn(`No data found for menu ${menuId} in API response:`, result.data);
-            
-            // Try to see if the data is directly in the response (fallback)
-            if (result.data.maxLevel && Array.isArray(result.data.data || result.data.approvalLevels)) {
-              const formattedData = {
-                maxLevel: result.data.maxLevel || 0,
-                userOptions: result.data.userOptions || [],
-                data: result.data.data || result.data.approvalLevels || []
-              };
-              
-              setApprovalLevelsData(formattedData);
-              console.log("Using fallback data structure:", formattedData);
-            } else {
-              // Create an empty structure if no valid data found
-              setApprovalLevelsData({
-                maxLevel: 0,
-                userOptions: [],
-                data: []
-              });
-              console.log("Created empty approval levels structure");
-            }
-          }
-        } else {
-          console.error("Failed to fetch approval levels data:", result.error);
-          setApprovalLevelsData(undefined);
-        }
-      } catch (error) {
-        console.error("Error fetching approval levels data:", error);
-        setApprovalLevelsData(undefined);
-      } finally {
-        setApprovalLevelsLoading(false);
-      }
-    };
-    
-    fetchApprovalLevelsData();
-  }, [selections.menu, selections.branch]);
-
-  // Log when approvalLevelsData changes
-  useEffect(() => {
-    console.log("approvalLevelsData updated:", approvalLevelsData);
-  }, [approvalLevelsData]);
-
-  // Handler to update approvalLevelsData.data from ApprovalLevelsTable
-  const handleTableChange = useCallback((newRows: ApprovalLevelRow[]) => {
-    setApprovalLevelsData(prev =>
-      prev
-        ? { ...prev, data: newRows }
-        : undefined
-    );
-  }, []);
-
-  // Handler for submit button
-  const handleSubmit = async () => {
-    const filteredApprovalLevels = approvalLevelsData?.data.filter(row => row.users.length > 0) ?? [];
-    const submitData = {
-      branchId: selections.branch,
-      menuId: selections.menu,
-      data: filteredApprovalLevels
-    };
-    console.log("Submitted IDs:", submitData);
-    
-    // Call the API to submit approval levels data
-    try {
-      const result = await fetchWithCookie(
-        apiRoutes.PORTAL_APPROVAL_LEVELS_DATA_SUBMIT,
-        "POST",
-        submitData
-      );
-      
-      if (result.data && !result.error) {
-        console.log("Approval levels data submitted successfully:", result.data);
-        // You can add success notification or redirect here
-      } else {
-        console.error("Failed to submit approval levels data:", result.error);
-        // You can add error notification here
-      }
-    } catch (error) {
-      console.error("Error submitting approval levels data:", error);
-      // You can add error notification here
-    }
-  };
-
-  // Get the selected menu ID
-  const selectedMenu = selections.menu;
 
   return (
-    <div className="page-container">
-      <div className="page-header">
-        <h1 className="page-title">Create Approval Hierarchy</h1>
-      </div>
-      <div className="content-box p-6">
-        {isLoading ? (
-          <div className="flex items-center justify-center p-4">
-            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-700"></div>
-            <span className="ml-2">Loading dropdown data...</span>
-          </div>
-        ) : (
-          <ApprovalDropdowns 
-            fields={dropdownFields}
-            onSelectionChange={handleSelectionChange} 
-          />
+    <Box className="min-h-screen bg-gray-50 p-8">
+      <Box className="mx-auto max-w-7xl">
+        {/* Page Header */}
+        <Box sx={{ mb: 4 }}>
+          <Typography variant="h5" component="h1" sx={{ fontWeight: 600, color: "#0C3C60" }}>
+            Approval Hierarchy Configuration
+          </Typography>
+          <Typography variant="body2" color="text.secondary" sx={{ mt: 0.5 }}>
+            Configure approval levels and assign users for different menus and branches
+          </Typography>
+        </Box>
+
+        {/* Selection Form */}
+        <Paper sx={{ p: 3, mb: 3 }}>
+          {isDropdownLoading ? (
+            <Box sx={{ display: "flex", alignItems: "center", justifyContent: "center", py: 4 }}>
+              <CircularProgress size={24} sx={{ mr: 2 }} />
+              <Typography>Loading configuration options...</Typography>
+            </Box>
+          ) : (
+            <MuiForm
+              schema={formSchema}
+              initialValues={formValues}
+              mode="create"
+              hideModeToggle
+              hideSubmit
+              onValuesChange={handleFormValuesChange}
+            />
+          )}
+        </Paper>
+
+        {/* Loading state for approval levels */}
+        {isApprovalLevelsLoading && (
+          <Paper sx={{ p: 4, textAlign: "center" }}>
+            <CircularProgress size={24} sx={{ mr: 2 }} />
+            <Typography component="span">Loading approval levels...</Typography>
+          </Paper>
         )}
-        
-        {/* Show loading state when fetching approval levels data */}
-        {approvalLevelsLoading && (
-          <div className="mt-6 flex items-center justify-center p-4">
-            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-700"></div>
-            <span className="ml-2">Loading approval levels data...</span>
-          </div>
-        )}
-        
-        {/* Approval Levels Table below dropdowns */}
-        {selectedMenu && approvalLevelsData && !approvalLevelsLoading && (
-          <>
+
+        {/* Approval Levels Table */}
+        {canShowTable && approvalLevelsData && (
+          <Paper sx={{ p: 3 }}>
             <ApprovalLevelsTable
-              key={`${selections.branch}-${selectedMenu}`}
+              key={`${selections.branch}-${selections.menu}`}
               maxLevel={approvalLevelsData.maxLevel}
               userOptions={approvalLevelsData.userOptions}
               data={approvalLevelsData.data}
-              onChange={handleTableChange}
+              onChange={updateApprovalRows}
             />
-            <button
-              className="mt-4 px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700"
-              onClick={handleSubmit}
-            >
-              Submit
-            </button>
-          </>
+
+            {/* Submit Button */}
+            <Box sx={{ mt: 3, display: "flex", justifyContent: "flex-end" }}>
+              <Button
+                onClick={onSubmitClick}
+                disabled={isSubmitting}
+                className="bg-[#95C11F] hover:bg-[#85ad1b] text-white px-6"
+              >
+                {isSubmitting ? "Saving..." : "Save Configuration"}
+              </Button>
+            </Box>
+          </Paper>
         )}
-      </div>
-    </div>
-  )
+
+        {/* Empty state */}
+        {!isDropdownLoading && !isApprovalLevelsLoading && !canShowTable && selections.company && (
+          <Alert severity="info" sx={{ mt: 2 }}>
+            Please select a company, branch, and menu to configure approval levels.
+          </Alert>
+        )}
+
+        {/* Snackbar for notifications */}
+        <Snackbar
+          open={snackbar.open}
+          autoHideDuration={4000}
+          onClose={handleCloseSnackbar}
+          anchorOrigin={{ vertical: "bottom", horizontal: "right" }}
+        >
+          <Alert
+            onClose={handleCloseSnackbar}
+            severity={snackbar.severity}
+            sx={{ width: "100%" }}
+          >
+            {snackbar.message}
+          </Alert>
+        </Snackbar>
+      </Box>
+    </Box>
+  );
 }

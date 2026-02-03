@@ -3,7 +3,6 @@ import type {
 	DepartmentRecord,
 	EditableLineItem,
 	ExpenseRecord,
-	ItemGroupRecord,
 	Option,
 	ProjectRecord,
 	CostFactorRecord,
@@ -42,7 +41,6 @@ export const ISSUE_STATUS_LABELS: Record<ApprovalStatusId, string> = {
 export const EMPTY_DEPARTMENTS: ReadonlyArray<DepartmentRecord> = Object.freeze([]);
 export const EMPTY_PROJECTS: ReadonlyArray<ProjectRecord> = Object.freeze([]);
 export const EMPTY_EXPENSES: ReadonlyArray<ExpenseRecord> = Object.freeze([]);
-export const EMPTY_ITEM_GROUPS: ReadonlyArray<ItemGroupRecord> = Object.freeze([]);
 export const EMPTY_COST_FACTORS: ReadonlyArray<CostFactorRecord> = Object.freeze([]);
 export const EMPTY_MACHINES: ReadonlyArray<MachineRecord> = Object.freeze([]);
 export const EMPTY_OPTIONS: ReadonlyArray<Option> = Object.freeze([]);

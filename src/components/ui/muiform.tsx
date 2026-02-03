@@ -20,6 +20,7 @@ export type FieldType =
 	| "multiselect"
 	| "checkbox"
 	| "date"
+	| "time"
 	| "custom";
 
 export type CustomFieldRenderProps = {
@@ -133,6 +134,9 @@ export const MuiForm = React.forwardRef(function MuiForm(
 
 	// track an initial snapshot of values to detect dirty state in edit mode
 	const initialSnapshotRef = React.useRef<string>(JSON.stringify(getInitialValues(schema, initialValues)));
+	// track previous schema/initialValues to avoid infinite loops
+	const prevSchemaRef = React.useRef<string>("");
+	const prevInitialValuesRef = React.useRef<string>("");
 
 	const dirty = React.useMemo(() => {
 		if (externalDirty) return true;
@@ -148,6 +152,24 @@ export const MuiForm = React.forwardRef(function MuiForm(
 	}, [modeProp]);
 
 	React.useEffect(() => {
+		// Serialize current schema and initialValues to detect actual changes
+		let schemaString = "";
+		let initialValuesString = "";
+		try {
+			schemaString = JSON.stringify(schema);
+			initialValuesString = JSON.stringify(initialValues);
+		} catch {
+			// If serialization fails, skip update to avoid loops
+			return;
+		}
+
+		// Only update if schema or initialValues actually changed
+		if (schemaString === prevSchemaRef.current && initialValuesString === prevInitialValuesRef.current) {
+			return;
+		}
+		prevSchemaRef.current = schemaString;
+		prevInitialValuesRef.current = initialValuesString;
+
 		const base = getInitialValues(schema, initialValues);
 		setValues((prev) => {
 			let next: Record<string, unknown>;
@@ -305,12 +327,12 @@ export const MuiForm = React.forwardRef(function MuiForm(
 						</Typography>
 						<Typography variant="body1">{displayValue(field, value)}</Typography>
 					</Box>
-				) : field.type === "text" || field.type === "number" || field.type === "date" ? (
+				) : field.type === "text" || field.type === "number" || field.type === "date" || field.type === "time" ? (
 					<TextField
-						type={field.type === "text" ? "text" : field.type === "number" ? "number" : "date"}
+						type={field.type === "text" ? "text" : field.type === "number" ? "number" : field.type === "time" ? "time" : "date"}
 						value={value ?? ""}
 						onChange={(e) => handleChange(field.name, e.target.value)}
-						InputLabelProps={field.type === "date" ? { shrink: true } : undefined}
+						InputLabelProps={field.type === "date" || field.type === "time" ? { shrink: true } : undefined}
 						inputProps={mode === "view" ? { readOnly: true } : undefined}
 						{...commonTextProps}
 					/>
@@ -344,6 +366,7 @@ export const MuiForm = React.forwardRef(function MuiForm(
 					<Autocomplete<Option, false, boolean, false>
 						options={(field.options ?? []) as Option[]}
 						getOptionLabel={(opt: Option) => opt?.label ?? String(opt?.value ?? "")}
+						getOptionKey={(opt: Option) => String(opt?.value ?? "")}
 						isOptionEqualToValue={(o: Option, v: Option) => String(o.value) === String(v.value)}
 						value={((field.options ?? []) as Option[]).find((o) => String(o.value) === String(value)) ?? null}
 						onChange={(_, newOpt) => handleChange(field.name, (newOpt as Option | null)?.value ?? "")}
@@ -368,6 +391,7 @@ export const MuiForm = React.forwardRef(function MuiForm(
 						multiple
 						options={(field.options ?? []) as Option[]}
 						getOptionLabel={(opt: Option) => opt?.label ?? String(opt?.value ?? "")}
+						getOptionKey={(opt: Option) => String(opt?.value ?? "")}
 						isOptionEqualToValue={(o: Option, v: Option) => String(o.value) === String(v.value)}
 						value={((field.options ?? []) as Option[]).filter((o) => Array.isArray(value) && (value as Array<unknown>).some((v) => String(v) === String(o.value)))}
 						onChange={(_, newOpts) => handleChange(field.name, (newOpts as Option[]).map((o) => o.value))}

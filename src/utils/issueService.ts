@@ -54,12 +54,15 @@ export type IssueDetails = {
 
 /**
  * Issue setup data from API
+ * Note: item_groups removed as items now come from inventory search table.
+ * cost_factors and machines are included (machines filtered by dept on frontend).
  */
 export type IssueSetupResponse = {
 	departments?: unknown[];
 	projects?: unknown[];
 	expense_types?: unknown[];
-	item_groups?: unknown[];
+	cost_factors?: unknown[];
+	machines?: unknown[];
 };
 
 /**
@@ -79,6 +82,35 @@ export type AvailableInventoryResponse = {
 };
 
 /**
+ * Inventory list item from searchable inventory endpoint
+ */
+export type InventoryListItem = {
+	inward_dtl_id: number;
+	inward_id: number;
+	inward_sequence_no: number;
+	inward_no: string;
+	inward_date: string;
+	branch_id: number;
+	branch_name: string;
+	item_id: number;
+	item_name: string;
+	item_code: string;
+	item_grp_id: number;
+	item_grp_name: string;
+	item_grp_code?: string;
+	item_make_id?: number;
+	item_make_name?: string;
+	uom_id: number;
+	uom_name: string;
+	approved_qty: number;
+	issue_qty: number;
+	available_qty: number;
+	rate: number;
+	warehouse_id?: number;
+	warehouse_name?: string;
+};
+
+/**
  * Cost factor from API
  */
 export type CostFactorResponse = {
@@ -88,12 +120,14 @@ export type CostFactorResponse = {
 };
 
 /**
- * Machine from API
+ * Machine from API (includes dept_id for frontend filtering by department)
  */
 export type MachineResponse = {
 	machine_id: number;
 	machine_name: string;
 	dept_id?: number;
+	dept_name?: string;
+	mech_code?: string;
 };
 
 /**
@@ -159,12 +193,12 @@ export const getIssueById = async (
 	return {
 		id: data.issue_id ?? data.id,
 		issueId: data.issue_id,
-		issuePassNo: data.issue_pass_no,
+		issuePassNo: data.issue_pass_no ?? data.issue_pass_print_no ?? data.issue_no,
 		date: data.issue_date,
 		branchId: data.branch_id,
 		branchName: data.branch_name,
 		deptId: data.dept_id,
-		deptName: data.dept_name ?? data.dept_desc,
+		deptName: data.dept_name ?? data.department ?? data.dept_desc,
 		projectId: data.project_id,
 		projectName: data.project_name,
 		issuedTo: data.issued_to,
@@ -172,28 +206,46 @@ export const getIssueById = async (
 		internalNote: data.internal_note,
 		status: data.status ?? data.status_name,
 		statusId: data.status_id,
-		createdBy: data.created_by,
-		createdAt: data.created_at,
+		createdBy: data.created_by ?? data.updated_by_name,
+		createdAt: data.created_at ?? data.updated_date_time,
 		updatedBy: data.updated_by,
-		updatedAt: data.updated_at,
+		updatedAt: data.updated_at ?? data.updated_date_time,
 		lineItems: (data.line_items ?? data.lines ?? []).map((line: Record<string, unknown>) => ({
 			id: line.issue_li_id ?? line.id,
+			issue_li_id: line.issue_li_id,
 			itemId: line.item_id,
+			item_id: line.item_id,
 			itemName: line.item_name,
-			itemGroupId: line.item_group_id,
-			itemGroupName: line.item_group_name,
-			qty: line.qty,
+			item_name: line.item_name,
+			itemCode: line.item_code,
+			item_code: line.item_code,
+			// Handle both item_grp_id and item_group_id variants
+			itemGroupId: line.item_grp_id ?? line.item_group_id,
+			item_grp_id: line.item_grp_id ?? line.item_group_id,
+			itemGroupName: line.item_grp_name ?? line.item_group_name,
+			item_grp_name: line.item_grp_name ?? line.item_group_name,
+			// Handle both issue_qty and qty variants
+			qty: line.issue_qty ?? line.qty ?? line.req_quantity,
+			issue_qty: line.issue_qty ?? line.qty,
 			uomId: line.uom_id,
+			uom_id: line.uom_id,
 			uomName: line.uom_name,
+			uom_name: line.uom_name,
 			rate: line.rate,
-			expenseId: line.expense_id,
-			expenseName: line.expense_name ?? line.expense_type_name,
+			// Handle both expense_type_id and expense_id variants
+			expenseId: line.expense_type_id ?? line.expense_id,
+			expense_type_id: line.expense_type_id ?? line.expense_id,
+			expenseName: line.expense_type_name ?? line.expense_name,
 			costFactorId: line.cost_factor_id,
+			cost_factor_id: line.cost_factor_id,
 			costFactorName: line.cost_factor_name,
 			machineId: line.machine_id,
+			machine_id: line.machine_id,
 			machineName: line.machine_name,
 			inwardDtlId: line.inward_dtl_id,
-			srNo: line.sr_no,
+			inward_dtl_id: line.inward_dtl_id,
+			srNo: line.sr_no ?? line.inward_no,
+			sr_no: line.sr_no ?? line.inward_no,
 			remarks: line.remarks,
 		})),
 	};
@@ -220,26 +272,24 @@ export const fetchIssueSetup1 = async (
 };
 
 /**
- * Fetch item group details (items, UOMs) - uses existing item master endpoint
+ * Fetch item group details (items, makes, UOMs) - reuses existing procurement endpoint
  */
 export const fetchIssueSetup2 = async (
 	itemGroupId: string,
-	coId?: string
-): Promise<{ items?: unknown[]; uoms_by_item?: Record<string, unknown[]> }> => {
-	// Use the item master setup endpoint for item group details
-	const API_URL = process.env.NEXT_PUBLIC_API_BASE_URL || "/apix";
+	_coId?: string
+): Promise<{ items?: unknown[]; makes?: unknown[]; uoms?: unknown[] }> => {
+	// Use the existing procurement indent setup 2 endpoint which returns items by group
 	const searchParams = new URLSearchParams();
-	searchParams.append("item_grp_id", itemGroupId);
-	if (coId) searchParams.append("co_id", coId);
+	searchParams.append("item_group", itemGroupId);
 
-	const url = `${API_URL}/itemMaster/setup2_dropdown?${searchParams.toString()}`;
+	const url = `${apiRoutesPortalMasters.GET_INDENT_SETUP_2}?${searchParams.toString()}`;
 	const response = await fetchWithCookie(url, "GET");
 	
-	if (!response || response.error) {
-		throw new Error(response?.error ?? "Failed to fetch item group details");
+	if (response.error) {
+		throw new Error(response.error ?? "Failed to fetch item group details");
 	}
 
-	return response.data ?? response;
+	return response.data ?? response ?? {};
 };
 
 /**
@@ -404,4 +454,38 @@ export const updateIssueStatus = async (
 	}
 
 	return response.data ?? response;
+};
+/**
+ * Fetch paginated searchable inventory list for the issue page
+ */
+export const fetchInventoryList = async (
+	coId: string,
+	params: {
+		branchId: string;
+		page?: number;
+		limit?: number;
+		search?: string;
+	}
+): Promise<{ data: InventoryListItem[]; total: number; page: number; limit: number }> => {
+	const searchParams = new URLSearchParams();
+	searchParams.append("co_id", coId);
+	searchParams.append("branch_id", params.branchId);
+	if (params.page) searchParams.append("page", String(params.page));
+	if (params.limit) searchParams.append("limit", String(params.limit));
+	if (params.search) searchParams.append("search", params.search);
+
+	const url = `${apiRoutesPortalMasters.ISSUE_INVENTORY_LIST}?${searchParams.toString()}`;
+	const response = await fetchWithCookie(url, "GET");
+	
+	if (!response || response.error) {
+		throw new Error(response?.error ?? "Failed to fetch inventory list");
+	}
+
+	const result = response.data as Record<string, unknown> | null;
+	return {
+		data: (result?.data as InventoryListItem[]) ?? [],
+		total: (result?.total as number) ?? 0,
+		page: (result?.page as number) ?? 1,
+		limit: (result?.limit as number) ?? 10,
+	};
 };

@@ -11,22 +11,16 @@ import useSelectedCompanyCoId from "@/hooks/use-selected-company-coid";
 
 /**
  * @component JuteIssueIndexPage
- * @description Index page displaying list of Jute Issue records with pagination and search.
- * Jute Issue tracks yarn issued against MR line items.
+ * @description Index page displaying aggregated Jute Issue records by date.
+ * Shows total weight per day and aggregated status (Approved/Partial Approved/Draft).
  */
 
-type JuteIssueRow = {
-	id: string | number;
-	issue_id: number | null;
+type JuteIssueSummaryRow = {
+	id: string;
 	issue_date: string;
 	issue_date_raw?: string;
-	branch_name: string;
-	yarn_type_name: string | null;
-	jute_quality: string | null;
-	mr_no: number | null;
-	quantity: number | null;
-	weight: number | null;
-	issue_value: number | null;
+	total_weight: number;
+	total_entries: number;
 	status: string;
 };
 
@@ -56,9 +50,8 @@ const formatDate = (value?: string) => {
 
 const getStatusColor = (status: string): "success" | "error" | "warning" | "info" | "default" => {
 	const normalized = status?.toLowerCase() ?? "";
-	if (normalized.includes("approved") || normalized.includes("closed")) return "success";
-	if (normalized.includes("rejected") || normalized.includes("cancelled")) return "error";
-	if (normalized.includes("pending") || normalized.includes("open")) return "warning";
+	if (normalized === "approved") return "success";
+	if (normalized.includes("partial")) return "warning";
 	if (normalized.includes("draft")) return "info";
 	return "default";
 };
@@ -66,118 +59,46 @@ const getStatusColor = (status: string): "success" | "error" | "warning" | "info
 export default function JuteIssueIndexPage() {
 	const router = useRouter();
 	const { coId } = useSelectedCompanyCoId();
-	const [rows, setRows] = React.useState<JuteIssueRow[]>([]);
+	const [rows, setRows] = React.useState<JuteIssueSummaryRow[]>([]);
 	const [totalRows, setTotalRows] = React.useState(0);
 	const [loading, setLoading] = React.useState(false);
 	const [paginationModel, setPaginationModel] = React.useState<GridPaginationModel>({ page: 0, pageSize: 10 });
 	const [searchValue, setSearchValue] = React.useState("");
 	const [errorMessage, setErrorMessage] = React.useState<string | null>(null);
 
-	const columns = React.useMemo<GridColDef<JuteIssueRow>[]>(
+	const columns = React.useMemo<GridColDef<JuteIssueSummaryRow>[]>(
 		() => [
 			{
-				field: "issue_id",
-				headerName: "Issue No",
-				flex: 0.7,
-				minWidth: 100,
-				renderCell: (params: GridRenderCellParams<JuteIssueRow, number | null>) => (
-					<Typography component="span" variant="body2" color="primary" sx={{ fontWeight: 600 }}>
-						{params.value ?? "-"}
-					</Typography>
-				),
-			},
-			{
 				field: "issue_date",
-				headerName: "Issue Date",
-				minWidth: 120,
-				renderCell: (params: GridRenderCellParams<JuteIssueRow, string>) => (
-					<Typography component="span" variant="body2">
+				headerName: "Date",
+				flex: 1,
+				minWidth: 150,
+				renderCell: (params: GridRenderCellParams<JuteIssueSummaryRow, string>) => (
+					<Typography component="span" variant="body2" color="primary" sx={{ fontWeight: 600 }}>
 						{params.value || formatDate(params.row.issue_date_raw) || "-"}
 					</Typography>
 				),
 			},
 			{
-				field: "branch_name",
-				headerName: "Branch",
-				flex: 1,
-				minWidth: 120,
-			},
-			{
-				field: "yarn_type_name",
-				headerName: "Yarn Type",
-				flex: 1.2,
-				minWidth: 140,
-				renderCell: (params: GridRenderCellParams<JuteIssueRow, string | null>) => (
-					<Typography component="span" variant="body2">
-						{params.value || "-"}
-					</Typography>
-				),
-			},
-			{
-				field: "jute_quality",
-				headerName: "Quality",
-				flex: 1,
-				minWidth: 120,
-				renderCell: (params: GridRenderCellParams<JuteIssueRow, string | null>) => (
-					<Typography component="span" variant="body2">
-						{params.value || "-"}
-					</Typography>
-				),
-			},
-			{
-				field: "mr_no",
-				headerName: "MR No",
-				minWidth: 100,
-				renderCell: (params: GridRenderCellParams<JuteIssueRow, number | null>) => (
-					<Typography component="span" variant="body2">
-						{params.value ?? "-"}
-					</Typography>
-				),
-			},
-			{
-				field: "quantity",
-				headerName: "Quantity",
-				minWidth: 100,
-				type: "number",
-				align: "right",
-				headerAlign: "right",
-				renderCell: (params: GridRenderCellParams<JuteIssueRow, number | null>) => (
-					<Typography component="span" variant="body2">
-						{params.value != null ? params.value.toFixed(2) : "-"}
-					</Typography>
-				),
-			},
-			{
-				field: "weight",
+				field: "total_weight",
 				headerName: "Weight (kg)",
-				minWidth: 110,
+				flex: 1,
+				minWidth: 150,
 				type: "number",
 				align: "right",
 				headerAlign: "right",
-				renderCell: (params: GridRenderCellParams<JuteIssueRow, number | null>) => (
+				renderCell: (params: GridRenderCellParams<JuteIssueSummaryRow, number>) => (
 					<Typography component="span" variant="body2">
 						{params.value != null ? params.value.toFixed(2) : "-"}
-					</Typography>
-				),
-			},
-			{
-				field: "issue_value",
-				headerName: "Value",
-				minWidth: 110,
-				type: "number",
-				align: "right",
-				headerAlign: "right",
-				renderCell: (params: GridRenderCellParams<JuteIssueRow, number | null>) => (
-					<Typography component="span" variant="body2">
-						{params.value != null ? `₹${params.value.toFixed(2)}` : "-"}
 					</Typography>
 				),
 			},
 			{
 				field: "status",
 				headerName: "Status",
-				minWidth: 120,
-				renderCell: (params: GridRenderCellParams<JuteIssueRow, string>) => (
+				flex: 1,
+				minWidth: 150,
+				renderCell: (params: GridRenderCellParams<JuteIssueSummaryRow, string>) => (
 					<Chip size="small" color={getStatusColor(params.value ?? "")} label={params.value || "Draft"} />
 				),
 			},
@@ -217,22 +138,16 @@ export default function JuteIssueIndexPage() {
 
 			const rawRows = Array.isArray(response?.data) ? response.data : [];
 
-			const mappedRows: JuteIssueRow[] = rawRows.map((r: Record<string, unknown>) => {
+			const mappedRows: JuteIssueSummaryRow[] = rawRows.map((r: Record<string, unknown>) => {
 				const rawDate = (r.issue_date ?? "") as string;
 				const normalizedRaw = typeof rawDate === "string" ? rawDate : rawDate ? String(rawDate) : "";
 
 				return {
-					id: (r.jute_issue_id ?? `jute-issue-${Math.random().toString(36).slice(2, 8)}`) as string | number,
-					issue_id: (r.jute_issue_id ?? null) as number | null,
+					id: normalizedRaw || `jute-issue-${Math.random().toString(36).slice(2, 8)}`,
 					issue_date_raw: normalizedRaw,
 					issue_date: formatDate(normalizedRaw),
-					branch_name: (r.branch_name ?? "") as string,
-					yarn_type_name: (r.yarn_type_name ?? null) as string | null,
-					jute_quality: (r.jute_quality ?? null) as string | null,
-					mr_no: (r.mr_no ?? null) as number | null,
-					quantity: (r.quantity ?? null) as number | null,
-					weight: (r.weight ?? null) as number | null,
-					issue_value: (r.issue_value ?? null) as number | null,
+					total_weight: (r.total_weight ?? 0) as number,
+					total_entries: (r.total_entries ?? 0) as number,
 					status: (r.status ?? "Draft") as string,
 				};
 			});
@@ -267,19 +182,19 @@ export default function JuteIssueIndexPage() {
 	}, []);
 
 	const handleView = React.useCallback(
-		(row: JuteIssueRow) => {
-			const id = row.id;
-			if (!id) return;
-			router.push(`/dashboardportal/jutePurchase/juteIssue/edit?mode=view&id=${encodeURIComponent(String(id))}`);
+		(row: JuteIssueSummaryRow) => {
+			const dateParam = row.issue_date_raw;
+			if (!dateParam) return;
+			router.push(`/dashboardportal/jutePurchase/juteIssue/edit?mode=view&date=${encodeURIComponent(dateParam)}`);
 		},
 		[router]
 	);
 
 	const handleEdit = React.useCallback(
-		(row: JuteIssueRow) => {
-			const id = row.id;
-			if (!id) return;
-			router.push(`/dashboardportal/jutePurchase/juteIssue/edit?mode=edit&id=${encodeURIComponent(String(id))}`);
+		(row: JuteIssueSummaryRow) => {
+			const dateParam = row.issue_date_raw;
+			if (!dateParam) return;
+			router.push(`/dashboardportal/jutePurchase/juteIssue/edit?mode=edit&date=${encodeURIComponent(dateParam)}`);
 		},
 		[router]
 	);
@@ -291,7 +206,7 @@ export default function JuteIssueIndexPage() {
 	return (
 		<IndexWrapper
 			title="Jute Issue"
-			subtitle="Review and manage jute issues against yarn types."
+			subtitle="Daily summary of jute issues with total weight and status."
 			rows={rows}
 			columns={columns}
 			rowCount={totalRows}
@@ -302,7 +217,7 @@ export default function JuteIssueIndexPage() {
 			search={{
 				value: searchValue,
 				onChange: handleSearchChange,
-				placeholder: "Search by issue number, yarn type, quality, or branch",
+				placeholder: "Search by date",
 				debounceDelayMs: 500,
 			}}
 			onView={handleView}

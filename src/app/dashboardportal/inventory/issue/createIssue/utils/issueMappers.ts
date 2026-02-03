@@ -2,13 +2,10 @@ import type {
 	DepartmentRecord,
 	ProjectRecord,
 	ExpenseRecord,
-	ItemGroupRecord,
 	CostFactorRecord,
 	MachineRecord,
 	IssueSetupData,
 	AvailableInventoryItem,
-	ItemGroupCacheEntry,
-	ItemOption,
 	Option,
 } from "../types/issueTypes";
 
@@ -63,22 +60,6 @@ export const mapExpenseRecords = (records: unknown[]): ExpenseRecord[] =>
 		.filter(Boolean) as ExpenseRecord[];
 
 /**
- * Maps raw item group records from API to ItemGroupRecord type.
- */
-export const mapItemGroupRecords = (records: unknown[]): ItemGroupRecord[] =>
-	records
-		.map((row) => {
-			const data = row as Record<string, unknown>;
-			const id = data?.item_grp_id ?? data?.id;
-			if (!id) return null;
-			return {
-				id: String(id),
-				label: String(data?.item_grp_name ?? data?.label ?? data?.name ?? id),
-			} satisfies ItemGroupRecord;
-		})
-		.filter(Boolean) as ItemGroupRecord[];
-
-/**
  * Maps raw cost factor records from API to CostFactorRecord type.
  */
 export const mapCostFactorRecords = (records: unknown[]): CostFactorRecord[] =>
@@ -116,6 +97,7 @@ export const mapMachineRecords = (records: unknown[]): MachineRecord[] =>
 
 /**
  * Maps the issue setup API response to IssueSetupData.
+ * Note: item_groups removed - items now come from inventory search table.
  */
 export const mapIssueSetupResponse = (response: unknown): IssueSetupData => {
 	const result = response as Record<string, unknown>;
@@ -123,7 +105,8 @@ export const mapIssueSetupResponse = (response: unknown): IssueSetupData => {
 		departments: mapDepartmentRecords((result?.departments as unknown[]) ?? []),
 		projects: mapProjectRecords((result?.projects as unknown[]) ?? []),
 		expenses: mapExpenseRecords((result?.expense_types as unknown[]) ?? []),
-		itemGroups: mapItemGroupRecords((result?.item_groups as unknown[]) ?? []),
+		costFactors: mapCostFactorRecords((result?.cost_factors as unknown[]) ?? []),
+		machines: mapMachineRecords((result?.machines as unknown[]) ?? []),
 	};
 };
 
@@ -139,7 +122,7 @@ export const mapAvailableInventoryItems = (records: unknown[]): AvailableInvento
 			return {
 				inwardDtlId: String(inwardDtlId),
 				inwardId: String(data?.inward_id ?? ""),
-				srNo: String(data?.sr_no ?? data?.inward_no ?? ""),
+				grnNo: String(data?.inward_no ?? data?.sr_no ?? ""),
 				inwardDate: String(data?.inward_date ?? ""),
 				branchId: String(data?.branch_id ?? ""),
 				branchName: String(data?.branch_name ?? ""),
@@ -153,67 +136,10 @@ export const mapAvailableInventoryItems = (records: unknown[]): AvailableInvento
 				uomId: String(data?.uom_id ?? ""),
 				uomName: String(data?.uom_name ?? ""),
 				approvedQty: Number(data?.approved_qty ?? 0),
-				availableQty: Number(data?.available_qty ?? 0),
+				availableQty: Number(data?.available_qty ?? data?.balance_qty ?? 0),
 				rate: Number(data?.rate ?? 0),
 				warehouseId: data?.warehouse_id ? String(data.warehouse_id) : undefined,
 				warehouseName: data?.warehouse_name ? String(data.warehouse_name) : undefined,
 			} satisfies AvailableInventoryItem;
 		})
 		.filter(Boolean) as AvailableInventoryItem[];
-
-/**
- * Maps item group detail response (setup 2) for caching.
- */
-export const mapItemGroupDetailResponse = (response: unknown): ItemGroupCacheEntry => {
-	const data = response as Record<string, unknown>;
-	const innerData = (data?.data ?? {}) as Record<string, unknown>;
-	const rawItems = (data?.items ?? innerData?.items ?? []) as Record<string, unknown>[];
-	const rawMakes = (data?.makes ?? innerData?.makes ?? []) as Record<string, unknown>[];
-	const rawUoms = (data?.uoms ?? innerData?.uoms ?? []) as Record<string, unknown>[];
-
-	const items: ItemOption[] = rawItems.map((it) => ({
-		label: String(it?.item_name ?? it?.label ?? ""),
-		value: String(it?.item_id ?? it?.value ?? ""),
-		defaultUomId: it?.uom_id != null ? String(it.uom_id) : undefined,
-		defaultUomLabel: it?.uom_name != null ? String(it.uom_name) : undefined,
-	}));
-
-	const makes: Option[] = rawMakes.map((mk) => ({
-		label: String(mk?.item_make_name ?? mk?.label ?? ""),
-		value: String(mk?.item_make_id ?? mk?.value ?? ""),
-	}));
-
-	// Build UOM map by item ID
-	const uomsByItemId: Record<string, Option[]> = {};
-	for (const uom of rawUoms) {
-		const itemId = String(uom?.item_id ?? "");
-		if (!itemId) continue;
-		if (!uomsByItemId[itemId]) uomsByItemId[itemId] = [];
-		uomsByItemId[itemId].push({
-			label: String(uom?.uom_name ?? ""),
-			value: String(uom?.uom_id ?? ""),
-		});
-	}
-
-	// Build label lookup maps
-	const itemLabelById: Record<string, string> = {};
-	for (const it of items) itemLabelById[it.value] = it.label;
-
-	const makeLabelById: Record<string, string> = {};
-	for (const mk of makes) makeLabelById[mk.value] = mk.label;
-
-	const uomLabelByItemId: Record<string, Record<string, string>> = {};
-	for (const [itemId, uomList] of Object.entries(uomsByItemId)) {
-		uomLabelByItemId[itemId] = {};
-		for (const uom of uomList) uomLabelByItemId[itemId][uom.value] = uom.label;
-	}
-
-	return {
-		items,
-		makes,
-		uomsByItemId,
-		itemLabelById,
-		makeLabelById,
-		uomLabelByItemId,
-	};
-};

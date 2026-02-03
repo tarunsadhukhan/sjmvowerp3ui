@@ -2,7 +2,7 @@ import React from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "@/hooks/use-toast";
 import { savePO, type SavePORequest } from "@/utils/poService";
-import type { BranchAddressRecord, EditableLineItem } from "../types/poTypes";
+import type { BranchAddressRecord, EditableLineItem, POAdditionalCharge } from "../types/poTypes";
 
  type UsePOFormSubmissionParams = {
   mode: "create" | "edit" | "view";
@@ -12,6 +12,8 @@ import type { BranchAddressRecord, EditableLineItem } from "../types/poTypes";
   filledLineItems: ReadonlyArray<EditableLineItem>;
   isLineItemsReady: boolean;
   requestedId: string;
+  /** Function to get charges to save (filters incomplete charges) */
+  getChargesToSave?: () => POAdditionalCharge[];
 };
 
 /**
@@ -25,6 +27,7 @@ export const usePOFormSubmission = ({
   filledLineItems,
   isLineItemsReady,
   requestedId,
+  getChargesToSave,
 }: UsePOFormSubmissionParams) => {
   const [saving, setSaving] = React.useState(false);
   const router = useRouter();
@@ -64,6 +67,22 @@ export const usePOFormSubmission = ({
         tax_amount: item.taxAmount,
       }));
 
+      // Map additional charges
+      const chargesPayload = getChargesToSave
+        ? getChargesToSave().map((charge) => ({
+            additional_charges_id: String(charge.additional_charges_id),
+            qty: charge.qty,
+            rate: charge.rate,
+            net_amount: charge.net_amount,
+            remarks: charge.remarks || undefined,
+            tax_pct: charge.tax_pct,
+            igst_amount: charge.igst_amount,
+            cgst_amount: charge.cgst_amount,
+            sgst_amount: charge.sgst_amount,
+            tax_amount: charge.tax_amount,
+          }))
+        : undefined;
+
       const createPayload: SavePORequest = {
         branch: String(values.branch ?? ""),
         date: String(values.date ?? ""),
@@ -83,6 +102,7 @@ export const usePOFormSubmission = ({
         terms_conditions: values.terms_conditions ? String(values.terms_conditions) : undefined,
         advance_percentage: values.advance_percentage ? Number(values.advance_percentage) : undefined,
         items: itemsPayload,
+        additional_charges: chargesPayload && chargesPayload.length > 0 ? chargesPayload : undefined,
       };
 
       setSaving(true);
@@ -113,6 +133,7 @@ export const usePOFormSubmission = ({
       isLineItemsReady,
       requestedId,
       router,
+      getChargesToSave,
     ],
   );
 

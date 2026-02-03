@@ -9,17 +9,19 @@ import { fetchWithCookie } from "@/utils/apiClient2";
 import { apiRoutesPortalMasters } from "@/utils/api";
 import useSelectedCompanyCoId from "@/hooks/use-selected-company-coid";
 
-import type { SRHeader, SRLineItem, SRHeaderRaw, SRLineItemRaw } from "./types/srTypes";
+import type { SRHeader, SRLineItem, SRHeaderRaw, SRLineItemRaw, WarehouseOption, AdditionalChargeOption, SRAdditionalChargeRaw } from "./types/srTypes";
 import { mapSRHeader, mapSRLineItems } from "./utils/srMappers";
 import { calculateTotals } from "./utils/srCalculations";
 import { getStatusColor } from "./utils/srConstants";
 import { useSRFormState } from "./hooks/useSRFormState";
 import { useSRLineItems } from "./hooks/useSRLineItems";
 import { useSRApproval } from "./hooks/useSRApproval";
+import { useSRAdditionalCharges } from "./hooks/useSRAdditionalCharges";
 import { SRHeaderForm } from "./components/SRHeaderForm";
 import { useSRLineItemColumns } from "./components/SRLineItemsTable";
 import { SRTotalsDisplay } from "./components/SRTotalsDisplay";
 import { SRPreview } from "./components/SRPreview";
+import { SRAdditionalCharges } from "./components/SRAdditionalCharges";
 
 // Loading fallback for Suspense
 function SRPageLoading() {
@@ -50,12 +52,28 @@ function SRTransactionPageContent() {
 	const [header, setHeader] = React.useState<SRHeader | null>(null);
 	const [loading, setLoading] = React.useState(true);
 	const [pageError, setPageError] = React.useState<string | null>(null);
+	const [warehouseOptions, setWarehouseOptions] = React.useState<WarehouseOption[]>([]);
+	const [additionalChargeOptions, setAdditionalChargeOptions] = React.useState<AdditionalChargeOption[]>([]);
 
 	// Form state hook
 	const { srDate, setSRDate, srRemarks, setSRRemarks, resetFormState } = useSRFormState();
 
 	// Line items hook
 	const { lineItems, setLineItems, handleLineItemChange } = useSRLineItems({ header });
+
+	// Additional charges hook
+	const mode = isViewMode ? "view" : "edit";
+	const {
+		charges: additionalCharges,
+		addCharge,
+		removeCharge,
+		updateCharge,
+		replaceCharges,
+		mapRawToCharges,
+		getChargesToSave,
+		totalChargesAmount,
+		chargesTotals,
+	} = useSRAdditionalCharges({ mode, header });
 
 	// Fetch SR data
 	const fetchSRData = React.useCallback(async () => {
@@ -81,7 +99,16 @@ function SRTransactionPageContent() {
 				throw new Error(error);
 			}
 
-			const result = data as { header?: SRHeaderRaw; line_items?: SRLineItemRaw[] };
+			const result = data as { 
+				header?: SRHeaderRaw; 
+				line_items?: SRLineItemRaw[]; 
+				warehouses?: Array<{ warehouse_id: number; warehouse_name: string; branch_id?: number }>;
+				additional_charges_options?: AdditionalChargeOption[];
+				additional_charges?: SRAdditionalChargeRaw[];
+			};
+
+			// Debug: Log warehouses received from API
+			console.log("Warehouses from API:", result.warehouses);
 
 			// Map header
 			const mappedHeader = mapSRHeader(result.header);
@@ -93,13 +120,47 @@ function SRTransactionPageContent() {
 			// Map line items
 			const mappedItems = mapSRLineItems(result.line_items, mappedHeader);
 			setLineItems(mappedItems);
+
+			// Map warehouse options (filter by branch if needed, dedupe by warehouse_id)
+			const warehouseData = result.warehouses ?? [];
+			const branchId = mappedHeader.branch_id;
+			console.log("Branch ID for warehouse filtering:", branchId);
+			const filteredWarehouses = branchId
+				? warehouseData.filter((wh) => !wh.branch_id || wh.branch_id === branchId)
+				: warehouseData;
+			console.log("Filtered warehouses:", filteredWarehouses);
+			
+			// Dedupe by warehouse_id to avoid duplicate key errors
+			const seenIds = new Set<string>();
+			const uniqueWarehouses = filteredWarehouses.filter((wh) => {
+				const id = String(wh.warehouse_id);
+				if (seenIds.has(id)) return false;
+				seenIds.add(id);
+				return true;
+			});
+			
+			const mappedWarehouses: WarehouseOption[] = uniqueWarehouses.map((wh) => ({
+				label: wh.warehouse_name,
+				value: String(wh.warehouse_id),
+				branchId: wh.branch_id,
+			}));
+			setWarehouseOptions(mappedWarehouses);
+
+			// Map additional charge options
+			setAdditionalChargeOptions(result.additional_charges_options ?? []);
+
+			// Map existing additional charges
+			if (result.additional_charges && result.additional_charges.length > 0) {
+				const mappedCharges = mapRawToCharges(result.additional_charges);
+				replaceCharges(mappedCharges);
+			}
 		} catch (err) {
 			const message = err instanceof Error ? err.message : "Failed to load SR data";
 			setPageError(message);
 		} finally {
 			setLoading(false);
 		}
-	}, [inwardId, coId, resetFormState, setLineItems]);
+	}, [inwardId, coId, resetFormState, setLineItems, mapRawToCharges, replaceCharges]);
 
 	// Initial fetch
 	React.useEffect(() => {
@@ -122,6 +183,8 @@ function SRTransactionPageContent() {
 		srDate,
 		srRemarks,
 		lineItems,
+		additionalCharges,
+		getChargesToSave,
 		onRefresh: fetchSRData,
 	});
 
@@ -129,6 +192,7 @@ function SRTransactionPageContent() {
 	const columns = useSRLineItemColumns({
 		canEdit: canEdit && !isViewMode,
 		onLineItemChange: handleLineItemChange,
+		warehouseOptions,
 	});
 
 	// Calculate totals
@@ -228,7 +292,16 @@ function SRTransactionPageContent() {
 			}}
 			footer={
 				<Box sx={{ display: "flex", flexDirection: "column", gap: 3 }}>
-					<SRTotalsDisplay totals={totals} />
+					{/* Additional Charges Section */}
+					<SRAdditionalCharges
+						charges={additionalCharges}
+						options={additionalChargeOptions}
+						canEdit={canEdit && !isViewMode}
+						onAddCharge={addCharge}
+						onRemoveCharge={removeCharge}
+						onChargeChange={updateCharge}
+					/>
+					<SRTotalsDisplay totals={totals} chargesTotals={chargesTotals} />
 				</Box>
 			}
 			preview={

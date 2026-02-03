@@ -11,6 +11,7 @@ type UseSRLineItemsReturn = {
 	setLineItems: React.Dispatch<React.SetStateAction<SRLineItem[]>>;
 	handleLineItemChange: (id: string, field: keyof SRLineItem, value: unknown) => void;
 	recalculateLineItem: (item: SRLineItem) => SRLineItem;
+	validateLineItems: () => { valid: boolean; missingWarehouseCount: number };
 };
 
 /**
@@ -73,10 +74,22 @@ export const useSRLineItems = ({ header }: UseSRLineItemsParams): UseSRLineItems
 		[recalculateLineItem],
 	);
 
+	/**
+	 * Validates all line items have required fields (warehouse_id is mandatory).
+	 */
+	const validateLineItems = React.useCallback((): { valid: boolean; missingWarehouseCount: number } => {
+		const missingWarehouseCount = lineItems.filter((item) => item.warehouse_id === null || item.warehouse_id === undefined).length;
+		return {
+			valid: missingWarehouseCount === 0,
+			missingWarehouseCount,
+		};
+	}, [lineItems]);
+
 	return {
 		lineItems,
 		setLineItems,
 		handleLineItemChange,
 		recalculateLineItem,
+		validateLineItems,
 	};
 };

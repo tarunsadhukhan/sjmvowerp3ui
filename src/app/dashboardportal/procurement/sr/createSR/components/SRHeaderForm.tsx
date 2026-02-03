@@ -255,6 +255,7 @@ export const SRHeaderForm: React.FC<SRHeaderFormProps> = ({
 				}}
 			>
 				<TextField
+					id="sr-date-field"
 					label="SR Date"
 					type="date"
 					size="small"
@@ -264,6 +265,7 @@ export const SRHeaderForm: React.FC<SRHeaderFormProps> = ({
 					InputLabelProps={{ shrink: true }}
 				/>
 				<TextField
+					id="sr-remarks-field"
 					label="SR Remarks"
 					size="small"
 					value={srRemarks}

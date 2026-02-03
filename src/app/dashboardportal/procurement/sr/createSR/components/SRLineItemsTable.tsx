@@ -1,9 +1,9 @@
 "use client";
 
 import * as React from "react";
-import { Box, TextField, Typography } from "@mui/material";
+import { Autocomplete, TextField, Typography } from "@mui/material";
 import type { TransactionLineColumn } from "@/components/ui/transaction";
-import type { SRLineItem } from "../types/srTypes";
+import type { SRLineItem, WarehouseOption } from "../types/srTypes";
 
 /**
  * Format currency for display.
@@ -55,7 +55,7 @@ const EditableNumberCell: React.FC<EditableNumberCellProps> = ({
 			disabled={disabled}
 			onChange={handleChange}
 			inputProps={{ min: 0, step: 0.01 }}
-			sx={{ width: 100 }}
+			sx={{ width: "100%" }}
 		/>
 	);
 };
@@ -63,6 +63,7 @@ const EditableNumberCell: React.FC<EditableNumberCellProps> = ({
 type UseSRLineItemColumnsParams = {
 	canEdit: boolean;
 	onLineItemChange: (id: string, field: keyof SRLineItem, value: unknown) => void;
+	warehouseOptions: WarehouseOption[];
 };
 
 /**
@@ -71,52 +72,56 @@ type UseSRLineItemColumnsParams = {
 export const useSRLineItemColumns = ({
 	canEdit,
 	onLineItemChange,
+	warehouseOptions,
 }: UseSRLineItemColumnsParams): TransactionLineColumn<SRLineItem>[] => {
+	// Build warehouse label map for display
+	const warehouseLabelMap = React.useMemo(() => {
+		const map: Record<string, string> = {};
+		for (const opt of warehouseOptions) {
+			map[opt.value] = opt.label;
+		}
+		return map;
+	}, [warehouseOptions]);
+
 	return React.useMemo(
 		() => [
 			{
 				id: "item_grp_name",
 				header: "Item Group",
-				width: "minmax(120px, 1fr)",
+				width: "1fr",
 				renderCell: ({ item }) => (
-					<Box sx={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
-						<Typography variant="body2" noWrap>
-							{item.item_grp_name || "-"}
-						</Typography>
-					</Box>
+					<Typography variant="body2" noWrap title={item.item_grp_name || undefined}>
+						{item.item_grp_name || "-"}
+					</Typography>
 				),
 				getTooltip: ({ item }) => item.item_grp_name || undefined,
 			},
 			{
 				id: "item_name",
 				header: "Item",
-				width: "minmax(150px, 1.5fr)",
+				width: "1.5fr",
 				renderCell: ({ item }) => (
-					<Box sx={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
-						<Typography variant="body2" noWrap>
-							{item.item_name || "-"}
-						</Typography>
-					</Box>
+					<Typography variant="body2" noWrap title={item.item_name || undefined}>
+						{item.item_name || "-"}
+					</Typography>
 				),
 				getTooltip: ({ item }) => item.item_name || undefined,
 			},
 			{
 				id: "accepted_item_make_name",
 				header: "Make",
-				width: "100px",
+				width: "0.8fr",
 				renderCell: ({ item }) => (
-					<Box sx={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
-						<Typography variant="body2" noWrap>
-							{item.accepted_item_make_name || "-"}
-						</Typography>
-					</Box>
+					<Typography variant="body2" noWrap title={item.accepted_item_make_name || undefined}>
+						{item.accepted_item_make_name || "-"}
+					</Typography>
 				),
 				getTooltip: ({ item }) => item.accepted_item_make_name || undefined,
 			},
 			{
 				id: "uom_name",
 				header: "UOM",
-				width: "70px",
+				width: "60px",
 				renderCell: ({ item }) => (
 					<Typography variant="body2" noWrap>{item.uom_name || "-"}</Typography>
 				),
@@ -124,7 +129,7 @@ export const useSRLineItemColumns = ({
 			{
 				id: "approved_qty",
 				header: "Qty",
-				width: "70px",
+				width: "60px",
 				renderCell: ({ item }) => (
 					<Typography variant="body2" noWrap sx={{ textAlign: "right", width: "100%" }}>
 						{item.approved_qty}
@@ -134,7 +139,7 @@ export const useSRLineItemColumns = ({
 			{
 				id: "po_rate",
 				header: "PO Rate",
-				width: "100px",
+				width: "90px",
 				renderCell: ({ item }) => (
 					<Typography variant="body2" color="text.secondary" noWrap sx={{ textAlign: "right", width: "100%" }}>
 						{formatCurrency(item.po_rate)}
@@ -144,7 +149,7 @@ export const useSRLineItemColumns = ({
 			{
 				id: "accepted_rate",
 				header: "Accept Rate",
-				width: "120px",
+				width: "100px",
 				renderCell: ({ item }) => (
 					<EditableNumberCell
 						initialValue={item.accepted_rate}
@@ -154,9 +159,65 @@ export const useSRLineItemColumns = ({
 				),
 			},
 			{
+				id: "warehouse_id",
+				header: "Warehouse *",
+				width: "140px",
+				renderCell: ({ item }) => {
+					if (!canEdit) {
+						const warehouseLabel = item.warehouse_id ? warehouseLabelMap[String(item.warehouse_id)] || item.warehouse_name : "-";
+						return (
+							<Typography variant="body2" noWrap>
+								{warehouseLabel}
+							</Typography>
+						);
+					}
+
+					const selectedOption = warehouseOptions.find(
+						(opt) => String(opt.value) === String(item.warehouse_id)
+					) ?? null;
+
+					return (
+						<Autocomplete
+							size="small"
+							options={warehouseOptions}
+							value={selectedOption}
+							onChange={(_, newValue) => {
+								onLineItemChange(item.id, "warehouse_id", newValue ? Number(newValue.value) : null);
+							}}
+							getOptionLabel={(opt) => opt.label}
+							isOptionEqualToValue={(opt, val) => opt.value === val.value}
+							renderOption={(props, option) => {
+								const { key, ...rest } = props;
+								return (
+									<li key={`wh-${option.value}-${item.id}`} {...rest}>
+										{option.label}
+									</li>
+								);
+							}}
+							renderInput={(params) => (
+								<TextField
+									{...params}
+									placeholder="Select warehouse"
+									variant="outlined"
+									size="small"
+									error={item.warehouse_id === null || item.warehouse_id === undefined}
+								/>
+							)}
+							sx={{ width: "100%" }}
+						/>
+					);
+				},
+				getTooltip: ({ item }) => {
+					if (item.warehouse_id) {
+						return warehouseLabelMap[String(item.warehouse_id)] || item.warehouse_name || undefined;
+					}
+					return "Warehouse is required";
+				},
+			},
+			{
 				id: "amount",
 				header: "Amount",
-				width: "110px",
+				width: "90px",
 				renderCell: ({ item }) => (
 					<Typography variant="body2" noWrap sx={{ textAlign: "right", width: "100%" }}>
 						{formatCurrency(item.amount)}
@@ -166,7 +227,7 @@ export const useSRLineItemColumns = ({
 			{
 				id: "tax_percentage",
 				header: "Tax %",
-				width: "70px",
+				width: "60px",
 				renderCell: ({ item }) => (
 					<Typography variant="body2" noWrap sx={{ textAlign: "right", width: "100%" }}>
 						{item.tax_percentage}%
@@ -176,7 +237,7 @@ export const useSRLineItemColumns = ({
 			{
 				id: "tax_amount",
 				header: "Tax Amt",
-				width: "100px",
+				width: "80px",
 				renderCell: ({ item }) => (
 					<Typography variant="body2" noWrap sx={{ textAlign: "right", width: "100%" }}>
 						{formatCurrency(item.tax_amount)}
@@ -186,7 +247,7 @@ export const useSRLineItemColumns = ({
 			{
 				id: "total_amount",
 				header: "Total",
-				width: "110px",
+				width: "90px",
 				renderCell: ({ item }) => (
 					<Typography variant="body2" fontWeight={600} color="primary" noWrap sx={{ textAlign: "right", width: "100%" }}>
 						{formatCurrency(item.total_amount)}
@@ -194,6 +255,6 @@ export const useSRLineItemColumns = ({
 				),
 			},
 		],
-		[canEdit, onLineItemChange],
+		[canEdit, onLineItemChange, warehouseOptions, warehouseLabelMap],
 	);
 };

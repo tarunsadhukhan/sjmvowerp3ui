@@ -1,0 +1,555 @@
+"use client";
+
+import * as React from "react";
+import { Suspense } from "react";
+import { useSearchParams, useRouter } from "next/navigation";
+import { Alert, CircularProgress, Box } from "@mui/material";
+import TransactionWrapper from "@/components/ui/TransactionWrapper";
+import { fetchWithCookie } from "@/utils/apiClient2";
+import { apiRoutesPortalMasters } from "@/utils/api";
+import useSelectedCompanyCoId from "@/hooks/use-selected-company-coid";
+import { MRHeaderForm } from "../components/MRHeaderForm";
+import { MRApprovalBar } from "../components/MRApprovalBar";
+import { MRApprovalDialog } from "../components/MRApprovalDialog";
+import { useMRLineItems } from "../hooks/useMRLineItems";
+import { useMRApproval } from "../hooks/useMRApproval";
+import { MR_STATUS_IDS } from "../utils/mrConstants";
+import type { JuteMRHeader, JuteMRLineItemAPI, MRLineItem, MuiFormMode, PartyBranchOption } from "../types/mrTypes";
+
+type JuteMRDetailsResponse = {
+	header: JuteMRHeader;
+	line_items: JuteMRLineItemAPI[];
+};
+
+/**
+ * Calculate shortage_kgs and accepted_weight based on formulas:
+ * shortage_kgs = actual_weight * (difference of allowable moisture and actual moisture % + claim_dust%)
+ * accepted_weight = actual_weight - shortage_kgs
+ */
+function calculateShortageAndAcceptedWeight(
+	actualWeight: number | null,
+	allowableMoisture: number | null,
+	actualMoisture: number | null,
+	claimDust: number | null
+): { shortageKgs: number | null; acceptedWeight: number | null } {
+	if (actualWeight == null || actualWeight <= 0) {
+		return { shortageKgs: null, acceptedWeight: null };
+	}
+
+	const allowable = allowableMoisture ?? 0;
+	const actual = actualMoisture ?? 0;
+	const dust = claimDust ?? 0;
+
+	// Calculate moisture difference (only if actual > allowable)
+	const moistureDiff = actual > allowable ? actual - allowable : 0;
+
+	// Total deduction percentage
+	const deductionPercentage = moistureDiff + dust;
+
+	if (deductionPercentage <= 0) {
+		return { shortageKgs: 0, acceptedWeight: Math.round(actualWeight) };
+	}
+
+	// Formula: shortage_kgs = actual_weight * (moisture diff % + claim_dust%)
+	const shortageKgs = Math.round(actualWeight * deductionPercentage / 100.0);
+	
+	// Formula: accepted_weight = actual_weight - shortage_kgs
+	const acceptedWeight = Math.round(Math.max(0, actualWeight - shortageKgs)); // Ensure non-negative
+	
+	return { shortageKgs, acceptedWeight };
+}
+
+/**
+ * Distribute header actual weight to line items proportionally based on actualQty.
+ * Similar to how challan weight is handled in Material Inspection.
+ * Also recalculates shortage_kgs and accepted_weight for each line.
+ */
+function distributeActualWeightToLineItems(
+	lineItems: MRLineItem[],
+	headerActualWeight: number
+): MRLineItem[] {
+	if (headerActualWeight <= 0 || lineItems.length === 0) {
+		return lineItems;
+	}
+
+	// Calculate total actual quantity
+	const totalActualQty = lineItems.reduce((sum, li) => sum + (li.actualQty ?? 0), 0);
+
+	if (totalActualQty <= 0) {
+		// If no quantities, distribute equally or assign all to first item
+		if (lineItems.length === 1) {
+			const li = lineItems[0];
+			const { shortageKgs, acceptedWeight } = calculateShortageAndAcceptedWeight(
+				headerActualWeight,
+				li.allowableMoisture,
+				li.actualMoisture,
+				li.claimDust
+			);
+			return [{
+				...li,
+				actualWeight: Math.round(headerActualWeight),
+				shortageKgs,
+				acceptedWeight,
+			}];
+		}
+		return lineItems;
+	}
+
+	// Distribute proportionally based on actualQty
+	return lineItems.map((li) => {
+		const lineActualQty = li.actualQty ?? 0;
+		if (lineActualQty <= 0) {
+			return li;
+		}
+
+		const proportionalWeight = Math.round((headerActualWeight * lineActualQty) / totalActualQty);
+		const { shortageKgs, acceptedWeight } = calculateShortageAndAcceptedWeight(
+			proportionalWeight,
+			li.allowableMoisture,
+			li.actualMoisture,
+			li.claimDust
+		);
+
+		return {
+			...li,
+			actualWeight: proportionalWeight,
+			shortageKgs,
+			acceptedWeight,
+		};
+	});
+}
+
+function JuteMREditPageContent() {
+	const searchParams = useSearchParams();
+	const router = useRouter();
+	const { coId } = useSelectedCompanyCoId();
+
+	const mrIdParam = searchParams?.get("id");
+	const modeParam = searchParams?.get("mode") ?? "edit";
+	const mode: MuiFormMode = modeParam === "view" ? "view" : "edit";
+
+	const [loading, setLoading] = React.useState(true);
+	const [pageError, setPageError] = React.useState<string | null>(null);
+	const [header, setHeader] = React.useState<JuteMRHeader | null>(null);
+	const [lineItems, setLineItems] = React.useState<MRLineItem[]>([]);
+	const [saving, setSaving] = React.useState(false);
+	const [warehouseOptions, setWarehouseOptions] = React.useState<Array<{ value: number; label: string }>>([]);
+	const [partyBranchOptions, setPartyBranchOptions] = React.useState<PartyBranchOption[]>([]);
+	const [partyBranchLoading, setPartyBranchLoading] = React.useState(false);
+	const [partyBranchesLoaded, setPartyBranchesLoaded] = React.useState(false);
+
+	const handleHeaderChange = React.useCallback(
+		(field: keyof JuteMRHeader, value: string | number | null) => {
+			setHeader((prev) => (prev ? { ...prev, [field]: value } : null));
+		},
+		[]
+	);
+
+	// Build line item columns
+	const handleLineFieldChange = React.useCallback(
+		(id: string, field: keyof MRLineItem, value: string | number | null) => {
+			setLineItems((prev) =>
+				prev.map((li) => {
+					if (li.id !== id) return li;
+
+					const updated = { ...li, [field]: value };
+
+					// Recalculate shortage_kgs and accepted_weight when relevant fields change
+					if (
+						field === "actualWeight" ||
+						field === "allowableMoisture" ||
+						field === "actualMoisture" ||
+						field === "claimDust"
+					) {
+						const { shortageKgs, acceptedWeight } = calculateShortageAndAcceptedWeight(
+							updated.actualWeight,
+							updated.allowableMoisture,
+							updated.actualMoisture,
+							updated.claimDust
+						);
+						updated.shortageKgs = shortageKgs;
+						updated.acceptedWeight = acceptedWeight;
+					}
+
+					return updated;
+				})
+			);
+		},
+		[]
+	);
+
+	const lineItemColumns = useMRLineItems({
+		canEdit: mode !== "view",
+		handleLineFieldChange,
+		warehouseOptions,
+	});
+
+	// Calculate total accepted weight (MR weight)
+	const totalAcceptedWeight = React.useMemo(() => {
+		return lineItems.reduce((sum, li) => sum + (li.acceptedWeight ?? 0), 0);
+	}, [lineItems]);
+
+	// Update header MR weight when total changes
+	React.useEffect(() => {
+		if (mode === "edit") {
+			setHeader((prev) => {
+				if (!prev) return null;
+				// Only update if value has actually changed
+				if (prev.mr_weight === totalAcceptedWeight) return prev;
+				return { ...prev, mr_weight: totalAcceptedWeight };
+			});
+		}
+	}, [totalAcceptedWeight, mode]);
+
+	const loadWarehouseOptions = React.useCallback(async (branchId: number) => {
+		try {
+			const url = `${apiRoutesPortalMasters.JUTE_MR_WAREHOUSE_OPTIONS}?branch_id=${branchId}`;
+			const { data, error } = await fetchWithCookie<{ warehouses: Array<{ warehouse_id: number; warehouse_name: string; warehouse_path: string }> }>(url, "GET");
+			if (error || !data) return;
+			
+			const options = data.warehouses.map((w) => ({
+				value: w.warehouse_id,
+				label: w.warehouse_path || w.warehouse_name,
+			}));
+			setWarehouseOptions(options);
+		} catch (err) {
+			console.error("Error loading warehouse options:", err);
+		}
+	}, []);
+
+	/**
+	 * Load party branches for a given party_id.
+	 * Auto-selects if only one branch exists (mandatory field).
+	 */
+	const loadPartyBranches = React.useCallback(async (partyId: string, currentPartyBranchId: number | null) => {
+		if (!partyId) {
+			setPartyBranchOptions([]);
+			setPartyBranchesLoaded(false);
+			return;
+		}
+		
+		setPartyBranchLoading(true);
+		setPartyBranchesLoaded(false);
+		try {
+			const url = `${apiRoutesPortalMasters.JUTE_MR_PARTY_BRANCHES}?party_id=${partyId}`;
+			const { data, error } = await fetchWithCookie<{ branches: PartyBranchOption[] }>(url, "GET");
+			if (error || !data) {
+				setPartyBranchOptions([]);
+				setPartyBranchesLoaded(true);
+				return;
+			}
+			
+			const branches = data.branches || [];
+			setPartyBranchOptions(branches);
+			setPartyBranchesLoaded(true);
+			
+			// Auto-select if only 1 branch and no branch is currently selected
+			if (branches.length === 1 && !currentPartyBranchId) {
+				setHeader((prev) => prev ? { 
+					...prev, 
+					party_branch_id: branches[0].party_mst_branch_id,
+					party_branch_name: branches[0].display 
+				} : null);
+			}
+		} catch (err) {
+			console.error("Error loading party branches:", err);
+			setPartyBranchOptions([]);
+			setPartyBranchesLoaded(true);
+		} finally {
+			setPartyBranchLoading(false);
+		}
+	}, []);
+
+	const loadData = React.useCallback(async () => {
+		if (!coId || !mrIdParam) return;
+		setLoading(true);
+		setPageError(null);
+
+		try {
+			const url = `${apiRoutesPortalMasters.JUTE_MR_BY_ID}?id=${mrIdParam}`;
+			const { data, error } = await fetchWithCookie<JuteMRDetailsResponse>(url, "GET");
+			if (error) {
+				setPageError(error);
+				setLoading(false);
+				return;
+			}
+			if (!data) {
+				setPageError("No data received from server");
+				setLoading(false);
+				return;
+			}
+
+			setHeader(data.header);
+
+			const mappedLineItems: MRLineItem[] = data.line_items.map((li) => {
+				const actualMoistureNum = li.actual_moisture
+					? parseFloat(li.actual_moisture)
+					: null;
+
+				const { shortageKgs, acceptedWeight } = calculateShortageAndAcceptedWeight(
+					li.actual_weight,
+					li.allowable_moisture,
+					actualMoistureNum,
+					li.claim_dust
+				);
+
+				return {
+					id: `mr-li-${li.jute_mr_li_id}`,
+					juteMrLiId: li.jute_mr_li_id,
+					actualItemId: li.actual_item_id,
+					actualItemName: li.actual_item_name || "-",
+					actualQualityId: li.actual_quality,
+					actualQualityName: li.actual_quality_name || "-",
+					actualQty: li.actual_qty,
+					actualWeight: li.actual_weight,
+					allowableMoisture: li.allowable_moisture,
+					actualMoisture: actualMoistureNum,
+					claimDust: li.claim_dust,
+					shortageKgs: shortageKgs ?? li.shortage_kgs,
+					acceptedWeight,
+					rate: li.rate,
+					claimRate: li.claim_rate,
+					claimQuality: li.claim_quality,
+					waterDamageAmount: li.water_damage_amount,
+					premiumAmount: li.premium_amount,
+					remarks: li.remarks,
+					warehouseId: li.warehouse_id,
+					warehousePath: li.warehouse_path,
+				};
+			});
+
+			// Auto-apply header actual weight to line items if they don't have weights yet
+			const headerActualWeight = data.header.actual_weight;
+			const hasExistingWeights = mappedLineItems.some((li) => li.actualWeight != null && li.actualWeight > 0);
+			
+			if (mode === "edit" && headerActualWeight && headerActualWeight > 0 && !hasExistingWeights) {
+				const distributedLineItems = distributeActualWeightToLineItems(mappedLineItems, headerActualWeight);
+				setLineItems(distributedLineItems);
+			} else {
+				setLineItems(mappedLineItems);
+			}
+		} catch (err) {
+			setPageError(err instanceof Error ? err.message : "Failed to load MR data");
+		} finally {
+			setLoading(false);
+		}
+	}, [coId, mrIdParam]);
+
+	React.useEffect(() => {
+		void loadData();
+	}, [loadData]);
+
+	// Load warehouse options when header is available
+	React.useEffect(() => {
+		if (header?.branch_id) {
+			void loadWarehouseOptions(header.branch_id);
+		}
+	}, [header?.branch_id, loadWarehouseOptions]);
+
+	// Load party branches when party_id is available
+	React.useEffect(() => {
+		if (header?.party_id) {
+			void loadPartyBranches(header.party_id, header.party_branch_id);
+		}
+	// eslint-disable-next-line react-hooks/exhaustive-deps
+	}, [header?.party_id, loadPartyBranches]);
+	// Note: We intentionally don't include party_branch_id in deps to avoid re-fetching on selection
+
+	// Approval workflow hook
+	const {
+		approvalLoading,
+		approvalInfo,
+		approvalPermissions,
+		statusChipProps,
+		statusId,
+		canSetPending,
+		partyHasNoBranches,
+		// Approval dialog state
+		approvalDialogOpen,
+		handleApprovalDialogClose,
+		handleApproveConfirm,
+		// Action handlers
+		handlePending,
+		handleApprove,
+		handleReject,
+		handleCancel,
+		handleViewApprovalLog,
+	} = useMRApproval({
+		mode,
+		mrId: mrIdParam ?? "",
+		header,
+		coId,
+		partyBranchesLoaded,
+		partyBranchOptions,
+		onRefresh: loadData,
+	});
+
+	// Determine if editing is allowed based on status
+	const canEdit = React.useMemo(() => {
+		if (mode === "view") return false;
+		// Allow editing in Draft and Open status
+		return statusId === MR_STATUS_IDS.DRAFT || statusId === MR_STATUS_IDS.OPEN;
+	}, [mode, statusId]);
+
+	const handleSave = React.useCallback(async () => {
+		if (!coId || !header) return;
+
+		setSaving(true);
+		setPageError(null);
+
+		try {
+			const payload = {
+				mr_weight: header.mr_weight,
+				party_branch_id: header.party_branch_id,
+				remarks: header.remarks,
+				src_com_id: header.src_com_id,
+				line_items: lineItems.map((li) => ({
+					jute_mr_li_id: li.juteMrLiId,
+					actual_item_id: li.actualItemId,
+					actual_quality: li.actualQualityId,
+					actual_qty: li.actualQty,
+					actual_weight: li.actualWeight,
+					allowable_moisture: li.allowableMoisture,
+					actual_moisture: li.actualMoisture != null ? li.actualMoisture.toFixed(2) : null,
+					claim_dust: li.claimDust,
+					shortage_kgs: li.shortageKgs,
+					accepted_weight: li.acceptedWeight,
+					rate: li.rate,
+					claim_rate: li.claimRate,
+					claim_quality: li.claimQuality,
+					water_damage_amount: li.waterDamageAmount,
+					premium_amount: li.premiumAmount,
+					remarks: li.remarks,
+					warehouse_id: li.warehouseId,
+				})),
+			};
+
+			const url = `${apiRoutesPortalMasters.JUTE_MR_UPDATE}/${header.jute_mr_id}?co_id=${coId}`;
+			const { error } = await fetchWithCookie(url, "PUT", payload);
+			if (error) {
+				setPageError(error);
+				setSaving(false);
+				return;
+			}
+
+			// Reload data to get updated values
+			await loadData();
+		} catch (err) {
+			setPageError(err instanceof Error ? err.message : "Failed to save MR");
+		} finally {
+			setSaving(false);
+		}
+	}, [coId, header, lineItems, loadData]);
+
+	if (!mrIdParam) {
+		return <Alert severity="error">MR id is required in URL.</Alert>;
+	}
+
+	if (loading || !header) {
+		return (
+			<div className="flex h-64 items-center justify-center">
+				<CircularProgress />
+			</div>
+		);
+	}
+
+	const actions: Array<{
+		label: string;
+		onClick: () => void;
+		variant: "default" | "outline";
+		disabled?: boolean;
+		loading?: boolean;
+	}> = [
+		{
+			label: "Back",
+			onClick: () => router.push("/dashboardportal/jutePurchase/mr"),
+			variant: "outline",
+		},
+	];
+
+	// Show Save button only if editing is allowed
+	if (canEdit && approvalPermissions.canSave) {
+		actions.push({
+			label: "Save",
+			onClick: handleSave,
+			disabled: saving || approvalLoading,
+			loading: saving,
+			variant: "default",
+		});
+	}
+
+	return (
+		<TransactionWrapper
+			title={`Material Receipt - MR #${header.branch_mr_no ?? header.jute_mr_id}`}
+			loading={loading}
+			statusChip={statusChipProps}
+			primaryActions={actions}
+			lineItems={{
+				items: lineItems,
+				columns: lineItemColumns,
+				getItemId: (item: MRLineItem) => item.id,
+				canEdit: canEdit,
+				onRemoveSelected: () => {},
+				title: "Line Items",
+				subtitle: `${lineItems.length} items | Total Accepted Weight: ${totalAcceptedWeight.toFixed(2)}`,
+			}}
+			alerts={
+				pageError ? (
+					<Alert severity="error" onClose={() => setPageError(null)}>
+						{pageError}
+					</Alert>
+				) : null
+			}
+			contentClassName="max-w-full"
+			footer={
+				<MRApprovalBar
+					approvalInfo={approvalInfo}
+					permissions={approvalPermissions}
+					loading={approvalLoading}
+					canSetPending={canSetPending}
+					partyHasNoBranches={partyHasNoBranches}
+					onApprove={handleApprove}
+					onReject={handleReject}
+					onPending={handlePending}
+					onCancel={handleCancel}
+					onViewApprovalLog={handleViewApprovalLog}
+				/>
+			}
+		>
+			<Box sx={{ maxHeight: "calc(100vh - 300px)", overflowY: "auto", pr: 1 }}>
+				<MRHeaderForm 
+					header={header} 
+					mode={canEdit ? mode : "view"} 
+					onHeaderChange={handleHeaderChange}
+					partyBranchOptions={partyBranchOptions}
+					partyBranchLoading={partyBranchLoading}
+					partyBranchesLoaded={partyBranchesLoaded}
+					totalAcceptedWeight={totalAcceptedWeight}
+				/>
+			</Box>
+			
+			{/* MR Approval Dialog - for entering MR date before final approval */}
+			<MRApprovalDialog
+				open={approvalDialogOpen}
+				loading={approvalLoading}
+				onClose={handleApprovalDialogClose}
+				onConfirm={handleApproveConfirm}
+				defaultDate={header?.jute_mr_date ? String(header.jute_mr_date).slice(0, 10) : undefined}
+			/>
+		</TransactionWrapper>
+	);
+}
+
+export default function JuteMREditPage() {
+	return (
+		<Suspense
+			fallback={
+				<Box display="flex" justifyContent="center" alignItems="center" minHeight="400px">
+					<CircularProgress />
+				</Box>
+			}
+		>
+			<JuteMREditPageContent />
+		</Suspense>
+	);
+}

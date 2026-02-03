@@ -9,6 +9,7 @@ export type SearchableSelectProps<TOption> = {
   value: TOption | null;
   onChange: (option: TOption | null) => void;
   getOptionLabel?: AutocompleteProps<TOption, false, false, false>["getOptionLabel"];
+  getOptionKey?: AutocompleteProps<TOption, false, false, false>["getOptionKey"];
   isOptionEqualToValue?: AutocompleteProps<TOption, false, false, false>["isOptionEqualToValue"];
   placeholder?: string;
   disabled?: boolean;
@@ -25,6 +26,7 @@ export function SearchableSelect<TOption>({
   value,
   onChange,
   getOptionLabel,
+  getOptionKey,
   isOptionEqualToValue,
   placeholder,
   disabled,
@@ -43,6 +45,7 @@ export function SearchableSelect<TOption>({
       value={value}
       onChange={(_, next) => onChange(next)}
       getOptionLabel={getOptionLabel}
+      getOptionKey={getOptionKey}
       isOptionEqualToValue={isOptionEqualToValue}
       disabled={disabled}
       loading={loading}
@@ -50,7 +53,6 @@ export function SearchableSelect<TOption>({
       clearOnEscape={clearOnEscape}
       className={className}
       fullWidth={fullWidth}
-      disablePortal
       openOnFocus
       renderInput={(params) => (
         <TextField

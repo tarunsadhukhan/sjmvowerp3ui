@@ -173,6 +173,127 @@ const apiRoutesPortalMasters = {
     COSTFACTOR_EDIT_SETUP: `${API_URL}/costFactorMaster/cost_factor_edit_setup`,
     COSTFACTOR_EDIT: `${API_URL}/costFactorMaster/cost_factor_edit`,
 
+    JUTE_QUALITY_TABLE: `${API_URL}/juteQualityMaster/get_jute_quality_table`,
+    JUTE_QUALITY_BY_ID: `${API_URL}/juteQualityMaster/get_jute_quality_by_id`,
+    JUTE_QUALITY_CREATE_SETUP: `${API_URL}/juteQualityMaster/jute_quality_create_setup`,
+    JUTE_QUALITY_EDIT_SETUP: `${API_URL}/juteQualityMaster/jute_quality_edit_setup`,
+    JUTE_QUALITY_CREATE: `${API_URL}/juteQualityMaster/jute_quality_create`,
+    JUTE_QUALITY_EDIT: `${API_URL}/juteQualityMaster/jute_quality_edit`,
+
+    // Jute Supplier Master endpoints (global - not company-specific)
+    JUTE_SUPPLIER_TABLE: `${API_URL}/juteSupplierMaster/get_jute_supplier_table`,
+    JUTE_SUPPLIER_BY_ID: `${API_URL}/juteSupplierMaster/get_jute_supplier_by_id`,
+    JUTE_SUPPLIER_EDIT_SETUP: `${API_URL}/juteSupplierMaster/jute_supplier_edit_setup`,
+    JUTE_SUPPLIER_CREATE: `${API_URL}/juteSupplierMaster/jute_supplier_create`,
+    JUTE_SUPPLIER_EDIT: `${API_URL}/juteSupplierMaster/jute_supplier_edit`,
+
+    // Jute Supplier Map endpoints (company-specific mappings)
+    JUTE_SUPPLIER_MAP_TABLE: `${API_URL}/juteSupplierMap/get_jute_supplier_map_table`,
+    JUTE_SUPPLIER_MAP_BY_ID: `${API_URL}/juteSupplierMap/get_jute_supplier_map_by_id`,
+    JUTE_SUPPLIER_MAP_CREATE_SETUP: `${API_URL}/juteSupplierMap/jute_supplier_map_create_setup`,
+    JUTE_SUPPLIER_MAP_AVAILABLE_PARTIES: `${API_URL}/juteSupplierMap/get_available_parties_for_supplier`,
+    JUTE_SUPPLIER_MAP_CREATE: `${API_URL}/juteSupplierMap/jute_supplier_map_create`,
+    JUTE_SUPPLIER_MAP_DELETE: `${API_URL}/juteSupplierMap/jute_supplier_map_delete`,
+
+    // Jute Agent Map endpoints (agent branch to party branch mappings)
+    JUTE_AGENT_MAP_TABLE: `${API_URL}/juteAgentMap/get_jute_agent_map_table`,
+    JUTE_AGENT_MAP_BY_ID: `${API_URL}/juteAgentMap/get_jute_agent_map_by_id`,
+    JUTE_AGENT_MAP_CREATE_SETUP: `${API_URL}/juteAgentMap/jute_agent_map_create_setup`,
+    JUTE_AGENT_MAP_PARTY_BRANCHES: `${API_URL}/juteAgentMap/get_party_branches_for_agent`,
+    JUTE_AGENT_MAP_CREATE: `${API_URL}/juteAgentMap/jute_agent_map_create`,
+    JUTE_AGENT_MAP_DELETE: `${API_URL}/juteAgentMap/jute_agent_map_delete`,
+
+    // Yarn Type Master endpoints
+    YARN_TYPE_TABLE: `${API_URL}/yarnTypeMaster/get_yarn_type_table`,
+    YARN_TYPE_BY_ID: `${API_URL}/yarnTypeMaster/get_yarn_type_by_id`,
+    YARN_TYPE_EDIT_SETUP: `${API_URL}/yarnTypeMaster/yarn_type_edit_setup`,
+    YARN_TYPE_CREATE: `${API_URL}/yarnTypeMaster/yarn_type_create`,
+    YARN_TYPE_EDIT: `${API_URL}/yarnTypeMaster/yarn_type_edit`,
+
+    // Yarn Master endpoints (jute_yarn_mst)
+    YARN_TABLE: `${API_URL}/yarnMaster/get_yarn_table`,
+    YARN_BY_ID: `${API_URL}/yarnMaster/get_yarn_by_id`,
+    YARN_CREATE_SETUP: `${API_URL}/yarnMaster/yarn_create_setup`,
+    YARN_EDIT_SETUP: `${API_URL}/yarnMaster/yarn_edit_setup`,
+    YARN_CREATE: `${API_URL}/yarnMaster/yarn_create`,
+    YARN_EDIT: `${API_URL}/yarnMaster/yarn_edit`,
+
+    // Batch Plan Master endpoints (jute_batch_plan)
+    BATCH_PLAN_TABLE: `${API_URL}/batchPlanMaster/get_batch_plan_table`,
+    BATCH_PLAN_BY_ID: `${API_URL}/batchPlanMaster/get_batch_plan_by_id`,
+    BATCH_PLAN_CREATE_SETUP: `${API_URL}/batchPlanMaster/batch_plan_create_setup`,
+    BATCH_PLAN_EDIT_SETUP: `${API_URL}/batchPlanMaster/batch_plan_edit_setup`,
+    BATCH_PLAN_CREATE: `${API_URL}/batchPlanMaster/batch_plan_create`,
+    BATCH_PLAN_EDIT: `${API_URL}/batchPlanMaster/batch_plan_edit`,
+    BATCH_PLAN_QUALITIES_FOR_ITEM: `${API_URL}/batchPlanMaster/get_qualities_for_item`,
+
+    // Jute PO endpoints
+    JUTE_PO_TABLE: `${API_URL}/jutePO/get_jute_po_table`,
+    JUTE_PO_BY_ID: `${API_URL}/jutePO/get_jute_po_by_id`,
+    JUTE_PO_LINE_ITEMS: `${API_URL}/jutePO/get_jute_po_line_items`,
+    JUTE_PO_CREATE_SETUP: `${API_URL}/jutePO/jute_po_create_setup`,
+    JUTE_PO_SUPPLIERS_BY_MUKAM: `${API_URL}/jutePO/get_suppliers_by_mukam`,
+    JUTE_PO_PARTIES_BY_SUPPLIER: `${API_URL}/jutePO/get_parties_by_supplier`,
+    JUTE_PO_QUALITIES_BY_ITEM: `${API_URL}/jutePO/get_qualities_by_item`,
+    JUTE_PO_CREATE: `${API_URL}/jutePO/jute_po_create`,
+    JUTE_PO_UPDATE: `${API_URL}/jutePO/jute_po_update`,
+    JUTE_PO_OPEN: `${API_URL}/jutePO/open_jute_po`,
+    JUTE_PO_APPROVE: `${API_URL}/jutePO/approve_jute_po`,
+    JUTE_PO_REJECT: `${API_URL}/jutePO/reject_jute_po`,
+    JUTE_PO_CANCEL_DRAFT: `${API_URL}/jutePO/cancel_draft_jute_po`,
+    JUTE_PO_REOPEN: `${API_URL}/jutePO/reopen_jute_po`,
+
+    // Jute Gate Entry endpoints
+    JUTE_GATE_ENTRY_TABLE: `${API_URL}/juteGateEntry/get_jute_gate_entry_table`,
+    JUTE_GATE_ENTRY_BY_ID: `${API_URL}/juteGateEntry/get_jute_gate_entry_by_id`,
+    JUTE_GATE_ENTRY_CREATE_SETUP: `${API_URL}/juteGateEntry/jute_gate_entry_create_setup`,
+    JUTE_GATE_ENTRY_CREATE: `${API_URL}/juteGateEntry/jute_gate_entry_create`,
+    JUTE_GATE_ENTRY_UPDATE: `${API_URL}/juteGateEntry/jute_gate_entry_update`,
+    JUTE_GATE_ENTRY_PARTIES_BY_SUPPLIER: `${API_URL}/juteGateEntry/get_parties_by_supplier`,
+    JUTE_GATE_ENTRY_QUALITIES_BY_ITEM: `${API_URL}/juteGateEntry/get_qualities_by_item`,
+    JUTE_GATE_ENTRY_PO_DETAILS: `${API_URL}/juteGateEntry/get_po_details`,
+
+    // Jute Material Inspection endpoints
+    JUTE_MATERIAL_INSPECTION_TABLE: `${API_URL}/juteMaterialInspection/get_inspection_table`,
+    JUTE_MATERIAL_INSPECTION_BY_ID: `${API_URL}/juteMaterialInspection/get_inspection_by_id`,
+    JUTE_MATERIAL_INSPECTION_SETUP: `${API_URL}/juteMaterialInspection/get_inspection_setup`,
+    JUTE_MATERIAL_INSPECTION_QUALITIES: `${API_URL}/juteMaterialInspection/get_qualities_by_item`,
+    JUTE_MATERIAL_INSPECTION_COMPLETE: `${API_URL}/juteMaterialInspection/complete_inspection`,
+    JUTE_MATERIAL_INSPECTION_MR_LINE: `${API_URL}/juteMaterialInspection/get_mr_line_item`,
+    JUTE_MATERIAL_INSPECTION_SAVE_MOISTURE: `${API_URL}/juteMaterialInspection/save_moisture_readings`,
+
+    // Jute MR endpoints
+    JUTE_MR_TABLE: `${API_URL}/juteMR/get_mr_table`,
+    JUTE_MR_BY_ID: `${API_URL}/juteMR/get_mr_by_id`,
+    JUTE_MR_UPDATE: `${API_URL}/juteMR/update_mr`,
+    JUTE_MR_AGENT_OPTIONS: `${API_URL}/juteMR/get_agent_options`,
+    JUTE_MR_WAREHOUSE_OPTIONS: `${API_URL}/juteMR/get_warehouse_options`,
+    JUTE_MR_PARTY_BRANCHES: `${API_URL}/juteMR/get_party_branches`,
+    JUTE_MR_PENDING: `${API_URL}/juteMR/pending_mr`,
+    JUTE_MR_APPROVE: `${API_URL}/juteMR/approve_mr`,
+    JUTE_MR_REJECT: `${API_URL}/juteMR/reject_mr`,
+    JUTE_MR_CANCEL: `${API_URL}/juteMR/cancel_mr`,
+    JUTE_MATERIAL_INSPECTION_UPDATE_LINE: `${API_URL}/juteMaterialInspection/update_line_item`,
+
+    // Jute Bill Pass endpoints
+    JUTE_BILL_PASS_TABLE: `${API_URL}/juteBillPass/get_bill_pass_list`,
+    JUTE_BILL_PASS_BY_ID: `${API_URL}/juteBillPass/get_bill_pass_by_id`,
+    JUTE_BILL_PASS_LINE_ITEMS: `${API_URL}/juteBillPass/get_bill_pass_line_items`,
+    JUTE_BILL_PASS_UPDATE: `${API_URL}/juteBillPass/update_bill_pass`,
+
+    // Jute Issue endpoints
+    JUTE_ISSUE_TABLE: `${API_URL}/juteIssue/get_issue_table`,
+    JUTE_ISSUE_BY_ID: `${API_URL}/juteIssue/get_issue_by_id`,
+    JUTE_ISSUE_CREATE_SETUP: `${API_URL}/juteIssue/get_issue_create_setup`,
+    JUTE_ISSUE_STOCK_OUTSTANDING: `${API_URL}/juteIssue/get_stock_outstanding`,
+    JUTE_ISSUES_BY_DATE: `${API_URL}/juteIssue/get_issues_by_date`,
+    JUTE_ISSUE_CREATE: `${API_URL}/juteIssue/create_issue`,
+    JUTE_ISSUE_UPDATE: `${API_URL}/juteIssue/update_issue`,
+    JUTE_ISSUE_DELETE: `${API_URL}/juteIssue/delete_issue`,
+    JUTE_ISSUE_OPEN: `${API_URL}/juteIssue/open_issues`,
+    JUTE_ISSUE_APPROVE: `${API_URL}/juteIssue/approve_issues`,
+    JUTE_ISSUE_REJECT: `${API_URL}/juteIssue/reject_issues`,
+
     GET_INDENT_SETUP_1: `${API_URL}/procurementIndent/get_indent_setup_1`,
     GET_INDENT_SETUP_2: `${API_URL}/procurementIndent/get_indent_setup_2`,
     INDENT_CREATE: `${API_URL}/procurementIndent/create_indent`,
@@ -222,6 +343,7 @@ const apiRoutesPortalMasters = {
     // Stores Receipt (SR) endpoints
     SR_PENDING_LIST: `${API_URL}/storesReceipt/get_sr_pending_list`,
     SR_GET_BY_INWARD_ID: `${API_URL}/storesReceipt/get_sr_by_inward_id`,
+    SR_SETUP: `${API_URL}/storesReceipt/get_sr_setup`,
     SR_SAVE: `${API_URL}/storesReceipt/save_sr`,
     SR_OPEN: `${API_URL}/storesReceipt/open_sr`,
     SR_APPROVE: `${API_URL}/storesReceipt/approve_sr`,
@@ -248,6 +370,7 @@ const apiRoutesPortalMasters = {
     ISSUE_UPDATE: `${API_URL}/inventoryIssue/update_issue`,
     ISSUE_UPDATE_STATUS: `${API_URL}/inventoryIssue/update_issue_status`,
     ISSUE_AVAILABLE_INVENTORY: `${API_URL}/inventoryIssue/get_available_inventory`,
+    ISSUE_INVENTORY_LIST: `${API_URL}/inventoryIssue/get_inventory_list`,
     ISSUE_COST_FACTORS: `${API_URL}/inventoryIssue/get_cost_factors`,
     ISSUE_MACHINES: `${API_URL}/inventoryIssue/get_machines`,
 

@@ -314,8 +314,8 @@ function IndentTransactionPageContent() {
 	// Expense type validation on indent type change
 	React.useEffect(() => {
 		if (mode === "view") return;
-		const indentType = String(formValues.indent_type ?? "").toLowerCase();
-		if (indentType !== "open") return;
+		const indentType = String(formValues.indent_type ?? "");
+		if (indentType !== "Open") return;
 		const allowed = new Set(["3", "5", "6"]);
 		const current = String(formValues.expense_type ?? "");
 		if (current && !allowed.has(current)) {
@@ -323,12 +323,25 @@ function IndentTransactionPageContent() {
 		}
 	}, [formValues.indent_type, formValues.expense_type, mode, setFormValues]);
 
+	// Check if header fields are complete for line item entry
+	const headerFieldsComplete = React.useMemo(() => {
+		const indentType = String(formValues.indent_type ?? "").trim();
+		const expenseType = String(formValues.expense_type ?? "").trim();
+		return Boolean(indentType && expenseType);
+	}, [formValues.indent_type, formValues.expense_type]);
+
+	// Check if any line item has data entered (to lock indent_type and expense_type)
+	const hasLineItemData = React.useMemo(() => {
+		return filledLineItems.length > 0;
+	}, [filledLineItems]);
+
 	// Form schema
 	const schema = useIndentFormSchema({
 		mode,
 		branchOptions,
 		expenseOptions,
 		projectOptions,
+		hasLineItemData,
 	});
 
 	// Approval hook
@@ -356,8 +369,8 @@ function IndentTransactionPageContent() {
 		setFormValues,
 	});
 
-	// Line item columns
-	const canEdit = mode !== "view";
+	// Line item columns - only allow editing if header fields are complete
+	const canEdit = mode !== "view" && headerFieldsComplete;
 	const lineItemColumns = useIndentLineItemColumns({
 		canEdit,
 		departmentOptions,
@@ -384,9 +397,9 @@ function IndentTransactionPageContent() {
 				return;
 			}
 
-			const indentType = String(values.indent_type ?? "").toLowerCase();
+			const indentType = String(values.indent_type ?? "");
 			const expenseType = String(values.expense_type ?? "");
-			if (indentType === "open" && expenseType && !["3", "5", "6"].includes(expenseType)) {
+			if (indentType === "Open" && expenseType && !["3", "5", "6"].includes(expenseType)) {
 				toast({
 					variant: "destructive",
 					title: "Select allowed expense type",
@@ -493,9 +506,9 @@ function IndentTransactionPageContent() {
 	const indentTypeLabel = React.useMemo(() => {
 		const value = String(formValues.indent_type ?? "");
 		const options = [
-			{ label: "Regular Indent", value: "regular" },
-			{ label: "Open Indent", value: "open" },
-			{ label: "BOM", value: "bom" },
+			{ label: "Regular", value: "Regular" },
+			{ label: "Open", value: "Open" },
+			{ label: "BOM", value: "BOM" },
 		];
 		return options.find((opt) => opt.value === value)?.label || indentDetails?.indentType || "";
 	}, [formValues.indent_type, indentDetails?.indentType]);
@@ -693,13 +706,19 @@ function IndentTransactionPageContent() {
 			}
 			lineItems={{
 				title: "Line Items",
-				subtitle: "List the materials or services you intend to procure.",
+				subtitle: mode !== "view" && !headerFieldsComplete
+					? "Please select Indent Type and Expense Type above before adding line items."
+					: "List the materials or services you intend to procure.",
 				items: lineItems,
 				getItemId: getLineItemId,
 				canEdit,
 				columns: lineItemColumns,
 				onRemoveSelected: handleBulkRemoveLines,
-				placeholder: canEdit ? "Add items to build the indent." : "No line items available.",
+				placeholder: mode !== "view" && !headerFieldsComplete
+					? "Select Indent Type and Expense Type to enable line item entry."
+					: canEdit
+						? "Add items to build the indent."
+						: "No line items available.",
 				selectionColumnWidth: "28px",
 			}}
 		>

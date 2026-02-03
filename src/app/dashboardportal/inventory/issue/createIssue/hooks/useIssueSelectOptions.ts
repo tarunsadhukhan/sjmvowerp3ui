@@ -4,10 +4,8 @@ import type {
 	DepartmentRecord,
 	ProjectRecord,
 	ExpenseRecord,
-	ItemGroupRecord,
 	CostFactorRecord,
 	MachineRecord,
-	ItemGroupCacheEntry,
 	IssueLabelResolvers,
 } from "../types/issueTypes";
 import {
@@ -19,27 +17,24 @@ type UseIssueSelectOptionsParams = {
 	departments: readonly DepartmentRecord[];
 	projects: readonly ProjectRecord[];
 	expenses: readonly ExpenseRecord[];
-	itemGroups: readonly ItemGroupRecord[];
 	costFactors: readonly CostFactorRecord[];
 	machines: readonly MachineRecord[];
 	branchIdForSetup?: string;
 	departmentIdForMachines?: string;
-	itemGroupCache: Partial<Record<string, ItemGroupCacheEntry>>;
 };
 
 /**
  * Hook to memoize all select options and label resolvers for the Issue transaction page.
+ * Items now come from InventorySearchTable, so item group/item/uom options are not needed.
  */
 export const useIssueSelectOptions = ({
 	departments,
 	projects,
 	expenses,
-	itemGroups,
 	costFactors,
 	machines,
 	branchIdForSetup,
 	departmentIdForMachines,
-	itemGroupCache,
 }: UseIssueSelectOptionsParams) => {
 	// --- DEPARTMENT OPTIONS (filtered by branch) ---
 	const departmentOptions = React.useMemo<Option[]>(
@@ -73,12 +68,6 @@ export const useIssueSelectOptions = ({
 	const expenseOptions = React.useMemo<Option[]>(
 		() => expenses.map((exp) => ({ label: exp.name, value: exp.id })),
 		[expenses]
-	);
-
-	// --- ITEM GROUP OPTIONS ---
-	const itemGroupOptions = React.useMemo<Option[]>(
-		() => itemGroups.map((grp) => ({ label: grp.label, value: grp.id })),
-		[itemGroups]
 	);
 
 	// --- COST FACTOR OPTIONS (filtered by branch) ---
@@ -140,16 +129,6 @@ export const useIssueSelectOptions = ({
 		[expenses]
 	);
 
-	const itemGroupLabelMap = React.useMemo(
-		() =>
-			buildLabelMap(
-				[...itemGroups],
-				(g) => g.id,
-				(g) => g.label
-			),
-		[itemGroups]
-	);
-
 	const costFactorLabelMap = React.useMemo(
 		() =>
 			buildLabelMap(
@@ -186,11 +165,6 @@ export const useIssueSelectOptions = ({
 		[expenseLabelMap]
 	);
 
-	const getItemGroupLabel = React.useMemo(
-		() => createLabelResolver(itemGroupLabelMap),
-		[itemGroupLabelMap]
-	);
-
 	const getCostFactorLabel = React.useMemo(
 		() => createLabelResolver(costFactorLabelMap),
 		[costFactorLabelMap]
@@ -201,54 +175,13 @@ export const useIssueSelectOptions = ({
 		[machineLabelMap]
 	);
 
-	// --- ITEM/UOM GETTERS FROM CACHE ---
-	const getItemOptions = React.useCallback(
-		(groupId: string): Option[] => {
-			const cache = itemGroupCache[groupId];
-			if (!cache) return [];
-			return cache.items.map((item) => ({ label: item.label, value: item.value }));
-		},
-		[itemGroupCache]
-	);
-
-	const getUomOptions = React.useCallback(
-		(groupId: string, itemId: string): Option[] => {
-			const cache = itemGroupCache[groupId];
-			if (!cache) return [];
-			return cache.uomsByItemId[itemId] ?? [];
-		},
-		[itemGroupCache]
-	);
-
-	const getItemLabel = React.useCallback(
-		(groupId: string, itemId: string): string => {
-			const cache = itemGroupCache[groupId];
-			if (!cache) return itemId;
-			return cache.itemLabelById[itemId] ?? itemId;
-		},
-		[itemGroupCache]
-	);
-
-	const getUomLabel = React.useCallback(
-		(groupId: string, itemId: string, uomId: string): string => {
-			const cache = itemGroupCache[groupId];
-			if (!cache) return uomId;
-			const uomLabels = cache.uomLabelByItemId[itemId];
-			if (!uomLabels) return uomId;
-			return uomLabels[uomId] ?? uomId;
-		},
-		[itemGroupCache]
-	);
-
 	// --- COMBINED LABEL RESOLVERS ---
+	// Simplified since items now come from InventorySearchTable with names pre-populated
 	const labelResolvers: IssueLabelResolvers = React.useMemo(
 		() => ({
 			department: getDepartmentLabel,
 			project: getProjectLabel,
 			expense: getExpenseLabel,
-			itemGroup: getItemGroupLabel,
-			item: getItemLabel,
-			uom: getUomLabel,
 			costFactor: getCostFactorLabel,
 			machine: getMachineLabel,
 		}),
@@ -256,9 +189,6 @@ export const useIssueSelectOptions = ({
 			getDepartmentLabel,
 			getProjectLabel,
 			getExpenseLabel,
-			getItemGroupLabel,
-			getItemLabel,
-			getUomLabel,
 			getCostFactorLabel,
 			getMachineLabel,
 		]
@@ -269,20 +199,14 @@ export const useIssueSelectOptions = ({
 		departmentOptions,
 		projectOptions,
 		expenseOptions,
-		itemGroupOptions,
 		costFactorOptions,
 		machineOptions,
 		// Individual resolvers
 		getDepartmentLabel,
 		getProjectLabel,
 		getExpenseLabel,
-		getItemGroupLabel,
 		getCostFactorLabel,
 		getMachineLabel,
-		getItemOptions,
-		getUomOptions,
-		getItemLabel,
-		getUomLabel,
 		// Combined resolvers
 		labelResolvers,
 	};

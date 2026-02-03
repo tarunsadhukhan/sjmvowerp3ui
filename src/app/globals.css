@@ -220,3 +220,34 @@
 .btn-primary:hover {
   background-color: hsl(var(--brand-primary-hover)) !important;
 }
+
+/* Transaction Grid Styles - shared across line items and additional charges */
+@layer components {
+  .transaction-grid-container {
+    @apply border border-slate-300 bg-white;
+  }
+
+  .transaction-grid-header {
+    @apply grid gap-x-1 bg-slate-100 px-1.5 py-0.5 text-[11px] font-semibold uppercase tracking-wide text-slate-700 border-b border-slate-300;
+  }
+
+  .transaction-grid-row {
+    @apply grid gap-x-1 items-center border-b border-slate-200 px-1.5 py-0.5 text-xs hover:bg-slate-100 transition-colors;
+  }
+
+  .transaction-grid-row-even {
+    @apply bg-white;
+  }
+
+  .transaction-grid-row-odd {
+    @apply bg-slate-50;
+  }
+
+  .transaction-grid-cell {
+    @apply flex flex-col gap-0.5 justify-center;
+  }
+
+  .transaction-grid-empty {
+    @apply px-1.5 py-2 text-center text-xs text-slate-500;
+  }
+}

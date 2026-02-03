@@ -13,6 +13,66 @@ export type Option = {
 };
 
 /**
+ * Warehouse option with branch association.
+ */
+export type WarehouseOption = {
+	label: string;
+	value: string;
+	branchId?: number;
+};
+
+/**
+ * Additional charge option from master table.
+ */
+export type AdditionalChargeOption = {
+	additional_charges_id: number;
+	additional_charges_name: string;
+	default_value: number | null; // Default tax percentage
+};
+
+/**
+ * Additional charge line item for SR.
+ */
+export type SRAdditionalCharge = {
+	id: string; // Frontend-generated ID for tracking
+	inward_additional_id: number | null; // null for new charges
+	additional_charges_id: number;
+	additional_charges_name: string;
+	qty: number;
+	rate: number;
+	net_amount: number;
+	remarks: string;
+	// Tax fields (optional)
+	apply_tax: boolean;
+	tax_pct: number;
+	igst_amount: number;
+	sgst_amount: number;
+	cgst_amount: number;
+	tax_amount: number;
+};
+
+/**
+ * Raw additional charge from API.
+ */
+export type SRAdditionalChargeRaw = {
+	inward_additional_id?: number;
+	inward_id?: number;
+	additional_charges_id?: number;
+	additional_charges_name?: string;
+	default_tax_pct?: number;
+	qty?: number;
+	rate?: number;
+	net_amount?: number;
+	remarks?: string;
+	apply_tax?: boolean;
+	tax_pct?: number;
+	igst_amount?: number;
+	sgst_amount?: number;
+	cgst_amount?: number;
+	tax_amount?: number;
+};
+
+/**
  * Normalized representation of an SR line item used in the UI.
  */
 export type SRLineItem = {
@@ -42,6 +102,8 @@ export type SRLineItem = {
 	tax_amount: number;
 	total_amount: number;
 	remarks: string;
+	warehouse_id: number | null;
+	warehouse_name: string;
 };
 
 /**
@@ -129,6 +191,8 @@ export type SRLineItemRaw = {
 	discount_amount?: number | null;
 	tax_percentage?: number;
 	remarks?: string;
+	warehouse_id?: number | null;
+	warehouse_name?: string;
 };
 
 /**

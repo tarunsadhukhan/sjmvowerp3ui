@@ -344,7 +344,7 @@ export function ApprovalActionsBar({
 
       {/* Reject Dialog */}
       <Dialog open={rejectDialogOpen} onOpenChange={setRejectDialogOpen}>
-        <DialogContent className="sm:max-w-[500px]">
+        <DialogContent className="sm:max-w-125">
           <DialogHeader>
             <DialogTitle>Reject Document</DialogTitle>
             <DialogDescription>Please provide a reason for rejecting this document.</DialogDescription>
@@ -359,7 +359,7 @@ export function ApprovalActionsBar({
                 placeholder="Enter rejection reason..."
                 value={rejectReason}
                 onChange={(e) => setRejectReason(e.target.value)}
-                className="min-h-[80px] w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+                className="min-h-20 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
                 minHeight={80}
                 maxHeight={200}
               />

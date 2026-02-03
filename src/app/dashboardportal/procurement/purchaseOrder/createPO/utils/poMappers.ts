@@ -157,6 +157,19 @@ export const mapPOSetupResponse = (response: unknown): POSetupData => {
 		const suppliersRaw = result?.suppliers ?? [];
 		const mappedSuppliers = mapSupplierRecords(suppliersRaw);
 
+		// Map additional charges options
+		const additionalChargesRaw = (result as Record<string, unknown>)?.additional_charges_options;
+		const additionalChargeOptions = Array.isArray(additionalChargesRaw)
+			? additionalChargesRaw.map((opt) => {
+					const data = opt as Record<string, unknown>;
+					return {
+						additional_charges_id: Number(data?.additional_charges_id ?? 0),
+						additional_charges_name: String(data?.additional_charges_name ?? ""),
+						default_value: data?.default_value != null ? Number(data.default_value) : null,
+					};
+				})
+			: [];
+
 		const mapped = {
 			suppliers: mappedSuppliers,
 			projects: mapProjectRecords(result?.projects ?? []),
@@ -164,6 +177,7 @@ export const mapPOSetupResponse = (response: unknown): POSetupData => {
 			itemGroups: mapItemGroupRecords(result?.item_groups ?? []),
 			coConfig: result?.co_config as POSetupData["coConfig"],
 			branchAddresses: mapBranchAddressRecords(result?.branch_addresses ?? []),
+			additionalChargeOptions,
 		} satisfies POSetupData;
 
 		return mapped;

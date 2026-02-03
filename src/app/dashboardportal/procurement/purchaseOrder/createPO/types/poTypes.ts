@@ -13,6 +13,64 @@ export type Option = {
 };
 
 /**
+ * Additional charge option from master table.
+ */
+export type AdditionalChargeOption = {
+	additional_charges_id: number;
+	additional_charges_name: string;
+	default_value: number | null; // Default tax percentage
+};
+
+/**
+ * Additional charge line item for PO.
+ */
+export type POAdditionalCharge = {
+	id: string; // Frontend-generated ID for tracking
+	po_additional_id: number | null; // null for new charges
+	additional_charges_id: number;
+	additional_charges_name: string;
+	qty: number;
+	rate: number;
+	net_amount: number;
+	remarks: string;
+	// Tax fields
+	apply_tax: boolean;
+	tax_pct: number;
+	igst_amount: number;
+	sgst_amount: number;
+	cgst_amount: number;
+	tax_amount: number;
+};
+
+/**
+ * Raw additional charge from API.
+ */
+export type POAdditionalChargeRaw = {
+	id?: string;
+	po_additional_id?: number;
+	po_id?: number;
+	additionalChargesId?: string;
+	additional_charges_id?: number;
+	additionalChargesName?: string;
+	additional_charges_name?: string;
+	default_tax_pct?: number;
+	qty?: number;
+	rate?: number;
+	netAmount?: number;
+	net_amount?: number;
+	remarks?: string;
+	apply_tax?: boolean;
+	tax_pct?: number;
+	igst?: number;
+	igst_amount?: number;
+	sgst?: number;
+	sgst_amount?: number;
+	cgst?: number;
+	cgst_amount?: number;
+	tax_amount?: number;
+};
+
+/**
  * Normalized representation of a PO line item used in the UI.
  */
 export type EditableLineItem = {
@@ -136,6 +194,19 @@ export type POSetupData = {
 		back_date_allowable?: number;
 	};
 	branchAddresses: BranchAddressRecord[];
+	additionalChargeOptions: AdditionalChargeOption[];
+};
+
+/**
+ * Aggregated totals for additional charges.
+ */
+export type AdditionalChargesTotals = {
+	baseAmount: number;  // Sum of net_amount (before tax)
+	totalIGST: number;
+	totalCGST: number;
+	totalSGST: number;
+	totalTax: number;
+	totalAmount: number; // baseAmount + totalTax
 };
 
 /**

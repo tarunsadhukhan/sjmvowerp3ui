@@ -36,12 +36,23 @@ export const INDENT_STATUS_LABELS: Record<ApprovalStatusId, string> = {
 
 /**
  * Indent type options for the header dropdown.
+ * 
+ * IMPORTANT: This must stay in sync with the backend:
+ *   vowerp3be/src/procurement/constants.py
+ * 
+ * Labels match values for 100% frontend-backend consistency.
  */
-export const INDENT_TYPE_OPTIONS: ReadonlyArray<Option> = Object.freeze([
-	{ label: "Regular Indent", value: "regular" },
-	{ label: "Open Indent", value: "open" },
-	{ label: "BOM", value: "bom" },
-]);
+export const INDENT_TYPES = {
+	Regular: { id: 1, label: "Regular", value: "Regular" },
+	Open: { id: 2, label: "Open", value: "Open" },
+	BOM: { id: 3, label: "BOM", value: "BOM" },
+} as const;
+
+export const INDENT_TYPE_OPTIONS: ReadonlyArray<Option> = Object.freeze(
+	Object.values(INDENT_TYPES).map(({ label, value }) => ({ label, value }))
+);
+
+export const VALID_INDENT_TYPE_VALUES = Object.keys(INDENT_TYPES) as Array<keyof typeof INDENT_TYPES>;
 
 /**
  * Immutable fallbacks to avoid recreating empty arrays on every render.

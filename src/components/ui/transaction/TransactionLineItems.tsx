@@ -58,6 +58,14 @@ export function TransactionLineItems<TItem>({
     return parts.join(" ");
   }, [columns, allowSelection, selectionColumnWidth]);
 
+  // Calculate minimum width for horizontal scrolling
+  // Estimate: each column needs at least 100px, plus selection column if present
+  const estimatedMinWidth = React.useMemo(() => {
+    const baseWidth = columns.length * 100;
+    const selectionWidth = allowSelection ? 48 : 0;
+    return Math.max(800, baseWidth + selectionWidth); // Minimum 800px, or calculated width
+  }, [columns.length, allowSelection]);
+
   const handleRemoveSelected = React.useCallback(() => {
     if (!onRemoveSelected || !selection.hasSelection) return;
     onRemoveSelected(selection.selectedIds);
@@ -88,10 +96,13 @@ export function TransactionLineItems<TItem>({
         ) : null}
       </div>
 
-      <div className="overflow-x-auto">
-        <div className="min-w-280 overflow-hidden border border-slate-300 bg-white">
+      <div className="overflow-x-auto" style={{ width: "100%" }}>
+        <div 
+          className="transaction-grid-container"
+          style={{ minWidth: `${estimatedMinWidth}px` }}
+        >
           <div
-            className={`grid gap-x-1 bg-slate-100 px-2 py-1 text-[11px] font-semibold uppercase tracking-wide text-slate-700 border-b border-slate-300`}
+            className="transaction-grid-header"
             style={{ gridTemplateColumns }}
           >
                   {allowSelection ? (
@@ -121,12 +132,12 @@ export function TransactionLineItems<TItem>({
           {items.length ? (
             items.map((item, index) => {
               const itemId = getItemId(item);
-              const backgroundClass = index % 2 === 0 ? "bg-white" : "bg-slate-50";
+              const rowClass = index % 2 === 0 ? "transaction-grid-row-even" : "transaction-grid-row-odd";
 
               return (
                 <div
                   key={itemId}
-                  className={`grid gap-x-1 items-center border-b border-slate-200 px-2 py-1 text-xs ${backgroundClass} hover:bg-slate-100 transition-colors`}
+                  className={`transaction-grid-row ${rowClass}`}
                   style={{ gridTemplateColumns }}
                 >
                   {allowSelection ? (
@@ -164,7 +175,7 @@ export function TransactionLineItems<TItem>({
                     );
 
                     return (
-                      <div key={column.id} className={column.className ?? "flex flex-col gap-1"}>
+                      <div key={column.id} className={column.className ?? "transaction-grid-cell"}>
                         {wrapped}
                       </div>
                     );
@@ -173,7 +184,7 @@ export function TransactionLineItems<TItem>({
               );
             })
           ) : (
-            <div className="px-2 py-3 text-center text-xs text-slate-500">{effectivePlaceholder}</div>
+            <div className="transaction-grid-empty">{effectivePlaceholder}</div>
           )}
         </div>
       </div>

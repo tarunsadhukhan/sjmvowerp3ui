@@ -284,6 +284,15 @@ const apiRoutesPortalMasters = {
     // Jute Issue endpoints
     JUTE_ISSUE_TABLE: `${API_URL}/juteIssue/get_issue_table`,
     JUTE_ISSUE_BY_ID: `${API_URL}/juteIssue/get_issue_by_id`,
+    JUTE_ISSUE_CREATE_SETUP: `${API_URL}/juteIssue/get_issue_create_setup`,
+    JUTE_ISSUE_STOCK_OUTSTANDING: `${API_URL}/juteIssue/get_stock_outstanding`,
+    JUTE_ISSUES_BY_DATE: `${API_URL}/juteIssue/get_issues_by_date`,
+    JUTE_ISSUE_CREATE: `${API_URL}/juteIssue/create_issue`,
+    JUTE_ISSUE_UPDATE: `${API_URL}/juteIssue/update_issue`,
+    JUTE_ISSUE_DELETE: `${API_URL}/juteIssue/delete_issue`,
+    JUTE_ISSUE_OPEN: `${API_URL}/juteIssue/open_issues`,
+    JUTE_ISSUE_APPROVE: `${API_URL}/juteIssue/approve_issues`,
+    JUTE_ISSUE_REJECT: `${API_URL}/juteIssue/reject_issues`,
 
     GET_INDENT_SETUP_1: `${API_URL}/procurementIndent/get_indent_setup_1`,
     GET_INDENT_SETUP_2: `${API_URL}/procurementIndent/get_indent_setup_2`,

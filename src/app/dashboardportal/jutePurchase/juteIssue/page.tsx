@@ -11,14 +11,16 @@ import useSelectedCompanyCoId from "@/hooks/use-selected-company-coid";
 
 /**
  * @component JuteIssueIndexPage
- * @description Index page displaying aggregated Jute Issue records by date.
- * Shows total weight per day and aggregated status (Approved/Partial Approved/Draft).
+ * @description Index page displaying aggregated Jute Issue records by date and branch.
+ * Shows total weight per day/branch and aggregated status (Approved/Partial Approved/Draft).
  */
 
 type JuteIssueSummaryRow = {
 	id: string;
 	issue_date: string;
 	issue_date_raw?: string;
+	branch_id: number;
+	branch_name: string;
 	total_weight: number;
 	total_entries: number;
 	status: string;
@@ -76,6 +78,17 @@ export default function JuteIssueIndexPage() {
 				renderCell: (params: GridRenderCellParams<JuteIssueSummaryRow, string>) => (
 					<Typography component="span" variant="body2" color="primary" sx={{ fontWeight: 600 }}>
 						{params.value || formatDate(params.row.issue_date_raw) || "-"}
+					</Typography>
+				),
+			},
+			{
+				field: "branch_name",
+				headerName: "Branch",
+				flex: 1,
+				minWidth: 180,
+				renderCell: (params: GridRenderCellParams<JuteIssueSummaryRow, string>) => (
+					<Typography component="span" variant="body2">
+						{params.value || "-"}
 					</Typography>
 				),
 			},
@@ -141,11 +154,14 @@ export default function JuteIssueIndexPage() {
 			const mappedRows: JuteIssueSummaryRow[] = rawRows.map((r: Record<string, unknown>) => {
 				const rawDate = (r.issue_date ?? "") as string;
 				const normalizedRaw = typeof rawDate === "string" ? rawDate : rawDate ? String(rawDate) : "";
+				const branchId = (r.branch_id ?? 0) as number;
 
 				return {
-					id: normalizedRaw || `jute-issue-${Math.random().toString(36).slice(2, 8)}`,
+					id: `${normalizedRaw}-${branchId}` || `jute-issue-${Math.random().toString(36).slice(2, 8)}`,
 					issue_date_raw: normalizedRaw,
 					issue_date: formatDate(normalizedRaw),
+					branch_id: branchId,
+					branch_name: (r.branch_name ?? "") as string,
 					total_weight: (r.total_weight ?? 0) as number,
 					total_entries: (r.total_entries ?? 0) as number,
 					status: (r.status ?? "Draft") as string,
@@ -184,8 +200,9 @@ export default function JuteIssueIndexPage() {
 	const handleView = React.useCallback(
 		(row: JuteIssueSummaryRow) => {
 			const dateParam = row.issue_date_raw;
-			if (!dateParam) return;
-			router.push(`/dashboardportal/jutePurchase/juteIssue/edit?mode=view&date=${encodeURIComponent(dateParam)}`);
+			const branchId = row.branch_id;
+			if (!dateParam || !branchId) return;
+			router.push(`/dashboardportal/jutePurchase/juteIssue/edit?mode=view&date=${encodeURIComponent(dateParam)}&branch_id=${branchId}`);
 		},
 		[router]
 	);
@@ -193,8 +210,9 @@ export default function JuteIssueIndexPage() {
 	const handleEdit = React.useCallback(
 		(row: JuteIssueSummaryRow) => {
 			const dateParam = row.issue_date_raw;
-			if (!dateParam) return;
-			router.push(`/dashboardportal/jutePurchase/juteIssue/edit?mode=edit&date=${encodeURIComponent(dateParam)}`);
+			const branchId = row.branch_id;
+			if (!dateParam || !branchId) return;
+			router.push(`/dashboardportal/jutePurchase/juteIssue/edit?mode=edit&date=${encodeURIComponent(dateParam)}&branch_id=${branchId}`);
 		},
 		[router]
 	);

@@ -1,3 +1,238 @@
+name: Deploy UI (ECS EC2)
+
+on:
+  # push:
+  #   branches: [dev]
+  pull_request:
+    branches: [dev]
+  workflow_dispatch:
+
+env:
+  AWS_REGION: ap-south-1
+  ECS_CLUSTER: default
+  ECR_REPOSITORY: my-next-app-dev
+  ECS_SERVICE: vowerp3ui-dev-service
+  ECS_TASK_DEFINITION: .aws/task-definition-ui.json
+  CONTAINER_NAME: vowerp3ui-dev
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: Login to Amazon ECR
+        id: login-ecr
+        uses: aws-actions/amazon-ecr-login@v2
+
+      - name: Build, tag, and push image
+        id: build-image
+        env:
+          ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
+          IMAGE_TAG: ${{ github.sha }}
+        run: |
+          docker build \
+            --build-arg NEXT_PUBLIC_BACKENDHOST=${{ secrets.NEXT_PUBLIC_BACKENDHOST }} \
+            --build-arg NEXT_PUBLIC_API_BASE_URL=${{ secrets.NEXT_PUBLIC_API_BASE_URL }} \
+            --build-arg USE_NEXT_PROXY=${{ secrets.USE_NEXT_PROXY }} \
+            -t $ECR_REGISTRY/${{ env.ECR_REPOSITORY }}:$IMAGE_TAG .
+
+          docker push $ECR_REGISTRY/${{ env.ECR_REPOSITORY }}:$IMAGE_TAG
+          echo "image=$ECR_REGISTRY/${{ env.ECR_REPOSITORY }}:$IMAGE_TAG" >> $GITHUB_OUTPUT
+
+      - name: Enforce rolling config (stop then start on same hostPort)
+        run: |
+          aws ecs update-service \
+            --cluster ${{ env.ECS_CLUSTER }} \
+            --service ${{ env.ECS_SERVICE }} \
+            --deployment-configuration minimumHealthyPercent=0,maximumPercent=101
+
+      - name: Render task definition (inject image)
+        id: task-def
+        uses: aws-actions/amazon-ecs-render-task-definition@v1
+        with:
+          task-definition: ${{ env.ECS_TASK_DEFINITION }}
+          container-name: ${{ env.CONTAINER_NAME }}
+          image: ${{ steps.build-image.outputs.image }}
+
+      - name: Deploy task definition
+        uses: aws-actions/amazon-ecs-deploy-task-definition@v2
+        with:
+          cluster: ${{ env.ECS_CLUSTER }}
+          service: ${{ env.ECS_SERVICE }}
+          task-definition: ${{ steps.task-def.outputs.task-definition }}
+          wait-for-service-stability: true
+
+
+
+# # name: Deploy
+
+# # on:
+# #   pull_request:
+# #     branches:
+# #       - dev
+# #       - main
+  
+# # env:
+# #   AWS_REGION: ${{ secrets.AWS_REGION }}                  # set this to your preferred AWS region, e.g. us-west-1
+# #   ECR_REPOSITORY: my-next-app-dev           # set this to your Amazon ECR repository name
+# #   ECS_SERVICE: vowerp3ui-dev-service                 # set this to your Amazon ECS service name
+# #   ECS_CLUSTER: default                 # set this to your Amazon ECS cluster name
+# #   ECS_TASK_DEFINITION: .aws/task-definition.json # set this to the path to your Amazon ECS task definition
+# #                                                # file, e.g. .aws/task-definition.json
+# #   CONTAINER_NAME: vowerp3ui-dev           # set this to the name of the container in the
+# #                                                # containerDefinitions section of your task definition
+
+# # jobs:
+# #   test-and-deploy-dev:
+# #     if: github.ref == 'refs/heads/dev' || (github.event_name == 'pull_request' && github.base_ref == 'dev')
+# #     runs-on: ubuntu-latest
+# #     steps:
+# #       - name: Checkout code
+# #         uses: actions/checkout@v2
+
+# #       - name: Set up Node.js
+# #         uses: actions/setup-node@v2
+# #         with:
+# #           node-version: '22'
+
+# #       - name: Install dependencies
+# #         run: npm install -g pnpm@latest && pnpm install
+
+# #         #build docker image in the pipeline
+# #       - name: Build Docker image
+# #         run: docker build -t my-next-app-dev:latest -f Dockerfile .
+
+# #         #test docker container in the pipeline and confirm if tests have passed
+# #       # - name: Test Docker container
+# #       #   run: docker run -d -p 3000:3000 my-next-app-dev:latest
+# #       #   run: curl -f http://localhost:3000 || exit 1
+
+# #       - name: Configure AWS credentials
+# #         uses: aws-actions/configure-aws-credentials@v1
+# #         with:
+# #           aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+# #           aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+# #           aws-region: ${{ env.AWS_REGION }}
+
+# #       - name: Login to Amazon ECR
+# #         id: login-ecr
+# #         uses: aws-actions/amazon-ecr-login@v1
+
+# #       - name: Build, tag, and push image to Amazon ECR
+# #         id: build-image
+# #         env:
+# #           ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
+# #           IMAGE_TAG: ${{ github.sha }}
+# #         run: |
+# #           # Build a docker container and
+# #           # push it to ECR so that it can
+# #           # be deployed to ECS.
+# #           docker build -t $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG .
+# #           docker push $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG
+# #           echo "image=$ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG" >> $GITHUB_OUTPUT
+
+# #       - name: Fill in the new image ID in the Amazon ECS task definition
+# #         id: task-def
+# #         uses: aws-actions/amazon-ecs-render-task-definition@v1
+# #         with:
+# #           task-definition: ${{ env.ECS_TASK_DEFINITION }}
+# #           container-name: ${{ env.CONTAINER_NAME }}
+# #           image: ${{ steps.build-image.outputs.image }}
+
+# #       - name: Deploy Amazon ECS task definition
+# #         uses: aws-actions/amazon-ecs-deploy-task-definition@v1
+# #         with:
+# #           task-definition: ${{ steps.task-def.outputs.task-definition }}
+# #           service: ${{ env.ECS_SERVICE }}
+# #           cluster: ${{ env.ECS_CLUSTER }}
+# #           wait-for-service-stability: true
+# #       # - name: Deploy to AWS
+# #       #   run: |
+# #       #     aws ecs update-service --cluster default --service vowerp3ui-dev-service --task-definition my-nextjs-task --force-new-deployment
+
+# #       - name: Test application availability
+# #         run: |
+# #           curl -f http://13.233.237.141:3000 || exit 1
+
+# #   # test-and-deploy-main:
+# #   #   if: github.ref == 'refs/heads/main' || (github.event_name == 'pull_request' && github.base_ref == 'main')
+# #   #   runs-on: ubuntu-latest
+# #   #   steps:
+# #   #     - name: Checkout code
+# #   #       uses: actions/checkout@v2
+
+# #   #     - name: Set up Node.js
+# #   #       uses: actions/setup-node@v2
+# #   #       with:
+# #   #         node-version: '22'
+
+# #   #     - name: Install dependencies
+# #   #       run: npm install -g pnpm@latest && pnpm install
+
+# #   #     - name: Build Docker image
+# #   #       run: docker build -t my-next-app-main:latest -f Dockerfile .
+        
+# #   #     - name: Set up AWS credentials
+# #   #       uses: aws-actions/configure-aws-credentials@v1
+# #   #       with:
+# #   #         aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+# #   #         aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+# #   #         aws-region: ${{ secrets.AWS_REGION }}
+
+# #   #     - name: Log in to Amazon ECR
+# #   #       run: |
+# #   #         aws ecr get-login-password --region ${{ secrets.AWS_REGION }} | docker login --username AWS --password-stdin ${{ secrets.ECR_MAIN_URI }}
+
+# #   #     - name: Tag and push Docker image to ECR
+# #   #       run: |
+# #   #         docker tag my-next-app-main:latest ${{ secrets.ECR_MAIN_URI }}:latest
+# #   #         docker push ${{ secrets.ECR_MAIN_URI }}:latest
+
+# #   #     # register new task definition
+# #   #     - name: Register new task definition
+# #   #       run: |
+# #   #         aws ecs register-task-definition \
+# #   #           --family vowerp3ui-main-task \
+# #   #           --cpu "512" \
+# #   #           --memory "1536" \
+# #   #           --container-definitions '[{
+# #   #             "name": "vowerp3ui-main",
+# #   #             "image": "${{ secrets.ECR_MAIN_URI }}:latest",
+# #   #             "cpu": 512,
+# #   #             "memory": 1536,
+# #   #             "memoryReservation": 1024,
+# #   #             "portMappings": [{
+# #   #               "name": "ui-main",
+# #   #               "containerPort": 3001,
+# #   #               "hostPort": 3001,
+# #   #               "protocol": "tcp"
+# #   #             }],
+# #   #             "essential": false
+# #   #           }]'
+
+# #   #     # deploy the image to ECS after updating task definition
+# #   #     - name: Deploy to AWS
+# #   #       run: |
+# #   #         aws ecs update-service --cluster default --service vowerp3ui-main-service --task-definition vowerp3ui-main-task --force-new-deployment
+
+# #   #     - name: Wait for ECS service to stabilize
+# #   #       run: |
+# #   #         aws ecs wait services-stable --cluster default --services vowerp3ui-main-service
+
+# #   #     - name: Test application availability
+# #   #       run: |
+# #   #         curl -f http://13.233.237.141:3001 || exit 1
+
+
 # name: Deploy
 
 # on:
@@ -5,16 +240,14 @@
 #     branches:
 #       - dev
 #       - main
-  
+
 # env:
-#   AWS_REGION: ${{ secrets.AWS_REGION }}                  # set this to your preferred AWS region, e.g. us-west-1
-#   ECR_REPOSITORY: my-next-app-dev           # set this to your Amazon ECR repository name
-#   ECS_SERVICE: vowerp3ui-dev-service                 # set this to your Amazon ECS service name
-#   ECS_CLUSTER: default                 # set this to your Amazon ECS cluster name
-#   ECS_TASK_DEFINITION: .aws/task-definition.json # set this to the path to your Amazon ECS task definition
-#                                                # file, e.g. .aws/task-definition.json
-#   CONTAINER_NAME: vowerp3ui-dev           # set this to the name of the container in the
-#                                                # containerDefinitions section of your task definition
+#   AWS_REGION: ${{ secrets.AWS_REGION }}
+#   ECR_REPOSITORY: my-next-app-dev
+#   ECS_SERVICE: vowerp3ui-dev-service
+#   ECS_CLUSTER: default
+#   ECS_TASK_DEFINITION: .aws/task-definition.json
+#   CONTAINER_NAME: vowerp3ui-dev
 
 # jobs:
 #   test-and-deploy-dev:
@@ -31,15 +264,6 @@
 
 #       - name: Install dependencies
 #         run: npm install -g pnpm@latest && pnpm install
-
-#         #build docker image in the pipeline
-#       - name: Build Docker image
-#         run: docker build -t my-next-app-dev:latest -f Dockerfile .
-
-#         #test docker container in the pipeline and confirm if tests have passed
-#       # - name: Test Docker container
-#       #   run: docker run -d -p 3000:3000 my-next-app-dev:latest
-#       #   run: curl -f http://localhost:3000 || exit 1
 
 #       - name: Configure AWS credentials
 #         uses: aws-actions/configure-aws-credentials@v1
@@ -58,10 +282,12 @@
 #           ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
 #           IMAGE_TAG: ${{ github.sha }}
 #         run: |
-#           # Build a docker container and
-#           # push it to ECR so that it can
-#           # be deployed to ECS.
-#           docker build -t $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG .
+#           docker build \
+#             --build-arg NEXT_PUBLIC_BACKENDHOST=${{ secrets.NEXT_PUBLIC_BACKENDHOST }} \
+#             --build-arg NEXT_PUBLIC_API_BASE_URL=${{ secrets.NEXT_PUBLIC_API_BASE_URL }} \
+#             --build-arg USE_NEXT_PROXY=${{ secrets.USE_NEXT_PROXY }} \
+#             -t $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG .
+
 #           docker push $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG
 #           echo "image=$ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG" >> $GITHUB_OUTPUT
 
@@ -80,158 +306,7 @@
 #           service: ${{ env.ECS_SERVICE }}
 #           cluster: ${{ env.ECS_CLUSTER }}
 #           wait-for-service-stability: true
-#       # - name: Deploy to AWS
-#       #   run: |
-#       #     aws ecs update-service --cluster default --service vowerp3ui-dev-service --task-definition my-nextjs-task --force-new-deployment
 
 #       - name: Test application availability
 #         run: |
 #           curl -f http://13.233.237.141:3000 || exit 1
-
-#   # test-and-deploy-main:
-#   #   if: github.ref == 'refs/heads/main' || (github.event_name == 'pull_request' && github.base_ref == 'main')
-#   #   runs-on: ubuntu-latest
-#   #   steps:
-#   #     - name: Checkout code
-#   #       uses: actions/checkout@v2
-
-#   #     - name: Set up Node.js
-#   #       uses: actions/setup-node@v2
-#   #       with:
-#   #         node-version: '22'
-
-#   #     - name: Install dependencies
-#   #       run: npm install -g pnpm@latest && pnpm install
-
-#   #     - name: Build Docker image
-#   #       run: docker build -t my-next-app-main:latest -f Dockerfile .
-        
-#   #     - name: Set up AWS credentials
-#   #       uses: aws-actions/configure-aws-credentials@v1
-#   #       with:
-#   #         aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
-#   #         aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-#   #         aws-region: ${{ secrets.AWS_REGION }}
-
-#   #     - name: Log in to Amazon ECR
-#   #       run: |
-#   #         aws ecr get-login-password --region ${{ secrets.AWS_REGION }} | docker login --username AWS --password-stdin ${{ secrets.ECR_MAIN_URI }}
-
-#   #     - name: Tag and push Docker image to ECR
-#   #       run: |
-#   #         docker tag my-next-app-main:latest ${{ secrets.ECR_MAIN_URI }}:latest
-#   #         docker push ${{ secrets.ECR_MAIN_URI }}:latest
-
-#   #     # register new task definition
-#   #     - name: Register new task definition
-#   #       run: |
-#   #         aws ecs register-task-definition \
-#   #           --family vowerp3ui-main-task \
-#   #           --cpu "512" \
-#   #           --memory "1536" \
-#   #           --container-definitions '[{
-#   #             "name": "vowerp3ui-main",
-#   #             "image": "${{ secrets.ECR_MAIN_URI }}:latest",
-#   #             "cpu": 512,
-#   #             "memory": 1536,
-#   #             "memoryReservation": 1024,
-#   #             "portMappings": [{
-#   #               "name": "ui-main",
-#   #               "containerPort": 3001,
-#   #               "hostPort": 3001,
-#   #               "protocol": "tcp"
-#   #             }],
-#   #             "essential": false
-#   #           }]'
-
-#   #     # deploy the image to ECS after updating task definition
-#   #     - name: Deploy to AWS
-#   #       run: |
-#   #         aws ecs update-service --cluster default --service vowerp3ui-main-service --task-definition vowerp3ui-main-task --force-new-deployment
-
-#   #     - name: Wait for ECS service to stabilize
-#   #       run: |
-#   #         aws ecs wait services-stable --cluster default --services vowerp3ui-main-service
-
-#   #     - name: Test application availability
-#   #       run: |
-#   #         curl -f http://13.233.237.141:3001 || exit 1
-
-
-name: Deploy
-
-on:
-  pull_request:
-    branches:
-      - dev
-      - main
-
-env:
-  AWS_REGION: ${{ secrets.AWS_REGION }}
-  ECR_REPOSITORY: my-next-app-dev
-  ECS_SERVICE: vowerp3ui-dev-service
-  ECS_CLUSTER: default
-  ECS_TASK_DEFINITION: .aws/task-definition.json
-  CONTAINER_NAME: vowerp3ui-dev
-
-jobs:
-  test-and-deploy-dev:
-    if: github.ref == 'refs/heads/dev' || (github.event_name == 'pull_request' && github.base_ref == 'dev')
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v2
-
-      - name: Set up Node.js
-        uses: actions/setup-node@v2
-        with:
-          node-version: '22'
-
-      - name: Install dependencies
-        run: npm install -g pnpm@latest && pnpm install
-
-      - name: Configure AWS credentials
-        uses: aws-actions/configure-aws-credentials@v1
-        with:
-          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
-          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-          aws-region: ${{ env.AWS_REGION }}
-
-      - name: Login to Amazon ECR
-        id: login-ecr
-        uses: aws-actions/amazon-ecr-login@v1
-
-      - name: Build, tag, and push image to Amazon ECR
-        id: build-image
-        env:
-          ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
-          IMAGE_TAG: ${{ github.sha }}
-        run: |
-          docker build \
-            --build-arg NEXT_PUBLIC_BACKENDHOST=${{ secrets.NEXT_PUBLIC_BACKENDHOST }} \
-            --build-arg NEXT_PUBLIC_API_BASE_URL=${{ secrets.NEXT_PUBLIC_API_BASE_URL }} \
-            --build-arg USE_NEXT_PROXY=${{ secrets.USE_NEXT_PROXY }} \
-            -t $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG .
-
-          docker push $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG
-          echo "image=$ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG" >> $GITHUB_OUTPUT
-
-      - name: Fill in the new image ID in the Amazon ECS task definition
-        id: task-def
-        uses: aws-actions/amazon-ecs-render-task-definition@v1
-        with:
-          task-definition: ${{ env.ECS_TASK_DEFINITION }}
-          container-name: ${{ env.CONTAINER_NAME }}
-          image: ${{ steps.build-image.outputs.image }}
-
-      - name: Deploy Amazon ECS task definition
-        uses: aws-actions/amazon-ecs-deploy-task-definition@v1
-        with:
-          task-definition: ${{ steps.task-def.outputs.task-definition }}
-          service: ${{ env.ECS_SERVICE }}
-          cluster: ${{ env.ECS_CLUSTER }}
-          wait-for-service-stability: true
-
-      - name: Test application availability
-        run: |
-          curl -f http://13.233.237.141:3000 || exit 1

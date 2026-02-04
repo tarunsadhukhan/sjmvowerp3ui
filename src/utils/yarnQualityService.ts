@@ -23,11 +23,13 @@ type YarnQualityDetails = {
   yarn_quality_id?: number;
   quality_code?: string;
   jute_yarn_type_id?: number | string;
+  yarn_type_id?: number | string; // API may return this instead of jute_yarn_type_id
   branch_id?: number | string;
   twist_per_inch?: number | string;
   std_count?: number | string;
   std_doff?: number | string;
   std_wt_doff?: number | string;
+  target_eff?: number | string;
   is_active?: number;
 };
 

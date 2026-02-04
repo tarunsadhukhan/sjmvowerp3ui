@@ -159,7 +159,7 @@ export default function YarnQualityMasterPage() {
       loading={loading}
       paginationModel={paginationModel}
       onPaginationModelChange={handlePaginationModelChange}
-      totalRows={totalRows}
+      rowCount={totalRows}
       search={{ value: searchQuery, onChange: handleSearchChange, placeholder: "Search quality code or yarn type", debounceDelayMs: 1000 }}
       createAction={{ onClick: openCreateDialog, label: "Create Yarn Quality" }}
     >

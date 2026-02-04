@@ -27,6 +27,7 @@
  */
 
 import * as React from "react";
+import { Suspense } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import {
   Alert,
@@ -213,7 +214,7 @@ const mapDetailsToFormValues = (details: GateEntryDetails): GateEntryFormValues 
 // COMPONENT
 // =============================================================================
 
-export default function JuteGateEntryCreatePage() {
+function JuteGateEntryCreatePageContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const { coId } = useSelectedCompanyCoId();
@@ -936,5 +937,19 @@ export default function JuteGateEntryCreatePage() {
         {/* View mode: No action buttons (already have Back) */}
       </Box>
     </Box>
+  );
+}
+
+export default function JuteGateEntryCreatePage() {
+  return (
+    <Suspense
+      fallback={
+        <Box display="flex" justifyContent="center" alignItems="center" minHeight="400px">
+          <CircularProgress />
+        </Box>
+      }
+    >
+      <JuteGateEntryCreatePageContent />
+    </Suspense>
   );
 }

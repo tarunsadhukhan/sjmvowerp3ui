@@ -1,13 +1,14 @@
 "use client";
 
 import * as React from "react";
-import { Alert, Chip, Typography } from "@mui/material";
+import { Alert, Chip, Typography, IconButton, Tooltip, Stack } from "@mui/material";
 import type { GridColDef, GridPaginationModel, GridRenderCellParams } from "@mui/x-data-grid";
 import { fetchWithCookie } from "@/utils/apiClient2";
 import { apiRoutesPortalMasters } from "@/utils/api";
 import IndexWrapper from "@/components/ui/IndexWrapper";
 import { useRouter } from "next/navigation";
 import useSelectedCompanyCoId from "@/hooks/use-selected-company-coid";
+import { Edit, Eye } from "lucide-react";
 
 /**
  * @component JuteBillPassIndexPage
@@ -29,6 +30,7 @@ type JuteBillPassRow = {
 	invoice_date_raw?: string;
 	amount: number | null;
 	status: string;
+	bill_pass_complete: number | null;
 };
 
 /**
@@ -93,8 +95,56 @@ export default function JuteBillPassIndexPage() {
 	const [searchValue, setSearchValue] = React.useState("");
 	const [errorMessage, setErrorMessage] = React.useState<string | null>(null);
 
+	const handleView = React.useCallback(
+		(row: JuteBillPassRow) => {
+			const id = row.id;
+			if (!id) return;
+			router.push(`/dashboardportal/jutePurchase/billPass/view?id=${encodeURIComponent(String(id))}`);
+		},
+		[router]
+	);
+
+	const handleEdit = React.useCallback(
+		(row: JuteBillPassRow) => {
+			const id = row.id;
+			if (!id) return;
+			router.push(`/dashboardportal/jutePurchase/billPass/edit?id=${encodeURIComponent(String(id))}`);
+		},
+		[router]
+	);
+
 	const columns = React.useMemo<GridColDef<JuteBillPassRow>[]>(
 		() => [
+			{
+				field: "__actions",
+				headerName: "Actions",
+				width: 90,
+				sortable: false,
+				filterable: false,
+				align: "center",
+				headerAlign: "center",
+				renderCell: (params: GridRenderCellParams<JuteBillPassRow>) => {
+					const row = params.row;
+					const isComplete = row.bill_pass_complete === 1;
+					return (
+						<Stack direction="row" spacing={0.5} justifyContent="center" alignItems="center">
+							{isComplete ? (
+								<Tooltip title="View">
+									<IconButton size="small" onClick={() => handleView(row)}>
+										<Eye size={16} />
+									</IconButton>
+								</Tooltip>
+							) : (
+								<Tooltip title="Edit">
+									<IconButton size="small" onClick={() => handleEdit(row)}>
+										<Edit size={16} />
+									</IconButton>
+								</Tooltip>
+							)}
+						</Stack>
+					);
+				},
+			},
 			{
 				field: "bill_pass_no",
 				headerName: "Bill Pass No",
@@ -187,7 +237,7 @@ export default function JuteBillPassIndexPage() {
 				),
 			},
 		],
-		[]
+		[handleView, handleEdit]
 	);
 
 	const fetchBillPasses = React.useCallback(async () => {
@@ -240,6 +290,7 @@ export default function JuteBillPassIndexPage() {
 					invoice_date: formatDate(rawInvoiceDate),
 					amount: (r.amount ?? null) as number | null,
 					status: (r.status ?? "Approved") as string,
+					bill_pass_complete: (r.bill_pass_complete ?? 0) as number | null,
 				};
 			});
 
@@ -272,15 +323,6 @@ export default function JuteBillPassIndexPage() {
 		setSearchValue(value);
 	}, []);
 
-	const handleView = React.useCallback(
-		(row: JuteBillPassRow) => {
-			const id = row.id;
-			if (!id) return;
-			router.push(`/dashboardportal/jutePurchase/billPass/view?id=${encodeURIComponent(String(id))}`);
-		},
-		[router]
-	);
-
 	const searchConfig = React.useMemo(
 		() => ({
 			value: searchValue,
@@ -301,8 +343,7 @@ export default function JuteBillPassIndexPage() {
 			onPaginationModelChange={handlePaginationModelChange}
 			rowCount={totalRows}
 			search={searchConfig}
-			onView={handleView}
-			// No create button for bill pass - it's a view of approved MRs
+			// Actions are handled by custom column based on bill_pass_complete status
 		>
 			{errorMessage && (
 				<Alert severity="error" sx={{ mb: 2 }}>

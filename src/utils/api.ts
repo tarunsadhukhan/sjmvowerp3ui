@@ -203,6 +203,20 @@ const apiRoutesPortalMasters = {
     JUTE_AGENT_MAP_CREATE: `${API_URL}/juteAgentMap/jute_agent_map_create`,
     JUTE_AGENT_MAP_DELETE: `${API_URL}/juteAgentMap/jute_agent_map_delete`,
 
+    // Yarn Quality Master endpoints
+    YARN_QUALITY_TABLE: `${API_URL}/yarnQualityMaster/yarn_quality_table`,
+    YARN_QUALITY_CREATE_SETUP: `${API_URL}/yarnQualityMaster/yarn_quality_create_setup`,
+    YARN_QUALITY_EDIT_SETUP: `${API_URL}/yarnQualityMaster/yarn_quality_edit_setup`,
+    YARN_QUALITY_CREATE: `${API_URL}/yarnQualityMaster/yarn_quality_create`,
+    YARN_QUALITY_EDIT: `${API_URL}/yarnQualityMaster/yarn_quality_edit`,
+
+    // Machine SPG Details Master endpoints
+    MACHINE_SPG_DETAILS_TABLE: `${API_URL}/machineSpgDetailsMaster/machine_spg_details_table`,
+    MACHINE_SPG_DETAILS_CREATE_SETUP: `${API_URL}/machineSpgDetailsMaster/machine_spg_details_create_setup`,
+    MACHINE_SPG_DETAILS_MACHINES_BY_BRANCH: `${API_URL}/machineSpgDetailsMaster/get_machines_by_branch`,
+    MACHINE_SPG_DETAILS_EDIT_SETUP: `${API_URL}/machineSpgDetailsMaster/machine_spg_details_edit_setup`,
+    MACHINE_SPG_DETAILS_CREATE: `${API_URL}/machineSpgDetailsMaster/machine_spg_details_create`,
+    MACHINE_SPG_DETAILS_EDIT: `${API_URL}/machineSpgDetailsMaster/machine_spg_details_edit`,
     // Yarn Type Master endpoints
     YARN_TYPE_TABLE: `${API_URL}/yarnTypeMaster/get_yarn_type_table`,
     YARN_TYPE_BY_ID: `${API_URL}/yarnTypeMaster/get_yarn_type_by_id`,

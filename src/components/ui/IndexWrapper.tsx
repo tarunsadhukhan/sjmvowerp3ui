@@ -244,6 +244,7 @@ function IndexWrapper<RowType extends GridValidRowModel & { id?: string | number
           rowCount={rowCount}
           paginationModel={paginationModel}
           onPaginationModelChange={onPaginationModelChange}
+          paginationMode="server"
           loading={loading}
           showLoadingUntilLoaded={showLoadingUntilLoaded}
           showToolbar={showToolbar}

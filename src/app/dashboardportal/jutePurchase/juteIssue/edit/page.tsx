@@ -206,6 +206,7 @@ function JuteIssueEditPage() {
     coId,
     branchId: selectedBranchId,
     itemId: undefined, // Fetch all, filter client-side
+    issueDate, // Filter stock by issue date
   });
 
   // Filter stock items by selected jute type and quality, and exclude already added items

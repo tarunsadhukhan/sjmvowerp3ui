@@ -179,6 +179,13 @@ function JuteIssueEditPage() {
     return (selectedStock.balqty || 0) * wtPerUnit;
   }, [selectedStock, wtPerUnit]);
 
+  // Quantity validation - check if entered quantity exceeds available balance
+  const quantityExceedsBalance = React.useMemo(() => {
+    const qty = Number(newQuantity) || 0;
+    if (!selectedStock || !selectedStock.balqty) return false;
+    return qty > selectedStock.balqty;
+  }, [newQuantity, selectedStock]);
+
   // Setup data
   const { juteItems, yarnTypes, branches, loading: setupLoading, error: setupError } = useJuteIssueSetup({
     coId,
@@ -987,10 +994,12 @@ function JuteIssueEditPage() {
                   <TableHead>
                     <TableRow>
                       <TableCell padding="checkbox" />
+                      <TableCell>Gate Entry No</TableCell>
                       <TableCell>MR No</TableCell>
                       <TableCell>Jute Type</TableCell>
                       <TableCell>Quality</TableCell>
                       <TableCell>Unit</TableCell>
+                      <TableCell>Warehouse</TableCell>
                       <TableCell align="right">Bal Qty</TableCell>
                       <TableCell align="right">Bal Weight (kg)</TableCell>
                       <TableCell align="right">Rate/Qtl</TableCell>
@@ -1002,6 +1011,10 @@ function JuteIssueEditPage() {
                         key={stock.jute_mr_li_id}
                         hover
                         onClick={() => handleStockRadioChange(String(stock.jute_mr_li_id))}
+                        onDoubleClick={() => {
+                          handleStockRadioChange(String(stock.jute_mr_li_id));
+                          setTimeout(() => handleConfirmStockSelection(), 50);
+                        }}
                         sx={{ cursor: "pointer" }}
                         selected={selectedStockId === String(stock.jute_mr_li_id)}
                       >
@@ -1012,10 +1025,12 @@ function JuteIssueEditPage() {
                             size="small"
                           />
                         </TableCell>
+                        <TableCell>{stock.jute_gate_entry_no || "-"}</TableCell>
                         <TableCell>{stock.branch_mr_no}</TableCell>
                         <TableCell>{stock.item_name}</TableCell>
                         <TableCell>{stock.quality_name}</TableCell>
                         <TableCell>{stock.unit_conversion}</TableCell>
+                        <TableCell>{stock.warehouse_name || "-"}</TableCell>
                         <TableCell align="right">{stock.balqty?.toFixed(2)}</TableCell>
                         <TableCell align="right">{stock.balweight?.toFixed(2)}</TableCell>
                         <TableCell align="right">{stock.actual_rate?.toFixed(2)}</TableCell>
@@ -1044,6 +1059,12 @@ function JuteIssueEditPage() {
         <DialogTitle>Add Issue Item</DialogTitle>
         <DialogContent>
           <Box display="flex" flexDirection="column" gap={3} pt={2}>
+            {/* Quantity Error Alert */}
+            {quantityExceedsBalance && (
+              <Alert severity="error">
+                Cannot issue more than available balance quantity ({selectedStock?.balqty?.toFixed(2)})
+              </Alert>
+            )}
             {/* Selected Stock Info */}
             {selectedStock && (
               <Box sx={{ p: 2, bgcolor: "grey.100", borderRadius: 1 }}>
@@ -1054,7 +1075,7 @@ function JuteIssueEditPage() {
                   MR {selectedStock.branch_mr_no} - {selectedStock.item_name} ({selectedStock.quality_name})
                 </Typography>
                 <Typography variant="body2" color="text.secondary">
-                  Available: {selectedStock.balqty?.toFixed(2)} qty | Rate: ₹{selectedStock.actual_rate?.toFixed(2)}/qtl
+                  Available: {selectedStock.balqty?.toFixed(2)} unit({selectedStock.unit_conversion}) | Rate: ₹{selectedStock.actual_rate?.toFixed(2)}/qtl
                 </Typography>
                 <Typography variant="body2" color="primary">
                   Wt/Unit: {wtPerUnit.toFixed(2)} kg
@@ -1082,7 +1103,9 @@ function JuteIssueEditPage() {
                 type="number"
                 value={newQuantity}
                 onChange={(e) => setNewQuantity(e.target.value)}
+                onFocus={(e) => e.target.select()}
                 fullWidth
+                autoFocus
                 inputProps={{ min: 0, step: 1, max: selectedStock?.balqty || 0 }}
                 helperText={selectedStock ? `Available: ${selectedStock.balqty?.toFixed(2)}` : ""}
               />
@@ -1115,7 +1138,7 @@ function JuteIssueEditPage() {
           <Button
             variant="contained"
             onClick={handleAddItem}
-            disabled={!selectedStock || !newYarnTypeId || !newQuantity || calculatedWeight <= 0}
+            disabled={!selectedStock || !newYarnTypeId || !newQuantity || calculatedWeight <= 0 || quantityExceedsBalance}
           >
             Add
           </Button>

@@ -17,6 +17,8 @@ export type Option = {
  */
 export type StockOutstandingItem = {
   jute_mr_li_id: number;
+  jute_gate_entry_no?: number;
+  warehouse_name?: string;
   branch_id: number;
   branch_mr_no: number;
   jute_mr_id: number;

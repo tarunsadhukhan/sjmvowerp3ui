@@ -11,6 +11,7 @@ type UseStockOutstandingParams = {
   coId: string | null;
   branchId: string;
   itemId?: string;
+  issueDate?: string;
 };
 
 type UseStockOutstandingReturn = {
@@ -24,6 +25,7 @@ export const useStockOutstanding = ({
   coId,
   branchId,
   itemId,
+  issueDate,
 }: UseStockOutstandingParams): UseStockOutstandingReturn => {
   const [stockItems, setStockItems] = React.useState<StockOutstandingItem[]>([]);
   const [loading, setLoading] = React.useState(false);
@@ -46,6 +48,9 @@ export const useStockOutstanding = ({
       if (itemId) {
         params.set("item_id", itemId);
       }
+      if (issueDate) {
+        params.set("issue_date", issueDate);
+      }
 
       const url = `${apiRoutesPortalMasters.JUTE_ISSUE_STOCK_OUTSTANDING}?${params.toString()}`;
       const { data, error: fetchError } = await fetchWithCookie(url, "GET");
@@ -63,7 +68,7 @@ export const useStockOutstanding = ({
     } finally {
       setLoading(false);
     }
-  }, [coId, branchId, itemId]);
+  }, [coId, branchId, itemId, issueDate]);
 
   React.useEffect(() => {
     if (coId && branchId) {

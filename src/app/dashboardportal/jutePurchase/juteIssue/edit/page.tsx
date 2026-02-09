@@ -1073,7 +1073,7 @@ function JuteIssueEditPage() {
                               {getAdjustedBalQty(stock).toFixed(2)}
                             </Typography>
                             <Typography variant="caption" color="text.secondary">
-                              (Op Bal: {stock.balqty?.toFixed(2)})
+                              (Prv Bal: {stock.balqty?.toFixed(2)})
                             </Typography>
                           </Box>
                         </TableCell>
@@ -1083,7 +1083,7 @@ function JuteIssueEditPage() {
                               {getAdjustedBalWeight(stock).toFixed(2)}
                             </Typography>
                             <Typography variant="caption" color="text.secondary">
-                              (Op Bal: {stock.balweight?.toFixed(2)})
+                              (Prv Bal: {stock.balweight?.toFixed(2)})
                             </Typography>
                           </Box>
                         </TableCell>

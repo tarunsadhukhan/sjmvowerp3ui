@@ -41,10 +41,11 @@ export const useIndentLineItemColumns = ({
 				id: "department",
 				header: "Department",
 				width: "1.2fr",
+				minWidth: "130px",
 				renderCell: ({ item }) => {
 					if (!canEdit) {
 						return (
-							<span className="block truncate text-xs text-slate-700">
+							<span className="block truncate text-sm text-slate-700">
 								{labelResolvers.department(item.department)}
 							</span>
 						);
@@ -71,11 +72,12 @@ export const useIndentLineItemColumns = ({
 			{
 				id: "itemGroup",
 				header: "Item Group",
-				width: "1.6fr",
+				width: "2fr",
+				minWidth: "188px",
 				renderCell: ({ item }) => {
 					if (!canEdit) {
 						return (
-							<span className="block truncate text-xs text-slate-700">
+							<span className="block truncate text-sm text-slate-700">
 								{labelResolvers.itemGroup(item.itemGroup)}
 							</span>
 						);
@@ -102,11 +104,12 @@ export const useIndentLineItemColumns = ({
 			{
 				id: "item",
 				header: "Item",
-				width: "1.6fr",
+				width: "2.4fr",
+				minWidth: "225px",
 				renderCell: ({ item }) => {
 					if (!canEdit) {
 						return (
-							<span className="block truncate text-xs text-slate-700">
+							<span className="block truncate text-sm text-slate-700">
 								{labelResolvers.item(item.itemGroup, item.item)}
 							</span>
 						);
@@ -139,10 +142,11 @@ export const useIndentLineItemColumns = ({
 				id: "itemMake",
 				header: "Item Make",
 				width: "1.1fr",
+				minWidth: "110px",
 				renderCell: ({ item }) => {
 					if (!canEdit) {
 						return (
-							<span className="block truncate text-xs text-slate-700">
+							<span className="block truncate text-sm text-slate-700">
 								{labelResolvers.itemMake(item.itemGroup, item.itemMake)}
 							</span>
 						);
@@ -174,11 +178,12 @@ export const useIndentLineItemColumns = ({
 				id: "quantity",
 				header: "Qty",
 				width: "0.7fr",
+				minWidth: "70px",
 				className: "flex flex-col gap-1",
 				renderCell: ({ item }) => {
 					if (!canEdit) {
 						return (
-							<span className="block truncate text-xs text-slate-700">
+							<span className="block truncate text-sm text-slate-700">
 								{item.quantity || "-"}
 							</span>
 						);
@@ -191,7 +196,7 @@ export const useIndentLineItemColumns = ({
 							value={item.quantity}
 							onChange={(event) => handleLineFieldChange(item.id, "quantity", event.target.value)}
 							placeholder="0"
-							className="h-7 px-1.5 py-0.5 text-xs border-0 bg-transparent focus-visible:ring-1 focus-visible:ring-blue-500 focus-visible:outline-none"
+							className="h-7 px-1.5 py-0.5 text-sm border-0 bg-transparent focus-visible:ring-1 focus-visible:ring-blue-500 focus-visible:outline-none"
 						/>
 					);
 				},
@@ -204,10 +209,11 @@ export const useIndentLineItemColumns = ({
 				id: "uom",
 				header: "UOM",
 				width: "0.75fr",
+				minWidth: "80px",
 				renderCell: ({ item }) => {
 					if (!canEdit) {
 						return (
-							<span className="block truncate text-xs text-slate-700">
+							<span className="block truncate text-sm text-slate-700">
 								{labelResolvers.uom(item.itemGroup, item.item, item.uom)}
 							</span>
 						);
@@ -240,10 +246,11 @@ export const useIndentLineItemColumns = ({
 				id: "remarks",
 				header: "Remarks",
 				width: "1.6fr",
+				minWidth: "120px",
 				renderCell: ({ item }) => {
 					if (!canEdit) {
 						return (
-							<span className="block truncate text-xs text-slate-700" title={item.remarks}>
+							<span className="block truncate text-sm text-slate-700" title={item.remarks}>
 								{item.remarks || "-"}
 							</span>
 						);
@@ -251,7 +258,7 @@ export const useIndentLineItemColumns = ({
 
 					return (
 						<textarea
-							className="h-auto min-h-[24px] w-full resize-none border-0 bg-transparent px-1 py-0.5 text-xs focus:outline-none focus:ring-1 focus:ring-blue-500"
+							className="h-auto min-h-6 w-full resize-none border-0 bg-transparent px-1 py-0.5 text-sm focus:outline-none focus:ring-1 focus:ring-blue-500"
 							rows={1}
 							value={item.remarks}
 							placeholder="Notes"

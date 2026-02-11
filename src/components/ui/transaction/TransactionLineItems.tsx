@@ -10,6 +10,8 @@ export type TransactionLineColumn<TItem> = {
   id: string;
   header: React.ReactNode;
   width?: string;
+  /** Minimum width for the column (e.g. "130px"). Prevents the column from shrinking below this when the viewport is narrow or zoomed in. */
+  minWidth?: string;
   className?: string;
   renderCell: (context: { item: TItem; index: number; canEdit: boolean }) => React.ReactNode;
   getTooltip?: (context: { item: TItem; index: number; canEdit: boolean }) => string | undefined;
@@ -53,18 +55,35 @@ export function TransactionLineItems<TItem>({
   });
 
   const gridTemplateColumns = React.useMemo(() => {
-    const widths = columns.map((column) => column.width ?? "1fr");
+    const widths = columns.map((column) => {
+      const w = column.width ?? "1fr";
+      const min = column.minWidth;
+      // If the width is already a fixed px value, use it directly (no minmax needed)
+      if (w.endsWith("px")) return w;
+      // If a minWidth is specified, wrap in minmax(min, w)
+      if (min) return `minmax(${min}, ${w})`;
+      // Default: use minmax with a sensible floor of 80px
+      return `minmax(80px, ${w})`;
+    });
     const parts = allowSelection ? [selectionColumnWidth, ...widths] : widths;
     return parts.join(" ");
   }, [columns, allowSelection, selectionColumnWidth]);
 
-  // Calculate minimum width for horizontal scrolling
-  // Estimate: each column needs at least 100px, plus selection column if present
+  // Calculate minimum width from column minWidths for horizontal scrolling
   const estimatedMinWidth = React.useMemo(() => {
-    const baseWidth = columns.length * 100;
+    const parseMinPx = (col: TransactionLineColumn<TItem>): number => {
+      // If width is a fixed px value, use that
+      const w = col.width ?? "1fr";
+      if (w.endsWith("px")) return parseInt(w, 10) || 80;
+      // If minWidth is specified, use it
+      if (col.minWidth) return parseInt(col.minWidth, 10) || 80;
+      // Default floor per column
+      return 80;
+    };
+    const baseWidth = columns.reduce((sum, col) => sum + parseMinPx(col), 0);
     const selectionWidth = allowSelection ? 48 : 0;
-    return Math.max(800, baseWidth + selectionWidth); // Minimum 800px, or calculated width
-  }, [columns.length, allowSelection]);
+    return Math.max(800, baseWidth + selectionWidth);
+  }, [columns, allowSelection]);
 
   const handleRemoveSelected = React.useCallback(() => {
     if (!onRemoveSelected || !selection.hasSelection) return;

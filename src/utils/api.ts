@@ -283,6 +283,7 @@ const apiRoutesPortalMasters = {
     JUTE_MR_AGENT_OPTIONS: `${API_URL}/juteMR/get_agent_options`,
     JUTE_MR_WAREHOUSE_OPTIONS: `${API_URL}/juteMR/get_warehouse_options`,
     JUTE_MR_PARTY_BRANCHES: `${API_URL}/juteMR/get_party_branches`,
+    JUTE_MR_OPEN: `${API_URL}/juteMR/open_mr`,
     JUTE_MR_PENDING: `${API_URL}/juteMR/pending_mr`,
     JUTE_MR_APPROVE: `${API_URL}/juteMR/approve_mr`,
     JUTE_MR_REJECT: `${API_URL}/juteMR/reject_mr`,

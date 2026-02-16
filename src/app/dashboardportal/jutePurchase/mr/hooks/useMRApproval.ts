@@ -12,7 +12,7 @@ import { toast } from "@/hooks/use-toast";
 import type { MuiFormMode } from "@/components/ui/muiform";
 import type { ApprovalInfo, ApprovalActionPermissions, ApprovalStatusId } from "@/components/ui/transaction";
 import { MR_STATUS_IDS, MR_STATUS_LABELS, type MRStatusId } from "../utils/mrConstants";
-import { pendingMR, approveMR, rejectMR, cancelMR } from "../utils/mrService";
+import { openMR, pendingMR, approveMR, rejectMR, cancelMR } from "../utils/mrService";
 import type { JuteMRHeader } from "../types/mrTypes";
 
 type UseMRApprovalParams = {
@@ -125,20 +125,34 @@ export const useMRApproval = ({
 				return { canViewApprovalLog: true };
 			}
 
-			// Draft (shouldn't happen for MR, but handle gracefully)
+			// Draft: can save and open (if party + branch are selected)
 			if (status === MR_STATUS_IDS.DRAFT) {
-				return { canSave: true, canViewApprovalLog: true };
+				const hasParty = Boolean(header?.party_id);
+				const hasPartyBranch = Boolean(header?.party_branch_id);
+				return {
+					canSave: true,
+					canOpen: hasParty && hasPartyBranch,
+					canViewApprovalLog: true,
+				};
 			}
 
 			return {};
 		},
-		[partyHasNoBranches],
+		[partyHasNoBranches, header?.party_id, header?.party_branch_id],
 	);
 
 	const approvalPermissions = React.useMemo(
 		() => getApprovalPermissions(statusId, mode),
 		[statusId, mode, getApprovalPermissions],
 	);
+
+	/**
+	 * Whether the Open button should be shown (only from Draft status).
+	 * Disabled if party or party branch is not set.
+	 */
+	const canSetOpen = React.useMemo(() => {
+		return mode !== "view" && statusId === MR_STATUS_IDS.DRAFT;
+	}, [mode, statusId]);
 
 	/**
 	 * Whether the Pending button should be shown (only from Open status).
@@ -189,6 +203,50 @@ export const useMRApproval = ({
 	}, [statusId, header?.status]);
 
 	const branchId = String(header?.branch_id ?? "");
+
+	/**
+	 * Handle Open action - sets MR from Draft (21) to Open (1).
+	 * Validates party and party_branch are set first.
+	 */
+	const handleOpen = React.useCallback(async () => {
+		if (!mrId || !branchId) {
+			toast({ variant: "destructive", title: "Missing required information" });
+			return;
+		}
+
+		if (!header?.party_id) {
+			toast({
+				variant: "destructive",
+				title: "Party required",
+				description: "Please select a party before opening the MR.",
+			});
+			return;
+		}
+
+		if (!header?.party_branch_id) {
+			toast({
+				variant: "destructive",
+				title: "Party branch required",
+				description: "Please select a party branch before opening the MR.",
+			});
+			return;
+		}
+
+		setApprovalLoading(true);
+		try {
+			await openMR(mrId, branchId);
+			toast({ title: "MR opened successfully" });
+			await onRefresh();
+		} catch (error) {
+			toast({
+				variant: "destructive",
+				title: "Unable to open MR",
+				description: error instanceof Error ? error.message : "Please try again.",
+			});
+		} finally {
+			setApprovalLoading(false);
+		}
+	}, [mrId, branchId, header?.party_id, header?.party_branch_id, onRefresh]);
 
 	/**
 	 * Handle Pending action - sets MR to Pending status (external system).
@@ -347,6 +405,7 @@ export const useMRApproval = ({
 		approvalPermissions,
 		statusChipProps,
 		statusId,
+		canSetOpen,
 		canSetPending,
 		partyHasNoBranches,
 		// Approval dialog state
@@ -354,6 +413,7 @@ export const useMRApproval = ({
 		handleApprovalDialogClose,
 		handleApproveConfirm,
 		// Action handlers
+		handleOpen,
 		handlePending,
 		handleApprove,
 		handleReject,

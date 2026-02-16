@@ -4,18 +4,126 @@
 
 VoWERP3 UI is a **multi-tenant ERP frontend** built with **Next.js 15**, **TypeScript**, and **React 19**. It provides a modern, type-safe interface for complex ERP operations including procurement, inventory, sales, and jute/yarn management.
 
-**Tech Stack:**
-- Next.js 15 with App Router
-- TypeScript (strict mode)
-- React 19 with Hooks
-- Tailwind CSS 4.1 + Material-UI 7.3
-- Zod 4.2 for validation
-- React Hook Form 7.69
-- Vitest + Storybook
-- pnpm package manager
+**Tech Stack:** Next.js 15 (App Router) | TypeScript (strict) | React 19 | Tailwind CSS 4.1 + MUI 7.3 | Zod 4.2 | React Hook Form 7.69 | Vitest + Storybook | pnpm
 
-**Current Repo:** `vowerp3ui` (Next.js 15)
-**Backend:** `vowerp3be` (FastAPI/Python)
+**Current Repo:** `vowerp3ui` | **Backend:** `vowerp3be` (FastAPI/Python)
+
+---
+
+## Three-Dashboard Architecture (MOST IMPORTANT)
+
+The app has **three completely separate dashboards** for three user personas. Each has its own layout, sidebar, menus, API endpoints, and permission model. **Identify which dashboard you're working in before writing any code.**
+
+### Dashboard 1: VOW Admin (Control Desk) — `/dashboardctrldesk`
+
+**Purpose:** System-wide super admin managing all organizations/tenants.
+
+| Aspect | Details |
+|--------|---------|
+| **Route prefix** | `/dashboardctrldesk/` |
+| **Layout** | `src/app/dashboardctrldesk/layout.tsx` |
+| **Sidebar** | `SidebarConsole` → `sidebarConsole.tsx` |
+| **Menu hook** | `use-org-ctrldesk.tsx` → fetches from `MENU_CTRLDESK` |
+| **Login endpoint** | `SUPERADMINLOGINCONSOLE` → `/authRoutes/loginconsole` |
+| **API prefix** | `/ctrldskAdmin/` |
+| **Backend DB** | `vowconsole3` (no org filter) |
+| **Subdomain** | `admin` (hardcoded detection) |
+| **Pages** | orgSetup, roleManagementAdmin, userManagementAdmin, menuManagement, orgModuleMap |
+
+### Dashboard 2: Tenant Admin — `/dashboardadmin`
+
+**Purpose:** Company-level admin for a single tenant/organization.
+
+| Aspect | Details |
+|--------|---------|
+| **Route prefix** | `/dashboardadmin/` |
+| **Layout** | `src/app/dashboardadmin/layout.tsx` |
+| **Sidebar** | `SidebarConsole` → `sidebarCompanyConsole.tsx` |
+| **Menu hook** | `use-org-console_menu.tsx` → fetches from `GET_TENANT_ADMIN_MENU_ROLE` |
+| **Login endpoint** | `USERLOGINCONSOLE` → `/authRoutes/login` |
+| **API prefix** | `/companyAdmin/` |
+| **Backend DB** | `vowconsole3` (scoped by `con_org_id`) |
+| **Subdomain** | Tenant subdomain (e.g., `dev3`, `sls`) |
+| **Pages** | companyManagement, branchManagement, deptManagement, roleManagement, userManagement, approvalHierarchy |
+
+### Dashboard 3: Tenant Portal — `/dashboardportal`
+
+**Purpose:** Day-to-day operational users (procurement, inventory, sales, production).
+
+| Aspect | Details |
+|--------|---------|
+| **Route prefix** | `/dashboardportal/` |
+| **Layout** | `src/app/dashboardportal/layout.tsx` |
+| **Sidebar** | `Sidebar` → `sidebar.tsx` + `SidebarProvider` + `PortalPermissionBoundary` |
+| **Menu hook** | `SidebarContext` (context-based, with localStorage caching) |
+| **Login endpoint** | `USERLOGINCONSOLE` → `/authRoutes/login` |
+| **API prefix** | `/admin/PortalData/` (admin) + business routes (`/itemMaster/`, `/procurementIndent/`, etc.) |
+| **Backend DB** | Tenant-specific DB (e.g., `dev3`, `sls`) |
+| **Subdomain** | Tenant subdomain |
+| **Permission model** | Action-level: view(1), print(2), create(3), edit(4) via `portal_permission_token` |
+| **State management** | `SidebarProvider` context (companies, branches, menus, permissions) |
+| **Pages** | masters/, procurement/, inventory/, jutePurchase/, juteProduction/ |
+
+### Login Flow (Unified Form)
+
+The login form (`src/components/auth/login-form.tsx`) is shared but routes differently:
+
+```typescript
+// Subdomain detection
+if (subdomain === "admin") {
+  // → Control Desk login → redirects to /dashboardctrldesk
+  loginFunction = loginConsole;  // POST /authRoutes/loginconsole
+} else if (loginType === "portal") {
+  // → Portal login → redirects to /dashboardportal
+  loginFunction = login;         // POST /authRoutes/login
+} else {
+  // → Tenant Admin login → redirects to /dashboardadmin
+  loginFunction = loginConsole;  // POST /authRoutes/loginconsole
+}
+```
+
+Both login functions send `X-Subdomain` header extracted from hostname.
+
+### Permission Differences
+
+| Dashboard | Permission Model | Middleware Check |
+|-----------|-----------------|-----------------|
+| Control Desk | Role-based (via menu structure) | Access token only |
+| Tenant Admin | Role-based (via menu structure) | Access token only |
+| Portal | **Action-level** (view/print/create/edit per menu) | Access token + `portal_permission_token` + per-route permission check |
+
+Portal permission check (`src/middleware.ts`):
+```typescript
+if (pathname.startsWith('/dashboardportal')) {
+  const action = determinePortalAction(pathname); // 'view', 'create', 'edit', 'print'
+  // Validates permission level >= action threshold
+}
+```
+
+### API Routes by Dashboard (`src/utils/api.ts`)
+
+**Three route objects:**
+- `apiRoutesconsole` — Control Desk endpoints (prefix: `/ctrldskAdmin/`)
+- `apiRoutes` — Tenant Admin endpoints (prefix: `/companyAdmin/`)
+- `apiRoutesPortalMasters` + business routes — Portal endpoints
+
+### Key Frontend Files by Dashboard
+
+| Control Desk | Tenant Admin | Portal |
+|-------------|-------------|--------|
+| `src/app/dashboardctrldesk/layout.tsx` | `src/app/dashboardadmin/layout.tsx` | `src/app/dashboardportal/layout.tsx` |
+| `src/components/dashboard/sidebarConsole.tsx` | `src/components/dashboard/sidebarCompanyConsole.tsx` | `src/components/dashboard/sidebar.tsx` |
+| `src/hooks/use-org-ctrldesk.tsx` | `src/hooks/use-org-console_menu.tsx` | `src/components/dashboard/sidebarContext.tsx` |
+| — | — | `src/utils/portalPermissions.ts` |
+
+### Choosing Where to Add New Pages
+
+| If the page is for... | Put it under... | API prefix |
+|----------------------|----------------|------------|
+| Managing organizations, system menus | `dashboardctrldesk/` | `/ctrldskAdmin/` |
+| Managing companies, branches, departments, tenant users | `dashboardadmin/` | `/companyAdmin/` |
+| Managing portal users, roles, menus, approvals | `dashboardportal/` (uses `/admin/PortalData/`) | `/admin/PortalData/` |
+| Business operations (procurement, masters, inventory) | `dashboardportal/{module}/` | `/{moduleName}/` |
 
 ---
 
@@ -295,58 +403,75 @@ import { tokens } from "@/styles/tokens";
   components/
     {Transaction}Preview.tsx            # Preview modal/component
   create{Transaction}/
-    page.tsx                            # Create/edit/view page (container)
-    _components/                        # Page-specific components
+    page.tsx                            # Create/edit/view page (Smart container)
+    _components/                        # Page-specific presentational components
       {Transaction}HeaderForm.tsx       # Header fields
-      {Transaction}LineItemsTable.tsx   # Line items grid
+      {Transaction}LineItemsTable.tsx   # Line items grid (with column hook)
       {Transaction}FooterForm.tsx       # Footer/summary (optional)
-    hooks/                              # Custom hooks for this page
-      use{Transaction}FormState.ts      # Form state management
-      use{Transaction}LineItems.ts      # Line item CRUD
-      use{Transaction}SelectOptions.ts  # Dropdown options
-      use{Transaction}FormSchemas.ts    # Zod schemas
-      use{Transaction}Approval.ts       # Approval workflow
-    types/                              # Type definitions
-      {transaction}Types.ts             # All types in ONE file
-    utils/                              # Helper functions
-      {transaction}Constants.ts         # Status IDs, enums
-      {transaction}Factories.ts         # Factory functions
-      {transaction}Mappers.ts           # Data transformation
-      {transaction}Calculations.ts      # Business logic (optional)
+      {Transaction}TotalsDisplay.tsx    # Calculated totals (optional)
+    hooks/                              # CRITICAL: Custom hooks for page logic
+      use{Transaction}FormState.ts      # Form state + formRef + formKey
+      use{Transaction}LineItems.ts      # Line item CRUD + cascade logic
+      use{Transaction}SelectOptions.ts  # Memoized options + label resolvers
+      use{Transaction}FormSchemas.ts    # Dynamic MuiForm schema
+      use{Transaction}Approval.ts       # Approval workflow state + handlers
+      use{Transaction}PageController.ts # Optional: top-level orchestration
+    types/
+      {transaction}Types.ts             # ALL types in ONE file (prevent circular deps)
+    utils/
+      {transaction}Constants.ts         # Status IDs, frozen empty arrays
+      {transaction}Factories.ts         # createBlankLine, buildDefaultFormValues
+      {transaction}Mappers.ts           # API response → UI type converters
+      {transaction}Calculations.ts      # Tax/amount calculations (optional)
 ```
 
 ### Type Definitions Pattern
-**IMPORTANT: All types in single file to prevent circular dependencies**
+**CRITICAL: All types for a module go in ONE file to prevent circular dependency hell.**
 
 ```typescript
-// types/indentTypes.ts - Single file for all types
+// types/indentTypes.ts
 
-// Base types
 export type Option = { label: string; value: string };
 export type DepartmentRecord = { id: string; name: string; branchId?: string };
 
-// Form types
+// Line items keep quantity as STRING during editing (user input)
 export type EditableLineItem = {
   id: string;
   itemGroup: string;
   item: string;
-  quantity: number;
+  itemMake: string;
+  quantity: string;        // STRING during editing, convert on submit
   uom: string;
-  remarks?: string;
+  remarks: string;
 };
 
-// Setup data types
+// Extended item option with defaults (for auto-populating UOM)
+export type ItemOption = Option & {
+  defaultUomId?: string;
+  defaultUomLabel?: string;
+};
+
+// Cache entry for deferred loading pattern
+export type ItemGroupCacheEntry = {
+  items: ItemOption[];
+  makes: Option[];
+  uomsByItemId: Record<string, Option[]>;
+  itemLabelById: Record<string, string>;
+};
+
+// Label resolvers for preview/tooltips
+export type LabelResolvers = {
+  department: (id: string) => string;
+  itemGroup: (id: string) => string;
+  item: (groupId: string, itemId: string) => string;
+  uom: (groupId: string, itemId: string, uomId: string) => string;
+};
+
+// Setup data from API
 export type IndentSetupData = {
   departments: DepartmentRecord[];
   projects: ProjectRecord[];
-  branches: BranchRecord[];
-};
-
-// API response types
-export type IndentResponse = {
-  header: IndentHeader;
-  lines: IndentLine[];
-  approval: ApprovalInfo;
+  itemGroups: ItemGroupRecord[];
 };
 ```
 
@@ -354,108 +479,198 @@ export type IndentResponse = {
 ```typescript
 // utils/indentConstants.ts
 
-// Status IDs (MUST match backend)
+import type { ApprovalStatusId } from "@/components/ui/transaction";
+
 export const INDENT_STATUS_IDS = {
-  DRAFT: 21,
-  OPEN: 1,
-  PENDING_APPROVAL: 20,
-  APPROVED: 3,
-  REJECTED: 4,
-  CLOSED: 5,
-  CANCELLED: 6,
-} as const;
+  DRAFT: 21, OPEN: 1, PENDING_APPROVAL: 20,
+  APPROVED: 3, REJECTED: 4, CLOSED: 5, CANCELLED: 6,
+} as const satisfies Record<string, ApprovalStatusId>;
 
-// Immutable empty defaults (prevent accidental mutations)
-export const EMPTY_DEPARTMENTS = Object.freeze([]);
-export const EMPTY_PROJECTS = Object.freeze([]);
-export const EMPTY_OPTIONS = Object.freeze([]);
+export const INDENT_STATUS_LABELS: Record<ApprovalStatusId, string> = {
+  [INDENT_STATUS_IDS.DRAFT]: "Draft",
+  [INDENT_STATUS_IDS.OPEN]: "Open",
+  // ... etc
+};
 
-// Other constants
-export const MAX_LINE_ITEMS = 100;
-export const REQUIRED_FIELDS = ["date", "department", "branch"] as const;
+// IMMUTABLE empty arrays (prevent re-renders from new [] allocations)
+export const EMPTY_DEPARTMENTS: ReadonlyArray<DepartmentRecord> = Object.freeze([]);
+export const EMPTY_OPTIONS: ReadonlyArray<Option> = Object.freeze([]);
 ```
 
 ### Factories Pattern
 ```typescript
 // utils/indentFactories.ts
 
-let lineIdCounter = 0;
-
-export const generateLineId = (): string => {
-  return `line_${Date.now()}_${lineIdCounter++}`;
-};
+let lineIdSeed = 0;
+export const generateLineId = (): string => `line-${++lineIdSeed}`;
 
 export const createBlankLine = (): EditableLineItem => ({
   id: generateLineId(),
-  itemGroup: "",
-  item: "",
-  quantity: 0,
-  uom: "",
-  remarks: "",
+  itemGroup: "", item: "", itemMake: "",
+  quantity: "",  // String!
+  uom: "", remarks: "",
 });
 
-export const buildDefaultFormValues = (): IndentFormValues => ({
-  branch: "",
-  date: new Date().toISOString().slice(0, 10),
-  department: "",
-  project: "",
-  remarks: "",
+export const buildDefaultFormValues = () => ({
+  branch: "", date: new Date().toISOString().slice(0, 10),
+  department: "", project: "", remarks: "",
 });
+
+// Helpers for validation
+export const lineHasAnyData = (line: EditableLineItem): boolean =>
+  Boolean(line.itemGroup || line.item || line.quantity || line.remarks);
+
+export const lineIsComplete = (line: EditableLineItem): boolean => {
+  const qty = Number(line.quantity);
+  return Boolean(line.itemGroup && line.item && line.uom && Number.isFinite(qty) && qty > 0);
+};
 ```
 
-### Hooks Composition Pattern
+### Mappers Pattern (API → UI)
 ```typescript
-// hooks/useIndentFormState.ts
-export function useIndentFormState(mode: "create" | "edit" | "view", indentId?: string) {
-  const [headerData, setHeaderData] = useState(buildDefaultFormValues());
-  const [loading, setLoading] = useState(false);
+// utils/indentMappers.ts — Handle null-safety and field name variations from backend
 
-  // Load data in edit/view mode
-  useEffect(() => {
-    if (mode !== "create" && indentId) {
-      loadIndentData(indentId);
-    }
-  }, [mode, indentId]);
+export const mapDepartmentRecords = (records: unknown[]): DepartmentRecord[] =>
+  records.map((row) => {
+    const data = row as Record<string, unknown>;
+    const id = data?.dept_id ?? data?.department_id ?? data?.id;
+    if (!id) return null;
+    return {
+      id: String(id),
+      name: String(data?.dept_desc ?? data?.dept_name ?? data?.name ?? id),
+      branchId: data?.branch_id != null ? String(data.branch_id) : undefined,
+    };
+  }).filter(Boolean) as DepartmentRecord[];
+```
 
-  return { headerData, setHeaderData, loading };
+### Hooks — Complete Patterns
+
+**Rule:** If a `useEffect` or state logic exceeds 10-15 lines or is reusable, extract into a custom hook.
+
+#### Form State Hook
+```typescript
+export function useIndentFormState({ mode }: { mode: MuiFormMode }) {
+  const [initialValues, setInitialValues] = useState(buildDefaultFormValues);
+  const [formValues, setFormValues] = useState(buildDefaultFormValues);
+  const [formKey, setFormKey] = useState(0);       // Bump to force re-render
+  const formRef = useRef<{ submit: () => Promise<void> } | null>(null);
+  const bumpFormKey = useCallback(() => setFormKey(prev => prev + 1), []);
+  return { initialValues, setInitialValues, formValues, setFormValues, formKey, bumpFormKey, formRef };
 }
+```
 
-// hooks/useIndentLineItems.ts
-export function useIndentLineItems(initialLines: EditableLineItem[] = []) {
-  const [lines, setLines] = useState(() =>
-    initialLines.length > 0 ? initialLines : [createBlankLine()]
+#### Line Items Hook (with CASCADE logic — CRITICAL)
+```typescript
+export const useIndentLineItems = ({ mode, itemGroupCache, ensureItemGroupData }) => {
+  const { items: lineItems, setItems: setLineItems } = useLineItems<EditableLineItem>({
+    createBlankItem: createBlankLine,
+    hasData: lineHasAnyData,
+    maintainTrailingBlank: mode !== "view",  // Keep blank row when editing
+  });
+
+  const handleLineFieldChange = useCallback(
+    (id: string, field: keyof EditableLineItem, rawValue: string) => {
+      if (mode === "view") return;
+
+      // CASCADE 1: itemGroup change → reset item, itemMake, uom
+      if (field === "itemGroup") {
+        setLineItems(prev => prev.map(item =>
+          item.id === id ? { ...item, itemGroup: rawValue, item: "", itemMake: "", uom: "" } : item
+        ));
+        if (rawValue && !itemGroupCache[rawValue]) ensureItemGroupData(rawValue);
+        return;
+      }
+
+      // CASCADE 2: item change → auto-select default UOM from cache
+      if (field === "item") {
+        setLineItems(prev => prev.map(item => {
+          if (item.id !== id) return item;
+          const defaultUom = itemGroupCache[item.itemGroup]?.items
+            .find(opt => opt.value === rawValue)?.defaultUomId ?? "";
+          return { ...item, item: rawValue, uom: defaultUom };
+        }));
+        return;
+      }
+
+      // Generic field update
+      setLineItems(prev => prev.map(item =>
+        item.id === id ? { ...item, [field]: rawValue } : item
+      ));
+    },
+    [mode, setLineItems, itemGroupCache, ensureItemGroupData]
   );
 
-  const addLine = useCallback(() => {
-    setLines(prev => [...prev, createBlankLine()]);
-  }, []);
-
-  const removeLine = useCallback((id: string) => {
-    setLines(prev => prev.filter(line => line.id !== id));
-  }, []);
-
-  const updateLine = useCallback((id: string, field: string, value: unknown) => {
-    setLines(prev => prev.map(line =>
-      line.id === id ? { ...line, [field]: value } : line
-    ));
-  }, []);
-
-  return { lines, addLine, removeLine, updateLine };
-}
-
-// hooks/useIndentSelectOptions.ts
-export function useIndentSelectOptions(setupData: IndentSetupData | null) {
-  const departmentOptions = useMemo(() =>
-    setupData?.departments.map(d => ({ label: d.name, value: d.id })) ?? EMPTY_OPTIONS
-  , [setupData]);
-
-  const departmentLabelMap = useMemo(() =>
-    Object.fromEntries(departmentOptions.map(o => [o.value, o.label]))
-  , [departmentOptions]);
-
-  return { departmentOptions, departmentLabelMap };
-}
+  return { lineItems, setLineItems, handleLineFieldChange };
+};
 ```
+
+#### Select Options Hook (Memoized + Label Resolvers)
+```typescript
+export const useIndentSelectOptions = ({ departments, itemGroups, branchId, itemGroupCache }) => {
+  // Filter by branch
+  const departmentOptions = useMemo(() =>
+    departments
+      .filter(d => !branchId || !d.branchId || d.branchId === branchId)
+      .map(d => ({ label: d.name, value: d.id })),
+    [departments, branchId]
+  );
+
+  // Build label maps for display + tooltips
+  const departmentLabelMap = useMemo(() =>
+    Object.fromEntries(departmentOptions.map(o => [o.value, o.label])),
+    [departmentOptions]
+  );
+
+  // Item getters from deferred cache
+  const getItemOptions = useCallback(
+    (groupId: string) => itemGroupCache[groupId]?.items ?? [],
+    [itemGroupCache]
+  );
+
+  return { departmentOptions, departmentLabelMap, getItemOptions, /* labelResolvers */ };
+};
+```
+
+#### Line Item Columns as Hook (for DataGrid)
+```typescript
+export const useIndentLineItemColumns = ({ canEdit, itemGroupOptions, labelResolvers, handleLineFieldChange }) => {
+  return useMemo(() => [
+    {
+      id: "itemGroup", header: "Item Group", width: "1.6fr",
+      renderCell: ({ item }) => canEdit
+        ? <SearchableSelect options={itemGroupOptions} value={...} onChange={...} />
+        : <span>{labelResolvers.itemGroup(item.itemGroup)}</span>,
+      getTooltip: ({ item }) => labelResolvers.itemGroup(item.itemGroup),
+    },
+    // ... more columns
+  ], [canEdit, itemGroupOptions, labelResolvers, handleLineFieldChange]);
+};
+```
+
+### Deferred Loading Pattern (CRITICAL for dependent dropdowns)
+```typescript
+// Use useDeferredOptionCache for itemGroup → items/UOMs lazy loading
+const { cache, loading, ensure } = useDeferredOptionCache<string, ItemGroupCacheEntry>({
+  fetcher: async (groupId) => {
+    const response = await fetchSetup2(groupId);
+    return mapItemGroupDetailResponse(response);
+  },
+});
+// Call ensure(groupId) when user selects an item group
+```
+
+### Key Pattern Summary
+
+| Pattern | Rule |
+|---------|------|
+| **Separation of concerns** | Types, constants, factories, mappers, hooks, components in dedicated files |
+| **Memoization** | ALL options, label maps, computed values use `useMemo` and `useCallback` |
+| **Deferred loading** | Use `useDeferredOptionCache` for dependent data (itemGroup → items/UOMs) |
+| **Cascade resets** | When parent field changes (itemGroup), reset all dependent child fields |
+| **Immutable defaults** | Use `Object.freeze()` on empty arrays to prevent re-renders |
+| **Label resolvers** | Build label maps for tooltips and preview rendering |
+| **Mode-aware** | Check `mode !== "view"` before allowing edits; disable fields appropriately |
+| **Trailing blank row** | Maintain one blank row at end of line items when editing |
 
 ---
 
@@ -466,16 +681,43 @@ export function useIndentSelectOptions(setupData: IndentSetupData | null) {
 **Location:** `src/components/ui/transaction/ApprovalActionsBar.tsx`
 
 **Status Contract (Fixed - MUST match backend):**
+
+| Status ID | Label | Meaning | Badge Color |
+|-----------|-------|---------|-------------|
+| 21 | Drafted | Initial state, editable | `default` (gray) |
+| 1 | Open | Doc number generated, ready for approval | `primary` (blue) |
+| 20 | Pending Approval | In workflow (has `approval_level`) | `warning` (amber) |
+| 3 | Approved | Fully approved | `success` (green) |
+| 4 | Rejected | Rejected during approval | `error` (red) |
+| 5 | Closed | External close | `default` (gray) |
+| 6 | Cancelled | Draft cancelled | `default` (gray) |
+
+**Behavior rules:**
+- Document number is generated **only** when moving to Open (1)
+- **Pending (20)** contains `approval_level`; on approve: increment level (stay 20) or finalize (→ 3)
+- **Rejected (4)** can be reopened back to 1 or 21
+
+**Type Definitions:**
 ```typescript
-export const STATUS_IDS = {
-  DRAFT: 21,        // Initial state, can be edited
-  OPEN: 1,          // Ready for approval
-  PENDING_APPROVAL: 20,  // In approval workflow
-  APPROVED: 3,      // Fully approved
-  REJECTED: 4,      // Rejected during approval
-  CLOSED: 5,        // Closed externally
-  CANCELLED: 6,     // Draft cancelled
-} as const;
+type ApprovalInfo = {
+  statusId: ApprovalStatusId;
+  statusLabel: string;
+  approvalLevel?: number | null;
+  maxApprovalLevel?: number | null;
+  isFinalLevel?: boolean;
+};
+
+type ApprovalActionPermissions = {
+  canSave?: boolean;
+  canOpen?: boolean;
+  canCancelDraft?: boolean;
+  canReopen?: boolean;
+  canSendForApproval?: boolean;
+  canApprove?: boolean;
+  canReject?: boolean;
+  canViewApprovalLog?: boolean;
+  canClone?: boolean;
+};
 ```
 
 **Button Visibility Rules:**
@@ -492,27 +734,11 @@ export const STATUS_IDS = {
 
 **Usage:**
 ```typescript
-import { ApprovalActionsBar } from "@/components/ui/transaction/ApprovalActionsBar";
-
 <ApprovalActionsBar
-  approvalInfo={{
-    statusId: 21,
-    statusLabel: "Draft",
-    approvalLevel: 0,
-    totalLevels: 3,
-  }}
-  permissions={{
-    canSave: true,
-    canOpen: true,
-    canApprove: false,
-    canReject: false,
-  }}
-  onSave={handleSave}
-  onOpen={handleOpen}
-  onApprove={handleApprove}
-  onReject={handleReject}
-  onViewLog={handleViewLog}
-  loading={isLoading}
+  approvalInfo={{ statusId: 21, statusLabel: "Draft", approvalLevel: 0, totalLevels: 3 }}
+  permissions={{ canSave: true, canOpen: true, canApprove: false, canReject: false }}
+  onSave={handleSave} onOpen={handleOpen} onApprove={handleApprove}
+  onReject={handleReject} onViewLog={handleViewLog} loading={isLoading}
 />
 ```
 
@@ -602,6 +828,63 @@ export const saveIndent = async (formData: IndentFormData): Promise<boolean> => 
 
   return !error && data?.success;
 };
+```
+
+---
+
+## MuiForm Schema Pattern
+
+The `MuiForm` component renders forms dynamically from a schema:
+
+```typescript
+type Schema = {
+  fields: Array<{
+    name: string;
+    label: string;
+    type: "text" | "date" | "select" | "textarea" | "number" | "checkbox";
+    required?: boolean;
+    options?: Option[];
+    disabled?: boolean;
+    grid?: { xs: number; md: number };
+    placeholder?: string;
+    validate?: (value: unknown) => string | undefined;
+  }>;
+};
+
+// Build schema in a hook, memoize with useMemo:
+export const useIndentFormSchema = ({ mode, branchOptions, departmentOptions }) => {
+  return useMemo(() => ({
+    fields: [
+      { name: "branch", label: "Branch", type: "select", required: true,
+        options: branchOptions, disabled: mode !== "create", grid: { xs: 12, md: 4 } },
+      { name: "date", label: "Date", type: "date", required: true, grid: { xs: 12, md: 4 } },
+      { name: "department", label: "Department", type: "select", required: true,
+        options: departmentOptions, grid: { xs: 12, md: 4 } },
+    ],
+  }), [mode, branchOptions, departmentOptions]);
+};
+```
+
+---
+
+## Component Documentation Standards
+
+**JSDoc is required for ALL reusable components:**
+```typescript
+/**
+ * @component ApprovalActionsBar
+ * @description Renders action buttons for transaction approval workflows.
+ * Handles visibility based on current status and user permissions.
+ * @example
+ * <ApprovalActionsBar statusId={1} permissions={{ canApprove: true }} onApprove={fn} />
+ */
+```
+
+**Inline comments for non-trivial logic:**
+```typescript
+// Status ID 21 = Draft, 1 = Open, 3 = Approved
+// Map these IDs to color tokens for consistent theming
+const statusColor = getStatusColor(statusId);
 ```
 
 ---
@@ -791,11 +1074,31 @@ const STATUS_IDS = {
 } as const;
 ```
 
-### Authentication Flow
-1. Frontend sends login request
-2. Backend returns JWT in cookie (`access_token`)
-3. Frontend includes credentials in all requests (`withCredentials: true`)
-4. Backend validates JWT and auto-refreshes
+### Authentication Flow (Persona-Specific)
+
+**Control Desk (subdomain = "admin"):**
+1. `loginConsole()` → `POST /authRoutes/loginconsole`
+2. Backend validates against `vowconsole3.con_user_master` where `con_user_type = 0`
+3. JWT set in `access_token` cookie
+4. Redirect to `/dashboardctrldesk`
+
+**Tenant Admin (subdomain != "admin", loginType = "admin"):**
+1. `loginConsole()` → `POST /authRoutes/loginconsole` with `X-Subdomain` header
+2. Backend validates against `vowconsole3.con_user_master` where `con_user_type = 1` and `con_org_id` matches
+3. JWT set in `access_token` cookie
+4. Redirect to `/dashboardadmin`
+
+**Portal (subdomain != "admin", loginType = "portal"):**
+1. `login()` → `POST /authRoutes/login` with `X-Subdomain` header
+2. Backend validates against `{tenant_db}.user_mst` by `email_id`
+3. JWT set in `access_token` cookie (token includes `type: "portal"`)
+4. Redirect to `/dashboardportal`
+5. Middleware also fetches `portal_permission_token` for action-level permissions
+
+### Cookies
+- `access_token` — JWT auth token (all dashboards)
+- `portal_permission_token` — permission data (Portal only)
+- `subdomain` — tenant identifier
 
 ---
 
@@ -887,6 +1190,8 @@ export type TypeB = { a: TypeA };
 ---
 
 ## Quick Reference: Creating a New Transaction Page
+
+**Note:** Transaction pages with approval workflows live under `dashboardportal/` (Portal persona).
 
 ### 1. Create Folder Structure
 ```bash

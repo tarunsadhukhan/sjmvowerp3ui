@@ -362,6 +362,7 @@ function JuteMREditPageContent() {
 		approvalPermissions,
 		statusChipProps,
 		statusId,
+		canSetOpen,
 		canSetPending,
 		partyHasNoBranches,
 		// Approval dialog state
@@ -369,6 +370,7 @@ function JuteMREditPageContent() {
 		handleApprovalDialogClose,
 		handleApproveConfirm,
 		// Action handlers
+		handleOpen,
 		handlePending,
 		handleApprove,
 		handleReject,
@@ -506,8 +508,10 @@ function JuteMREditPageContent() {
 					approvalInfo={approvalInfo}
 					permissions={approvalPermissions}
 					loading={approvalLoading}
+					canSetOpen={canSetOpen}
 					canSetPending={canSetPending}
 					partyHasNoBranches={partyHasNoBranches}
+					onOpen={handleOpen}
 					onApprove={handleApprove}
 					onReject={handleReject}
 					onPending={handlePending}

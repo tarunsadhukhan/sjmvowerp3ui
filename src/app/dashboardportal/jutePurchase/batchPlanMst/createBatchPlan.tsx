@@ -68,9 +68,9 @@ type ItemRecord = {
  * Quality type from API
  */
 type QualityRecord = {
-  jute_quality_id: number;
-  jute_quality: string;
   item_id: number;
+  jute_quality: string;
+  item_grp_id: number;
 };
 
 /**
@@ -192,7 +192,7 @@ export default function CreateBatchPlan({
         const qualities = data.qualities ?? [];
         const options: Option[] = qualities.map((q: QualityRecord) => ({
           label: q.jute_quality || "",
-          value: String(q.jute_quality_id),
+          value: String(q.item_id),
         }));
 
         setQualityCache((prev) => ({ ...prev, [itemId]: options }));
@@ -267,7 +267,7 @@ export default function CreateBatchPlan({
             (li: Record<string, unknown>) => ({
               id: generateLineId(),
               item_grp_id: li.item_grp_id ? String(li.item_grp_id) : (li.item_id ? String(li.item_id) : ""),
-              item_id: li.item_id ? String(li.item_id) : (li.jute_quality_id ? String(li.jute_quality_id) : ""),
+              item_id: li.item_id ? String(li.item_id) : "",
               percentage: li.percentage !== null && li.percentage !== undefined
                 ? String(li.percentage)
                 : "",

@@ -512,6 +512,12 @@ function JuteGateEntryCreatePageContent() {
 					setInitialValues(mappedFormValues);
 					setFormValues(mappedFormValues);
 
+					// Sync PO ref so the PO auto-fill effect doesn't re-trigger
+					// and overwrite saved line items with PO-sourced ones (jute_mr_li_id=null)
+					if (mappedFormValues.poId) {
+						prevPoIdRef.current = mappedFormValues.poId;
+					}
+
 					// Map line items
 					if (entryDetails.line_items && entryDetails.line_items.length > 0) {
 						const mappedLineItems = mapLineItemsFromAPI(entryDetails.line_items);
@@ -593,10 +599,65 @@ function JuteGateEntryCreatePageContent() {
 					`/dashboardportal/jutePurchase/gateEntry/createGateEntry?mode=edit&id=${result.jute_gate_entry_id}`
 				);
 			} else if (mode === "edit" && gateEntryId) {
-				const payload = mapFormToUpdatePayload(formValues, lineItems);
+				// Build line items payload for save
+				const filledLines = lineItems.filter((li) => li.actualItem || li.challanItem || li.jute_mr_li_id);
+				const lineItemsPayload = filledLines.map((li) => ({
+					jute_mr_li_id: li.jute_mr_li_id ? Number(li.jute_mr_li_id) : 0,
+					jute_po_li_id: li.jutePoLiId ? Number(li.jutePoLiId) : null,
+					challan_item_id: li.challanQuality ? Number(li.challanQuality) : null,
+					challan_quantity: li.challanQty ? parseFloat(li.challanQty) : null,
+					challan_weight: li.challanWeight ? parseFloat(li.challanWeight) : null,
+					actual_item_id: li.actualQuality ? Number(li.actualQuality) : null,
+					actual_qty: li.actualQty ? parseFloat(li.actualQty) : null,
+					actual_weight: li.actualWeight ? parseFloat(li.actualWeight) : null,
+					allowable_moisture: li.allowableMoisture ? parseFloat(li.allowableMoisture) : null,
+					moisture_readings: (li.moistureReadings ?? []).map((r) => ({
+						moisture_percentage: r,
+					})),
+					remarks: li.remarks || null,
+				}));
+
+				// Parse weight values
+				const grossWeightNum = formValues.grossWeight ? parseFloat(String(formValues.grossWeight)) : null;
+				const tareWeightNum = formValues.tareWeight ? parseFloat(String(formValues.tareWeight)) : null;
+				const challanWeightNum = formValues.challanWeight ? parseFloat(String(formValues.challanWeight)) : null;
+				const variableShortageNum = formValues.variableShortage ? parseFloat(String(formValues.variableShortage)) : null;
+
+				const payload: Record<string, unknown> = {
+					jute_mr_id: Number(gateEntryId),
+					save_only: true,
+					branch_id: formValues.branch ? parseInt(String(formValues.branch), 10) : null,
+					jute_gate_entry_date: formValues.entryDate || null,
+					in_time: formValues.entryTime || null,
+					out_date: formValues.outDate || null,
+					out_time: formValues.outTime || null,
+					challan_no: formValues.challanNo || null,
+					challan_date: formValues.challanDate || null,
+					challan_weight: challanWeightNum,
+					vehicle_no: formValues.vehicleNo || null,
+					driver_name: formValues.driverName || null,
+					transporter: formValues.transporter || null,
+					po_id: formValues.poId ? parseInt(String(formValues.poId), 10) : null,
+					jute_uom: formValues.juteUom || null,
+					mukam_id: formValues.mukam ? parseInt(String(formValues.mukam), 10) : null,
+					jute_supplier_id: formValues.supplier ? parseInt(String(formValues.supplier), 10) : null,
+					party_id: formValues.party ? parseInt(String(formValues.party), 10) : null,
+					gross_weight: grossWeightNum,
+					tare_weight: tareWeightNum,
+					variable_shortage: variableShortageNum,
+					marketing_slip: formValues.marketingSlip ? 1 : 0,
+					remarks: formValues.remarks || null,
+					line_items: lineItemsPayload,
+				};
+
+				// Only include net_weight if tare_weight is entered
+				if (tareWeightNum !== null && tareWeightNum > 0) {
+					payload.net_weight = formValues.netWeight ? parseFloat(String(formValues.netWeight)) : null;
+				}
+
 				const { error } = await fetchWithCookie(
-					`${apiRoutesPortalMasters.JUTE_GATE_ENTRY_UPDATE}/${gateEntryId}?co_id=${coId}`,
-					"PUT",
+					`${apiRoutesPortalMasters.JUTE_MATERIAL_INSPECTION_COMPLETE}?co_id=${coId}`,
+					"POST",
 					payload
 				);
 
@@ -652,12 +713,10 @@ function JuteGateEntryCreatePageContent() {
 				jute_mr_li_id: li.jute_mr_li_id ? Number(li.jute_mr_li_id) : 0,
 				jute_po_li_id: li.jutePoLiId ? Number(li.jutePoLiId) : null,
 				// Challan data
-				challan_item_grp_id: li.challanItem ? Number(li.challanItem) : null,
 				challan_item_id: li.challanQuality ? Number(li.challanQuality) : null,
 				challan_quantity: li.challanQty ? parseFloat(li.challanQty) : null,
 				challan_weight: li.challanWeight ? parseFloat(li.challanWeight) : null,
 				// Actual data
-				actual_item_grp_id: li.actualItem ? Number(li.actualItem) : null,
 				actual_item_id: li.actualQuality ? Number(li.actualQuality) : null,
 				actual_qty: li.actualQty ? parseFloat(li.actualQty) : null,
 				actual_weight: li.actualWeight ? parseFloat(li.actualWeight) : null,

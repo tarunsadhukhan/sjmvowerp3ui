@@ -174,7 +174,7 @@ function JuteIssueEditPage() {
   }, [newQuantity, wtPerUnit]);
 
   // Setup data
-  const { juteItems, yarnTypes, branches, loading: setupLoading, error: setupError } = useJuteIssueSetup({
+  const { juteGroups, yarnTypes, branches, loading: setupLoading, error: setupError } = useJuteIssueSetup({
     coId,
   });
 
@@ -200,10 +200,10 @@ function JuteIssueEditPage() {
   const stockItems = React.useMemo(() => {
     let filtered = allStockItems;
     if (filterItemId) {
-      filtered = filtered.filter((s) => String(s.item_id) === filterItemId.value);
+      filtered = filtered.filter((s) => String(s.item_grp_id) === filterItemId.value);
     }
     if (filterQualityId) {
-      filtered = filtered.filter((s) => String(s.actual_quality) === filterQualityId.value);
+      filtered = filtered.filter((s) => String(s.item_id) === filterQualityId.value);
     }
     return filtered;
   }, [allStockItems, filterItemId, filterQualityId]);
@@ -265,8 +265,8 @@ function JuteIssueEditPage() {
   const qualityOptions = React.useMemo(() => {
     const seen = new Map<string, string>();
     allStockItems.forEach((s) => {
-      if (s.actual_quality && s.quality_name && !seen.has(String(s.actual_quality))) {
-        seen.set(String(s.actual_quality), s.quality_name);
+      if (s.item_id && s.quality_name && !seen.has(String(s.item_id))) {
+        seen.set(String(s.item_id), s.quality_name);
       }
     });
     return Array.from(seen.entries()).map(([id, name]) => ({ value: id, label: name }));
@@ -307,7 +307,7 @@ function JuteIssueEditPage() {
   );
 
   // Memoized options
-  const juteItemOptions = React.useMemo(() => mapJuteItemsToOptions(juteItems), [juteItems]);
+  const juteItemOptions = React.useMemo(() => mapJuteItemsToOptions(juteGroups), [juteGroups]);
   const yarnTypeOptions = React.useMemo(() => mapYarnTypesToOptions(yarnTypes), [yarnTypes]);
   const branchOptions = React.useMemo(() => {
     // If sidebar has only one branch selected, use it
@@ -331,8 +331,8 @@ function JuteIssueEditPage() {
   const getYarnTypeLabel = React.useMemo(() => createLabelResolver(yarnTypeLabelMap), [yarnTypeLabelMap]);
 
   const juteItemLabelMap = React.useMemo(
-    () => buildLabelMap(juteItems, (i) => String(i.item_id), (i) => i.item_name),
-    [juteItems]
+    () => buildLabelMap(juteGroups, (i) => String(i.item_grp_id), (i) => i.item_grp_desc),
+    [juteGroups]
   );
   const getJuteItemLabel = React.useMemo(() => createLabelResolver(juteItemLabelMap), [juteItemLabelMap]);
 
@@ -873,7 +873,7 @@ function JuteIssueEditPage() {
                     <TableCell>{getYarnTypeLabel(line.yarn_type_id)}</TableCell>
                     <TableCell>{line.branch_mr_no}</TableCell>
                     <TableCell>{line.unit_conversion}</TableCell>
-                    <TableCell>{line.item_name || getJuteItemLabel(line.item_id)}</TableCell>
+                    <TableCell>{line.jute_group_name || getJuteItemLabel(line.item_grp_id)}</TableCell>
                     <TableCell>{line.quality_name}</TableCell>
                     <TableCell align="right">{Number(line.quantity).toFixed(2)}</TableCell>
                     <TableCell align="right">{Number(line.weight).toFixed(2)}</TableCell>
@@ -1063,7 +1063,7 @@ function JuteIssueEditPage() {
                         </TableCell>
                         <TableCell>{stock.jute_gate_entry_no || "-"}</TableCell>
                         <TableCell>{stock.branch_mr_no}</TableCell>
-                        <TableCell>{stock.item_name}</TableCell>
+                        <TableCell>{stock.jute_group_name}</TableCell>
                         <TableCell>{stock.quality_name}</TableCell>
                         <TableCell>{stock.unit_conversion}</TableCell>
                         <TableCell>{stock.warehouse_name || "-"}</TableCell>
@@ -1126,7 +1126,7 @@ function JuteIssueEditPage() {
                   Selected Stock
                 </Typography>
                 <Typography>
-                  MR {selectedStock.branch_mr_no} - {selectedStock.item_name} ({selectedStock.quality_name})
+                  MR {selectedStock.branch_mr_no} - {selectedStock.jute_group_name} ({selectedStock.quality_name})
                 </Typography>
                 <Typography variant="body2" color="text.secondary">
                   Available: {selectedStock ? getAdjustedBalQty(selectedStock).toFixed(2) : "0"} unit({selectedStock?.unit_conversion}) | Rate: ₹{selectedStock?.actual_rate?.toFixed(2)}/qtl

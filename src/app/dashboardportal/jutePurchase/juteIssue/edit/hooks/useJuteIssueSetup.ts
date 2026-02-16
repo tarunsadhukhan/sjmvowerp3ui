@@ -17,7 +17,7 @@ type UseJuteIssueSetupParams = {
 };
 
 type UseJuteIssueSetupReturn = {
-  juteItems: JuteItemRecord[];
+  juteGroups: JuteItemRecord[];
   yarnTypes: YarnTypeRecord[];
   branches: BranchRecord[];
   loading: boolean;
@@ -27,7 +27,7 @@ type UseJuteIssueSetupReturn = {
 export const useJuteIssueSetup = ({
   coId,
 }: UseJuteIssueSetupParams): UseJuteIssueSetupReturn => {
-  const [juteItems, setJuteItems] = React.useState<JuteItemRecord[]>([]);
+  const [juteGroups, setJuteGroups] = React.useState<JuteItemRecord[]>([]);
   const [yarnTypes, setYarnTypes] = React.useState<YarnTypeRecord[]>([]);
   const [branches, setBranches] = React.useState<BranchRecord[]>([]);
   const [loading, setLoading] = React.useState(false);
@@ -48,10 +48,19 @@ export const useJuteIssueSetup = ({
           throw new Error(fetchError);
         }
 
-        const response = data as JuteIssueSetupData;
-        setJuteItems(response.jute_items || []);
-        setYarnTypes(response.yarn_types || []);
-        setBranches(response.branches || []);
+        const response = data as Record<string, unknown>;
+        // Map raw API fields (item_grp_name) to our type fields (item_grp_desc)
+        const rawGroups = (response.jute_groups || []) as Record<string, unknown>[];
+        setJuteGroups(
+          rawGroups.map((g) => ({
+            item_grp_id: Number(g.item_grp_id ?? 0),
+            item_grp_desc: String(g.item_grp_name ?? g.item_grp_desc ?? ""),
+            parent_grp_id: g.parent_grp_id ? Number(g.parent_grp_id) : undefined,
+            parent_grp_name: g.parent_grp_name ? String(g.parent_grp_name) : undefined,
+          }))
+        );
+        setYarnTypes((response.yarn_types || []) as YarnTypeRecord[]);
+        setBranches((response.branches || []) as BranchRecord[]);
       } catch (err) {
         const message = err instanceof Error ? err.message : "Failed to load setup data";
         setError(message);
@@ -63,5 +72,5 @@ export const useJuteIssueSetup = ({
     fetchSetup();
   }, [coId]);
 
-  return { juteItems, yarnTypes, branches, loading, error };
+  return { juteGroups, yarnTypes, branches, loading, error };
 };

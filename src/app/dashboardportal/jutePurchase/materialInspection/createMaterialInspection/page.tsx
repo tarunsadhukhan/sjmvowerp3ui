@@ -173,7 +173,7 @@ function JuteGateEntryCreatePageContent() {
 	// Label resolvers for display
 	const getItemLabel = React.useCallback(
 		(itemId: string) =>
-			setupData?.jute_items.find((i) => String(i.item_id) === itemId)?.item_name ?? itemId,
+			setupData?.jute_items.find((i) => String(i.item_grp_id) === itemId)?.item_grp_desc ?? itemId,
 		[setupData]
 	);
 
@@ -368,7 +368,7 @@ function JuteGateEntryCreatePageContent() {
 					[itemId]: qualityList.map((q) => ({
 						quality_id: Number(q.quality_id),
 						quality_name: String(q.quality_name ?? ""),
-						item_id: Number(q.item_id),
+						item_grp_id: Number(q.item_grp_id ?? q.item_id),
 					})),
 				}));
 			} catch (err) {
@@ -435,11 +435,11 @@ function JuteGateEntryCreatePageContent() {
 						id: `ge-line-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
 						jute_mr_li_id: null,  // New lines from PO don't have a database ID yet
 						jutePoLiId: String(poli.jute_po_li_id),  // Link to PO line item
-						challanItem: poli.item_id ? String(poli.item_id) : "",
-						challanQuality: poli.quality_id ? String(poli.quality_id) : "",
-						challanQty: poli.quantity ? String(poli.quantity) : "",
-						challanWeight: "",
-						actualItem: poli.item_id ? String(poli.item_id) : "",
+					challanItem: poli.item_grp_id ? String(poli.item_grp_id) : "",
+					challanQuality: poli.quality_id ? String(poli.quality_id) : "",
+					challanQty: poli.quantity ? String(poli.quantity) : "",
+					challanWeight: "",
+					actualItem: poli.item_grp_id ? String(poli.item_grp_id) : "",
 						actualQuality: poli.quality_id ? String(poli.quality_id) : "",
 						actualQty: poli.quantity ? String(poli.quantity) : "",
 						actualWeight: "",
@@ -652,13 +652,13 @@ function JuteGateEntryCreatePageContent() {
 				jute_mr_li_id: li.jute_mr_li_id ? Number(li.jute_mr_li_id) : 0,
 				jute_po_li_id: li.jutePoLiId ? Number(li.jutePoLiId) : null,
 				// Challan data
-				challan_item_id: li.challanItem ? Number(li.challanItem) : null,
-				challan_quality_id: li.challanQuality ? Number(li.challanQuality) : null,
+				challan_item_grp_id: li.challanItem ? Number(li.challanItem) : null,
+				challan_item_id: li.challanQuality ? Number(li.challanQuality) : null,
 				challan_quantity: li.challanQty ? parseFloat(li.challanQty) : null,
 				challan_weight: li.challanWeight ? parseFloat(li.challanWeight) : null,
 				// Actual data
-				actual_item_id: li.actualItem ? Number(li.actualItem) : null,
-				actual_quality_id: li.actualQuality ? Number(li.actualQuality) : null,
+				actual_item_grp_id: li.actualItem ? Number(li.actualItem) : null,
+				actual_item_id: li.actualQuality ? Number(li.actualQuality) : null,
 				actual_qty: li.actualQty ? parseFloat(li.actualQty) : null,
 				actual_weight: li.actualWeight ? parseFloat(li.actualWeight) : null,
 				// Moisture

@@ -57,10 +57,11 @@ type Option = {
  * Item type from API
  */
 type ItemRecord = {
-  item_id: number;
-  item_name: string;
-  item_code?: string;
+  item_grp_id: number;
   item_grp_name?: string;
+  item_grp_desc?: string;
+  item_code?: string;
+  parent_grp_name?: string;
 };
 
 /**
@@ -77,12 +78,12 @@ type QualityRecord = {
  */
 type BatchPlanLineItem = {
   id: string; // Client-side ID for tracking
+  item_grp_id: string;
   item_id: string;
-  jute_quality_id: string;
   percentage: string;
   // For display
-  item_name?: string;
-  jute_quality?: string;
+  jute_group_name?: string;
+  quality_name?: string;
 };
 
 let lineIdCounter = 0;
@@ -100,8 +101,8 @@ const generateLineId = (): string => {
  */
 const createBlankLineItem = (): BatchPlanLineItem => ({
   id: generateLineId(),
+  item_grp_id: "",
   item_id: "",
-  jute_quality_id: "",
   percentage: "",
 });
 
@@ -245,8 +246,8 @@ export default function CreateBatchPlan({
       const items = (data.items ?? []) as ItemRecord[];
       setItemRecords(items);
       const mappedItems: Option[] = items.map((item) => ({
-        label: `${item.item_name}${item.item_code ? ` (${item.item_code})` : ""}`,
-        value: String(item.item_id),
+        label: `${item.item_grp_name ?? item.item_grp_desc ?? String(item.item_grp_id)}${item.item_code ? ` (${item.item_code})` : ""}`,
+        value: String(item.item_grp_id),
       }));
       setItemOptions(mappedItems);
 
@@ -265,20 +266,20 @@ export default function CreateBatchPlan({
           const mappedLineItems: BatchPlanLineItem[] = existingLineItems.map(
             (li: Record<string, unknown>) => ({
               id: generateLineId(),
-              item_id: li.item_id ? String(li.item_id) : "",
-              jute_quality_id: li.jute_quality_id ? String(li.jute_quality_id) : "",
+              item_grp_id: li.item_grp_id ? String(li.item_grp_id) : (li.item_id ? String(li.item_id) : ""),
+              item_id: li.item_id ? String(li.item_id) : (li.jute_quality_id ? String(li.jute_quality_id) : ""),
               percentage: li.percentage !== null && li.percentage !== undefined
                 ? String(li.percentage)
                 : "",
-              item_name: (li.item_name as string) ?? "",
-              jute_quality: (li.jute_quality as string) ?? "",
+              jute_group_name: (li.jute_group_name as string) ?? "",
+              quality_name: (li.quality_name as string) ?? (li.jute_quality as string) ?? "",
             })
           );
           setLineItems(mappedLineItems);
 
           // Pre-fetch qualities for all items in line items
           // Use empty cache since we just reset it
-          const uniqueItemIds = [...new Set(mappedLineItems.map((li) => li.item_id).filter(Boolean))];
+          const uniqueItemIds = [...new Set(mappedLineItems.map((li) => li.item_grp_id).filter(Boolean))];
           for (const itemId of uniqueItemIds) {
             void fetchQualitiesForItem(itemId, {});
           }
@@ -328,7 +329,7 @@ export default function CreateBatchPlan({
       setLineItems((prev) =>
         prev.map((li) =>
           li.id === lineId
-            ? { ...li, item_id: newItemId, jute_quality_id: "" }
+            ? { ...li, item_grp_id: newItemId, item_id: "" }
             : li
         )
       );
@@ -351,7 +352,7 @@ export default function CreateBatchPlan({
   const handleQualityChange = useCallback((lineId: string, newQualityId: string) => {
     setLineItems((prev) =>
       prev.map((li) =>
-        li.id === lineId ? { ...li, jute_quality_id: newQualityId } : li
+        li.id === lineId ? { ...li, item_id: newQualityId } : li
       )
     );
   }, []);
@@ -413,7 +414,7 @@ export default function CreateBatchPlan({
 
       // Validate line items
       const validLineItems = lineItems.filter(
-        (li) => li.jute_quality_id && li.percentage
+        (li) => li.item_id && li.percentage
       );
 
       if (validLineItems.length === 0) {
@@ -435,9 +436,9 @@ export default function CreateBatchPlan({
         plan_name: planName.trim(),
         branch_id: parseInt(selectedBranch),
         line_items: validLineItems.map((li) => ({
-          jute_quality_id: parseInt(li.jute_quality_id),
+          item_id: parseInt(li.item_id),
           percentage: parseFloat(li.percentage),
-          item_id: li.item_id ? parseInt(li.item_id) : null,
+          item_grp_id: li.item_grp_id ? parseInt(li.item_grp_id) : null,
         })),
       };
 
@@ -593,23 +594,23 @@ export default function CreateBatchPlan({
                   </TableHead>
                   <TableBody>
                     {lineItems.map((line) => {
-                      const qualityOptions = qualityCache[line.item_id] ?? [];
-                      const isLoadingQualities = qualityLoading[line.item_id] ?? false;
+                      const qualityOptions = qualityCache[line.item_grp_id] ?? [];
+                      const isLoadingQualities = qualityLoading[line.item_grp_id] ?? false;
 
                       return (
                         <TableRow key={line.id}>
                           <TableCell>
                             {isViewMode ? (
                               <Typography variant="body2">
-                                {line.item_name || 
-                                  itemOptions.find((o) => o.value === line.item_id)?.label || 
+                                {line.jute_group_name || 
+                                  itemOptions.find((o) => o.value === line.item_grp_id)?.label || 
                                   "-"}
                               </Typography>
                             ) : (
                               <Autocomplete
                                 size="small"
                                 options={itemOptions}
-                                value={itemOptions.find((o) => o.value === line.item_id) ?? null}
+                                value={itemOptions.find((o) => o.value === line.item_grp_id) ?? null}
                                 onChange={(_, newValue) => {
                                   handleItemChange(line.id, newValue?.value ?? "");
                                 }}
@@ -625,26 +626,26 @@ export default function CreateBatchPlan({
                           <TableCell>
                             {isViewMode ? (
                               <Typography variant="body2">
-                                {line.jute_quality ||
-                                  qualityOptions.find((o) => o.value === line.jute_quality_id)?.label ||
+                                {line.quality_name ||
+                                  qualityOptions.find((o) => o.value === line.item_id)?.label ||
                                   "-"}
                               </Typography>
                             ) : (
                               <Autocomplete
                                 size="small"
                                 options={qualityOptions}
-                                value={qualityOptions.find((o) => o.value === line.jute_quality_id) ?? null}
+                                value={qualityOptions.find((o) => o.value === line.item_id) ?? null}
                                 onChange={(_, newValue) => {
                                   handleQualityChange(line.id, newValue?.value ?? "");
                                 }}
                                 getOptionLabel={(o) => o.label}
                                 isOptionEqualToValue={(a, b) => a.value === b.value}
                                 loading={isLoadingQualities}
-                                disabled={!line.item_id}
+                                disabled={!line.item_grp_id}
                                 renderInput={(params) => (
                                   <TextField
                                     {...params}
-                                    placeholder={line.item_id ? "Select quality" : "Select item first"}
+                                    placeholder={line.item_grp_id ? "Select quality" : "Select item first"}
                                   />
                                 )}
                                 disableClearable={false}

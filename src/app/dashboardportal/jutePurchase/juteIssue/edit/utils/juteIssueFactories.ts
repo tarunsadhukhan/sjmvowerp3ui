@@ -29,8 +29,8 @@ export const createBlankLine = (): EditableLineItem => ({
   jute_issue_id: undefined,
   jute_mr_li_id: "",
   yarn_type_id: "",
+  item_grp_id: "",
   item_id: "",
-  jute_quality_id: "",
   quantity: "",
   weight: "",
   unit_conversion: "",
@@ -38,7 +38,7 @@ export const createBlankLine = (): EditableLineItem => ({
   issue_value: 0,
   branch_mr_no: undefined,
   quality_name: undefined,
-  item_name: undefined,
+  jute_group_name: undefined,
   balqty: undefined,
   balweight: undefined,
 });

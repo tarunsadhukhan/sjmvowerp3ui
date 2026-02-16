@@ -36,19 +36,16 @@ export type MukamRecord = {
 };
 
 export type JuteItemRecord = {
-	item_id: number;
-	item_code: string;
-	item_name: string;
-	item_grp_id?: number;
-	item_grp_name?: string;
-	default_uom_id?: number;
-	default_uom?: string;
+	item_grp_id: number;
+	item_grp_desc: string;
+	parent_grp_id?: number;
+	parent_grp_name?: string;
 };
 
 export type JuteQualityRecord = {
 	quality_id: number;
 	quality_name: string;
-	item_id: number;
+	item_grp_id: number;
 };
 
 export type OpenPORecord = {
@@ -188,15 +185,15 @@ export type GateEntryLineItemAPI = {
 	jute_mr_li_id: number;  // Line item ID from jute_mr_li table
 	jute_mr_id: number;  // Parent jute_mr ID
 	jute_po_li_id: number | null;
+	challan_item_grp_id: number | null;
+	challan_group_name: string | null;
 	challan_item_id: number | null;
-	challan_item_name: string | null;
-	challan_quality_id: number | null;  // Backend returns this (not challan_jute_quality_id)
 	challan_quality_name: string | null;
 	challan_quantity: number | null;
 	challan_weight: number | null;
+	actual_item_grp_id: number | null;
+	actual_group_name: string | null;
 	actual_item_id: number | null;
-	actual_item_name: string | null;
-	actual_quality_id: number | null;  // Backend returns this (aliased from actual_quality)
 	actual_quality_name: string | null;
 	actual_qty: number | null;  // Backend returns actual_qty (not actual_quantity)
 	actual_weight: number | null;
@@ -226,8 +223,8 @@ export type PODetailsForGateEntry = {
 
 export type POLineItemForGateEntry = {
 	jute_po_li_id: number;
-	item_id: number | null;
-	item_name: string | null;
+	item_grp_id: number | null;
+	jute_group_name: string | null;
 	quality_id: number | null;
 	quality_name: string | null;
 	quantity: number | null;

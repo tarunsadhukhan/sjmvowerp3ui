@@ -33,6 +33,7 @@ export const mapApiLineItemsToEditable = (
     actual_rate: item.actual_rate || 0,
     issue_value: item.issue_value || 0,
     status_id: item.status_id,
+    jute_gate_entry_no: item.jute_gate_entry_no,
     branch_mr_no: item.branch_mr_no,
     item_name: item.item_name,
     jute_group_name: item.jute_group_name,
@@ -45,7 +46,7 @@ export const mapApiLineItemsToEditable = (
  * Map stock outstanding item to option for dropdown.
  */
 export const mapStockToOption = (stock: StockOutstandingItem): Option => ({
-  label: `MR ${stock.branch_mr_no} - ${stock.item_name || "N/A"} (Bal: ${stock.balqty?.toFixed(2) ?? 0} / ${stock.balweight?.toFixed(2) ?? 0} kg)`,
+  label: `GE ${stock.jute_gate_entry_no ?? "-"} - ${stock.item_name || "Unknown"} (Bal: ${stock.balqty?.toFixed(2) ?? 0} / ${stock.balweight?.toFixed(2) ?? 0} kg)`,
   value: String(stock.jute_mr_li_id),
 });
 
@@ -100,6 +101,7 @@ export const createLineFromStock = (
     actual_rate: stock.actual_rate || 0,
     issue_value: issueValue,
     branch_mr_no: stock.branch_mr_no,
+    jute_gate_entry_no: stock.jute_gate_entry_no,
     item_name: stock.item_name,
     jute_group_name: stock.jute_group_name,
     balqty: stock.balqty,

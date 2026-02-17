@@ -37,6 +37,7 @@ export const createBlankLine = (): EditableLineItem => ({
   actual_rate: 0,
   issue_value: 0,
   branch_mr_no: undefined,
+  jute_gate_entry_no: undefined,
   item_name: undefined,
   jute_group_name: undefined,
   balqty: undefined,

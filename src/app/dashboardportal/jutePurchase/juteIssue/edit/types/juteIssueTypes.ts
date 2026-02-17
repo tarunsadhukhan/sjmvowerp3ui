@@ -46,6 +46,7 @@ export type JuteIssueLineItem = {
   status: string;
   jute_mr_li_id: number;
   jute_mr_id: number;
+  jute_gate_entry_no?: number;
   branch_mr_no: number;
   item_grp_id?: number;
   jute_group_name?: string;
@@ -79,6 +80,7 @@ export type EditableLineItem = {
   issue_value: number;
   status_id?: number; // Item-level status for approval workflow
   // Display fields (from stock outstanding)
+  jute_gate_entry_no?: number;
   branch_mr_no?: number;
   item_name?: string;
   jute_group_name?: string;

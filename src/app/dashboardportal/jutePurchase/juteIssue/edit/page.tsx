@@ -133,7 +133,7 @@ function JuteIssueEditPage() {
   // Stock selection dialog state
   const [stockDialogOpen, setStockDialogOpen] = React.useState(false);
   const [filterItemId, setFilterItemId] = React.useState<Option | null>(null);
-  const [filterQualityId, setFilterQualityId] = React.useState<Option | null>(null);
+  const [filterItemName, setFilterItemName] = React.useState<Option | null>(null);
   const [selectedStockId, setSelectedStockId] = React.useState<string>("");
 
   // Add item dialog state (quantity/weight input after selecting stock)
@@ -188,7 +188,7 @@ function JuteIssueEditPage() {
     calculateTotals,
   } = useJuteIssueLineItems({ mode });
 
-  // Stock data - fetch when branch is selected (filtered client-side by item/quality)
+  // Stock data - fetch when branch is selected (filtered client-side by jute type/item)
   const { stockItems: allStockItems, loading: stockLoading, refetch: refetchStock } = useStockOutstanding({
     coId,
     branchId: selectedBranchId,
@@ -196,17 +196,17 @@ function JuteIssueEditPage() {
     issueDate, // Filter stock by issue date
   });
 
-  // Filter stock items by selected jute type and quality
+  // Filter stock items by selected jute type and item
   const stockItems = React.useMemo(() => {
     let filtered = allStockItems;
     if (filterItemId) {
       filtered = filtered.filter((s) => String(s.item_grp_id) === filterItemId.value);
     }
-    if (filterQualityId) {
-      filtered = filtered.filter((s) => String(s.item_id) === filterQualityId.value);
+    if (filterItemName) {
+      filtered = filtered.filter((s) => String(s.item_id) === filterItemName.value);
     }
     return filtered;
-  }, [allStockItems, filterItemId, filterQualityId]);
+  }, [allStockItems, filterItemId, filterItemName]);
 
   // Calculate how much of each stock has already been entered in draft items
   const draftQuantityByMrLiId = React.useMemo(() => {
@@ -261,12 +261,12 @@ function JuteIssueEditPage() {
     return qty > adjustedBalQty;
   }, [newQuantity, selectedStock, getAdjustedBalQty]);
 
-  // Extract unique qualities from stock for filter dropdown
-  const qualityOptions = React.useMemo(() => {
+  // Extract unique items from stock for filter dropdown
+  const itemNameOptions = React.useMemo(() => {
     const seen = new Map<string, string>();
     allStockItems.forEach((s) => {
-      if (s.item_id && s.quality_name && !seen.has(String(s.item_id))) {
-        seen.set(String(s.item_id), s.quality_name);
+      if (s.item_id && s.item_name && !seen.has(String(s.item_id))) {
+        seen.set(String(s.item_id), s.item_name);
       }
     });
     return Array.from(seen.entries()).map(([id, name]) => ({ value: id, label: name }));
@@ -422,7 +422,7 @@ function JuteIssueEditPage() {
   // Handle stock selection dialog
   const handleOpenStockDialog = () => {
     setFilterItemId(null);
-    setFilterQualityId(null);
+    setFilterItemName(null);
     setSelectedStockId("");
     refetchStock();
     setStockDialogOpen(true);
@@ -835,7 +835,7 @@ function JuteIssueEditPage() {
                 <TableCell>MR No</TableCell>
                 <TableCell>Unit</TableCell>
                 <TableCell>Jute Type</TableCell>
-                <TableCell>Quality</TableCell>
+                <TableCell>Item</TableCell>
                 <TableCell align="right">Bale/Drum</TableCell>
                 <TableCell align="right">Weight (kg)</TableCell>
                 <TableCell align="right">Rate/Qtl</TableCell>
@@ -874,7 +874,7 @@ function JuteIssueEditPage() {
                     <TableCell>{line.branch_mr_no}</TableCell>
                     <TableCell>{line.unit_conversion}</TableCell>
                     <TableCell>{line.jute_group_name || getJuteItemLabel(line.item_grp_id)}</TableCell>
-                    <TableCell>{line.quality_name}</TableCell>
+                    <TableCell>{line.item_name}</TableCell>
                     <TableCell align="right">{Number(line.quantity).toFixed(2)}</TableCell>
                     <TableCell align="right">{Number(line.weight).toFixed(2)}</TableCell>
                     <TableCell align="right">{line.actual_rate?.toFixed(2)}</TableCell>
@@ -1000,12 +1000,12 @@ function JuteIssueEditPage() {
                 sx={{ minWidth: 220, flex: 1 }}
               />
               <Autocomplete
-                id="stock-filter-quality"
-                options={qualityOptions}
-                value={filterQualityId}
-                onChange={(_, value) => setFilterQualityId(value)}
+                id="stock-filter-item"
+                options={itemNameOptions}
+                value={filterItemName}
+                onChange={(_, value) => setFilterItemName(value)}
                 renderInput={(params) => (
-                  <TextField {...params} label="Filter by Quality" size="small" />
+                  <TextField {...params} label="Filter by Item" size="small" />
                 )}
                 isOptionEqualToValue={(opt, val) => opt.value === val.value}
                 sx={{ minWidth: 220, flex: 1 }}
@@ -1033,7 +1033,7 @@ function JuteIssueEditPage() {
                       <TableCell>Gate Entry No</TableCell>
                       <TableCell>MR No</TableCell>
                       <TableCell>Jute Type</TableCell>
-                      <TableCell>Quality</TableCell>
+                      <TableCell>Item</TableCell>
                       <TableCell>Unit</TableCell>
                       <TableCell>Warehouse</TableCell>
                       <TableCell align="right">Bal Qty</TableCell>
@@ -1064,7 +1064,7 @@ function JuteIssueEditPage() {
                         <TableCell>{stock.jute_gate_entry_no || "-"}</TableCell>
                         <TableCell>{stock.branch_mr_no}</TableCell>
                         <TableCell>{stock.jute_group_name}</TableCell>
-                        <TableCell>{stock.quality_name}</TableCell>
+                        <TableCell>{stock.item_name}</TableCell>
                         <TableCell>{stock.unit_conversion}</TableCell>
                         <TableCell>{stock.warehouse_name || "-"}</TableCell>
                         <TableCell align="right">
@@ -1126,7 +1126,7 @@ function JuteIssueEditPage() {
                   Selected Stock
                 </Typography>
                 <Typography>
-                  MR {selectedStock.branch_mr_no} - {selectedStock.jute_group_name} ({selectedStock.quality_name})
+                  MR {selectedStock.branch_mr_no} - {selectedStock.jute_group_name} ({selectedStock.item_name})
                 </Typography>
                 <Typography variant="body2" color="text.secondary">
                   Available: {selectedStock ? getAdjustedBalQty(selectedStock).toFixed(2) : "0"} unit({selectedStock?.unit_conversion}) | Rate: ₹{selectedStock?.actual_rate?.toFixed(2)}/qtl

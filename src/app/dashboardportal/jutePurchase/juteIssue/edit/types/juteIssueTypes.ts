@@ -25,7 +25,7 @@ export type StockOutstandingItem = {
   item_grp_id: number;
   jute_group_name: string;
   item_id: number;
-  quality_name: string;
+  item_name: string;
   actual_qty: number;
   actual_weight: number;
   actual_rate: number;
@@ -50,7 +50,7 @@ export type JuteIssueLineItem = {
   item_grp_id?: number;
   jute_group_name?: string;
   item_id: number;
-  jute_quality: string;
+  item_name: string;
   yarn_type_id: number;
   yarn_type_name: string;
   quantity: number;
@@ -80,7 +80,7 @@ export type EditableLineItem = {
   status_id?: number; // Item-level status for approval workflow
   // Display fields (from stock outstanding)
   branch_mr_no?: number;
-  quality_name?: string;
+  item_name?: string;
   jute_group_name?: string;
   balqty?: number;
   balweight?: number;

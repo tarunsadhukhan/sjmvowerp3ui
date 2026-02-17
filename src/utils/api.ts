@@ -390,7 +390,49 @@ const apiRoutesPortalMasters = {
     ISSUE_COST_FACTORS: `${API_URL}/inventoryIssue/get_cost_factors`,
     ISSUE_MACHINES: `${API_URL}/inventoryIssue/get_machines`,
 
+    // Sales Quotation endpoints
+    QUOTATION_TABLE: `${API_URL}/salesQuotation/get_quotation_table`,
+    QUOTATION_SETUP_1: `${API_URL}/salesQuotation/get_quotation_setup_1`,
+    QUOTATION_SETUP_2: `${API_URL}/salesQuotation/get_quotation_setup_2`,
+    QUOTATION_GET_BY_ID: `${API_URL}/salesQuotation/get_quotation_by_id`,
+    QUOTATION_CREATE: `${API_URL}/salesQuotation/create_quotation`,
+    QUOTATION_UPDATE: `${API_URL}/salesQuotation/update_quotation`,
+    QUOTATION_OPEN: `${API_URL}/salesQuotation/open_quotation`,
+    QUOTATION_CANCEL_DRAFT: `${API_URL}/salesQuotation/cancel_draft_quotation`,
+    QUOTATION_SEND_FOR_APPROVAL: `${API_URL}/salesQuotation/send_quotation_for_approval`,
+    QUOTATION_APPROVE: `${API_URL}/salesQuotation/approve_quotation`,
+    QUOTATION_REJECT: `${API_URL}/salesQuotation/reject_quotation`,
+    QUOTATION_REOPEN: `${API_URL}/salesQuotation/reopen_quotation`,
 
+    // Sales Order endpoints
+    SALES_ORDER_TABLE: `${API_URL}/salesOrder/get_sales_order_table`,
+    SALES_ORDER_BY_ID: `${API_URL}/salesOrder/get_sales_order_by_id`,
+    SALES_ORDER_SETUP_1: `${API_URL}/salesOrder/get_sales_order_setup_1`,
+    SALES_ORDER_SETUP_2: `${API_URL}/salesOrder/get_sales_order_setup_2`,
+    SALES_ORDER_QUOTATION_LINES: `${API_URL}/salesOrder/get_quotation_lines`,
+    SALES_ORDER_CREATE: `${API_URL}/salesOrder/create_sales_order`,
+    SALES_ORDER_UPDATE: `${API_URL}/salesOrder/update_sales_order`,
+    SALES_ORDER_OPEN: `${API_URL}/salesOrder/open_sales_order`,
+    SALES_ORDER_CANCEL_DRAFT: `${API_URL}/salesOrder/cancel_draft_sales_order`,
+    SALES_ORDER_SEND_FOR_APPROVAL: `${API_URL}/salesOrder/send_sales_order_for_approval`,
+    SALES_ORDER_APPROVE: `${API_URL}/salesOrder/approve_sales_order`,
+    SALES_ORDER_REJECT: `${API_URL}/salesOrder/reject_sales_order`,
+    SALES_ORDER_REOPEN: `${API_URL}/salesOrder/reopen_sales_order`,
+
+    // Sales Delivery Order endpoints
+    DELIVERY_ORDER_TABLE: `${API_URL}/salesDeliveryOrder/get_delivery_order_table`,
+    DELIVERY_ORDER_SETUP_1: `${API_URL}/salesDeliveryOrder/get_delivery_order_setup_1`,
+    DELIVERY_ORDER_SETUP_2: `${API_URL}/salesDeliveryOrder/get_delivery_order_setup_2`,
+    DELIVERY_ORDER_SALES_ORDER_LINES: `${API_URL}/salesDeliveryOrder/get_sales_order_lines`,
+    DELIVERY_ORDER_GET_BY_ID: `${API_URL}/salesDeliveryOrder/get_delivery_order_by_id`,
+    DELIVERY_ORDER_CREATE: `${API_URL}/salesDeliveryOrder/create_delivery_order`,
+    DELIVERY_ORDER_UPDATE: `${API_URL}/salesDeliveryOrder/update_delivery_order`,
+    DELIVERY_ORDER_OPEN: `${API_URL}/salesDeliveryOrder/open_delivery_order`,
+    DELIVERY_ORDER_CANCEL_DRAFT: `${API_URL}/salesDeliveryOrder/cancel_draft_delivery_order`,
+    DELIVERY_ORDER_SEND_FOR_APPROVAL: `${API_URL}/salesDeliveryOrder/send_delivery_order_for_approval`,
+    DELIVERY_ORDER_APPROVE: `${API_URL}/salesDeliveryOrder/approve_delivery_order`,
+    DELIVERY_ORDER_REJECT: `${API_URL}/salesDeliveryOrder/reject_delivery_order`,
+    DELIVERY_ORDER_REOPEN: `${API_URL}/salesDeliveryOrder/reopen_delivery_order`,
 };
 
 export { apiRoutes, apiRoutesconsole, apiRoutesPortalMasters };

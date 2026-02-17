@@ -22,10 +22,10 @@ export type StockOutstandingItem = {
   branch_id: number;
   branch_mr_no: number;
   jute_mr_id: number;
+  item_grp_id: number;
+  jute_group_name: string;
   item_id: number;
   item_name: string;
-  actual_quality: number;
-  quality_name: string;
   actual_qty: number;
   actual_weight: number;
   actual_rate: number;
@@ -46,11 +46,12 @@ export type JuteIssueLineItem = {
   status: string;
   jute_mr_li_id: number;
   jute_mr_id: number;
+  jute_gate_entry_no?: number;
   branch_mr_no: number;
-  item_id?: number;
-  jute_type: string;
-  jute_quality_id: number;
-  jute_quality: string;
+  item_grp_id?: number;
+  jute_group_name?: string;
+  item_id: number;
+  item_name: string;
   yarn_type_id: number;
   yarn_type_name: string;
   quantity: number;
@@ -70,8 +71,8 @@ export type EditableLineItem = {
   jute_issue_id?: number; // Backend ID (null for new)
   jute_mr_li_id: string;
   yarn_type_id: string;
+  item_grp_id: string;
   item_id: string;
-  jute_quality_id: string;
   quantity: string;
   weight: string;
   unit_conversion: string;
@@ -79,9 +80,10 @@ export type EditableLineItem = {
   issue_value: number;
   status_id?: number; // Item-level status for approval workflow
   // Display fields (from stock outstanding)
+  jute_gate_entry_no?: number;
   branch_mr_no?: number;
-  quality_name?: string;
   item_name?: string;
+  jute_group_name?: string;
   balqty?: number;
   balweight?: number;
 };
@@ -90,11 +92,10 @@ export type EditableLineItem = {
  * Jute item (item_grp_id 2 or 3) option.
  */
 export type JuteItemRecord = {
-  item_id: number;
-  item_code: string;
-  item_name: string;
   item_grp_id: number;
-  item_grp_name: string;
+  item_grp_desc: string;
+  parent_grp_id?: number;
+  parent_grp_name?: string;
 };
 
 /**
@@ -117,7 +118,7 @@ export type BranchRecord = {
  * Setup data returned from get_issue_create_setup.
  */
 export type JuteIssueSetupData = {
-  jute_items: JuteItemRecord[];
+  jute_groups: JuteItemRecord[];
   yarn_types: YarnTypeRecord[];
   branches: BranchRecord[];
 };

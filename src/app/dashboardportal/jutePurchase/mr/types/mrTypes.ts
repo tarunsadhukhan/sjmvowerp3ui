@@ -53,9 +53,9 @@ export type JuteMRLineItemAPI = {
 	jute_mr_li_id: number;
 	jute_mr_id: number;
 	jute_po_li_id: number | null;
+	actual_item_grp_id: number | null;
+	actual_group_name: string | null;
 	actual_item_id: number | null;
-	actual_item_name: string | null;
-	actual_quality: number | null;
 	actual_quality_name: string | null;
 	actual_qty: number | null;
 	actual_weight: number | null;

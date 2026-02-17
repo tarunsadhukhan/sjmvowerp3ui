@@ -101,15 +101,15 @@ export const mapJuteItemRecords = (records: unknown[]): JuteItemRecord[] =>
   (records || [])
     .map((row) => {
       const data = row as Record<string, unknown>;
-      const id = data?.item_id;
+      const id = data?.item_grp_id ?? data?.item_id;
       if (!id) return null;
       return {
         item_id: Number(id),
-        item_code: String(data?.item_code ?? id),
-        // API returns item_name, but we store as item_desc for consistency
-        item_desc: String(data?.item_name ?? data?.item_desc ?? id),
-        item_grp_id: data?.item_grp_id ? Number(data.item_grp_id) : undefined,
-        item_grp_desc: data?.item_grp_name ?? data?.item_grp_desc ? String(data.item_grp_name ?? data.item_grp_desc) : undefined,
+        item_code: String(data?.item_grp_code ?? data?.item_code ?? id),
+        // API returns item_grp_name (with recursive path like "Jute > Raw Jute")
+        item_desc: String(data?.item_grp_name ?? data?.item_grp_desc ?? data?.item_name ?? data?.item_desc ?? id),
+        item_grp_id: data?.parent_grp_id ? Number(data.parent_grp_id) : undefined,
+        item_grp_desc: data?.parent_grp_name ? String(data.parent_grp_name) : undefined,
         default_uom_id: data?.default_uom_id ? Number(data.default_uom_id) : undefined,
         default_uom: data?.default_uom ? String(data.default_uom) : undefined,
       } satisfies JuteItemRecord;
@@ -125,7 +125,7 @@ export const mapJuteQualityRecords = (records: unknown[]): JuteQualityRecord[] =
       return {
         quality_id: Number(id),
         quality_name: String(data?.quality_name ?? data?.jute_quality ?? id),
-        item_id: Number(data?.item_id ?? 0),
+        item_grp_id: Number(data?.item_grp_id ?? data?.item_id ?? 0),
       } satisfies JuteQualityRecord;
     })
     .filter(Boolean) as JuteQualityRecord[];
@@ -140,7 +140,7 @@ export const mapJutePOSetupResponse = (response: unknown): JutePOSetupData => {
     branches: mapBranchRecords((data?.branches as unknown[]) ?? []),
     mukams: mapMukamRecords((data?.mukams as unknown[]) ?? []),
     vehicle_types: mapVehicleTypeRecords((data?.vehicle_types as unknown[]) ?? []),
-    jute_items: mapJuteItemRecords((data?.jute_items as unknown[]) ?? []),
+    jute_items: mapJuteItemRecords((data?.jute_groups as unknown[]) ?? (data?.jute_items as unknown[]) ?? []),
     suppliers: mapJuteSupplierRecords((data?.suppliers as unknown[]) ?? []),
     channel_options: (data?.channel_options as JutePOSetupData["channel_options"]) ?? [],
     unit_options: (data?.unit_options as JutePOSetupData["unit_options"]) ?? [],
@@ -249,9 +249,9 @@ export const mapLineItemDetailsToLineItem = (
   
   return {
     id: generateLineId(),
-    itemId: String(details.item_id),
-    itemName: details.item_name || undefined,
-    quality: details.jute_quality_id ? String(details.jute_quality_id) : "",
+    itemId: String(details.item_grp_id ?? details.item_id),
+    itemName: details.jute_group_name ?? undefined,
+    quality: details.item_id ? String(details.item_id) : "",
     qualityName: details.quality_name || undefined,
     cropYear: details.crop_year ? `${details.crop_year}-${(details.crop_year % 100) + 1}` : "",
     marka: details.marka || "",
@@ -292,8 +292,8 @@ export const mapFormValuesToCreatePayload = (
   line_items: lineItems
     .filter((li) => li.itemId && Number(li.quantity) > 0)
     .map((li) => ({
-      item_id: Number(li.itemId),
-      jute_quality_id: li.quality ? Number(li.quality) : null,
+      item_grp_id: Number(li.itemId),
+      item_id: li.quality ? Number(li.quality) : null,
       crop_year: li.cropYear || null,
       marka: li.marka || null,
       quantity: Number(li.quantity),
@@ -330,8 +330,8 @@ export const mapFormToUpdatePayload = (
   line_items: lineItems
     .filter((li) => li.itemId && Number(li.quantity) > 0)
     .map((li) => ({
-      item_id: Number(li.itemId),
-      jute_quality_id: li.quality ? Number(li.quality) : null,
+      item_grp_id: Number(li.itemId),
+      item_id: li.quality ? Number(li.quality) : null,
       crop_year: li.cropYear || null,
       marka: li.marka || null,
       quantity: Number(li.quantity),

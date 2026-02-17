@@ -25,17 +25,18 @@ export const mapApiLineItemsToEditable = (
     jute_issue_id: item.jute_issue_id,
     jute_mr_li_id: String(item.jute_mr_li_id || ""),
     yarn_type_id: String(item.yarn_type_id || ""),
+    item_grp_id: String(item.item_grp_id || ""),
     item_id: String(item.item_id || ""),
-    jute_quality_id: String(item.jute_quality_id || ""),
     quantity: String(item.quantity ?? ""),
     weight: String(item.weight ?? ""),
     unit_conversion: item.unit_conversion || "",
     actual_rate: item.actual_rate || 0,
     issue_value: item.issue_value || 0,
     status_id: item.status_id,
+    jute_gate_entry_no: item.jute_gate_entry_no,
     branch_mr_no: item.branch_mr_no,
-    quality_name: item.jute_quality,
-    item_name: item.jute_type,
+    item_name: item.item_name,
+    jute_group_name: item.jute_group_name,
     balqty: undefined, // Will be populated from stock
     balweight: undefined,
   }));
@@ -45,7 +46,7 @@ export const mapApiLineItemsToEditable = (
  * Map stock outstanding item to option for dropdown.
  */
 export const mapStockToOption = (stock: StockOutstandingItem): Option => ({
-  label: `MR ${stock.branch_mr_no} - ${stock.quality_name || "N/A"} (Bal: ${stock.balqty?.toFixed(2) ?? 0} / ${stock.balweight?.toFixed(2) ?? 0} kg)`,
+  label: `GE ${stock.jute_gate_entry_no ?? "-"} - ${stock.item_name || "Unknown"} (Bal: ${stock.balqty?.toFixed(2) ?? 0} / ${stock.balweight?.toFixed(2) ?? 0} kg)`,
   value: String(stock.jute_mr_li_id),
 });
 
@@ -54,8 +55,8 @@ export const mapStockToOption = (stock: StockOutstandingItem): Option => ({
  */
 export const mapJuteItemsToOptions = (items: JuteItemRecord[]): Option[] =>
   items.map((item) => ({
-    label: item.item_name,
-    value: String(item.item_id),
+    label: item.item_grp_desc,
+    value: String(item.item_grp_id),
   }));
 
 /**
@@ -92,16 +93,17 @@ export const createLineFromStock = (
     jute_issue_id: undefined,
     jute_mr_li_id: String(stock.jute_mr_li_id),
     yarn_type_id: yarnTypeId,
+    item_grp_id: String(stock.item_grp_id || ""),
     item_id: String(stock.item_id || ""),
-    jute_quality_id: String(stock.actual_quality || ""),
     quantity: String(quantity),
     weight: String(weight),
     unit_conversion: stock.unit_conversion || "",
     actual_rate: stock.actual_rate || 0,
     issue_value: issueValue,
     branch_mr_no: stock.branch_mr_no,
-    quality_name: stock.quality_name,
+    jute_gate_entry_no: stock.jute_gate_entry_no,
     item_name: stock.item_name,
+    jute_group_name: stock.jute_group_name,
     balqty: stock.balqty,
     balweight: stock.balweight,
   };
@@ -119,7 +121,7 @@ export const mapEditableToCreatePayload = (
   issue_date: issueDate,
   jute_mr_li_id: Number(line.jute_mr_li_id),
   yarn_type_id: Number(line.yarn_type_id),
-  jute_quality_id: Number(line.jute_quality_id),
+  item_id: Number(line.item_id),
   quantity: Number(line.quantity) || 0,
   weight: Number(line.weight) || 0,
   unit_conversion: line.unit_conversion || null,

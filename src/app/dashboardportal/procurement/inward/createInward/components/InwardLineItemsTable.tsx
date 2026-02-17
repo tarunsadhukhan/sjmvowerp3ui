@@ -37,8 +37,9 @@ export const useInwardLineItemColumns = ({
 				id: "poNo",
 				header: "PO No.",
 				width: "1fr",
+				minWidth: "100px",
 				renderCell: ({ item }) => (
-					<span className="text-xs text-muted-foreground">{item.poNo || "-"}</span>
+					<span className="text-sm text-muted-foreground">{item.poNo || "-"}</span>
 				),
 				getTooltip: ({ item }) => item.poNo || undefined,
 			},
@@ -46,11 +47,12 @@ export const useInwardLineItemColumns = ({
 			{
 				id: "itemGroup",
 				header: "Item Group",
-				width: "1.4fr",
+				width: "1.75fr",
+				minWidth: "175px",
 				renderCell: ({ item }) => {
 					if (!canEdit) {
 						return (
-							<span className="text-xs">{labelResolvers.itemGroup(item.itemGroup)}</span>
+							<span className="text-sm">{labelResolvers.itemGroup(item.itemGroup)}</span>
 						);
 					}
 					const isLoading = Boolean(item.itemGroup && itemGroupLoading[item.itemGroup]);
@@ -73,11 +75,12 @@ export const useInwardLineItemColumns = ({
 			{
 				id: "item",
 				header: "Item",
-				width: "1.6fr",
+				width: "2.4fr",
+				minWidth: "225px",
 				renderCell: ({ item }) => {
 					if (!canEdit) {
 						const label = labelResolvers.item(item.itemGroup, item.item);
-						return <span className="text-xs">{label || item.itemCode || "-"}</span>;
+						return <span className="text-sm">{label || item.itemCode || "-"}</span>;
 					}
 					const options = getItemOptions(item.itemGroup);
 					const value = options.find((opt) => opt.value === item.item) ?? null;
@@ -101,9 +104,10 @@ export const useInwardLineItemColumns = ({
 				id: "quantity",
 				header: "Qty",
 				width: "0.8fr",
+				minWidth: "70px",
 				renderCell: ({ item }) => {
 					if (!canEdit) {
-						return <span className="text-xs text-right w-full block">{item.quantity || "-"}</span>;
+						return <span className="text-sm text-right w-full block">{item.quantity || "-"}</span>;
 					}
 					return (
 						<TextField
@@ -111,7 +115,7 @@ export const useInwardLineItemColumns = ({
 							type="number"
 							value={item.quantity}
 							onChange={(e) => handleLineFieldChange(item.id, "quantity", e.target.value)}
-							inputProps={{ min: 0, step: 1, className: "text-right text-xs" }}
+							inputProps={{ min: 0, step: 1, className: "text-right text-sm" }}
 							sx={{ "& .MuiInputBase-input": { padding: "4px 8px" } }}
 							fullWidth
 						/>
@@ -130,10 +134,11 @@ export const useInwardLineItemColumns = ({
 				id: "uom",
 				header: "UOM",
 				width: "0.8fr",
+				minWidth: "80px",
 				renderCell: ({ item }) => {
 					if (!canEdit) {
 						return (
-							<span className="text-xs">
+							<span className="text-sm">
 								{labelResolvers.uom(item.itemGroup, item.item, item.uom)}
 							</span>
 						);
@@ -160,9 +165,10 @@ export const useInwardLineItemColumns = ({
 				id: "remarks",
 				header: "Remarks",
 				width: "1.2fr",
+				minWidth: "120px",
 				renderCell: ({ item }) => {
 					if (!canEdit) {
-						return <span className="text-xs">{item.remarks || "-"}</span>;
+						return <span className="text-sm">{item.remarks || "-"}</span>;
 					}
 					return (
 						<TextField
@@ -170,7 +176,7 @@ export const useInwardLineItemColumns = ({
 							value={item.remarks}
 							onChange={(e) => handleLineFieldChange(item.id, "remarks", e.target.value)}
 							placeholder="Remarks"
-							sx={{ "& .MuiInputBase-input": { padding: "4px 8px", fontSize: "0.75rem" } }}
+							sx={{ "& .MuiInputBase-input": { padding: "4px 8px", fontSize: "0.875rem" } }}
 							fullWidth
 						/>
 					);

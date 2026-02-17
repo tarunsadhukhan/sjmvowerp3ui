@@ -54,13 +54,10 @@ export const mapJuteItems = (raw: unknown[]): JuteItemRecord[] =>
 	raw.map((r) => {
 		const data = r as Record<string, unknown>;
 		return {
-			item_id: Number(data.item_id ?? 0),
-			item_code: String(data.item_code ?? ""),
-			item_name: String(data.item_name ?? ""),
-			item_grp_id: data.item_grp_id ? Number(data.item_grp_id) : undefined,
-			item_grp_name: data.item_grp_name ? String(data.item_grp_name) : undefined,
-			default_uom_id: data.default_uom_id ? Number(data.default_uom_id) : undefined,
-			default_uom: data.default_uom ? String(data.default_uom) : undefined,
+			item_grp_id: Number(data.item_grp_id ?? data.item_id ?? 0),
+			item_grp_desc: String(data.item_grp_name ?? data.item_grp_desc ?? data.item_name ?? ""),
+			parent_grp_id: data.parent_grp_id ? Number(data.parent_grp_id) : undefined,
+			parent_grp_name: data.parent_grp_name ? String(data.parent_grp_name) : undefined,
 		};
 	});
 
@@ -96,7 +93,7 @@ export const mapGateEntrySetupResponse = (response: unknown): GateEntrySetupData
 		branches: mapBranches((data.branches as unknown[]) ?? []),
 		mukams: mapMukams((data.mukams as unknown[]) ?? []),
 		suppliers: mapSuppliers((data.suppliers as unknown[]) ?? []),
-		jute_items: mapJuteItems((data.jute_items as unknown[]) ?? []),
+		jute_items: mapJuteItems((data.jute_groups as unknown[]) ?? (data.jute_items as unknown[]) ?? []),
 		open_pos: mapOpenPOs((data.open_pos as unknown[]) ?? []),
 		uom_options: ((data.uom_options as unknown[]) ?? []).map((o) => {
 			const opt = o as Record<string, unknown>;
@@ -130,8 +127,8 @@ export const buildMukamOptions = (mukams: MukamRecord[]): Option[] =>
 
 export const buildItemOptions = (items: JuteItemRecord[]): Option[] =>
 	items.map((i) => ({
-		label: i.item_name,
-		value: String(i.item_id),
+		label: i.item_grp_desc,
+		value: String(i.item_grp_id),
 	}));
 
 export const buildPOOptions = (pos: OpenPORecord[]): Option[] =>
@@ -212,12 +209,12 @@ export const mapLineItemsFromAPI = (lineItems: GateEntryLineItemAPI[]): GateEntr
 		id: generateLineId(),
 		jute_mr_li_id: li.jute_mr_li_id ?? null,
 		jutePoLiId: li.jute_po_li_id ? String(li.jute_po_li_id) : "",
-		challanItem: li.challan_item_id ? String(li.challan_item_id) : "",
-		challanQuality: li.challan_quality_id ? String(li.challan_quality_id) : "",
+		challanItem: li.challan_item_grp_id ? String(li.challan_item_grp_id) : "",
+		challanQuality: li.challan_item_id ? String(li.challan_item_id) : "",
 		challanQty: li.challan_quantity ? String(li.challan_quantity) : "",
 		challanWeight: li.challan_weight ? String(li.challan_weight) : "",
-		actualItem: li.actual_item_id ? String(li.actual_item_id) : "",
-		actualQuality: li.actual_quality_id ? String(li.actual_quality_id) : "",
+		actualItem: li.actual_item_grp_id ? String(li.actual_item_grp_id) : "",
+		actualQuality: li.actual_item_id ? String(li.actual_item_id) : "",
 		actualQty: li.actual_qty ? String(li.actual_qty) : "",
 		actualWeight: li.actual_weight ? String(li.actual_weight) : "",
 		allowableMoisture: li.allowable_moisture != null ? String(li.allowable_moisture) : "",

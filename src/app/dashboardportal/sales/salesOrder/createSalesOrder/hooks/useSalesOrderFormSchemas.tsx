@@ -1,0 +1,79 @@
+import React from "react";
+import type { Schema, Field } from "@/components/ui/muiform";
+import type { Option } from "../types/salesOrderTypes";
+
+export type UseSalesOrderHeaderSchemaParams = {
+	branchOptions: Option[];
+	customerOptions: Option[];
+	customerBranchOptions: Option[];
+	brokerOptions: Option[];
+	transporterOptions: Option[];
+	quotationOptions: Option[];
+	branchAddressOptions: Option[];
+	quotationRequired: boolean;
+	mode: "create" | "edit" | "view";
+	headerFieldsDisabled: boolean;
+};
+
+export const useSalesOrderHeaderSchema = ({
+	branchOptions,
+	customerOptions,
+	customerBranchOptions,
+	brokerOptions,
+	transporterOptions,
+	quotationOptions,
+	branchAddressOptions,
+	quotationRequired,
+	mode,
+	headerFieldsDisabled,
+}: UseSalesOrderHeaderSchemaParams): Schema =>
+	React.useMemo(() => {
+		const fields: Field[] = [
+			{
+				name: "branch",
+				label: "Branch",
+				type: "select",
+				options: branchOptions,
+				required: true,
+				disabled: mode !== "create",
+				grid: { xs: 12, md: 4 },
+			},
+			{ name: "date", label: "Order Date", type: "date", required: true, disabled: mode === "view", grid: { xs: 12, md: 4 } },
+			{ name: "expiry_date", label: "Expiry Date", type: "date", disabled: headerFieldsDisabled, grid: { xs: 12, md: 4 } },
+			{ name: "party", label: "Customer", type: "select", options: customerOptions, required: true, disabled: headerFieldsDisabled, grid: { xs: 12, md: 4 } },
+			{ name: "party_branch", label: "Customer Branch", type: "select", options: customerBranchOptions, disabled: headerFieldsDisabled, grid: { xs: 12, md: 4 } },
+		];
+
+		if (quotationRequired) {
+			fields.push({
+				name: "quotation",
+				label: "Quotation",
+				type: "select",
+				options: quotationOptions,
+				disabled: headerFieldsDisabled,
+				grid: { xs: 12, md: 4 },
+			});
+		}
+
+		fields.push(
+			{ name: "invoice_type", label: "Invoice Type", type: "select", options: [{ label: "GST Invoice", value: "1" }, { label: "Bill of Supply", value: "2" }], disabled: headerFieldsDisabled, grid: { xs: 12, md: 4 } },
+			{ name: "broker", label: "Broker", type: "select", options: brokerOptions, disabled: headerFieldsDisabled, grid: { xs: 12, md: 4 } },
+			{ name: "broker_commission_percent", label: "Broker Commission %", type: "text", placeholder: "%", disabled: headerFieldsDisabled, grid: { xs: 12, md: 4 } },
+			{ name: "billing_to", label: "Billing To", type: "select", options: branchAddressOptions, disabled: headerFieldsDisabled, grid: { xs: 12, md: 4 } },
+			{ name: "shipping_to", label: "Shipping To", type: "select", options: branchAddressOptions, disabled: headerFieldsDisabled, grid: { xs: 12, md: 4 } },
+			{ name: "transporter", label: "Transporter", type: "select", options: transporterOptions, disabled: headerFieldsDisabled, grid: { xs: 12, md: 4 } },
+			{ name: "delivery_terms", label: "Delivery Terms", type: "text", disabled: headerFieldsDisabled, grid: { xs: 12, md: 4 } },
+			{ name: "payment_terms", label: "Payment Terms", type: "text", disabled: headerFieldsDisabled, grid: { xs: 12, md: 4 } },
+			{ name: "delivery_days", label: "Delivery Days", type: "text", placeholder: "days", disabled: headerFieldsDisabled, grid: { xs: 12, md: 4 } },
+			{ name: "freight_charges", label: "Freight Charges", type: "text", placeholder: "0.00", disabled: headerFieldsDisabled, grid: { xs: 12, md: 4 } },
+			{ name: "footer_note", label: "Footer Note", type: "textarea", disabled: headerFieldsDisabled, grid: { xs: 12 } },
+			{ name: "internal_note", label: "Internal Note", type: "textarea", disabled: headerFieldsDisabled, grid: { xs: 12 } },
+			{ name: "terms_conditions", label: "Terms and Conditions", type: "textarea", disabled: headerFieldsDisabled, grid: { xs: 12 } },
+		);
+
+		return { fields } satisfies Schema;
+	}, [
+		branchOptions, customerOptions, customerBranchOptions,
+		brokerOptions, transporterOptions, quotationOptions,
+		branchAddressOptions, quotationRequired, mode, headerFieldsDisabled,
+	]);

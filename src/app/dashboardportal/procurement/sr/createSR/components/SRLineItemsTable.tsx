@@ -88,7 +88,8 @@ export const useSRLineItemColumns = ({
 			{
 				id: "item_grp_name",
 				header: "Item Group",
-				width: "1fr",
+				width: "1.25fr",
+				minWidth: "150px",
 				renderCell: ({ item }) => (
 					<Typography variant="body2" noWrap title={item.item_grp_name || undefined}>
 						{item.item_grp_name || "-"}
@@ -99,7 +100,8 @@ export const useSRLineItemColumns = ({
 			{
 				id: "item_name",
 				header: "Item",
-				width: "1.5fr",
+				width: "2.25fr",
+				minWidth: "225px",
 				renderCell: ({ item }) => (
 					<Typography variant="body2" noWrap title={item.item_name || undefined}>
 						{item.item_name || "-"}
@@ -111,6 +113,7 @@ export const useSRLineItemColumns = ({
 				id: "accepted_item_make_name",
 				header: "Make",
 				width: "0.8fr",
+				minWidth: "100px",
 				renderCell: ({ item }) => (
 					<Typography variant="body2" noWrap title={item.accepted_item_make_name || undefined}>
 						{item.accepted_item_make_name || "-"}

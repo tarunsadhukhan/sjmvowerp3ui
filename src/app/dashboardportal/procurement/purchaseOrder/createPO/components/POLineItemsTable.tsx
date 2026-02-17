@@ -43,11 +43,12 @@ export const usePOLineItemColumns = ({
       {
         id: "itemGroup",
         header: "Item Group",
-        width: "1.2fr",
+        width: "1.5fr",
+        minWidth: "163px",
         renderCell: ({ item }) => {
           const label = getItemGroupLabel(item.itemGroup);
           if (!canEdit) {
-            return <span className="block truncate text-xs">{label || "-"}</span>;
+            return <span className="block truncate text-sm">{label || "-"}</span>;
           }
           const value = itemGroupOptions.find((o) => o.value === item.itemGroup) ?? null;
           return (
@@ -66,11 +67,12 @@ export const usePOLineItemColumns = ({
       {
         id: "item",
         header: "Item",
-        width: "1.5fr",
+        width: "2.25fr",
+        minWidth: "225px",
         renderCell: ({ item }) => {
           const label = getItemLabel(item.itemGroup, item.item, item.itemCode);
           if (!canEdit) {
-            return <span className="block truncate text-xs">{label}</span>;
+            return <span className="block truncate text-sm">{label}</span>;
           }
           const options = getItemOptions(item.itemGroup);
           const value = options.find((o) => o.value === item.item) ?? null;
@@ -91,6 +93,7 @@ export const usePOLineItemColumns = ({
         id: "rate",
         header: "Rate",
         width: "0.8fr",
+        minWidth: "80px",
         renderCell: ({ item }) =>
           canEdit ? (
             <Input
@@ -98,10 +101,10 @@ export const usePOLineItemColumns = ({
               value={item.rate}
               onChange={(e) => onFieldChange(item.id, "rate", e.target.value)}
               placeholder="0.00"
-              className="h-8 text-xs"
+              className="h-8 text-sm"
             />
           ) : (
-            <span className="block truncate text-xs">{item.rate || "-"}</span>
+            <span className="block truncate text-sm">{item.rate || "-"}</span>
           ),
         getTooltip: ({ item }) => (item.rate ? `Rate: ${item.rate}` : undefined),
       },
@@ -109,6 +112,7 @@ export const usePOLineItemColumns = ({
         id: "quantity",
         header: "Quantity",
         width: "0.8fr",
+        minWidth: "80px",
         renderCell: ({ item }) =>
           canEdit ? (
             <Input
@@ -116,10 +120,10 @@ export const usePOLineItemColumns = ({
               value={item.quantity}
               onChange={(e) => onFieldChange(item.id, "quantity", e.target.value)}
               placeholder="0"
-              className="h-8 text-xs"
+              className="h-8 text-sm"
             />
           ) : (
-            <span className="block truncate text-xs">{item.quantity || "-"}</span>
+            <span className="block truncate text-sm">{item.quantity || "-"}</span>
           ),
         getTooltip: ({ item }) => (item.quantity ? `Quantity: ${item.quantity}` : undefined),
       },
@@ -127,11 +131,12 @@ export const usePOLineItemColumns = ({
         id: "uom",
         header: "Unit",
         width: "0.6fr",
+        minWidth: "80px",
         renderCell: ({ item }) => {
           const options = getUomOptions(item.itemGroup, item.item);
           const label = getUomLabel(item.itemGroup, item.item, item.uom);
           if (!canEdit) {
-            return <span className="block truncate text-xs">{label || "-"}</span>;
+            return <span className="block truncate text-sm">{label || "-"}</span>;
           }
           const value = options.find((o) => o.value === item.uom) ?? null;
           return (
@@ -151,11 +156,12 @@ export const usePOLineItemColumns = ({
         id: "discountMode",
         header: "Disc. Type",
         width: "0.7fr",
+        minWidth: "90px",
         renderCell: ({ item }) => {
           const currentVal = item.discountMode != null ? String(item.discountMode) : "";
           const label = DISCOUNT_MODE_OPTIONS.find((o) => o.value === currentVal)?.label || "-";
           if (!canEdit) {
-            return <span className="block truncate text-xs">{label}</span>;
+            return <span className="block truncate text-sm">{label}</span>;
           }
           const value = DISCOUNT_MODE_OPTIONS.find((o) => o.value === currentVal) ?? DISCOUNT_MODE_OPTIONS[0];
           return (
@@ -179,10 +185,11 @@ export const usePOLineItemColumns = ({
         id: "discountValue",
         header: "Disc. Value",
         width: "0.7fr",
+        minWidth: "80px",
         renderCell: ({ item }) => {
           const hasDiscountMode = item.discountMode != null && item.discountMode !== 0;
           if (!canEdit) {
-            return <span className="block truncate text-xs">{item.discountValue || "-"}</span>;
+            return <span className="block truncate text-sm">{item.discountValue || "-"}</span>;
           }
           return (
             <Input
@@ -190,7 +197,7 @@ export const usePOLineItemColumns = ({
               value={item.discountValue}
               onChange={(e) => onFieldChange(item.id, "discountValue", e.target.value)}
               placeholder="0"
-              className="h-8 text-xs"
+              className="h-8 text-sm"
               disabled={!hasDiscountMode}
             />
           );
@@ -201,8 +208,9 @@ export const usePOLineItemColumns = ({
         id: "discountAmount",
         header: "Disc. Amt",
         width: "0.7fr",
+        minWidth: "80px",
         renderCell: ({ item }) => (
-          <span className="block truncate text-xs">{item.discountAmount?.toFixed(2) || "0.00"}</span>
+          <span className="block truncate text-sm">{item.discountAmount?.toFixed(2) || "0.00"}</span>
         ),
         getTooltip: ({ item }) => (item.discountAmount ? `Discount Amount: ${item.discountAmount.toFixed(2)}` : undefined),
       },
@@ -210,7 +218,8 @@ export const usePOLineItemColumns = ({
         id: "amount",
         header: "Amount",
         width: "0.8fr",
-        renderCell: ({ item }) => <span className="block truncate text-xs font-medium">{item.amount?.toFixed(2) || "0.00"}</span>,
+        minWidth: "90px",
+        renderCell: ({ item }) => <span className="block truncate text-sm font-medium">{item.amount?.toFixed(2) || "0.00"}</span>,
         getTooltip: ({ item }) => (item.amount ? `Amount: ${item.amount.toFixed(2)}` : undefined),
       },
     ],

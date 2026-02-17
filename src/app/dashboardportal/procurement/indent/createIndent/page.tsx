@@ -370,7 +370,8 @@ function IndentTransactionPageContent() {
 	});
 
 	// Line item columns - only allow editing if header fields are complete
-	const canEdit = mode !== "view" && headerFieldsComplete;
+	// Only allow editing lines if header is complete AND status permits saving
+	const canEdit = mode !== "view" && headerFieldsComplete && approvalPermissions.canSave !== false;
 	const lineItemColumns = useIndentLineItemColumns({
 		canEdit,
 		departmentOptions,
@@ -387,6 +388,16 @@ function IndentTransactionPageContent() {
 	const handleFormSubmit = React.useCallback(
 		async (values: Record<string, unknown>) => {
 			if (mode === "view" || pageError || setupError) return;
+
+			// Block saving when the approval status does not allow it (e.g. Approved, Closed)
+			if (mode === "edit" && !approvalPermissions.canSave) {
+				toast({
+					variant: "destructive",
+					title: "Cannot save",
+					description: "This indent has been approved and can no longer be modified.",
+				});
+				return;
+			}
 
 			if (!lineItemsValid) {
 				toast({
@@ -478,7 +489,7 @@ function IndentTransactionPageContent() {
 				setSaving(false);
 			}
 		},
-		[filledLineItems, lineItemsValid, mode, pageError, setupError, requestedId, router]
+		[filledLineItems, lineItemsValid, mode, pageError, setupError, requestedId, router, approvalPermissions.canSave]
 	);
 
 	// Save handler for approval bar
@@ -609,9 +620,11 @@ function IndentTransactionPageContent() {
 		return statusChipProps;
 	}, [indentDetails?.status, statusChipProps]);
 
-	// Primary actions
+	// Primary actions — hide save when mode is view or status doesn't allow it
 	const primaryActions = React.useMemo<TransactionAction[] | undefined>(() => {
 		if (mode === "view" || pageError || setupError) return undefined;
+		// In edit mode, only show Save if the approval status allows saving
+		if (mode === "edit" && !approvalPermissions.canSave) return undefined;
 		return [
 			{
 				label: mode === "create" ? "Create Indent" : "Save Changes",
@@ -620,13 +633,13 @@ function IndentTransactionPageContent() {
 				loading: saving,
 			},
 		];
-	}, [mode, pageError, setupError, saving, lineItemsValid, setupLoading, formRef]);
+	}, [mode, pageError, setupError, saving, lineItemsValid, setupLoading, formRef, approvalPermissions.canSave]);
 
 	// Secondary actions
 	const secondaryActions = React.useMemo<TransactionAction[] | undefined>(() => {
 		if (!requestedId || pageError) return undefined;
 		const actions: TransactionAction[] = [];
-		if (mode === "view") {
+		if (mode === "view" && approvalPermissions.canSave) {
 			actions.push({
 				label: "Edit",
 				variant: "secondary",
@@ -641,7 +654,7 @@ function IndentTransactionPageContent() {
 			});
 		}
 		return actions.length ? actions : undefined;
-	}, [mode, requestedId, router, pageError]);
+	}, [mode, requestedId, router, pageError, approvalPermissions.canSave]);
 
 	// Alerts
 	const alerts = pageError || setupError ? (

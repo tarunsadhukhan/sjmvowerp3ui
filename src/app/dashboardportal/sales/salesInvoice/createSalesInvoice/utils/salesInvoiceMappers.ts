@@ -1,0 +1,264 @@
+import type {
+	CustomerRecord,
+	CustomerRecordRaw,
+	CustomerBranchRecord,
+	CustomerBranchRecordRaw,
+	TransporterRecord,
+	TransporterRecordRaw,
+	ApprovedDeliveryOrderRecord,
+	ApprovedDeliveryOrderRecordRaw,
+	ItemGroupRecord,
+	ItemGroupRecordRaw,
+	ItemGroupCacheEntry,
+	ItemOption,
+	ItemOptionRaw,
+	ItemMakeOptionRaw,
+	ItemUomOptionRaw,
+	InvoiceSetup1ResponseRaw,
+	InvoiceSetup2ResponseRaw,
+	InvoiceSetupData,
+	Option,
+} from "../types/salesInvoiceTypes";
+
+export const mapCustomerBranchRecords = (records: unknown[]): CustomerBranchRecord[] =>
+	records
+		.map((row) => {
+			const data = row as CustomerBranchRecordRaw;
+			const id = data?.party_mst_branch_id ?? data?.id;
+			if (!id) return null;
+			const address = data?.fatory_address ?? data?.branch_address1 ?? "";
+			return {
+				id: String(id),
+				name: data?.party_branch_name ?? (address || String(id)),
+				address: address || String(id),
+				stateName: data?.state_name,
+				stateId: data?.state_id,
+				gstNo: data?.gst_no,
+			} satisfies CustomerBranchRecord;
+		})
+		.filter(Boolean) as CustomerBranchRecord[];
+
+export const mapCustomerRecords = (records: unknown[]): CustomerRecord[] =>
+	records
+		.map((row) => {
+			const data = row as CustomerRecordRaw;
+			const id = data?.party_id ?? data?.id;
+			if (!id) return null;
+			const branchesRaw = (data?.branches as unknown[]) ?? [];
+			const branches = mapCustomerBranchRecords(branchesRaw);
+			return {
+				id: String(id),
+				name: data?.supp_name ?? data?.party_name ?? data?.name ?? String(id),
+				code: data?.supp_code ?? data?.party_code,
+				branches: branches.length > 0 ? branches : undefined,
+			} satisfies CustomerRecord;
+		})
+		.filter(Boolean) as CustomerRecord[];
+
+export const mapTransporterRecords = (records: unknown[]): TransporterRecord[] =>
+	records
+		.map((row) => {
+			const data = row as TransporterRecordRaw;
+			const id = data?.transporter_id ?? data?.party_id ?? data?.id;
+			if (!id) return null;
+			return {
+				id: String(id),
+				name: data?.transporter_name ?? data?.name ?? String(id),
+				code: data?.transporter_code,
+			} satisfies TransporterRecord;
+		})
+		.filter(Boolean) as TransporterRecord[];
+
+export const mapApprovedDeliveryOrders = (records: unknown[]): ApprovedDeliveryOrderRecord[] =>
+	records
+		.map((row) => {
+			const data = row as ApprovedDeliveryOrderRecordRaw;
+			const id = data?.sales_delivery_order_id ?? data?.id;
+			if (!id) return null;
+			return {
+				id: String(id),
+				deliveryOrderNo: data?.delivery_order_no ?? data?.do_no ?? String(id),
+				deliveryOrderDate: data?.delivery_order_date,
+				partyName: data?.party_name,
+				netAmount: data?.net_amount,
+			} satisfies ApprovedDeliveryOrderRecord;
+		})
+		.filter(Boolean) as ApprovedDeliveryOrderRecord[];
+
+export const mapItemGroupRecords = (records: unknown[]): ItemGroupRecord[] =>
+	records
+		.map((row) => {
+			const data = row as ItemGroupRecordRaw;
+			const id = data?.item_grp_id ?? data?.id;
+			if (!id) return null;
+			const code = data?.item_grp_code_display ?? data?.code;
+			const name = data?.item_grp_name_display ?? data?.name;
+			const labelParts = [code, name].filter(Boolean);
+			return {
+				id: String(id),
+				label: labelParts.length ? labelParts.join(" — ") : String(id),
+			} satisfies ItemGroupRecord;
+		})
+		.filter(Boolean) as ItemGroupRecord[];
+
+export const mapInvoiceSetupResponse = (response: unknown): InvoiceSetupData => {
+	try {
+		const result = response as InvoiceSetup1ResponseRaw;
+		return {
+			customers: mapCustomerRecords(result?.customers ?? []),
+			transporters: mapTransporterRecords(result?.transporters ?? []),
+			approvedDeliveryOrders: mapApprovedDeliveryOrders(result?.approved_delivery_orders ?? []),
+			itemGroups: mapItemGroupRecords(result?.item_groups ?? []),
+		} satisfies InvoiceSetupData;
+	} catch (error) {
+		console.error("Failed to map invoice setup response", error);
+		throw error;
+	}
+};
+
+export const mapItemGroupDetailResponse = (response: unknown): ItemGroupCacheEntry => {
+	const result = response as InvoiceSetup2ResponseRaw;
+
+	const groupCode = result?.item_grp_code;
+	const groupName = result?.item_grp_name;
+	const groupLabelParts = [groupCode, groupName].filter(Boolean);
+	const groupLabel = groupLabelParts.length ? groupLabelParts.join(" — ") : undefined;
+
+	const itemsRaw = Array.isArray(result.items) ? result.items : [];
+	const makesRaw = Array.isArray(result.makes) ? result.makes : [];
+	const uomsRaw = Array.isArray(result.uoms) ? result.uoms : [];
+
+	const items: ItemOption[] = itemsRaw
+		.map((row) => {
+			const data = row as ItemOptionRaw;
+			const id = data?.item_id ?? data?.id;
+			if (!id) return null;
+			const value = String(id);
+			const code = data?.item_code;
+			const name = data?.item_name;
+			const labelParts = [code, name].filter(Boolean);
+			return {
+				value,
+				label: labelParts.length ? labelParts.join(" — ") : value,
+				defaultUomId: data?.uom_id != null ? String(data.uom_id) : undefined,
+				defaultUomLabel: data?.uom_name ? String(data.uom_name) : undefined,
+				defaultRate: data?.rate != null ? Number(data.rate) : undefined,
+				taxPercentage: data?.tax_percentage != null ? Number(data.tax_percentage) : undefined,
+			};
+		})
+		.filter(Boolean) as ItemOption[];
+
+	const makes = makesRaw
+		.map((row) => {
+			const data = row as ItemMakeOptionRaw;
+			const id = data?.item_make_id ?? data?.id;
+			if (!id) return null;
+			return { value: String(id), label: data?.item_make_name ?? data?.name ?? String(id) };
+		})
+		.filter(Boolean) as Option[];
+
+	const uomsByItemId: Record<string, Option[]> = {};
+	const uomLabelByItemId: Record<string, Record<string, string>> = {};
+	const itemRateById: Record<string, number> = {};
+	const itemTaxById: Record<string, number> = {};
+
+	uomsRaw.forEach((row) => {
+		const data = row as ItemUomOptionRaw;
+		const itemId = data?.item_id ?? data?.id;
+		const uomId = data?.map_to_id ?? data?.uom_id ?? data?.mapToId;
+		if (!itemId || !uomId) return;
+		const itemKey = String(itemId);
+		const uomKey = String(uomId);
+		const label = data?.uom_name ? String(data.uom_name) : uomKey;
+		if (!uomsByItemId[itemKey]) uomsByItemId[itemKey] = [];
+		if (!uomLabelByItemId[itemKey]) uomLabelByItemId[itemKey] = {};
+		if (!uomsByItemId[itemKey].some((opt) => opt.value === uomKey)) {
+			uomsByItemId[itemKey].push({ value: uomKey, label });
+		}
+		uomLabelByItemId[itemKey][uomKey] = label;
+	});
+
+	items.forEach((item) => {
+		if (item.defaultUomId) {
+			const bucket = uomsByItemId[item.value] ?? [];
+			if (!bucket.some((opt) => opt.value === item.defaultUomId)) {
+				bucket.unshift({ value: item.defaultUomId, label: item.defaultUomLabel ?? item.defaultUomId });
+			}
+			uomsByItemId[item.value] = bucket;
+			if (!uomLabelByItemId[item.value]) uomLabelByItemId[item.value] = {};
+			uomLabelByItemId[item.value][item.defaultUomId] = item.defaultUomLabel ?? item.defaultUomId;
+		}
+		if (item.defaultRate != null) itemRateById[item.value] = item.defaultRate;
+		if (item.taxPercentage != null) itemTaxById[item.value] = item.taxPercentage;
+	});
+
+	const itemLabelById: Record<string, string> = {};
+	items.forEach((item) => { itemLabelById[item.value] = item.label; });
+
+	const makeLabelById: Record<string, string> = {};
+	makes.forEach((make) => { makeLabelById[make.value] = make.label; });
+
+	return { groupLabel, items, makes, uomsByItemId, itemLabelById, makeLabelById, uomLabelByItemId, itemRateById, itemTaxById };
+};
+
+const toStringValue = (value: unknown): string => {
+	if (value === null || value === undefined) return "";
+	return typeof value === "string" ? value : String(value);
+};
+
+const normalizeDate = (raw?: string): string => {
+	if (!raw) return "";
+	return raw.split("T")[0] || raw;
+};
+
+export const mapInvoiceDetailsToFormValues = (
+	details: {
+		branch?: unknown;
+		invoiceDate?: string;
+		party?: unknown;
+		partyBranch?: unknown;
+		deliveryOrder?: unknown;
+		billingTo?: unknown;
+		shippingTo?: unknown;
+		transporter?: unknown;
+		vehicleNo?: string;
+		ewayBillNo?: string;
+		ewayBillDate?: string;
+		challanNo?: string;
+		challanDate?: string;
+		invoiceType?: string;
+		footerNote?: string;
+		internalNote?: string;
+		termsConditions?: string;
+		grossAmount?: number;
+		netAmount?: number;
+		freightCharges?: number;
+		roundOff?: number;
+		tcsPercentage?: number;
+		tcsAmount?: number;
+	},
+	defaultValues: Record<string, unknown>,
+): Record<string, unknown> => ({
+	...defaultValues,
+	branch: toStringValue(details.branch ?? defaultValues.branch),
+	date: normalizeDate(details.invoiceDate) || toStringValue(defaultValues.date),
+	party: toStringValue(details.party ?? defaultValues.party),
+	party_branch: toStringValue(details.partyBranch ?? defaultValues.party_branch),
+	delivery_order: toStringValue(details.deliveryOrder ?? defaultValues.delivery_order),
+	billing_to: toStringValue(details.billingTo ?? defaultValues.billing_to),
+	shipping_to: toStringValue(details.shippingTo ?? defaultValues.shipping_to),
+	transporter: toStringValue(details.transporter ?? defaultValues.transporter),
+	vehicle_no: toStringValue(details.vehicleNo ?? defaultValues.vehicle_no),
+	eway_bill_no: toStringValue(details.ewayBillNo ?? defaultValues.eway_bill_no),
+	eway_bill_date: normalizeDate(details.ewayBillDate) || toStringValue(defaultValues.eway_bill_date),
+	challan_no: toStringValue(details.challanNo ?? defaultValues.challan_no),
+	challan_date: normalizeDate(details.challanDate) || toStringValue(defaultValues.challan_date),
+	invoice_type: toStringValue(details.invoiceType ?? defaultValues.invoice_type),
+	footer_note: toStringValue(details.footerNote ?? defaultValues.footer_note),
+	internal_note: toStringValue(details.internalNote ?? defaultValues.internal_note),
+	terms_conditions: toStringValue(details.termsConditions ?? defaultValues.terms_conditions),
+	freight_charges: details.freightCharges != null ? String(details.freightCharges) : toStringValue(defaultValues.freight_charges),
+	round_off: details.roundOff != null ? String(details.roundOff) : toStringValue(defaultValues.round_off),
+	tcs_percentage: details.tcsPercentage != null ? String(details.tcsPercentage) : toStringValue(defaultValues.tcs_percentage),
+	tcs_amount: details.tcsAmount != null ? String(details.tcsAmount) : toStringValue(defaultValues.tcs_amount),
+});

@@ -1,0 +1,241 @@
+# Indent Page — Procurement Module
+
+## 1. Overview
+
+The **Indent** page is part of the Procurement module. It allows users to create indents (material/service requests) based on a combination of **Indent Type** and **Expense Type**. The system enforces validation rules at both the header and line-item levels depending on this combination.
+
+This document serves as:
+
+- **AI Agent Context** — a reference for automated decision-making and validation logic.
+- **Developer Technical Spec** — a definitive source for implementing business rules.
+- **End-User Documentation** — a guide for understanding how indent creation works.
+
+---
+
+## 2. Core Concepts
+
+### 2.1 Indent Types
+
+| Indent Type | Description |
+|-------------|-------------|
+| **Regular** | A standard indent raised for routine procurement needs. |
+| **Open**    | An open-ended indent, typically used for recurring or flexible requirements. |
+| **BOM**     | A Bill of Materials indent, used for structured material lists that can be saved and reused. |
+
+### 2.2 Expense Types
+
+| Expense Type    | Description |
+|-----------------|-------------|
+| **General**     | General-purpose expenses not tied to a specific category. |
+| **Maintenance** | Expenses related to maintenance activities. |
+| **Production**  | Expenses related to production processes. |
+| **Overhaul**    | Expenses related to overhaul or refurbishment activities. |
+| **Capital**     | Capital expenditure items. |
+
+---
+
+## 3. Header Rules
+
+When a user creates an indent, the system applies **header-level rules** based on the selected Indent Type and Expense Type combination.
+
+### 3.1 Regular Indent Type
+
+| Expense Type  | Indent Name Field | Line Item Logic |
+|---------------|-------------------|-----------------|
+| General       | Hidden (auto/system-assigned) | 1 |
+| Maintenance   | Hidden | 1 |
+| Production    | Hidden | 1 |
+| Overhaul      | Hidden | 1 |
+| Capital       | Hidden | 2 |
+
+### 3.2 Open Indent Type
+
+| Expense Type  | Indent Name Field | Line Item Logic |
+|---------------|-------------------|-----------------|
+| General       | Hidden | 3 |
+| Maintenance   | Hidden | 3 |
+| Production    | Hidden | 3 |
+
+### 3.3 BOM Indent Type
+
+| Expense Type  | Indent Name Field | Line Item Logic |
+|---------------|-------------------|-----------------|
+| General       | BOM selection (see below) | 1 |
+| Maintenance   | BOM selection (see below) | 1 |
+| Production    | BOM selection (see below) | 1 |
+| Capital       | BOM selection (see below) | 2 |
+| Overhaul      | BOM selection (see below) | 2 |
+
+**BOM Selection Behavior:**
+When the Indent Type is **BOM**, the system prompts the user with two options:
+
+1. **Create a new BOM** — The Indent Name field becomes a text entry field where the user types a name for the new BOM.
+2. **Use an existing BOM** — The system presents a reference list of previously saved BOMs (from past indents saved as reusable templates) for the user to select from.
+
+---
+
+## 4. Indent View Fields
+
+The indent listing view displays the following fields:
+
+| Field | Description |
+|-------|-------------|
+| **Status (Header)** | Current status of the indent at the header level. |
+| **Indent Type** | Regular, Open, or BOM. |
+| **Expense Type** | General, Maintenance, Production, Overhaul, or Capital. |
+| **Indent Line Item ID** | Unique identifier for each line item within the indent. |
+| **Current Indent Outstanding** | Outstanding quantity for the indent (can be 0), tracked against the detail ID. |
+| **Balance Outstanding against Item ID** | Remaining balance outstanding for the item. **Available only for Maintenance, Production, and General expense types.** |
+
+---
+
+## 5. Line Item Validation Logic
+
+Each line item added to an indent is validated according to one of three logic sets, determined by the Indent Type + Expense Type combination (see Section 3).
+
+---
+
+### 5.1 Logic 1 — Max/Min Quantity Validation with Stock Check
+
+**Applies to:** Regular (General, Maintenance, Production, Overhaul) and BOM (General, Maintenance, Production).
+
+This is the most rigorous validation. It checks existing indents, stock levels, and calculates allowable indent quantities.
+
+#### Step-by-step:
+
+**Step 1 — Check for open indent against the item**
+When the user selects an item, the system checks if an open indent already exists for that item. If it does, an **error message is displayed** on item selection. This check must be performed at the point of item selection (i.e., the open indent status must be available alongside the item list).
+
+**Step 2 — Check stock + outstanding against max quantity**
+The system evaluates: `branch_stock + outstanding_indent_qty > max_qty`
+
+- If **no max quantity exists** for the item, the user may enter any value. Skip Step 3.
+- If the above condition is **true**, display an error message and prevent entry.
+- If the condition is **false**, proceed to Step 3.
+
+**Step 3 — Calculate allowable indent quantity (max and min)**
+Apply the following formula to determine the maximum indent quantity the user can request:
+
+```
+max_indent_qty = IF(
+    (max_qty - branch_stock - outstanding_indent_qty) < reorder_qty,
+    reorder_qty,
+    ROUNDUP((max_qty - branch_stock - outstanding_indent_qty) / reorder_qty, 0) * reorder_qty
+)
+```
+
+The **minimum indent quantity** is taken from the item master's `min_qty` value.
+
+The user may enter any quantity between `min_qty` and `max_indent_qty`.
+
+#### Formula Explanation
+
+The formula ensures:
+
+- If the available-to-indent quantity (`max_qty - branch_stock - outstanding_indent_qty`) falls below the reorder quantity, the system allows at least one reorder quantity.
+- Otherwise, the quantity is rounded up to the nearest multiple of the reorder quantity.
+
+#### Worked Example
+
+| Parameter | Value |
+|-----------|-------|
+| max_qty (from item master) | 100 |
+| min_qty (from item master) | 20 |
+| reorder_qty | 10 |
+| branch_stock | 60 |
+| outstanding_indent_qty | 10 |
+
+**Calculation:**
+
+```
+available = max_qty - branch_stock - outstanding_indent_qty
+         = 100 - 60 - 10
+         = 30
+
+Is 30 < reorder_qty (10)?  → No
+
+max_indent_qty = ROUNDUP(30 / 10, 0) * 10
+               = ROUNDUP(3, 0) * 10
+               = 3 * 10
+               = 30
+```
+
+**Result:** User can enter a quantity between **20** (min_qty) and **30** (max_indent_qty).
+
+---
+
+### 5.2 Logic 2 — Capital/Overhaul Validation with Financial Year Check
+
+**Applies to:** Regular (Capital) and BOM (Capital, Overhaul).
+
+This logic includes financial-year-scoped checks and enforces max quantity as the value.
+
+#### Step-by-step:
+
+**Step 1 — Check for existing open indent (financial year scoped)**
+The system checks if an open indent already exists for the item **within the current financial year**. If one exists, display an error message and clear the field.
+
+**Step 2 — Check if max/min exists**
+If no max/min quantity is defined for the item, display an error message and clear the field. The user cannot proceed without max/min values.
+
+**Step 3 — Check for outstanding indent quantity from Regular/BOM indents**
+The system checks if there is any outstanding indent quantity from Regular or BOM indents for the same item. If there is, display an **informational message** (warning), but **allow the user to continue**.
+
+**Step 4 — Set quantity**
+The **max quantity** from the item master is taken as the indent quantity value.
+
+---
+
+### 5.3 Logic 3 — Open Entry (No Validation)
+
+**Applies to:** Open (General, Maintenance, Production).
+
+No quantity validation is applied. The user can enter any value for the indent quantity.
+
+---
+
+## 6. Summary Matrix
+
+| Indent Type | Expense Type  | Indent Name | Line Item Logic | Key Behavior |
+|-------------|---------------|-------------|-----------------|--------------|
+| Regular     | General       | Hidden      | 1 | Stock check + max/min formula |
+| Regular     | Maintenance   | Hidden      | 1 | Stock check + max/min formula |
+| Regular     | Production    | Hidden      | 1 | Stock check + max/min formula |
+| Regular     | Overhaul      | Hidden      | 1 | Stock check + max/min formula |
+| Regular     | Capital       | Hidden      | 2 | FY check + max qty as value |
+| Open        | General       | Hidden      | 3 | Free entry |
+| Open        | Maintenance   | Hidden      | 3 | Free entry |
+| Open        | Production    | Hidden      | 3 | Free entry |
+| BOM         | General       | BOM select  | 1 | Stock check + max/min formula |
+| BOM         | Maintenance   | BOM select  | 1 | Stock check + max/min formula |
+| BOM         | Production    | BOM select  | 1 | Stock check + max/min formula |
+| BOM         | Capital       | BOM select  | 2 | FY check + max qty as value |
+| BOM         | Overhaul      | BOM select  | 2 | FY check + max qty as value |
+
+---
+
+## 7. Key Terminology
+
+| Term | Definition |
+|------|-----------|
+| **Indent** | A formal request for procurement of materials or services. |
+| **BOM (Bill of Materials)** | A saved, reusable list of items that can be loaded into a new indent. |
+| **max_qty** | Maximum stock quantity defined in the item master. |
+| **min_qty** | Minimum order/indent quantity defined in the item master. |
+| **reorder_qty** | The standard reorder quantity for an item; used as the rounding unit. |
+| **branch_stock** | Current stock available at the branch/location. |
+| **outstanding_indent_qty** | Quantity from existing indents that has not yet been fulfilled. |
+| **Financial Year (FY)** | The fiscal year used to scope indent checks (relevant for Logic 2). |
+
+---
+
+## 8. Error & Message Reference
+
+| Trigger | Message Type | User Action |
+|---------|-------------|-------------|
+| Open indent exists for selected item (Logic 1) | Error | Item cannot be selected; user must resolve existing indent. |
+| Branch stock + outstanding > max qty (Logic 1) | Error | Entry blocked; user cannot proceed. |
+| No max qty defined for item (Logic 1) | None | User may enter any value; skip formula. |
+| Open indent exists in current FY (Logic 2) | Error | Field cleared; user cannot proceed. |
+| No max/min defined (Logic 2) | Error | Field cleared; user cannot proceed. |
+| Outstanding Regular/BOM indent qty exists (Logic 2) | Warning | Informational only; user may continue. |

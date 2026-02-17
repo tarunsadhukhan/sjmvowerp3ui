@@ -433,6 +433,21 @@ const apiRoutesPortalMasters = {
     DELIVERY_ORDER_APPROVE: `${API_URL}/salesDeliveryOrder/approve_delivery_order`,
     DELIVERY_ORDER_REJECT: `${API_URL}/salesDeliveryOrder/reject_delivery_order`,
     DELIVERY_ORDER_REOPEN: `${API_URL}/salesDeliveryOrder/reopen_delivery_order`,
+
+    // Sales Invoice endpoints
+    SALES_INVOICE_TABLE: `${API_URL}/salesInvoice/get_sales_invoice_table`,
+    SALES_INVOICE_BY_ID: `${API_URL}/salesInvoice/get_sales_invoice_by_id`,
+    SALES_INVOICE_SETUP_1: `${API_URL}/salesInvoice/get_sales_invoice_setup_1`,
+    SALES_INVOICE_SETUP_2: `${API_URL}/salesInvoice/get_sales_invoice_setup_2`,
+    SALES_INVOICE_DELIVERY_ORDER_LINES: `${API_URL}/salesInvoice/get_delivery_order_lines`,
+    SALES_INVOICE_CREATE: `${API_URL}/salesInvoice/create_sales_invoice`,
+    SALES_INVOICE_UPDATE: `${API_URL}/salesInvoice/update_sales_invoice`,
+    SALES_INVOICE_OPEN: `${API_URL}/salesInvoice/open_sales_invoice`,
+    SALES_INVOICE_CANCEL_DRAFT: `${API_URL}/salesInvoice/cancel_draft_sales_invoice`,
+    SALES_INVOICE_SEND_FOR_APPROVAL: `${API_URL}/salesInvoice/send_sales_invoice_for_approval`,
+    SALES_INVOICE_APPROVE: `${API_URL}/salesInvoice/approve_sales_invoice`,
+    SALES_INVOICE_REJECT: `${API_URL}/salesInvoice/reject_sales_invoice`,
+    SALES_INVOICE_REOPEN: `${API_URL}/salesInvoice/reopen_sales_invoice`,
 };
 
 export { apiRoutes, apiRoutesconsole, apiRoutesPortalMasters };

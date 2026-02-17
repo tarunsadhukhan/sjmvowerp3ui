@@ -15,8 +15,10 @@ type MRApprovalBarProps = {
 	approvalInfo: ApprovalInfo;
 	permissions: ApprovalActionPermissions;
 	loading: boolean;
+	canSetOpen: boolean;
 	canSetPending: boolean;
 	partyHasNoBranches: boolean;
+	onOpen: () => Promise<void>;
 	onApprove: () => void | Promise<void>;
 	onReject: (reason: string) => Promise<void>;
 	onPending: () => Promise<void>;
@@ -32,8 +34,10 @@ export function MRApprovalBar({
 	approvalInfo,
 	permissions,
 	loading,
+	canSetOpen,
 	canSetPending,
 	partyHasNoBranches,
+	onOpen,
 	onApprove,
 	onReject,
 	onPending,
@@ -64,6 +68,7 @@ export function MRApprovalBar({
 					// Disable Approve if party has no branches
 					canApprove: permissions.canApprove && !partyHasNoBranches,
 				}}
+				onOpen={onOpen}
 				onApprove={onApprove}
 				onReject={onReject}
 				onCancelDraft={onCancel}

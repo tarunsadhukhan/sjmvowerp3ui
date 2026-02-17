@@ -34,8 +34,8 @@ export function useGateEntryLineItemColumns({
 	const itemOptions = React.useMemo<Option[]>(
 		() =>
 			juteItems.map((i) => ({
-				label: i.item_name,
-				value: String(i.item_id),
+				label: i.item_grp_desc,
+				value: String(i.item_grp_id),
 			})),
 		[juteItems]
 	);

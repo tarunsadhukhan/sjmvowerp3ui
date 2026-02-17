@@ -73,7 +73,7 @@ type BillPassHeader = {
 
 type BillPassLineItem = {
 	jute_mr_li_id: number;
-	actual_item_name: string | null;
+	actual_group_name: string | null;
 	actual_quality_name: string | null;
 	actual_qty: number | null;
 	claim_rate: number | null;
@@ -568,7 +568,7 @@ function BillPassEditPageContent() {
 											sx={{ bgcolor: idx % 2 === 0 ? "grey.50" : "white" }}
 										>
 											<Box component="td" sx={{ p: 1, fontSize: "0.75rem", borderRight: "1px solid #eee" }}>
-												{line.actual_item_name ?? "-"}
+												{line.actual_group_name ?? "-"}
 											</Box>
 											<Box component="td" sx={{ p: 1, fontSize: "0.75rem", borderRight: "1px solid #eee" }}>
 												{line.actual_quality_name ?? "-"}

@@ -60,7 +60,7 @@ export type JuteItemRecord = {
 export type JuteQualityRecord = {
   quality_id: number;
   quality_name: string;
-  item_id: number;
+  item_grp_id: number;
 };
 
 // =============================================================================
@@ -176,9 +176,9 @@ export type JutePODetails = {
 export type JutePOLineItemDetails = {
   jute_po_li_id: number;
   jute_po_id: number;
-  item_id: number;
-  item_name?: string;
-  jute_quality_id?: number;
+  item_grp_id: number;
+  jute_group_name?: string;
+  item_id?: number;
   quality_name?: string;
   crop_year?: number;
   marka?: string;
@@ -224,7 +224,7 @@ export type JutePOLabelResolvers = {
   party: (id: string) => string;
   vehicleType: (id: string) => string;
   item: (id: string) => string;
-  quality: (itemId: string, qualityId: string) => string;
+  quality: (itemGrpId: string, qualityId: string) => string;
 };
 
 // Alias for compatibility with transaction components

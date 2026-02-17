@@ -42,6 +42,33 @@ export type StatusChangeResponse = {
 // =============================================================================
 
 /**
+ * Open MR - Changes status from Draft (21) to Open (1).
+ * Requires party_id and party_branch_id to be filled.
+ */
+export async function openMR(mrId: string, branchId: string): Promise<StatusChangeResponse> {
+	const payload = {
+		mr_id: mrId,
+		branch_id: branchId,
+	};
+
+	const { data, error } = await fetchWithCookie<StatusChangeResponse>(
+		apiRoutesPortalMasters.JUTE_MR_OPEN,
+		"POST",
+		payload
+	);
+
+	if (error) {
+		throw new Error(error);
+	}
+
+	if (!data) {
+		throw new Error("Empty response from open API");
+	}
+
+	return data;
+}
+
+/**
  * Set MR to Pending - Changes status from Open (1) to Pending (13).
  * This is a terminal state on this screen (handled by external system).
  */

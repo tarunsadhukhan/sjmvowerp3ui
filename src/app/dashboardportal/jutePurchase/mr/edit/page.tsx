@@ -296,9 +296,9 @@ function JuteMREditPageContent() {
 				return {
 					id: `mr-li-${li.jute_mr_li_id}`,
 					juteMrLiId: li.jute_mr_li_id,
-					actualItemId: li.actual_item_id,
-					actualItemName: li.actual_item_name || "-",
-					actualQualityId: li.actual_quality,
+					actualItemId: li.actual_item_grp_id,
+					actualItemName: li.actual_group_name || "-",
+					actualQualityId: li.actual_item_id,
 					actualQualityName: li.actual_quality_name || "-",
 					actualQty: li.actual_qty,
 					actualWeight: li.actual_weight,
@@ -362,6 +362,7 @@ function JuteMREditPageContent() {
 		approvalPermissions,
 		statusChipProps,
 		statusId,
+		canSetOpen,
 		canSetPending,
 		partyHasNoBranches,
 		// Approval dialog state
@@ -369,6 +370,7 @@ function JuteMREditPageContent() {
 		handleApprovalDialogClose,
 		handleApproveConfirm,
 		// Action handlers
+		handleOpen,
 		handlePending,
 		handleApprove,
 		handleReject,
@@ -405,8 +407,8 @@ function JuteMREditPageContent() {
 				src_com_id: header.src_com_id,
 				line_items: lineItems.map((li) => ({
 					jute_mr_li_id: li.juteMrLiId,
-					actual_item_id: li.actualItemId,
-					actual_quality: li.actualQualityId,
+					actual_item_grp_id: li.actualItemId,
+					actual_item_id: li.actualQualityId,
 					actual_qty: li.actualQty,
 					actual_weight: li.actualWeight,
 					allowable_moisture: li.allowableMoisture,
@@ -506,8 +508,10 @@ function JuteMREditPageContent() {
 					approvalInfo={approvalInfo}
 					permissions={approvalPermissions}
 					loading={approvalLoading}
+					canSetOpen={canSetOpen}
 					canSetPending={canSetPending}
 					partyHasNoBranches={partyHasNoBranches}
+					onOpen={handleOpen}
 					onApprove={handleApprove}
 					onReject={handleReject}
 					onPending={handlePending}

@@ -1,0 +1,649 @@
+"use client";
+
+import React, { Suspense } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
+import TransactionWrapper from "@/components/ui/TransactionWrapper";
+import { Button } from "@/components/ui/button";
+import type { MuiFormMode } from "@/components/ui/muiform";
+import {
+	useDeferredOptionCache,
+	useTransactionSetup,
+	useTransactionPreview,
+} from "@/components/ui/transaction";
+import { useBranchOptions } from "@/utils/branchUtils";
+import {
+	fetchQuotationSetup1,
+	fetchQuotationSetup2,
+	getQuotationById,
+	type QuotationDetails,
+} from "@/utils/quotationService";
+import useSelectedCompanyCoId from "@/hooks/use-selected-company-coid";
+import { toast } from "@/hooks/use-toast";
+import { useMenuId } from "@/hooks/useMenuId";
+import { useCompanyName } from "@/hooks/useCompanyName";
+import { QuotationHeaderForm } from "./components/QuotationHeaderForm";
+import { QuotationFooterForm } from "./components/QuotationFooterForm";
+import { QuotationTotalsDisplay } from "./components/QuotationTotalsDisplay";
+import { QuotationApprovalBar } from "./components/QuotationApprovalBar";
+import QuotationPreview from "./components/QuotationPreview";
+import { useQuotationLineItemColumns } from "./components/QuotationLineItemsTable";
+import { useQuotationFormState } from "./hooks/useQuotationFormState";
+import { useQuotationAddresses } from "./hooks/useQuotationAddresses";
+import { useQuotationTaxCalculations } from "./hooks/useQuotationTaxCalculations";
+import { useQuotationSelectOptions } from "./hooks/useQuotationSelectOptions";
+import { useQuotationHeaderSchema, useQuotationFooterSchema } from "./hooks/useQuotationFormSchemas";
+import { useQuotationFormSubmission } from "./hooks/useQuotationFormSubmission";
+import { useQuotationApproval } from "./hooks/useQuotationApproval";
+import { useQuotationLineItems } from "./hooks/useQuotationLineItems";
+import type { ItemGroupCacheEntry, QuotationSetupData } from "./types/quotationTypes";
+import { mapItemGroupDetailResponse, mapQuotationSetupResponse, mapQuotationDetailsToFormValues } from "./utils/quotationMappers";
+import { calculateTotals } from "./utils/quotationCalculations";
+import { buildDefaultFormValues, createBlankLine } from "./utils/quotationFactories";
+import {
+	EMPTY_BRANCH_ADDRESSES,
+	EMPTY_BROKERS,
+	EMPTY_CUSTOMERS,
+	EMPTY_CUSTOMER_BRANCHES,
+	EMPTY_ITEM_GROUPS,
+	EMPTY_SETUP_PARAMS,
+	DISCOUNT_MODE,
+} from "./utils/quotationConstants";
+
+function QuotationPageLoading() {
+	return (
+		<div className="flex items-center justify-center min-h-100">
+			<div className="animate-spin h-8 w-8 border-4 border-primary border-t-transparent rounded-full" />
+		</div>
+	);
+}
+
+export default function QuotationTransactionPage() {
+	return (
+		<Suspense fallback={<QuotationPageLoading />}>
+			<QuotationTransactionPageContent />
+		</Suspense>
+	);
+}
+
+function QuotationTransactionPageContent() {
+	const router = useRouter();
+	const searchParams = useSearchParams();
+
+	const modeParam = (searchParams?.get("mode") || "create").toLowerCase();
+	const requestedId = searchParams?.get("id") || "";
+	const branchIdFromUrl = searchParams?.get("branch_id") || "";
+	const menuIdFromUrl = searchParams?.get("menu_id") || "";
+
+	const mode: MuiFormMode = modeParam === "edit" ? "edit" : modeParam === "view" ? "view" : "create";
+
+	const branchOptions = useBranchOptions();
+	const { coId } = useSelectedCompanyCoId();
+	const [lockedBranchId, setLockedBranchId] = React.useState<string | null>(() => (mode !== "create" && branchIdFromUrl ? String(branchIdFromUrl) : null));
+	const branchPrefillAppliedRef = React.useRef(false);
+
+	const { getMenuId } = useMenuId({ transactionType: "quotation", menuIdFromUrl });
+	const companyName = useCompanyName();
+
+	const {
+		initialValues,
+		setInitialValues,
+		formValues,
+		setFormValues,
+		formKey,
+		setFormKey,
+		formRef,
+		handleMainFormValuesChange,
+		handleFooterFormValuesChange,
+	} = useQuotationFormState({ mode, requestedId, branchIdFromUrl });
+
+	const [quotationDetails, setQuotationDetails] = React.useState<QuotationDetails | null>(null);
+	const [loading, setLoading] = React.useState<boolean>(mode !== "create");
+	const [pageError, setPageError] = React.useState<string | null>(null);
+
+	const branchValue = React.useMemo(() => {
+		if (lockedBranchId) return lockedBranchId;
+		const fromForm = formValues.branch != null ? String(formValues.branch) : "";
+		if (fromForm) return fromForm;
+		return branchIdFromUrl ? String(branchIdFromUrl) : "";
+	}, [formValues.branch, branchIdFromUrl, lockedBranchId]);
+
+	const resolvedBranchOptions = React.useMemo(() => {
+		if (!branchValue) return branchOptions;
+		const exists = branchOptions.some((opt) => String(opt.value) === String(branchValue));
+		if (exists) return branchOptions;
+		const fallbackLabel =
+			(quotationDetails?.branch && typeof quotationDetails.branch === "string" ? quotationDetails.branch : undefined) ||
+			branchValue;
+		return [...branchOptions, { label: fallbackLabel, value: branchValue }];
+	}, [branchOptions, branchValue, quotationDetails?.branch]);
+
+	const branchIdForSetup = React.useMemo(() => {
+		if (!branchValue || !/^\d+$/.test(branchValue)) return undefined;
+		return branchValue;
+	}, [branchValue]);
+
+	const setupParamsRef = React.useRef<typeof EMPTY_SETUP_PARAMS>(EMPTY_SETUP_PARAMS);
+	const setupParams = React.useMemo(() => {
+		const currentBranchId = branchIdForSetup;
+		const prevBranchId = setupParamsRef.current.branchId;
+		if (currentBranchId === prevBranchId) return setupParamsRef.current;
+		if (!currentBranchId) {
+			setupParamsRef.current = EMPTY_SETUP_PARAMS;
+			return EMPTY_SETUP_PARAMS;
+		}
+		setupParamsRef.current = { branchId: currentBranchId };
+		return setupParamsRef.current;
+	}, [branchIdForSetup]);
+
+	const memoizedMapSetupResponse = React.useCallback(mapQuotationSetupResponse, []);
+	const memoizedFetchSetup1 = React.useCallback(fetchQuotationSetup1, []);
+
+	const setupEnabled = React.useMemo(() => Boolean(coId && branchIdForSetup), [coId, branchIdForSetup]);
+
+	const { data: setupData, loading: setupLoading, error: setupError } = useTransactionSetup<{ branchId?: string }, Record<string, unknown>, QuotationSetupData>({
+		coId: coId || undefined,
+		params: setupParams,
+		fetcher: memoizedFetchSetup1,
+		mapData: memoizedMapSetupResponse,
+		enabled: setupEnabled,
+	});
+
+	const headerFieldsDisabled = React.useMemo(() => {
+		if (mode === "view") return true;
+		if (mode === "edit") return false;
+		return !branchIdForSetup;
+	}, [mode, branchIdForSetup]);
+
+	const customers = setupData?.customers ?? EMPTY_CUSTOMERS;
+	const customerBranches = setupData?.customerBranches ?? EMPTY_CUSTOMER_BRANCHES;
+	const brokers = setupData?.brokers ?? EMPTY_BROKERS;
+	const itemGroups = setupData?.itemGroups ?? EMPTY_ITEM_GROUPS;
+	const coConfig = setupData?.coConfig;
+	const branchAddresses = setupData?.branchAddresses ?? EMPTY_BRANCH_ADDRESSES;
+
+	const fetchItemGroupDetail = React.useCallback(async (itemGroupId: string) => {
+		if (!itemGroupId || !/^\d+$/.test(itemGroupId)) {
+			throw new Error(`Invalid item group identifier: ${itemGroupId}`);
+		}
+		const response = await fetchQuotationSetup2(itemGroupId);
+		return mapItemGroupDetailResponse(response);
+	}, []);
+
+	React.useEffect(() => {
+		if (mode === "create") return;
+		if (branchPrefillAppliedRef.current) return;
+		if (!branchIdFromUrl) return;
+		branchPrefillAppliedRef.current = true;
+		setLockedBranchId(String(branchIdFromUrl));
+	}, [branchIdFromUrl, mode]);
+
+	const handleItemGroupError = React.useCallback((error: unknown) => {
+		const description = error instanceof Error ? error.message : "Please try again.";
+		toast({ variant: "destructive", title: "Unable to load item options", description });
+	}, []);
+
+	const { cache: itemGroupCache, loading: itemGroupLoading, ensure: ensureItemGroupData } =
+		useDeferredOptionCache<string, ItemGroupCacheEntry>({
+			fetcher: fetchItemGroupDetail,
+			onError: handleItemGroupError,
+		});
+
+	const { billingState, shippingState } = useQuotationAddresses({ branchAddresses, formValues });
+
+	const {
+		lineItems,
+		setLineItems,
+		replaceItems,
+		removeLineItems,
+		handleLineFieldChange,
+		mapLineToEditable,
+		filledLineItems,
+		lineItemsValid,
+		itemGroupsFromLineItems,
+	} = useQuotationLineItems({
+		mode,
+		coConfig,
+		billingState,
+		shippingState,
+		itemGroupCache,
+		itemGroupLoading,
+		ensureItemGroupData,
+		itemGroups,
+	});
+
+	const initialLineSeededRef = React.useRef(false);
+	React.useEffect(() => {
+		if (mode !== "create") {
+			initialLineSeededRef.current = false;
+			return;
+		}
+		if (initialLineSeededRef.current) return;
+		setLineItems((prev) => {
+			if (prev.length) return prev;
+			initialLineSeededRef.current = true;
+			return [createBlankLine()];
+		});
+	}, [mode, setLineItems]);
+
+	const { taxType } = useQuotationTaxCalculations({
+		coConfig,
+		billingState,
+		shippingState,
+		setLineItems,
+	});
+
+	const totals = React.useMemo(() => calculateTotals(filledLineItems), [filledLineItems]);
+
+	// Fetch quotation details for edit/view mode
+	const detailsFetchKey = React.useMemo(
+		() => [mode, requestedId || "", branchIdForSetup || branchIdFromUrl || "", coId || ""].join("|"),
+		[mode, requestedId, branchIdForSetup, branchIdFromUrl, coId],
+	);
+
+	const lastDetailsKeyRef = React.useRef<string | null>(null);
+	const detailsFetchedRef = React.useRef(false);
+
+	React.useEffect(() => {
+		if (lastDetailsKeyRef.current !== detailsFetchKey) {
+			lastDetailsKeyRef.current = detailsFetchKey;
+			detailsFetchedRef.current = false;
+		}
+	}, [detailsFetchKey]);
+
+	React.useEffect(() => {
+		if (mode === "create") {
+			setQuotationDetails(null);
+			setPageError(null);
+			setLoading(false);
+			return;
+		}
+
+		if (!requestedId) {
+			setQuotationDetails(null);
+			setPageError("Quotation ID is required to load details.");
+			setLoading(false);
+			return;
+		}
+
+		if (!setupEnabled) return;
+		if (setupLoading) return;
+		if (!setupData) return;
+		if (detailsFetchedRef.current) return;
+
+		detailsFetchedRef.current = true;
+
+		let cancelled = false;
+		const fetchDetails = async () => {
+			setLoading(true);
+			try {
+				const details = await getQuotationById(requestedId, coId || undefined, getMenuId() || undefined);
+				if (cancelled) return;
+
+				setQuotationDetails(details);
+				const defaultFormValues = buildDefaultFormValues();
+				const nextValues = mapQuotationDetailsToFormValues(details, defaultFormValues);
+
+				const detailsWithBranchId = details as unknown as { branch_id?: unknown; branchId?: unknown };
+				const branchIdFromDetails = detailsWithBranchId?.branch_id ?? detailsWithBranchId?.branchId;
+				const resolvedBranchValue = (() => {
+					if (branchIdFromDetails != null && branchIdFromDetails !== "") return String(branchIdFromDetails);
+					if (branchIdFromUrl) return String(branchIdFromUrl);
+					if (branchValue && /^\d+$/.test(branchValue)) return branchValue;
+					const mappedValue = nextValues.branch != null ? String(nextValues.branch) : "";
+					return /^\d+$/.test(mappedValue) ? mappedValue : "";
+				})();
+
+				if (resolvedBranchValue) {
+					nextValues.branch = resolvedBranchValue;
+					setLockedBranchId(resolvedBranchValue);
+				}
+
+				setInitialValues(nextValues);
+				setFormValues(nextValues);
+				setFormKey((k) => k + 1);
+
+				const normalizedLines = (details.lines ?? []).map((line) => mapLineToEditable(line));
+				replaceItems(normalizedLines);
+
+				setPageError(null);
+			} catch (error) {
+				if (cancelled) return;
+				const description = error instanceof Error ? error.message : "Unable to load quotation.";
+				setQuotationDetails(null);
+				setPageError(description);
+				toast({ variant: "destructive", title: "Unable to load quotation", description });
+			} finally {
+				if (!cancelled) setLoading(false);
+			}
+		};
+
+		void fetchDetails();
+		return () => { cancelled = true; };
+	}, [
+		mode, requestedId, coId, getMenuId,
+		setInitialValues, setFormValues, setFormKey,
+		replaceItems, mapLineToEditable,
+		setupEnabled, setupLoading, setupData,
+		branchIdFromUrl, branchValue,
+	]);
+
+	// Pre-load item group data for existing line items
+	React.useEffect(() => {
+		if (!quotationDetails?.lines?.length) return;
+		const uniqueGroups = new Set(
+			quotationDetails.lines
+				.map((line) => (line.itemGroup ? String(line.itemGroup) : ""))
+				.filter((groupId) => groupId && /^\d+$/.test(groupId)),
+		);
+		uniqueGroups.forEach((groupId) => ensureItemGroupData(groupId));
+	}, [quotationDetails, ensureItemGroupData]);
+
+	const isLineItemsReady = React.useMemo(() => {
+		if (mode === "view" || pageError || setupError) return true;
+		return lineItemsValid;
+	}, [lineItemsValid, mode, pageError, setupError]);
+
+	const {
+		customerOptions,
+		brokerOptions,
+		branchAddressOptions,
+		itemGroupOptions,
+		getItemOptions,
+		getMakeOptions,
+		getMakeLabel,
+		getUomOptions,
+		getItemGroupLabel,
+		getItemLabel,
+		getUomLabel,
+		getOptionLabel,
+	} = useQuotationSelectOptions({
+		customers,
+		brokers,
+		branchAddresses,
+		itemGroupsFromLineItems,
+		itemGroupCache,
+	});
+
+	const headerSchema = useQuotationHeaderSchema({
+		branchOptions: resolvedBranchOptions,
+		customerOptions,
+		brokerOptions,
+		branchAddressOptions,
+		coConfig,
+		billingState,
+		shippingState,
+		taxType,
+		mode,
+		headerFieldsDisabled,
+	});
+
+	const footerSchema = useQuotationFooterSchema({
+		coConfig,
+		billingState,
+		shippingState,
+		taxType,
+	});
+
+	const canEdit = mode !== "view";
+
+	const lineItemColumns = useQuotationLineItemColumns({
+		canEdit,
+		itemGroupOptions,
+		getItemGroupLabel,
+		getItemOptions,
+		getItemLabel,
+		getMakeOptions,
+		getMakeLabel,
+		getUomOptions,
+		getUomLabel,
+		onFieldChange: handleLineFieldChange,
+	});
+
+	const handleRefresh = React.useCallback(() => {
+		detailsFetchedRef.current = false;
+		lastDetailsKeyRef.current = null;
+		setLoading(true);
+	}, []);
+
+	const {
+		approvalInfo,
+		approvalPermissions,
+		statusChipProps,
+		loading: approvalLoading,
+		handleOpen,
+		handleCancelDraft,
+		handleSendForApproval,
+		handleApprove,
+		handleReject,
+		handleReopen,
+	} = useQuotationApproval({
+		mode,
+		requestedId,
+		quotationDetails,
+		branchId: branchValue,
+		menuId: getMenuId() || "",
+		onRefresh: handleRefresh,
+	});
+
+	const branchLabel = React.useMemo(() => {
+		const value = formValues.branch ?? quotationDetails?.branch;
+		return getOptionLabel(resolvedBranchOptions, value) ?? (typeof value === "string" ? value : undefined);
+	}, [resolvedBranchOptions, formValues.branch, quotationDetails?.branch, getOptionLabel]);
+
+	const customerLabel = React.useMemo(() => {
+		const value = formValues.customer ?? quotationDetails?.customer;
+		return getOptionLabel(customerOptions, value) ?? (typeof value === "string" ? value : undefined);
+	}, [formValues.customer, quotationDetails?.customer, customerOptions, getOptionLabel]);
+
+	const brokerLabel = React.useMemo(() => {
+		const value = formValues.broker ?? quotationDetails?.broker;
+		return getOptionLabel(brokerOptions, value) ?? (typeof value === "string" ? value : undefined);
+	}, [formValues.broker, quotationDetails?.broker, brokerOptions, getOptionLabel]);
+
+	const billingAddressLabel = React.useMemo(() => {
+		const value = formValues.billing_address ?? quotationDetails?.billingAddress;
+		return getOptionLabel(branchAddressOptions, value) ?? (typeof value === "string" ? value : undefined);
+	}, [formValues.billing_address, quotationDetails?.billingAddress, branchAddressOptions, getOptionLabel]);
+
+	const shippingAddressLabel = React.useMemo(() => {
+		const value = formValues.shipping_address ?? quotationDetails?.shippingAddress;
+		return getOptionLabel(branchAddressOptions, value) ?? (typeof value === "string" ? value : undefined);
+	}, [formValues.shipping_address, quotationDetails?.shippingAddress, branchAddressOptions, getOptionLabel]);
+
+	const statusLabel = React.useMemo(() => statusChipProps?.label ?? quotationDetails?.status, [statusChipProps?.label, quotationDetails?.status]);
+
+	const previewHeader = React.useMemo(
+		() => ({
+			quotationNo: quotationDetails?.quotationNo,
+			quotationDate: (formValues.quotation_date as string) || quotationDetails?.quotationDate,
+			expiryDate: (formValues.quotation_expiry_date as string) || quotationDetails?.expiryDate,
+			branch: branchLabel,
+			customer: customerLabel,
+			broker: brokerLabel,
+			billingAddress: billingAddressLabel,
+			shippingAddress: shippingAddressLabel,
+			companyName,
+			status: statusLabel,
+			updatedBy: quotationDetails?.updatedBy,
+			updatedAt: quotationDetails?.updatedAt,
+			taxType,
+			paymentTerms: (formValues.payment_terms as string) || quotationDetails?.paymentTerms,
+			deliveryTerms: (formValues.delivery_terms as string) || quotationDetails?.deliveryTerms,
+			deliveryDays: (formValues.delivery_days as string) || (quotationDetails?.deliveryDays != null ? String(quotationDetails.deliveryDays) : undefined),
+			brokeragePercentage: (formValues.brokerage_percentage as string) || (quotationDetails?.brokeragePercentage != null ? String(quotationDetails.brokeragePercentage) : undefined),
+		}),
+		[
+			quotationDetails, formValues.quotation_date, formValues.quotation_expiry_date,
+			formValues.payment_terms, formValues.delivery_terms, formValues.delivery_days,
+			formValues.brokerage_percentage, branchLabel, customerLabel, brokerLabel,
+			billingAddressLabel, shippingAddressLabel, companyName, statusLabel, taxType,
+		],
+	);
+
+	const previewItems = React.useMemo(() => {
+		return filledLineItems.map((line, index) => {
+			const groupLabel = itemGroups.find((grp) => grp.id === line.itemGroup)?.label ?? line.itemGroup ?? "";
+			const itemLabel = getItemLabel(line.itemGroup, line.item, line.itemCode);
+			const makeLabel = getMakeLabel(line.itemGroup, line.itemMake);
+			const uomLabel = getUomLabel(line.itemGroup, line.item, line.uom);
+			const displayItem = (() => {
+				const parts = [groupLabel, itemLabel].filter(Boolean);
+				if (parts.length > 0) return parts.join(" — ");
+				return line.item || "-";
+			})();
+			const discountType = (() => {
+				if (line.discountMode === DISCOUNT_MODE.PERCENTAGE) return "%";
+				if (line.discountMode === DISCOUNT_MODE.AMOUNT) return "Amt";
+				return "";
+			})();
+			return {
+				srNo: index + 1,
+				itemGroup: groupLabel || undefined,
+				item: displayItem,
+				make: makeLabel !== "-" ? makeLabel : undefined,
+				hsnCode: line.hsnCode || undefined,
+				quantity: line.quantity || "-",
+				uom: uomLabel,
+				rate: line.rate,
+				discountType,
+				discountValue: line.discountValue || "",
+				amount: typeof line.netAmount === "number" ? line.netAmount : "",
+				remarks: line.remarks || "-",
+			};
+		});
+	}, [filledLineItems, getItemLabel, getMakeLabel, getUomLabel, itemGroups]);
+
+	const previewTotals = React.useMemo(
+		() => ({
+			netAmount: totals.netAmount,
+			totalIGST: totals.totalIGST,
+			totalCGST: totals.totalCGST,
+			totalSGST: totals.totalSGST,
+			totalAmount: totals.totalAmount,
+			roundOffValue: quotationDetails?.roundOffValue,
+		}),
+		[totals, quotationDetails?.roundOffValue],
+	);
+
+	const previewRemarks = React.useMemo(() => {
+		return (
+			(formValues.internal_note as string) ||
+			quotationDetails?.internalNote ||
+			(formValues.footer_notes as string) ||
+			quotationDetails?.footerNotes ||
+			""
+		);
+	}, [formValues.internal_note, formValues.footer_notes, quotationDetails?.internalNote, quotationDetails?.footerNotes]);
+
+	const previewTermsCondition = React.useMemo(() => {
+		return (formValues.terms_condition as string) || quotationDetails?.termsCondition || "";
+	}, [formValues.terms_condition, quotationDetails?.termsCondition]);
+
+	const { metadata } = useTransactionPreview({
+		header: previewHeader,
+		fields: [
+			{ label: "Quotation No", accessor: (header) => header.quotationNo || "Pending" },
+			{ label: "Quotation Date", accessor: (header) => header.quotationDate || "-" },
+			{ label: "Customer", accessor: (header) => header.customer || "-" },
+			{ label: "Status", accessor: (header) => header.status || "-", includeWhen: (header) => Boolean(header.status) },
+		],
+	});
+
+	const { saving, handleFormSubmit } = useQuotationFormSubmission({
+		mode,
+		pageError,
+		setupError,
+		branchAddresses,
+		filledLineItems,
+		isLineItemsReady,
+		requestedId,
+	});
+
+	const primaryActionLabel = mode === "create" ? "Create" : "Save";
+	const handleSaveClick = React.useCallback(() => {
+		if (!formRef.current?.submit) return;
+		void formRef.current.submit();
+	}, [formRef]);
+
+	const pageTitle = React.useMemo(() => {
+		if (mode === "create") return "Create Sales Quotation";
+		if (mode === "edit") {
+			return quotationDetails?.quotationNo ? `Edit Quotation ${quotationDetails.quotationNo}` : "Edit Sales Quotation";
+		}
+		return quotationDetails?.quotationNo ? `Sales Quotation ${quotationDetails.quotationNo}` : "Sales Quotation Details";
+	}, [mode, quotationDetails?.quotationNo]);
+
+	return (
+		<TransactionWrapper
+			title={pageTitle}
+			subtitle={mode === "create" ? "Create a new sales quotation" : mode === "edit" ? "Edit sales quotation" : "View sales quotation details"}
+			metadata={metadata}
+			statusChip={statusChipProps}
+			backAction={{ onClick: () => router.push("/dashboardportal/sales/quotation") }}
+			loading={loading || setupLoading}
+			alerts={pageError ? <div role="alert" aria-live="assertive" className="text-red-600">{pageError}</div> : undefined}
+			preview={
+				<QuotationPreview
+					header={previewHeader}
+					items={previewItems}
+					totals={previewTotals}
+					remarks={previewRemarks}
+					termsCondition={previewTermsCondition}
+				/>
+			}
+			lineItems={{
+				items: lineItems,
+				getItemId: (item) => item.id,
+				canEdit,
+				columns: lineItemColumns,
+				placeholder: "Add line items by selecting an item group and item",
+				selectionColumnWidth: "28px",
+			}}
+			footer={
+				<div className="space-y-6 pt-4 border-t">
+					<QuotationFooterForm
+						schema={footerSchema}
+						formKey={formKey}
+						initialValues={initialValues}
+						mode={mode}
+						onSubmit={handleFormSubmit}
+						onValuesChange={handleFooterFormValuesChange}
+					/>
+					<QuotationTotalsDisplay
+						totals={totals}
+						showGSTBreakdown={Boolean(coConfig?.india_gst)}
+						roundOffValue={quotationDetails?.roundOffValue}
+					/>
+					<QuotationApprovalBar
+						approvalInfo={approvalInfo}
+						permissions={approvalPermissions}
+						loading={approvalLoading}
+						onApprove={handleApprove}
+						onReject={handleReject}
+						onOpen={handleOpen}
+						onCancelDraft={handleCancelDraft}
+						onReopen={handleReopen}
+						onSendForApproval={handleSendForApproval}
+					/>
+					{mode !== "view" ? (
+						<div className="flex justify-end pt-2">
+							<Button type="button" onClick={handleSaveClick} disabled={saving || setupLoading || !isLineItemsReady}>
+								{saving ? "Processing..." : primaryActionLabel}
+							</Button>
+						</div>
+					) : null}
+				</div>
+			}
+		>
+			<QuotationHeaderForm
+				schema={headerSchema}
+				formKey={formKey}
+				initialValues={initialValues}
+				mode={mode}
+				formRef={formRef}
+				onSubmit={handleFormSubmit}
+				onValuesChange={handleMainFormValuesChange}
+			/>
+		</TransactionWrapper>
+	);
+}

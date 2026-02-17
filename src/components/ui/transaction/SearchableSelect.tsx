@@ -80,7 +80,7 @@ export function SearchableSelect<TOption>({
             "& .MuiOutlinedInput-input": {
               py: 0.5,
               px: 1,
-              fontSize: "0.75rem",
+              fontSize: "0.875rem",
               lineHeight: "1.25rem",
             },
             ...sx,

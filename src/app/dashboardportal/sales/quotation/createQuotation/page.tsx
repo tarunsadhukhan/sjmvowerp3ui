@@ -561,6 +561,7 @@ function QuotationTransactionPageContent() {
 
 	const primaryActionLabel = mode === "create" ? "Create" : "Save";
 	const handleSaveClick = React.useCallback(() => {
+		console.log("[Quotation] handleSaveClick called, formRef.current=", formRef.current, "submit=", formRef.current?.submit);
 		if (!formRef.current?.submit) return;
 		void formRef.current.submit();
 	}, [formRef]);

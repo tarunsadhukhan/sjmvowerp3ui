@@ -36,8 +36,8 @@ describe("editability utilities", () => {
 				statusField: "status_id",
 				editableStatuses: [21, 1],
 			});
-			expect(check({ id: 1, status_id: 21 })).toBe(true);  // Draft
-			expect(check({ id: 2, status_id: 1 })).toBe(true);   // Open
+			expect(check({ status_id: 21 })).toBe(true);  // Draft
+			expect(check({ status_id: 1 })).toBe(true);   // Open
 		});
 
 		it("should return false for non-editable status IDs", () => {
@@ -45,9 +45,9 @@ describe("editability utilities", () => {
 				statusField: "status_id",
 				editableStatuses: [21, 1],
 			});
-			expect(check({ id: 1, status_id: 3 })).toBe(false);  // Approved
-			expect(check({ id: 2, status_id: 20 })).toBe(false); // Pending
-			expect(check({ id: 3, status_id: 4 })).toBe(false);  // Rejected
+			expect(check({ status_id: 3 })).toBe(false);  // Approved
+			expect(check({ status_id: 20 })).toBe(false); // Pending
+			expect(check({ status_id: 4 })).toBe(false);  // Rejected
 		});
 
 		it("should return false for null/undefined status", () => {
@@ -55,8 +55,8 @@ describe("editability utilities", () => {
 				statusField: "status_id",
 				editableStatuses: [21, 1],
 			});
-			expect(check({ id: 1, status_id: null })).toBe(false);
-			expect(check({ id: 2, status_id: undefined })).toBe(false);
+			expect(check({ status_id: null })).toBe(false);
+			expect(check({ status_id: undefined })).toBe(false);
 		});
 
 		it("should work with string statuses", () => {
@@ -64,9 +64,9 @@ describe("editability utilities", () => {
 				statusField: "status",
 				editableStatuses: ["Draft", "Open"],
 			});
-			expect(check({ id: 1, status: "Draft" })).toBe(true);
-			expect(check({ id: 2, status: "Open" })).toBe(true);
-			expect(check({ id: 3, status: "Approved" })).toBe(false);
+			expect(check({ status: "Draft" })).toBe(true);
+			expect(check({ status: "Open" })).toBe(true);
+			expect(check({ status: "Approved" })).toBe(false);
 		});
 
 		it("should support case-insensitive matching", () => {
@@ -75,10 +75,10 @@ describe("editability utilities", () => {
 				editableStatuses: ["Draft", "Open"],
 				caseInsensitive: true,
 			});
-			expect(check({ id: 1, status: "draft" })).toBe(true);
-			expect(check({ id: 2, status: "OPEN" })).toBe(true);
-			expect(check({ id: 3, status: "DRAFT" })).toBe(true);
-			expect(check({ id: 4, status: "approved" })).toBe(false);
+			expect(check({ status: "draft" })).toBe(true);
+			expect(check({ status: "OPEN" })).toBe(true);
+			expect(check({ status: "DRAFT" })).toBe(true);
+			expect(check({ status: "approved" })).toBe(false);
 		});
 
 		it("should be case-sensitive by default", () => {
@@ -86,52 +86,52 @@ describe("editability utilities", () => {
 				statusField: "status",
 				editableStatuses: ["Draft", "Open"],
 			});
-			expect(check({ id: 1, status: "Draft" })).toBe(true);
-			expect(check({ id: 2, status: "draft" })).toBe(false); // Case mismatch
+			expect(check({ status: "Draft" })).toBe(true);
+			expect(check({ status: "draft" })).toBe(false); // Case mismatch
 		});
 	});
 
 	describe("createBooleanFieldEditCheck", () => {
 		it("should return true when field matches editableWhen=false", () => {
 			const check = createBooleanFieldEditCheck("inspection_check", false);
-			expect(check({ id: 1, inspection_check: false })).toBe(true);
-			expect(check({ id: 2, inspection_check: 0 })).toBe(true);
-			expect(check({ id: 3, inspection_check: null })).toBe(true);
-			expect(check({ id: 4, inspection_check: undefined })).toBe(true);
-			expect(check({ id: 5, inspection_check: "" })).toBe(true);
+			expect(check({ inspection_check: false })).toBe(true);
+			expect(check({ inspection_check: 0 })).toBe(true);
+			expect(check({ inspection_check: null })).toBe(true);
+			expect(check({ inspection_check: undefined })).toBe(true);
+			expect(check({ inspection_check: "" })).toBe(true);
 		});
 
 		it("should return false when field does not match editableWhen=false", () => {
 			const check = createBooleanFieldEditCheck("inspection_check", false);
-			expect(check({ id: 1, inspection_check: true })).toBe(false);
-			expect(check({ id: 2, inspection_check: 1 })).toBe(false);
-			expect(check({ id: 3, inspection_check: "yes" })).toBe(false);
+			expect(check({ inspection_check: true })).toBe(false);
+			expect(check({ inspection_check: 1 })).toBe(false);
+			expect(check({ inspection_check: "yes" })).toBe(false);
 		});
 
 		it("should work with editableWhen=true", () => {
 			const check = createBooleanFieldEditCheck("is_active", true);
-			expect(check({ id: 1, is_active: true })).toBe(true);
-			expect(check({ id: 2, is_active: false })).toBe(false);
+			expect(check({ is_active: true })).toBe(true);
+			expect(check({ is_active: false })).toBe(false);
 		});
 	});
 
 	describe("createNotEqualEditCheck", () => {
 		it("should return true when field does not equal completed value", () => {
 			const check = createNotEqualEditCheck("bill_pass_complete", 1);
-			expect(check({ id: 1, bill_pass_complete: 0 })).toBe(true);
-			expect(check({ id: 2, bill_pass_complete: null })).toBe(true);
-			expect(check({ id: 3, bill_pass_complete: undefined })).toBe(true);
+			expect(check({ bill_pass_complete: 0 })).toBe(true);
+			expect(check({ bill_pass_complete: null })).toBe(true);
+			expect(check({ bill_pass_complete: undefined })).toBe(true);
 		});
 
 		it("should return false when field equals completed value", () => {
 			const check = createNotEqualEditCheck("bill_pass_complete", 1);
-			expect(check({ id: 1, bill_pass_complete: 1 })).toBe(false);
+			expect(check({ bill_pass_complete: 1 })).toBe(false);
 		});
 
 		it("should work with string values", () => {
 			const check = createNotEqualEditCheck("status", "closed");
-			expect(check({ id: 1, status: "open" })).toBe(true);
-			expect(check({ id: 2, status: "closed" })).toBe(false);
+			expect(check({ status: "open" })).toBe(true);
+			expect(check({ status: "closed" })).toBe(false);
 		});
 	});
 });

@@ -1187,6 +1187,38 @@ export type TypeA = { b: TypeB };
 export type TypeB = { a: TypeA };
 ```
 
+### 6. React Hook Declaration Order (useMemo/useCallback)
+Block-scoped variables (`const`) declared with `useMemo` or `useCallback` **cannot** be referenced before their declaration — unlike `function` declarations, they are **not hoisted**. Always declare hooks in dependency order.
+
+❌ **Wrong:**
+```typescript
+// calculatedWeight references getAdjustedBalQty, but it's defined later!
+const calculatedWeight = React.useMemo(() => {
+  const adj = getAdjustedBalQty(stock); // TS error: used before declaration
+  return adj * rate;
+}, [getAdjustedBalQty, stock, rate]);
+
+const getAdjustedBalQty = React.useCallback(
+  (stock) => stock.balqty - draftQty,
+  [draftQty]
+);
+```
+
+✅ **Correct:**
+```typescript
+// Dependencies declared FIRST
+const getAdjustedBalQty = React.useCallback(
+  (stock) => stock.balqty - draftQty,
+  [draftQty]
+);
+
+// Dependent hook declared AFTER
+const calculatedWeight = React.useMemo(() => {
+  const adj = getAdjustedBalQty(stock);
+  return adj * rate;
+}, [getAdjustedBalQty, stock, rate]);
+```
+
 ---
 
 ## Quick Reference: Creating a New Transaction Page

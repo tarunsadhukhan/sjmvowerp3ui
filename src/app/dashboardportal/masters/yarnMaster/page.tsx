@@ -17,8 +17,10 @@ type YarnMasterRow = {
   jute_yarn_id: number;
   jute_yarn_name: string;
   jute_yarn_count?: number;
-  jute_yarn_type_id?: number;
-  jute_yarn_type_name?: string;
+  item_grp_id?: number;
+  item_grp_name?: string;
+  item_id?: number;
+  item_code?: string;
   jute_yarn_remarks?: string;
   updated_by?: number;
   updated_date_time?: string;
@@ -89,8 +91,10 @@ export default function YarnMasterPage() {
         jute_yarn_id: r.jute_yarn_id as number,
         jute_yarn_name: (r.jute_yarn_name as string) ?? "",
         jute_yarn_count: r.jute_yarn_count as number | undefined,
-        jute_yarn_type_id: r.jute_yarn_type_id as number | undefined,
-        jute_yarn_type_name: (r.jute_yarn_type_name as string) ?? "-",
+        item_grp_id: r.item_grp_id as number | undefined,
+        item_grp_name: (r.item_grp_name as string) ?? "-",
+        item_id: r.item_id as number | undefined,
+        item_code: (r.item_code as string) ?? "-",
         jute_yarn_remarks: (r.jute_yarn_remarks as string) ?? "-",
         updated_date_time: r.updated_date_time
           ? new Date(r.updated_date_time as string).toLocaleDateString()
@@ -184,6 +188,12 @@ export default function YarnMasterPage() {
         minWidth: 200,
       },
       {
+        field: "item_code",
+        headerName: "Item Code",
+        flex: 0.8,
+        minWidth: 150,
+      },
+      {
         field: "jute_yarn_count",
         headerName: "Yarn Count",
         flex: 0.7,
@@ -192,7 +202,7 @@ export default function YarnMasterPage() {
           value !== undefined && value !== null ? value.toString() : "-",
       },
       {
-        field: "jute_yarn_type_name",
+        field: "item_grp_name",
         headerName: "Yarn Type",
         flex: 1,
         minWidth: 180,

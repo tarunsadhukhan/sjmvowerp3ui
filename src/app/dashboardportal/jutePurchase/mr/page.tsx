@@ -8,6 +8,7 @@ import { apiRoutesPortalMasters } from "@/utils/api";
 import IndexWrapper from "@/components/ui/IndexWrapper";
 import { useRouter } from "next/navigation";
 import useSelectedCompanyCoId from "@/hooks/use-selected-company-coid";
+import { createStatusBasedEditCheck } from "@/utils/editability";
 
 /**
  * @component JuteMRIndexPage
@@ -272,6 +273,16 @@ export default function JuteMRIndexPage() {
 		[router]
 	);
 
+	// Row is editable only in Draft or Open status
+	const isRowEditable = React.useMemo(
+		() => createStatusBasedEditCheck<JuteMRRow>({
+			statusField: "status",
+			editableStatuses: ["Draft", "Open"],
+			caseInsensitive: true,
+		}),
+		[]
+	);
+
 	return (
 		<IndexWrapper
 			title="Jute Material Receipts"
@@ -291,6 +302,7 @@ export default function JuteMRIndexPage() {
 			}}
 			onView={handleView}
 			onEdit={handleEdit}
+			isRowEditable={isRowEditable}
 		>
 			{errorMessage ? (
 				<Alert severity="error" sx={{ mt: 2 }}>

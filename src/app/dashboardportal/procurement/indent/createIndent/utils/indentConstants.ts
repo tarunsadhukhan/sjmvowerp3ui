@@ -73,3 +73,45 @@ export const EMPTY_SETUP_PARAMS: Readonly<{ branchId?: string }> = Object.freeze
  * Expense type IDs allowed for "Open" indent type.
  */
 export const OPEN_INDENT_ALLOWED_EXPENSE_IDS = new Set(["3", "5", "6"]);
+
+/**
+ * Mirrors the backend VALIDATION_LOGIC_MAP in indent.py.
+ * Maps (indent_type, expense_type_name) → validation logic (1 | 2 | 3).
+ *
+ * Logic 1: Max/Min Quantity Validation (with stock check)
+ * Logic 2: Open Entry (FY duplicate check, no quantity cap)
+ * Logic 3: No Validation (free entry)
+ */
+const VALIDATION_LOGIC_MAP: Record<string, Record<string, 1 | 2 | 3>> = {
+	Regular: {
+		General: 1,
+		Maintenance: 1,
+		Production: 1,
+		Overhaul: 1,
+		Capital: 3,
+	},
+	Open: {
+		General: 2,
+		Maintenance: 2,
+		Production: 2,
+	},
+	BOM: {
+		General: 1,
+		Maintenance: 1,
+		Production: 1,
+		Capital: 3,
+		Overhaul: 3,
+	},
+};
+
+/**
+ * Determine the validation logic for a given indent_type + expense_type_name.
+ * Returns 3 (no validation) for unknown combinations.
+ */
+export function getValidationLogic(
+	indentType: string,
+	expenseTypeName: string | undefined
+): 1 | 2 | 3 {
+	if (!indentType || !expenseTypeName) return 3;
+	return VALIDATION_LOGIC_MAP[indentType]?.[expenseTypeName] ?? 3;
+}

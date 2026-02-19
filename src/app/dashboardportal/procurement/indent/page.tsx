@@ -1,13 +1,13 @@
 "use client";
 
 import * as React from "react";
-import { Alert, Chip, IconButton, Stack, Tooltip, Typography } from "@mui/material";
-import type { GridColDef, GridPaginationModel, GridRenderCellParams } from "@mui/x-data-grid";
-import { Eye, Edit } from "lucide-react";
+import { Alert, Chip, Typography } from "@mui/material";
+import type { GridColDef, GridPaginationModel } from "@mui/x-data-grid";
 import { fetchWithCookie } from "@/utils/apiClient2";
 import { apiRoutesPortalMasters } from "@/utils/api";
 import IndexWrapper from "@/components/ui/IndexWrapper";
 import { useRouter } from "next/navigation";
+import { createStatusBasedEditCheck } from "@/utils/editability";
 
 type IndentRow = {
 	id: string | number;
@@ -52,52 +52,40 @@ export default function ProcurementIndentIndexPage() {
 	const [searchValue, setSearchValue] = React.useState("");
 	const [errorMessage, setErrorMessage] = React.useState<string | null>(null);
 
-	const navigateToIndent = React.useCallback(
-		(row: IndentRow, mode: "view" | "edit") => {
+	const handleView = React.useCallback(
+		(row: IndentRow) => {
 			const id = row.id ?? row.indent_no;
 			if (!id) return;
-			router.push(`/dashboardportal/procurement/indent/createIndent?mode=${mode}&id=${encodeURIComponent(String(id))}`);
+			router.push(`/dashboardportal/procurement/indent/createIndent?mode=view&id=${encodeURIComponent(String(id))}`);
 		},
 		[router]
 	);
 
-	const columns = React.useMemo<GridColDef[]>(() => [
-		{
-			field: "__actions",
-			headerName: "Actions",
-			width: 90,
-			sortable: false,
-			filterable: false,
-			align: "center",
-			headerAlign: "center",
-			renderCell: (params: GridRenderCellParams<IndentRow>) => {
-				const row = params.row;
-				const isApproved = row.status?.toLowerCase() === "approved";
-				return (
-					<Stack direction="row" spacing={0.5} justifyContent="center" alignItems="center">
-						{isApproved ? (
-							<Tooltip title="View">
-								<IconButton size="small" onClick={() => navigateToIndent(row, "view")}>
-									<Eye size={16} />
-								</IconButton>
-							</Tooltip>
-						) : (
-							<Tooltip title="Edit">
-								<IconButton size="small" onClick={() => navigateToIndent(row, "edit")}>
-									<Edit size={16} />
-								</IconButton>
-							</Tooltip>
-						)}
-					</Stack>
-				);
-			},
+	const handleEdit = React.useCallback(
+		(row: IndentRow) => {
+			const id = row.id ?? row.indent_no;
+			if (!id) return;
+			router.push(`/dashboardportal/procurement/indent/createIndent?mode=edit&id=${encodeURIComponent(String(id))}`);
 		},
+		[router]
+	);
+
+	const isRowEditable = React.useMemo(
+		() => createStatusBasedEditCheck<IndentRow>({
+			statusField: "status",
+			editableStatuses: ["Draft", "Open", "Rejected", "Cancelled", "Pending"],
+			caseInsensitive: true,
+		}),
+		[]
+	);
+
+	const columns = React.useMemo<GridColDef[]>(() => [
 		{
 			field: "indent_no",
 			headerName: "Indent No.",
 			flex: 1,
 			minWidth: 140,
-			renderCell: (params: GridRenderCellParams<IndentRow, string>) => (
+			renderCell: (params) => (
 				<Typography component="span" variant="body2" color="primary" sx={{ fontWeight: 600 }}>
 					{params.value || "-"}
 				</Typography>
@@ -107,7 +95,7 @@ export default function ProcurementIndentIndexPage() {
 			field: "indent_date",
 			headerName: "Indent Date",
 			minWidth: 140,
-			renderCell: (params: GridRenderCellParams<IndentRow, string>) => (
+			renderCell: (params) => (
 				<Typography component="span" variant="body2">
 					{params.value || formatDate(typeof params.row.indent_date_raw === "string" ? params.row.indent_date_raw : "") || "-"}
 				</Typography>
@@ -129,11 +117,11 @@ export default function ProcurementIndentIndexPage() {
 			field: "status",
 			headerName: "Status",
 			minWidth: 130,
-					renderCell: (params: GridRenderCellParams<IndentRow, string>) => (
+			renderCell: (params) => (
 				<Chip size="small" color={params.value?.toLowerCase() === "approved" ? "success" : params.value?.toLowerCase() === "rejected" ? "error" : "default"} label={params.value || "Pending"} />
 			),
 		},
-	], [navigateToIndent]);
+	], []);
 
 	const fetchIndents = React.useCallback(async () => {
 		setLoading(true);
@@ -225,6 +213,9 @@ export default function ProcurementIndentIndexPage() {
 			showLoadingUntilLoaded
 			search={{ value: searchValue, onChange: handleSearchChange, placeholder: "Search by indent no., branch, or expense type", debounceDelayMs: 1000 }}
 			createAction={{ onClick: handleCreateIndent, label: "Create Indent" }}
+			onView={handleView}
+			onEdit={handleEdit}
+			isRowEditable={isRowEditable}
 		>
 			{errorMessage ? (
 				<Alert severity="error" sx={{ mt: 2 }}>

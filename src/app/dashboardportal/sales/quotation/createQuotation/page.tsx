@@ -265,9 +265,7 @@ function QuotationTransactionPageContent() {
 			return;
 		}
 
-		if (!setupEnabled) return;
-		if (setupLoading) return;
-		if (!setupData) return;
+		if (!coId) return;
 		if (detailsFetchedRef.current) return;
 
 		detailsFetchedRef.current = true;
@@ -323,7 +321,6 @@ function QuotationTransactionPageContent() {
 		mode, requestedId, coId, getMenuId,
 		setInitialValues, setFormValues, setFormKey,
 		replaceItems, mapLineToEditable,
-		setupEnabled, setupLoading, setupData,
 		branchIdFromUrl, branchValue,
 	]);
 
@@ -561,6 +558,7 @@ function QuotationTransactionPageContent() {
 
 	const primaryActionLabel = mode === "create" ? "Create" : "Save";
 	const handleSaveClick = React.useCallback(() => {
+		console.log("[Quotation] handleSaveClick called, formRef.current=", formRef.current, "submit=", formRef.current?.submit);
 		if (!formRef.current?.submit) return;
 		void formRef.current.submit();
 	}, [formRef]);

@@ -98,13 +98,15 @@ export default function CreateYarnType({
 				if (data.yarn_type_details) {
 					const details = data.yarn_type_details;
 					setInitialValues({
-						jute_yarn_type_name: details.jute_yarn_type_name ?? "",
+						item_grp_name: details.item_grp_name ?? "",
+						item_grp_code: details.item_grp_code ?? "",
 					});
 				}
 			} else {
 				// Create mode - empty initial values
 				setInitialValues({
-					jute_yarn_type_name: "",
+					item_grp_name: "",
+					item_grp_code: "",
 				});
 			}
 
@@ -148,7 +150,15 @@ export default function CreateYarnType({
 					: "Create Yarn Type",
 			fields: [
 				{
-					name: "jute_yarn_type_name",
+					name: "item_grp_code",
+					label: "Yarn Type Code",
+					type: "text",
+					required: true,
+					disabled: mode === "view",
+					grid: { xs: 12 },
+				},
+				{
+					name: "item_grp_name",
 					label: "Yarn Type Name",
 					type: "text",
 					required: true,

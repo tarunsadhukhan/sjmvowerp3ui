@@ -25,6 +25,7 @@ type JuteMRDetailsResponse = {
  * Calculate shortage_kgs and accepted_weight based on formulas:
  * shortage_kgs = actual_weight * (difference of allowable moisture and actual moisture % + claim_dust%)
  * accepted_weight = actual_weight - shortage_kgs
+ * All values are rounded to 0 decimal places (whole kg).
  */
 function calculateShortageAndAcceptedWeight(
 	actualWeight: number | null,
@@ -36,6 +37,7 @@ function calculateShortageAndAcceptedWeight(
 		return { shortageKgs: null, acceptedWeight: null };
 	}
 
+	const roundedWeight = Math.round(actualWeight);
 	const allowable = allowableMoisture ?? 0;
 	const actual = actualMoisture ?? 0;
 	const dust = claimDust ?? 0;
@@ -47,21 +49,22 @@ function calculateShortageAndAcceptedWeight(
 	const deductionPercentage = moistureDiff + dust;
 
 	if (deductionPercentage <= 0) {
-		return { shortageKgs: 0, acceptedWeight: Math.round(actualWeight) };
+		return { shortageKgs: 0, acceptedWeight: roundedWeight };
 	}
 
 	// Formula: shortage_kgs = actual_weight * (moisture diff % + claim_dust%)
-	const shortageKgs = Math.round(actualWeight * deductionPercentage / 100.0);
-	
-	// Formula: accepted_weight = actual_weight - shortage_kgs
-	const acceptedWeight = Math.round(Math.max(0, actualWeight - shortageKgs)); // Ensure non-negative
-	
+	const shortageKgs = Math.round(roundedWeight * deductionPercentage / 100.0);
+
+	// Formula: accepted_weight = actual_weight - shortage_kgs (both integers, result is integer)
+	const acceptedWeight = Math.max(0, roundedWeight - shortageKgs);
+
 	return { shortageKgs, acceptedWeight };
 }
 
 /**
  * Distribute header actual weight to line items proportionally based on actualQty.
- * Similar to how challan weight is handled in Material Inspection.
+ * Uses the largest-remainder method to ensure the sum of line weights
+ * equals the header weight exactly (no rounding loss).
  * Also recalculates shortage_kgs and accepted_weight for each line.
  */
 function distributeActualWeightToLineItems(
@@ -72,22 +75,24 @@ function distributeActualWeightToLineItems(
 		return lineItems;
 	}
 
+	const roundedHeaderWeight = Math.round(headerActualWeight);
+
 	// Calculate total actual quantity
 	const totalActualQty = lineItems.reduce((sum, li) => sum + (li.actualQty ?? 0), 0);
 
 	if (totalActualQty <= 0) {
-		// If no quantities, distribute equally or assign all to first item
+		// If no quantities, assign all to first item (single item case)
 		if (lineItems.length === 1) {
 			const li = lineItems[0];
 			const { shortageKgs, acceptedWeight } = calculateShortageAndAcceptedWeight(
-				headerActualWeight,
+				roundedHeaderWeight,
 				li.allowableMoisture,
 				li.actualMoisture,
 				li.claimDust
 			);
 			return [{
 				...li,
-				actualWeight: Math.round(headerActualWeight),
+				actualWeight: roundedHeaderWeight,
 				shortageKgs,
 				acceptedWeight,
 			}];
@@ -95,16 +100,45 @@ function distributeActualWeightToLineItems(
 		return lineItems;
 	}
 
-	// Distribute proportionally based on actualQty
-	return lineItems.map((li) => {
+	// --- Largest-remainder method for fair integer distribution ---
+	// 1. Compute exact proportional weights (float) and floor them
+	const withQty = lineItems.map((li) => {
+		const lineActualQty = li.actualQty ?? 0;
+		const exactWeight = lineActualQty > 0
+			? (roundedHeaderWeight * lineActualQty) / totalActualQty
+			: 0;
+		const flooredWeight = Math.floor(exactWeight);
+		const fractionalPart = exactWeight - flooredWeight;
+		return { li, lineActualQty, flooredWeight, fractionalPart };
+	});
+
+	// 2. Calculate remainder to distribute (should be a small integer, 0 to N-1)
+	const flooredSum = withQty.reduce((sum, entry) => sum + entry.flooredWeight, 0);
+	let remainder = roundedHeaderWeight - flooredSum;
+
+	// 3. Sort by fractional part descending — give +1 kg to lines with highest fractions
+	const sortedIndices = withQty
+		.map((_, idx) => idx)
+		.filter((idx) => withQty[idx].lineActualQty > 0)
+		.sort((a, b) => withQty[b].fractionalPart - withQty[a].fractionalPart);
+
+	const finalWeights = withQty.map((entry) => entry.flooredWeight);
+	for (const idx of sortedIndices) {
+		if (remainder <= 0) break;
+		finalWeights[idx] += 1;
+		remainder -= 1;
+	}
+
+	// 4. Apply distributed weights and recalculate shortage/accepted per line
+	return lineItems.map((li, idx) => {
 		const lineActualQty = li.actualQty ?? 0;
 		if (lineActualQty <= 0) {
 			return li;
 		}
 
-		const proportionalWeight = Math.round((headerActualWeight * lineActualQty) / totalActualQty);
+		const distributedWeight = finalWeights[idx];
 		const { shortageKgs, acceptedWeight } = calculateShortageAndAcceptedWeight(
-			proportionalWeight,
+			distributedWeight,
 			li.allowableMoisture,
 			li.actualMoisture,
 			li.claimDust
@@ -112,7 +146,7 @@ function distributeActualWeightToLineItems(
 
 		return {
 			...li,
-			actualWeight: proportionalWeight,
+			actualWeight: distributedWeight,
 			shortageKgs,
 			acceptedWeight,
 		};
@@ -152,7 +186,12 @@ function JuteMREditPageContent() {
 				prev.map((li) => {
 					if (li.id !== id) return li;
 
-					const updated = { ...li, [field]: value };
+					// Round actualWeight to 0 decimals when edited manually
+					const finalValue = field === "actualWeight" && typeof value === "number"
+						? Math.round(value)
+						: value;
+
+					const updated = { ...li, [field]: finalValue };
 
 					// Recalculate shortage_kgs and accepted_weight when relevant fields change
 					if (
@@ -184,9 +223,9 @@ function JuteMREditPageContent() {
 		warehouseOptions,
 	});
 
-	// Calculate total accepted weight (MR weight)
+	// Calculate total accepted weight (MR weight) - round as safety net
 	const totalAcceptedWeight = React.useMemo(() => {
-		return lineItems.reduce((sum, li) => sum + (li.acceptedWeight ?? 0), 0);
+		return Math.round(lineItems.reduce((sum, li) => sum + (li.acceptedWeight ?? 0), 0));
 	}, [lineItems]);
 
 	// Update header MR weight when total changes
@@ -401,7 +440,7 @@ function JuteMREditPageContent() {
 
 		try {
 			const payload = {
-				mr_weight: header.mr_weight,
+				mr_weight: Math.round(header.mr_weight ?? 0),
 				party_branch_id: header.party_branch_id,
 				remarks: header.remarks,
 				src_com_id: header.src_com_id,
@@ -410,12 +449,12 @@ function JuteMREditPageContent() {
 					actual_item_grp_id: li.actualItemId,
 					actual_item_id: li.actualQualityId,
 					actual_qty: li.actualQty,
-					actual_weight: li.actualWeight,
+					actual_weight: Math.round(li.actualWeight ?? 0),
 					allowable_moisture: li.allowableMoisture,
 					actual_moisture: li.actualMoisture != null ? li.actualMoisture.toFixed(2) : null,
 					claim_dust: li.claimDust,
-					shortage_kgs: li.shortageKgs,
-					accepted_weight: li.acceptedWeight,
+					shortage_kgs: Math.round(li.shortageKgs ?? 0),
+					accepted_weight: Math.round(li.acceptedWeight ?? 0),
 					rate: li.rate,
 					claim_rate: li.claimRate,
 					claim_quality: li.claimQuality,

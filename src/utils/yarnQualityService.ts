@@ -5,8 +5,8 @@ import { apiRoutesPortalMasters } from "@/utils/api";
  * Type definitions for yarn quality API responses
  */
 type YarnType = {
-  jute_yarn_type_id: number;
-  jute_yarn_type_name: string;
+  item_grp_id: number;
+  item_grp_name: string;
 };
 
 type Branch = {
@@ -22,8 +22,7 @@ type YarnQualitySetupResponse = {
 type YarnQualityDetails = {
   yarn_quality_id?: number;
   quality_code?: string;
-  jute_yarn_type_id?: number | string;
-  yarn_type_id?: number | string; // API may return this instead of jute_yarn_type_id
+  item_grp_id?: number | string;
   branch_id?: number | string;
   twist_per_inch?: number | string;
   std_count?: number | string;
@@ -141,7 +140,7 @@ export const createYarnQuality = async (payload: {
   co_id: string;
   branch_id?: string;
   quality_code: string;
-  jute_yarn_type_id: string;
+  item_grp_id: string;
   twist_per_inch?: string;
   std_count?: string;
   std_doff?: string;
@@ -166,7 +165,7 @@ export const updateYarnQuality = async (payload: {
   co_id: string;
   branch_id?: string;
   quality_code: string;
-  jute_yarn_type_id: string;
+  item_grp_id: string;
   twist_per_inch?: string;
   std_count?: string;
   std_doff?: string;

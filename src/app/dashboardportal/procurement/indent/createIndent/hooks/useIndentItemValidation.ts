@@ -78,6 +78,7 @@ export function useIndentItemValidation({
 
 				const mapped: ItemValidationResult = {
 					validationLogic: apiResult.validation_logic,
+					errors: apiResult.errors ?? [],
 					branchStock: apiResult.branch_stock,
 					minqty: apiResult.minqty,
 					maxqty: apiResult.maxqty,
@@ -85,8 +86,11 @@ export function useIndentItemValidation({
 					leadTime: apiResult.lead_time,
 					outstandingIndentQty: apiResult.outstanding_indent_qty,
 					hasOpenIndent: apiResult.has_open_indent,
+					stockExceedsMax: apiResult.stock_exceeds_max ?? false,
 					maxIndentQty: apiResult.max_indent_qty,
+					hasMinMax: apiResult.has_minmax ?? false,
 					fyDuplicateIndentNo: apiResult.fy_duplicate_indent_no,
+					forcedQty: apiResult.forced_qty ?? null,
 					regularBomOutstanding: apiResult.regular_bom_outstanding,
 					warnings: apiResult.warnings ?? [],
 				};
@@ -114,7 +118,12 @@ export function useIndentItemValidation({
 		(lineId: string, quantity: string): string | null => {
 			const state = validationMap[lineId];
 			if (!state?.result) return null;
-			const { validationLogic, maxIndentQty, fyDuplicateIndentNo } = state.result;
+			const { errors, validationLogic, maxIndentQty, fyDuplicateIndentNo } = state.result;
+
+			// Backend errors take priority (includes has_minmax=false, stock_exceeds_max, etc.)
+			if (errors.length > 0) {
+				return errors[0];
+			}
 
 			if (validationLogic === 2 && fyDuplicateIndentNo != null) {
 				return `An open indent already exists for this item in the current FY (Indent #${fyDuplicateIndentNo}).`;

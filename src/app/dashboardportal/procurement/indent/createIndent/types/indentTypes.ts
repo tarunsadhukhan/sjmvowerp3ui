@@ -106,6 +106,7 @@ export type IndentLabelResolvers = {
  */
 export type ItemValidationResult = {
 	validationLogic: 1 | 2 | 3;
+	errors: string[];
 	branchStock: number;
 	minqty: number | null;
 	maxqty: number | null;
@@ -113,8 +114,11 @@ export type ItemValidationResult = {
 	leadTime: number | null;
 	outstandingIndentQty: number;
 	hasOpenIndent: boolean;
+	stockExceedsMax: boolean;
 	maxIndentQty: number | null;
+	hasMinMax: boolean;
 	fyDuplicateIndentNo: number | null;
+	forcedQty: number | null;
 	regularBomOutstanding: number;
 	warnings: string[];
 };

@@ -91,6 +91,7 @@ export type ItemValidationResponse = {
   branch_id: number;
   indent_type: string;
   expense_type_name: string | null;
+  errors: string[];
   branch_stock: number;
   minqty: number | null;
   maxqty: number | null;
@@ -98,9 +99,15 @@ export type ItemValidationResponse = {
   lead_time: number | null;
   outstanding_indent_qty: number;
   has_open_indent: boolean;
+  stock_exceeds_max: boolean;
   max_indent_qty: number | null;
+  min_indent_qty: number | null;
+  has_minmax: boolean;
+  fy_indent_exists: boolean;
+  fy_indent_no: string | null;
   fy_duplicate_indent_no: number | null;
   regular_bom_outstanding: number;
+  forced_qty: number | null;
   warnings: string[];
 };
 

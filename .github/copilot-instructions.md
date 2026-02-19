@@ -380,10 +380,12 @@ Before submitting code changes, ensure:
 - Do provide `aria-label`s on icon buttons (lucide icons) and respect theme spacing.
 - Do use `satisfies` type assertions in mappers to catch type mismatches early.
 - Do use `Object.freeze()` on empty arrays/objects used as defaults to prevent accidental mutations.
+- Do declare `useMemo`/`useCallback` hooks in dependency order — a hook that references another must be declared **after** it (block-scoped `const` is not hoisted like `function`).
 - Don't import `@mui/material` or `@mui/x-data-grid` directly in page components—extend the wrappers instead.
 - Don't mutate shared option arrays across rows; clone or build per-row maps.
 - Don't bypass Zod validation or skip loading/error states—each async UI path must represent all three clearly.
 - Don't mix business logic with rendering—keep calculations in utils, state in hooks, and only rendering in components.
+- Don't reference a `useMemo`/`useCallback` variable before its declaration — this causes "Block-scoped variable used before its declaration" build errors.
 - Legacy notice: some older/testing pages still use raw MUI or ad-hoc fetches; treat them as migration targets, but new or touched code must follow the wrappers/services approach above.
 
 ---

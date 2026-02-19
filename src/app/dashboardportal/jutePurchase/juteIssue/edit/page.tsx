@@ -167,12 +167,6 @@ function JuteIssueEditPage() {
     return selectedStock.actual_weight / selectedStock.actual_qty;
   }, [selectedStock]);
 
-  // Auto-calculate weight based on quantity * wt_per_unit
-  const calculatedWeight = React.useMemo(() => {
-    const qty = Number(newQuantity) || 0;
-    return qty * wtPerUnit;
-  }, [newQuantity, wtPerUnit]);
-
   // Setup data
   const { juteGroups, yarnTypes, branches, loading: setupLoading, error: setupError } = useJuteIssueSetup({
     coId,
@@ -245,6 +239,22 @@ function JuteIssueEditPage() {
     },
     [draftQuantityByMrLiId]
   );
+
+  // Auto-calculate weight based on quantity * wt_per_unit
+  // When issuing the full remaining balance, use bal_weight directly to absorb rounding differences
+  const calculatedWeight = React.useMemo(() => {
+    const qty = Number(newQuantity) || 0;
+    if (qty <= 0 || !selectedStock) return 0;
+
+    const adjustedBalQty = getAdjustedBalQty(selectedStock);
+    // If issuing the entire remaining balance, use bal_weight directly
+    // This absorbs any 1-2 kg rounding difference from MR weight distribution
+    if (qty >= adjustedBalQty && adjustedBalQty > 0) {
+      return getAdjustedBalWeight(selectedStock);
+    }
+
+    return qty * wtPerUnit;
+  }, [newQuantity, wtPerUnit, selectedStock, getAdjustedBalQty, getAdjustedBalWeight]);
 
   // Max weight based on balance quantity (adjusted for drafts)
   const maxWeight = React.useMemo(() => {

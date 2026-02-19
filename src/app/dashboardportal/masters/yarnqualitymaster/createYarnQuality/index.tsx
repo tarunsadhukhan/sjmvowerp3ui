@@ -30,8 +30,8 @@ type CreateYarnQualityProps = {
 };
 
 type YarnType = {
-  jute_yarn_type_id: number;
-  jute_yarn_type_name: string;
+  item_grp_id: number;
+  item_grp_name: string;
 };
 
 type Branch = {
@@ -42,7 +42,7 @@ type Branch = {
 type FormData = {
   quality_code: string;
   branch_id: string;
-  jute_yarn_type_id: string;
+  item_grp_id: string;
   twist_per_inch: string;
   std_count: string;
   std_doff: string;
@@ -54,7 +54,7 @@ type FormData = {
 const INITIAL_FORM_DATA: FormData = {
   quality_code: "",
   branch_id: "",
-  jute_yarn_type_id: "",
+  item_grp_id: "",
   twist_per_inch: "",
   std_count: "",
   std_doff: "",
@@ -103,7 +103,7 @@ const CreateYarnQuality: React.FC<CreateYarnQualityProps> = ({ open, onClose, mo
           setFormData({
             quality_code: details.quality_code || "",
             branch_id: details.branch_id?.toString() || "",
-            jute_yarn_type_id: details.yarn_type_id?.toString() || "",
+            item_grp_id: details.item_grp_id?.toString() || "",
             twist_per_inch: details.twist_per_inch?.toString() || "",
             std_count: details.std_count?.toString() || "",
             std_doff: details.std_doff?.toString() || "",
@@ -146,7 +146,7 @@ const CreateYarnQuality: React.FC<CreateYarnQualityProps> = ({ open, onClose, mo
         setError("Branch is required");
         return;
       }
-      if (!formData.jute_yarn_type_id) {
+      if (!formData.item_grp_id) {
         setError("Yarn type is required");
         return;
       }
@@ -158,7 +158,7 @@ const CreateYarnQuality: React.FC<CreateYarnQualityProps> = ({ open, onClose, mo
         co_id: coId,
         quality_code: formData.quality_code,
         branch_id: formData.branch_id,
-        jute_yarn_type_id: formData.jute_yarn_type_id,
+        item_grp_id: formData.item_grp_id,
         twist_per_inch: formData.twist_per_inch || undefined,
         std_count: formData.std_count || undefined,
         std_doff: formData.std_doff || undefined,
@@ -259,14 +259,14 @@ const CreateYarnQuality: React.FC<CreateYarnQualityProps> = ({ open, onClose, mo
             <Autocomplete
               fullWidth
               options={yarnTypes}
-              getOptionLabel={(option) => option.jute_yarn_type_name}
+              getOptionLabel={(option) => option.item_grp_name}
               value={
-                yarnTypes.find((type) => type.jute_yarn_type_id.toString() === formData.jute_yarn_type_id) || null
+                yarnTypes.find((type) => type.item_grp_id.toString() === formData.item_grp_id) || null
               }
               onChange={(event, newValue) => {
                 setFormData((prev) => ({
                   ...prev,
-                  jute_yarn_type_id: newValue?.jute_yarn_type_id?.toString() || "",
+                  item_grp_id: newValue?.item_grp_id?.toString() || "",
                 }));
               }}
               disabled={submitting}

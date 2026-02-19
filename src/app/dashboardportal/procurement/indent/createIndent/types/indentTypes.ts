@@ -100,3 +100,34 @@ export type IndentLabelResolvers = {
 	itemMake: (groupId: string, makeId: string) => string;
 	uom: (groupId: string, itemId: string, uomId: string) => string;
 };
+
+/**
+ * Validation result returned from the backend for a single line item.
+ */
+export type ItemValidationResult = {
+	validationLogic: 1 | 2 | 3;
+	errors: string[];
+	branchStock: number;
+	minqty: number | null;
+	maxqty: number | null;
+	minOrderQty: number | null;
+	leadTime: number | null;
+	outstandingIndentQty: number;
+	hasOpenIndent: boolean;
+	stockExceedsMax: boolean;
+	maxIndentQty: number | null;
+	hasMinMax: boolean;
+	fyDuplicateIndentNo: number | null;
+	forcedQty: number | null;
+	regularBomOutstanding: number;
+	warnings: string[];
+};
+
+/**
+ * Per-line validation state managed by the useIndentItemValidation hook.
+ */
+export type LineItemValidationState = {
+	loading: boolean;
+	result: ItemValidationResult | null;
+	error: string | null;
+};

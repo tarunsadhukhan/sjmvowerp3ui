@@ -1,13 +1,13 @@
 "use client";
 
 import * as React from "react";
-import { Alert, Chip, IconButton, Stack, Tooltip, Typography } from "@mui/material";
+import { Alert, Chip, Typography } from "@mui/material";
 import type { GridColDef, GridPaginationModel, GridRenderCellParams } from "@mui/x-data-grid";
-import { Edit, Eye } from "lucide-react";
 import { fetchWithCookie } from "@/utils/apiClient2";
 import { apiRoutesPortalMasters } from "@/utils/api";
 import IndexWrapper from "@/components/ui/IndexWrapper";
 import { useRouter } from "next/navigation";
+import { createBooleanFieldEditCheck } from "@/utils/editability";
 
 /**
  * @component JuteGateEntryIndexPage
@@ -110,61 +110,32 @@ export default function JuteGateEntryIndexPage() {
 	const [searchValue, setSearchValue] = React.useState("");
 	const [errorMessage, setErrorMessage] = React.useState<string | null>(null);
 
+	const handleView = React.useCallback(
+		(row: JuteGateEntryRow) => {
+			const id = row.jute_mr_id ?? row.id;
+			if (!id) return;
+			router.push(`/dashboardportal/jutePurchase/gateEntry/createGateEntry?mode=view&id=${encodeURIComponent(String(id))}`);
+		},
+		[router]
+	);
+
+	const handleEdit = React.useCallback(
+		(row: JuteGateEntryRow) => {
+			const id = row.jute_mr_id ?? row.id;
+			if (!id) return;
+			router.push(`/dashboardportal/jutePurchase/gateEntry/createGateEntry?mode=edit&id=${encodeURIComponent(String(id))}`);
+		},
+		[router]
+	);
+
+	// Row is editable when OUT is not completed (isOutCompleted is false)
+	const isRowEditable = React.useMemo(
+		() => createBooleanFieldEditCheck<JuteGateEntryRow>("isOutCompleted", false),
+		[]
+	);
+
 	const columns = React.useMemo<GridColDef<JuteGateEntryRow>[]>(
 		() => [
-			{
-				field: "__actions",
-				headerName: "Actions",
-				width: 90,
-				sortable: false,
-				filterable: false,
-				align: "center",
-				headerAlign: "center",
-				renderCell: (params: GridRenderCellParams<JuteGateEntryRow>) => {
-					const row = params.row;
-					const outCompleted = row.isOutCompleted;
-
-					// If OUT completed, only show View button
-					if (outCompleted) {
-						return (
-							<Stack direction="row" spacing={0.5} justifyContent="center" alignItems="center">
-								<Tooltip title="View">
-									<IconButton
-										size="small"
-										onClick={() => {
-											const id = row.jute_mr_id ?? row.id;
-											if (id) {
-												router.push(`/dashboardportal/jutePurchase/gateEntry/createGateEntry?mode=view&id=${encodeURIComponent(String(id))}`);
-											}
-										}}
-									>
-										<Eye size={16} />
-									</IconButton>
-								</Tooltip>
-							</Stack>
-						);
-					}
-
-					// Otherwise show Edit button
-					return (
-						<Stack direction="row" spacing={0.5} justifyContent="center" alignItems="center">
-							<Tooltip title="Edit">
-								<IconButton
-									size="small"
-									onClick={() => {
-										const id = row.jute_mr_id ?? row.id;
-										if (id) {
-											router.push(`/dashboardportal/jutePurchase/gateEntry/createGateEntry?mode=edit&id=${encodeURIComponent(String(id))}`);
-										}
-									}}
-								>
-									<Edit size={16} />
-								</IconButton>
-							</Tooltip>
-						</Stack>
-					);
-				},
-			},
 			{
 				field: "gate_entry_num",
 				headerName: "Gate Entry No",
@@ -268,7 +239,7 @@ export default function JuteGateEntryIndexPage() {
 				),
 			},
 		],
-		[router]
+		[]
 	);
 
 	const fetchGateEntries = React.useCallback(async () => {
@@ -392,6 +363,9 @@ export default function JuteGateEntryIndexPage() {
 				debounceDelayMs: 500,
 			}}
 			createAction={{ onClick: handleCreateGateEntry, label: "Create Gate Entry" }}
+		onView={handleView}
+		onEdit={handleEdit}
+		isRowEditable={isRowEditable}
 		>
 			{errorMessage ? (
 				<Alert severity="error" sx={{ mt: 2 }}>

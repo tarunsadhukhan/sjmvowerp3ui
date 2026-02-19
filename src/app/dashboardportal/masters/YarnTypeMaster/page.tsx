@@ -14,8 +14,10 @@ import type { MuiFormMode } from "@/components/ui/muiform";
  */
 type YarnTypeRow = {
 	id: number | string;
-	jute_yarn_type_id: number;
-	jute_yarn_type_name: string;
+	item_grp_id: number;
+	item_grp_name: string;
+	item_grp_code: string;
+	active?: string;
 	updated_by?: number;
 	updated_date_time?: string;
 	[key: string]: unknown;
@@ -80,9 +82,10 @@ export default function YarnTypeMasterPage() {
 			// Map response data to grid rows
 			const mapped: YarnTypeRow[] = (data.data || []).map((r: Record<string, unknown>) => ({
 				...r,
-				id: r.jute_yarn_type_id as number,
-				jute_yarn_type_id: r.jute_yarn_type_id as number,
-				jute_yarn_type_name: (r.jute_yarn_type_name as string) ?? "",
+				id: r.item_grp_id as number,
+				item_grp_id: r.item_grp_id as number,
+				item_grp_name: (r.item_grp_name as string) ?? "",
+				item_grp_code: (r.item_grp_code as string) ?? "",
 				updated_date_time: r.updated_date_time
 					? new Date(r.updated_date_time as string).toLocaleDateString()
 					: "-",
@@ -134,7 +137,7 @@ export default function YarnTypeMasterPage() {
 	 * Handle view action - opens view dialog
 	 */
 	const handleView = useCallback((row: YarnTypeRow) => {
-		setSelectedId(row.jute_yarn_type_id);
+		setSelectedId(row.item_grp_id);
 		setDialogMode("view");
 		setDialogOpen(true);
 	}, []);
@@ -143,7 +146,7 @@ export default function YarnTypeMasterPage() {
 	 * Handle edit action - opens edit dialog
 	 */
 	const handleEdit = useCallback((row: YarnTypeRow) => {
-		setSelectedId(row.jute_yarn_type_id);
+		setSelectedId(row.item_grp_id);
 		setDialogMode("edit");
 		setDialogOpen(true);
 	}, []);
@@ -169,7 +172,13 @@ export default function YarnTypeMasterPage() {
 	const columns = useMemo<GridColDef<YarnTypeRow>[]>(
 		() => [
 			{
-				field: "jute_yarn_type_name",
+				field: "item_grp_code",
+				headerName: "Yarn Type Code",
+				flex: 1,
+				minWidth: 150,
+			},
+			{
+				field: "item_grp_name",
 				headerName: "Yarn Type Name",
 				flex: 2,
 				minWidth: 250,
@@ -197,7 +206,7 @@ export default function YarnTypeMasterPage() {
 			search={{
 				value: searchQuery,
 				onChange: handleSearchChange,
-				placeholder: "Search by yarn type name",
+				placeholder: "Search by yarn type name or code",
 				debounceDelayMs: 500,
 			}}
 			createAction={{

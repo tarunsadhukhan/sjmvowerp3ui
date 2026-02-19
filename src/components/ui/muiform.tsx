@@ -251,13 +251,17 @@ export const MuiForm = React.forwardRef(function MuiForm(
 				if (message) next[f.name] = message;
 			}
 		}
+		console.log("[MuiForm] validate errors:", JSON.stringify(next), "values:", JSON.stringify(values));
 		setErrors(next);
 		return Object.keys(next).length === 0;
 	};
 
 	const submit = async () => {
+		console.log("[MuiForm] submit called, mode=", mode);
 		if (mode === "view") return;
-		if (!validate()) return;
+		const isValid = validate();
+		console.log("[MuiForm] validate() =", isValid, "errors=", JSON.stringify(errors), "values=", JSON.stringify(values));
+		if (!isValid) return;
 		try {
 			setSubmitting(true);
 			await onSubmit?.(values, mode);

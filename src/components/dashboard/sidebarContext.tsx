@@ -46,48 +46,68 @@ interface SidebarContextType {
 const SidebarContext = createContext<SidebarContextType | undefined>(undefined);
 
 export const SidebarProvider = ({ children }: { children: ReactNode }) => {
-  // State
-  const [companies, setCompanies] = useState<Company[]>([]);
-  const [selectedCompany, setSelectedCompany] = useState<Company | null>(null);
-  const [selectedBranches, setSelectedBranches] = useState<number[]>([]);
-  const [expandedMenus, setExpandedMenus] = useState<number[]>([]);
+  // Lazy initializers that read from localStorage on first render (avoids race with persist effects)
+  const [companies, setCompanies] = useState<Company[]>(() => {
+    if (typeof window !== 'undefined') {
+      try { const s = localStorage.getItem('sidebar_companies'); if (s) return JSON.parse(s); } catch { /* ignore */ }
+    }
+    return [];
+  });
+  const [selectedCompany, setSelectedCompany] = useState<Company | null>(() => {
+    if (typeof window !== 'undefined') {
+      try { const s = localStorage.getItem('sidebar_selectedCompany'); if (s) return JSON.parse(s); } catch { /* ignore */ }
+    }
+    return null;
+  });
+  const [selectedBranches, setSelectedBranches] = useState<number[]>(() => {
+    if (typeof window !== 'undefined') {
+      try { const s = localStorage.getItem('sidebar_selectedBranches'); if (s) return JSON.parse(s); } catch { /* ignore */ }
+    }
+    return [];
+  });
+  const [expandedMenus, setExpandedMenus] = useState<number[]>(() => {
+    if (typeof window !== 'undefined') {
+      try { const s = localStorage.getItem('sidebar_expandedMenus'); if (s) return JSON.parse(s); } catch { /* ignore */ }
+    }
+    return [];
+  });
   const [availableMenus, setAvailableMenus] = useState<MenuItem[]>([]);
   const [parentMenus, setParentMenus] = useState<MenuItem[]>([]);
-  const [menuItems, setMenuItems] = useState<MenuItem[]>([]);
+  const [menuItems, setMenuItems] = useState<MenuItem[]>(() => {
+    if (typeof window !== 'undefined') {
+      try { const s = localStorage.getItem('sidebar_menuItems'); if (s) return JSON.parse(s); } catch { /* ignore */ }
+    }
+    return [];
+  });
   const [menuPermissions, setMenuPermissions] = useState<Record<string, number>>({});
 
-  // Load from localStorage on mount (client only)
+  // Guard flag: skip persisting the initial render to avoid overwriting localStorage before load completes
+  const initializedRef = React.useRef(false);
   useEffect(() => {
-    if (typeof window !== 'undefined') {
-      const storedCompanies = localStorage.getItem('sidebar_companies');
-      if (storedCompanies) setCompanies(JSON.parse(storedCompanies));
-      const storedCompany = localStorage.getItem('sidebar_selectedCompany');
-      if (storedCompany) setSelectedCompany(JSON.parse(storedCompany));
-      const storedBranches = localStorage.getItem('sidebar_selectedBranches');
-      if (storedBranches) setSelectedBranches(JSON.parse(storedBranches));
-      const storedMenus = localStorage.getItem('sidebar_expandedMenus');
-      if (storedMenus) setExpandedMenus(JSON.parse(storedMenus));
-      const storedMenuItems = localStorage.getItem('sidebar_menuItems');
-      if (storedMenuItems) setMenuItems(JSON.parse(storedMenuItems));
-    }
+    initializedRef.current = true;
   }, []);
 
-  // Persist to localStorage on change
+  // Persist to localStorage on change (guarded: skip first render to avoid overwriting restored values)
   useEffect(() => {
+    if (!initializedRef.current) return;
     localStorage.setItem('sidebar_companies', JSON.stringify(companies));
   }, [companies]);
   useEffect(() => {
+    if (!initializedRef.current) return;
     if (selectedCompany) {
       localStorage.setItem('sidebar_selectedCompany', JSON.stringify(selectedCompany));
     }
   }, [selectedCompany]);
   useEffect(() => {
+    if (!initializedRef.current) return;
     localStorage.setItem('sidebar_selectedBranches', JSON.stringify(selectedBranches));
   }, [selectedBranches]);
   useEffect(() => {
+    if (!initializedRef.current) return;
     localStorage.setItem('sidebar_expandedMenus', JSON.stringify(expandedMenus));
   }, [expandedMenus]);
   useEffect(() => {
+    if (!initializedRef.current) return;
     localStorage.setItem('sidebar_menuItems', JSON.stringify(menuItems));
   }, [menuItems]);
 

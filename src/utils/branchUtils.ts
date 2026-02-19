@@ -68,7 +68,7 @@ export function useBranchOptions(): Option[] {
         setOpts(getBranchOptionsFromLocalStorage());
       }
     };
-    // sync once on mount
+    // sync once on mount (in case lazy initializer ran during SSR where window was undefined)
     setOpts(getBranchOptionsFromLocalStorage());
     window.addEventListener("storage", handleStorage);
     return () => window.removeEventListener("storage", handleStorage);

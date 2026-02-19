@@ -362,10 +362,12 @@ function BillPassEditPageContent() {
 	};
 
 	// Calculate line item amount
+	// Weight is stored in KG, rate is per quintal (1 QNT = 100 KG)
 	const getLineAmount = (line: BillPassLineItem): number => {
-		const weight = line.accepted_weight ?? line.actual_weight ?? 0;
+		const weightKg = line.accepted_weight ?? line.actual_weight ?? 0;
+		const weightQnt = weightKg / 100; // Convert KG to Quintals
 		const rate = line.rate ?? 0;
-		return weight * rate;
+		return weightQnt * rate;
 	};
 
 	// Render loading state

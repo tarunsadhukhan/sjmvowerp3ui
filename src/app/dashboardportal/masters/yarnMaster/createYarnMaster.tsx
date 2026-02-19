@@ -43,7 +43,7 @@ type Props = {
  * Fields:
  * - jute_yarn_name (required): Yarn name
  * - jute_yarn_count: Yarn count (numeric)
- * - jute_yarn_type_id: Yarn type (dropdown from jute_yarn_type_mst)
+ * - item_grp_id: Yarn type (dropdown from item_grp_mst where item_type_id=4)
  * - jute_yarn_remarks: Additional remarks
  *
  * @example
@@ -143,8 +143,8 @@ export default function CreateYarnMaster({
       // Map yarn types to options
       const yarnTypes = data.yarn_types ?? [];
       const mappedYarnTypes: Option[] = yarnTypes.map((yt: Record<string, unknown>) => ({
-        label: (yt.jute_yarn_type_name as string) ?? "",
-        value: String(yt.jute_yarn_type_id ?? ""),
+        label: (yt.item_grp_name as string) ?? "",
+        value: String(yt.item_grp_id ?? ""),
       }));
       setYarnTypeOptions(mappedYarnTypes);
 
@@ -154,12 +154,12 @@ export default function CreateYarnMaster({
         const count = details.jute_yarn_count !== null && details.jute_yarn_count !== undefined 
           ? String(details.jute_yarn_count) 
           : "";
-        const typeId = details.jute_yarn_type_id ? String(details.jute_yarn_type_id) : "";
+        const typeId = details.item_grp_id ? String(details.item_grp_id) : "";
         const remarks = details.jute_yarn_remarks ?? "";
         
         const vals = {
           jute_yarn_count: count,
-          jute_yarn_type_id: typeId,
+          item_grp_id: typeId,
           jute_yarn_remarks: remarks,
         };
         setInitialValues(vals);
@@ -168,7 +168,7 @@ export default function CreateYarnMaster({
         // Create mode - empty initial values
         const vals = {
           jute_yarn_count: "",
-          jute_yarn_type_id: "",
+          item_grp_id: "",
           jute_yarn_remarks: "",
         };
         setInitialValues(vals);
@@ -225,7 +225,7 @@ export default function CreateYarnMaster({
           grid: { xs: 12, md: 4 },
         },
         {
-          name: "jute_yarn_type_id",
+          name: "item_grp_id",
           label: "Yarn Type",
           type: "select",
           required: false,
@@ -268,7 +268,7 @@ export default function CreateYarnMaster({
       // Generate the yarn name from current form values
       const yarnName = generateYarnName(
         String(values.jute_yarn_count ?? ""),
-        String(values.jute_yarn_type_id ?? ""),
+        String(values.item_grp_id ?? ""),
         String(values.jute_yarn_remarks ?? "")
       );
 
@@ -279,7 +279,7 @@ export default function CreateYarnMaster({
       const payload = {
         jute_yarn_name: yarnName,
         jute_yarn_count: parsedYarnCount,
-        jute_yarn_type_id: values.jute_yarn_type_id ? Number(values.jute_yarn_type_id) : null,
+        item_grp_id: values.item_grp_id ? Number(values.item_grp_id) : null,
         jute_yarn_remarks: values.jute_yarn_remarks || null,
         co_id,
       };
@@ -327,10 +327,10 @@ export default function CreateYarnMaster({
    */
   const generatedYarnName = useMemo(() => {
     const count = String(formValues.jute_yarn_count ?? "");
-    const typeId = String(formValues.jute_yarn_type_id ?? "");
+    const typeId = String(formValues.item_grp_id ?? "");
     const remarks = String(formValues.jute_yarn_remarks ?? "");
     return generateYarnName(count, typeId, remarks);
-  }, [formValues.jute_yarn_count, formValues.jute_yarn_type_id, formValues.jute_yarn_remarks, generateYarnName]);
+  }, [formValues.jute_yarn_count, formValues.item_grp_id, formValues.jute_yarn_remarks, generateYarnName]);
 
   /**
    * Handle form values change - just track values, no form re-mount

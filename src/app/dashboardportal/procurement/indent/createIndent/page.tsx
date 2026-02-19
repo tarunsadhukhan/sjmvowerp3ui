@@ -37,6 +37,7 @@ import { useIndentLineItems } from "./hooks/useIndentLineItems";
 import { useIndentApproval } from "./hooks/useIndentApproval";
 import { useIndentFormSchema } from "./hooks/useIndentFormSchemas";
 import { useIndentSelectOptions } from "./hooks/useIndentSelectOptions";
+import { useIndentItemValidation } from "./hooks/useIndentItemValidation";
 
 // Components
 import { IndentHeaderForm } from "./components/IndentHeaderForm";
@@ -289,6 +290,14 @@ function IndentTransactionPageContent() {
 	const expenses = setupData?.expenses ?? EMPTY_EXPENSES;
 	const itemGroups = setupData?.itemGroups ?? EMPTY_ITEM_GROUPS;
 
+	// Resolve the expense type name from the selected expense type ID
+	const resolvedExpenseTypeName = React.useMemo(() => {
+		const expId = String(formValues.expense_type ?? "");
+		if (!expId) return undefined;
+		const found = expenses.find((e) => e.id === expId);
+		return found?.name;
+	}, [formValues.expense_type, expenses]);
+
 	// Select options hook
 	const {
 		departmentOptions,
@@ -310,6 +319,39 @@ function IndentTransactionPageContent() {
 		indentType: String(formValues.indent_type ?? ""),
 		itemGroupCache,
 	});
+
+	// Item validation hook (per-line max qty / FY checks)
+	const {
+		validationMap,
+		currentLogic: validationLogic,
+		validateLine,
+		clearLine: clearLineValidation,
+		getQuantityError,
+		getLineWarnings,
+		allLinesValid: allLinesValidFn,
+	} = useIndentItemValidation({
+		branchId: branchValue,
+		indentType: String(formValues.indent_type ?? ""),
+		expenseTypeName: resolvedExpenseTypeName,
+		expenseTypeId: String(formValues.expense_type ?? ""),
+	});
+
+	// Wrap line field changes to trigger validation on item selection
+	const handleLineFieldChangeWithValidation = React.useCallback(
+		(id: string, field: keyof EditableLineItem, rawValue: string) => {
+			handleLineFieldChange(id, field, rawValue);
+
+			// When item changes, trigger validation for the new item
+			if (field === "item" && rawValue) {
+				void validateLine(id, rawValue);
+			}
+			// When itemGroup changes (clears item), clear validation for that line
+			if (field === "itemGroup") {
+				clearLineValidation(id);
+			}
+		},
+		[handleLineFieldChange, validateLine, clearLineValidation]
+	);
 
 	// Expense type validation on indent type change
 	React.useEffect(() => {
@@ -381,7 +423,7 @@ function IndentTransactionPageContent() {
 		getItemOptions,
 		getMakeOptions,
 		getUomOptions,
-		handleLineFieldChange,
+		handleLineFieldChange: handleLineFieldChangeWithValidation,
 	});
 
 	// Form submit handler
@@ -404,6 +446,20 @@ function IndentTransactionPageContent() {
 					variant: "destructive",
 					title: "Line items incomplete",
 					description: "Add at least one item and make sure quantity is greater than zero.",
+				});
+				return;
+			}
+
+			// Check per-line validation (max qty / FY duplicate)
+			const lineQtyMap: Record<string, string> = {};
+			for (const li of filledLineItems) {
+				lineQtyMap[li.id] = li.quantity;
+			}
+			if (!allLinesValidFn(filledLineItems.map((li) => li.id), lineQtyMap)) {
+				toast({
+					variant: "destructive",
+					title: "Validation errors",
+					description: "One or more line items have validation errors. Please review before saving.",
 				});
 				return;
 			}
@@ -489,7 +545,7 @@ function IndentTransactionPageContent() {
 				setSaving(false);
 			}
 		},
-		[filledLineItems, lineItemsValid, mode, pageError, setupError, requestedId, router, approvalPermissions.canSave]
+		[filledLineItems, lineItemsValid, mode, pageError, setupError, requestedId, router, approvalPermissions.canSave, allLinesValidFn]
 	);
 
 	// Save handler for approval bar

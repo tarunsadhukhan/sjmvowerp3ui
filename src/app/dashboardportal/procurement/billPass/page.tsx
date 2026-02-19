@@ -8,9 +8,8 @@
  */
 
 import * as React from "react";
-import { Alert, Chip, IconButton, Stack, Tooltip, Typography } from "@mui/material";
+import { Alert, Chip, Tooltip, Typography } from "@mui/material";
 import type { GridColDef, GridPaginationModel, GridRenderCellParams } from "@mui/x-data-grid";
-import { Eye } from "lucide-react";
 import { useRouter } from "next/navigation";
 
 import IndexWrapper from "@/components/ui/IndexWrapper";
@@ -98,24 +97,6 @@ export default function BillPassIndexPage() {
   // Column definitions
   const columns = React.useMemo<GridColDef[]>(
     () => [
-      {
-        field: "__actions",
-        headerName: "Actions",
-        width: 80,
-        sortable: false,
-        filterable: false,
-        align: "center",
-        headerAlign: "center",
-        renderCell: (params: GridRenderCellParams<BillPassRow>) => (
-          <Stack direction="row" spacing={0.5} justifyContent="center" alignItems="center">
-            <Tooltip title="View Bill Pass">
-              <IconButton size="small" onClick={() => handleView(params.row)}>
-                <Eye size={16} />
-              </IconButton>
-            </Tooltip>
-          </Stack>
-        ),
-      },
       {
         field: "bill_pass_no",
         headerName: "Bill Pass No.",
@@ -242,7 +223,7 @@ export default function BillPassIndexPage() {
         ),
       },
     ],
-    [handleView]
+    []
   );
 
   const handlePaginationModelChange = (model: GridPaginationModel) => {

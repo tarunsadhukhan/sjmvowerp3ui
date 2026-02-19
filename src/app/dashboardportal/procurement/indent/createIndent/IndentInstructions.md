@@ -164,16 +164,16 @@ max_indent_qty = ROUNDUP(30 / 10, 0) * 10
 
 ---
 
-### 5.2 Logic 2 — Capital/Overhaul Validation with Financial Year Check
+### 5.2 Logic 2 —  Open Entry Validation with Financial Year Check
 
-**Applies to:** Regular (Capital) and BOM (Capital, Overhaul).
+**Applies to:**  Open (General, Maintenance, Production).
 
 This logic includes financial-year-scoped checks and enforces max quantity as the value.
 
 #### Step-by-step:
 
 **Step 1 — Check for existing open indent (financial year scoped)**
-The system checks if an open indent already exists for the item **within the current financial year**. If one exists, display an error message and clear the field.
+The system checks if an open indent already exists for the item **within the current financial year**. If one exists in status_id other than 4,5,6. for this it needs to map the header from the item_id for the indent_id and then retreive it. display an error message and clear the field. 
 
 **Step 2 — Check if max/min exists**
 If no max/min quantity is defined for the item, display an error message and clear the field. The user cannot proceed without max/min values.
@@ -182,15 +182,15 @@ If no max/min quantity is defined for the item, display an error message and cle
 The system checks if there is any outstanding indent quantity from Regular or BOM indents for the same item. If there is, display an **informational message** (warning), but **allow the user to continue**.
 
 **Step 4 — Set quantity**
-The **max quantity** from the item master is taken as the indent quantity value.
+The **max quantity** from the item master is taken as the indent quantity value. The user cannot edit this value.
 
 ---
 
-### 5.3 Logic 3 — Open Entry (No Validation)
+### 5.3 Logic 3 — (No Validation) Capital/Overhaul 
 
-**Applies to:** Open (General, Maintenance, Production).
+**Applies to:** Regular (Capital, Overhaul) and BOM (Capital, Overhaul).
 
-No quantity validation is applied. The user can enter any value for the indent quantity.
+No quantity validation is applied. The user can enter any value for the indent quantity. no other verification either needs to be done. 
 
 ---
 
@@ -225,7 +225,7 @@ No quantity validation is applied. The user can enter any value for the indent q
 | **reorder_qty** | The standard reorder quantity for an item; used as the rounding unit. |
 | **branch_stock** | Current stock available at the branch/location. |
 | **outstanding_indent_qty** | Quantity from existing indents that has not yet been fulfilled. |
-| **Financial Year (FY)** | The fiscal year used to scope indent checks (relevant for Logic 2). |
+| **Financial Year (FY)** | The fiscal year used to scope indent checks (relevant for Logic 2). Fiscal year is considered from 1st April of the year to 31st March of the following year. |
 
 ---
 

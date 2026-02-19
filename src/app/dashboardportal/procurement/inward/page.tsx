@@ -1,13 +1,13 @@
 "use client";
 
 import * as React from "react";
-import { Alert, Chip, IconButton, Stack, Tooltip, Typography } from "@mui/material";
+import { Alert, Chip, Typography } from "@mui/material";
 import type { GridColDef, GridPaginationModel, GridRenderCellParams } from "@mui/x-data-grid";
-import { Edit, Eye } from "lucide-react";
 import { fetchWithCookie } from "@/utils/apiClient2";
 import { apiRoutesPortalMasters } from "@/utils/api";
 import IndexWrapper from "@/components/ui/IndexWrapper";
 import { useRouter } from "next/navigation";
+import { createBooleanFieldEditCheck } from "@/utils/editability";
 
 type InwardRow = {
 	id: string | number;
@@ -71,39 +71,13 @@ export default function InwardIndexPage() {
 		[router]
 	);
 
-	const columns = React.useMemo<GridColDef[]>(() => [
-		{
-			field: "__actions",
-			headerName: "Actions",
-			width: 90,
-			sortable: false,
-			filterable: false,
-			align: "center",
-			headerAlign: "center",
-			renderCell: (params: GridRenderCellParams<InwardRow>) => {
-				const row = params.row;
-				// If inspection_check is true, only allow viewing (no edit)
-				const canOnlyView = Boolean(row.inspection_check);
+	// Row is editable when inspection_check is false (not yet inspected)
+	const isRowEditable = React.useMemo(
+		() => createBooleanFieldEditCheck<InwardRow>("inspection_check", false),
+		[]
+	);
 
-				return (
-					<Stack direction="row" spacing={0.5} justifyContent="center" alignItems="center">
-						{canOnlyView ? (
-							<Tooltip title="View">
-								<IconButton size="small" onClick={() => handleView(row)}>
-									<Eye size={16} />
-								</IconButton>
-							</Tooltip>
-						) : (
-							<Tooltip title="Edit">
-								<IconButton size="small" onClick={() => handleEdit(row)}>
-									<Edit size={16} />
-								</IconButton>
-							</Tooltip>
-						)}
-					</Stack>
-				);
-			},
-		},
+	const columns = React.useMemo<GridColDef[]>(() => [
 		{
 			field: "branch_name",
 			headerName: "Branch",
@@ -166,7 +140,7 @@ export default function InwardIndexPage() {
 				/>
 			),
 		},
-	], [handleEdit, handleView]);
+	], []);
 
 	const fetchInwards = React.useCallback(async () => {
 		setLoading(true);
@@ -259,6 +233,9 @@ export default function InwardIndexPage() {
 			showLoadingUntilLoaded
 			search={{ value: searchValue, onChange: handleSearchChange, placeholder: "Search by inward no., PO no., supplier, or branch", debounceDelayMs: 1000 }}
 			createAction={{ onClick: handleCreateInward, label: "Create Inward" }}
+			onView={handleView}
+			onEdit={handleEdit}
+			isRowEditable={isRowEditable}
 		>
 			{errorMessage ? (
 				<Alert severity="error" sx={{ mt: 2 }}>

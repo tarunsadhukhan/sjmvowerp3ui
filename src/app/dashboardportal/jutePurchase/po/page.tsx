@@ -7,6 +7,7 @@ import { fetchWithCookie } from "@/utils/apiClient2";
 import { apiRoutesPortalMasters } from "@/utils/api";
 import IndexWrapper from "@/components/ui/IndexWrapper";
 import { useRouter } from "next/navigation";
+import { createStatusBasedEditCheck } from "@/utils/editability";
 
 /**
  * @component JutePOIndexPage
@@ -244,6 +245,16 @@ export default function JutePOIndexPage() {
 		[router]
 	);
 
+	// Row is editable only in Draft or Open status
+	const isRowEditable = React.useMemo(
+		() => createStatusBasedEditCheck<JutePORow>({
+			statusField: "status",
+			editableStatuses: ["Draft", "Open"],
+			caseInsensitive: true,
+		}),
+		[]
+	);
+
 	return (
 		<IndexWrapper
 			title="Jute Purchase Orders"
@@ -264,6 +275,7 @@ export default function JutePOIndexPage() {
 			createAction={{ onClick: handleCreateJutePO, label: "Create Jute PO" }}
 			onView={handleView}
 			onEdit={handleEdit}
+			isRowEditable={isRowEditable}
 		>
 			{errorMessage ? (
 				<Alert severity="error" sx={{ mt: 2 }}>

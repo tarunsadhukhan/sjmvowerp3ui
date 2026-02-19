@@ -85,6 +85,25 @@ export type CreateIndentResponse = {
   indent_no?: number | string;
 };
 
+export type ItemValidationResponse = {
+  validation_logic: 1 | 2 | 3;
+  item_id: number;
+  branch_id: number;
+  indent_type: string;
+  expense_type_name: string | null;
+  branch_stock: number;
+  minqty: number | null;
+  maxqty: number | null;
+  min_order_qty: number | null;
+  lead_time: number | null;
+  outstanding_indent_qty: number;
+  has_open_indent: boolean;
+  max_indent_qty: number | null;
+  fy_duplicate_indent_no: number | null;
+  regular_bom_outstanding: number;
+  warnings: string[];
+};
+
 const mockIndent: IndentDetails = {
   id: "123",
   indentNo: "IND-2025-00123",
@@ -504,6 +523,35 @@ export async function rejectIndent(indentId: string, branchId: string, menuId: s
 
   if (!data) {
     throw new Error("Empty response from reject API");
+  }
+
+  return data;
+}
+
+export async function validateItemForIndent(params: {
+  branchId: string;
+  itemId: string;
+  indentType: string;
+  expenseTypeId: string;
+}): Promise<ItemValidationResponse> {
+  const query = new URLSearchParams({
+    branch_id: params.branchId,
+    item_id: params.itemId,
+    indent_type: params.indentType,
+    expense_type_id: params.expenseTypeId,
+  });
+
+  const { data, error } = await fetchWithCookie<ItemValidationResponse>(
+    `${apiRoutesPortalMasters.VALIDATE_ITEM_FOR_INDENT}?${query.toString()}`,
+    "GET"
+  );
+
+  if (error) {
+    throw new Error(error);
+  }
+
+  if (!data) {
+    throw new Error("Empty validation response.");
   }
 
   return data;

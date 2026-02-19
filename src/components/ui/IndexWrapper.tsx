@@ -41,6 +41,11 @@ type IndexWrapperProps<RowType extends GridValidRowModel & { id?: string | numbe
   createAction?: CreateActionConfig;
   onView?: (row: RowType) => void;
   onEdit?: (row: RowType) => void;
+  /** Per-row callback to determine if a row can be edited.
+   * When provided, rows where this returns false show the View (eye) icon
+   * even if the user has page-level edit permission.
+   * When not provided, all rows follow page-level permission (current behavior). */
+  isRowEditable?: (row: RowType) => boolean;
   toolbarContent?: React.ReactNode;
   children?: React.ReactNode;
   className?: string;
@@ -63,6 +68,7 @@ function IndexWrapper<RowType extends GridValidRowModel & { id?: string | number
   createAction,
   onView,
   onEdit,
+  isRowEditable,
   toolbarContent,
   children,
   className,
@@ -154,12 +160,11 @@ function IndexWrapper<RowType extends GridValidRowModel & { id?: string | number
   }, [triggerSearchChange]);
 
   const actionColumn = useMemo<BaseColumn<RowType> | undefined>(() => {
-    const allowEdit = Boolean(onEdit) && canEdit;
-    const allowView = Boolean(onView) && canView;
-    const showEdit = allowEdit;
-    const showView = !allowEdit && allowView;
+    const hasEditHandler = Boolean(onEdit) && canEdit;
+    const hasViewHandler = Boolean(onView) && canView;
 
-    if (!showEdit && !showView) {
+    // If neither action is available at the page level, no column needed
+    if (!hasEditHandler && !hasViewHandler) {
       return undefined;
     }
 
@@ -173,15 +178,22 @@ function IndexWrapper<RowType extends GridValidRowModel & { id?: string | number
       headerAlign: "center",
       renderCell: (params: GridRenderCellParams<RowType>) => {
         const row = params.row;
+
+        // Determine per-row editability
+        // If isRowEditable is provided, use it; otherwise default to true (all rows editable)
+        const rowEditable = isRowEditable ? isRowEditable(row) : true;
+        const showEditForRow = hasEditHandler && rowEditable;
+        const showViewForRow = !showEditForRow && hasViewHandler;
+
         return (
           <Stack direction="row" spacing={0.5} justifyContent="center" alignItems="center">
-            {showEdit ? (
+            {showEditForRow ? (
               <Tooltip title="Edit">
                 <IconButton size="small" onClick={() => onEdit?.(row)}>
                   <Edit size={16} />
                 </IconButton>
               </Tooltip>
-            ) : showView ? (
+            ) : showViewForRow ? (
               <Tooltip title="View">
                 <IconButton size="small" onClick={() => onView?.(row)}>
                   <Eye size={16} />
@@ -192,7 +204,7 @@ function IndexWrapper<RowType extends GridValidRowModel & { id?: string | number
         );
       },
     } satisfies BaseColumn<RowType>;
-  }, [canEdit, canView, onEdit, onView]);
+  }, [canEdit, canView, isRowEditable, onEdit, onView]);
 
   const finalColumns = useMemo<BaseColumn<RowType>[]>(() => {
     if (!actionColumn) {

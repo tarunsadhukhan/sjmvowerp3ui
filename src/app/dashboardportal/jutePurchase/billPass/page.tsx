@@ -1,14 +1,14 @@
 "use client";
 
 import * as React from "react";
-import { Alert, Chip, Typography, IconButton, Tooltip, Stack } from "@mui/material";
+import { Alert, Chip, Typography } from "@mui/material";
 import type { GridColDef, GridPaginationModel, GridRenderCellParams } from "@mui/x-data-grid";
 import { fetchWithCookie } from "@/utils/apiClient2";
 import { apiRoutesPortalMasters } from "@/utils/api";
 import IndexWrapper from "@/components/ui/IndexWrapper";
 import { useRouter } from "next/navigation";
 import useSelectedCompanyCoId from "@/hooks/use-selected-company-coid";
-import { Edit, Eye } from "lucide-react";
+import { createNotEqualEditCheck } from "@/utils/editability";
 
 /**
  * @component JuteBillPassIndexPage
@@ -113,38 +113,14 @@ export default function JuteBillPassIndexPage() {
 		[router]
 	);
 
+	// Row is editable when bill_pass_complete is not 1
+	const isRowEditable = React.useMemo(
+		() => createNotEqualEditCheck<JuteBillPassRow>("bill_pass_complete", 1),
+		[]
+	);
+
 	const columns = React.useMemo<GridColDef<JuteBillPassRow>[]>(
 		() => [
-			{
-				field: "__actions",
-				headerName: "Actions",
-				width: 90,
-				sortable: false,
-				filterable: false,
-				align: "center",
-				headerAlign: "center",
-				renderCell: (params: GridRenderCellParams<JuteBillPassRow>) => {
-					const row = params.row;
-					const isComplete = row.bill_pass_complete === 1;
-					return (
-						<Stack direction="row" spacing={0.5} justifyContent="center" alignItems="center">
-							{isComplete ? (
-								<Tooltip title="View">
-									<IconButton size="small" onClick={() => handleView(row)}>
-										<Eye size={16} />
-									</IconButton>
-								</Tooltip>
-							) : (
-								<Tooltip title="Edit">
-									<IconButton size="small" onClick={() => handleEdit(row)}>
-										<Edit size={16} />
-									</IconButton>
-								</Tooltip>
-							)}
-						</Stack>
-					);
-				},
-			},
 			{
 				field: "bill_pass_no",
 				headerName: "Bill Pass No",
@@ -237,7 +213,7 @@ export default function JuteBillPassIndexPage() {
 				),
 			},
 		],
-		[handleView, handleEdit]
+		[]
 	);
 
 	const fetchBillPasses = React.useCallback(async () => {
@@ -343,7 +319,9 @@ export default function JuteBillPassIndexPage() {
 			onPaginationModelChange={handlePaginationModelChange}
 			rowCount={totalRows}
 			search={searchConfig}
-			// Actions are handled by custom column based on bill_pass_complete status
+			onView={handleView}
+			onEdit={handleEdit}
+			isRowEditable={isRowEditable}
 		>
 			{errorMessage && (
 				<Alert severity="error" sx={{ mb: 2 }}>

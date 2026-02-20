@@ -241,11 +241,11 @@ export function IndentLineItemsDialog({
               disabled={loadingIndents}
               loading={loadingIndents}
               noOptionsText="No indents available"
-              disablePortal={true}
               openOnFocus
               blurOnSelect
               selectOnFocus
               handleHomeEndKeys
+              ListboxProps={{ style: { maxHeight: 320, overflowY: "auto" } }}
               renderOption={(props, option) => {
                 const { key, ...otherProps } = props;
                 return (

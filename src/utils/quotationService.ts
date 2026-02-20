@@ -90,7 +90,7 @@ export type QuotationSetup2Response = {
 export type CreateQuotationRequest = {
   branch_id: number | string;
   quotation_date: string;
-  party_id: number | string;
+  party_id?: number | string | null;
   sales_broker_id?: number | string | null;
   billing_address_id?: number | string | null;
   shipping_address_id?: number | string | null;

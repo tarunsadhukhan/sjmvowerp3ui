@@ -9,7 +9,6 @@ export type UseSalesOrderHeaderSchemaParams = {
 	brokerOptions: Option[];
 	transporterOptions: Option[];
 	quotationOptions: Option[];
-	branchAddressOptions: Option[];
 	quotationRequired: boolean;
 	mode: "create" | "edit" | "view";
 	headerFieldsDisabled: boolean;
@@ -22,7 +21,6 @@ export const useSalesOrderHeaderSchema = ({
 	brokerOptions,
 	transporterOptions,
 	quotationOptions,
-	branchAddressOptions,
 	quotationRequired,
 	mode,
 	headerFieldsDisabled,
@@ -59,8 +57,8 @@ export const useSalesOrderHeaderSchema = ({
 			{ name: "invoice_type", label: "Invoice Type", type: "select", options: [{ label: "GST Invoice", value: "1" }, { label: "Bill of Supply", value: "2" }], disabled: headerFieldsDisabled, grid: { xs: 12, md: 4 } },
 			{ name: "broker", label: "Broker", type: "select", options: brokerOptions, disabled: headerFieldsDisabled, grid: { xs: 12, md: 4 } },
 			{ name: "broker_commission_percent", label: "Broker Commission %", type: "text", placeholder: "%", disabled: headerFieldsDisabled, grid: { xs: 12, md: 4 } },
-			{ name: "billing_to", label: "Billing To", type: "select", options: branchAddressOptions, disabled: headerFieldsDisabled, grid: { xs: 12, md: 4 } },
-			{ name: "shipping_to", label: "Shipping To", type: "select", options: branchAddressOptions, disabled: headerFieldsDisabled, grid: { xs: 12, md: 4 } },
+			{ name: "billing_to", label: "Billing To", type: "select", options: customerBranchOptions, disabled: headerFieldsDisabled, grid: { xs: 12, md: 4 } },
+			{ name: "shipping_to", label: "Shipping To", type: "select", options: customerBranchOptions, disabled: headerFieldsDisabled, grid: { xs: 12, md: 4 } },
 			{ name: "transporter", label: "Transporter", type: "select", options: transporterOptions, disabled: headerFieldsDisabled, grid: { xs: 12, md: 4 } },
 			{ name: "delivery_terms", label: "Delivery Terms", type: "text", disabled: headerFieldsDisabled, grid: { xs: 12, md: 4 } },
 			{ name: "payment_terms", label: "Payment Terms", type: "text", disabled: headerFieldsDisabled, grid: { xs: 12, md: 4 } },
@@ -75,5 +73,5 @@ export const useSalesOrderHeaderSchema = ({
 	}, [
 		branchOptions, customerOptions, customerBranchOptions,
 		brokerOptions, transporterOptions, quotationOptions,
-		branchAddressOptions, quotationRequired, mode, headerFieldsDisabled,
+		quotationRequired, mode, headerFieldsDisabled,
 	]);

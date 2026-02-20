@@ -218,18 +218,29 @@ function SalesOrderTransactionPageContent() {
 		return customer?.branches ?? [];
 	}, [formValues.party, customers]);
 
-	// Derive billing/shipping state from branch addresses
+	// Derive billing/shipping state from party (customer) branches
 	const billingToState = React.useMemo(() => {
 		const billingId = String(formValues.billing_to ?? "");
 		if (!billingId) return undefined;
-		return branchAddresses.find((a) => a.id === billingId)?.stateName;
-	}, [formValues.billing_to, branchAddresses]);
+		return customerBranches.find((b) => b.id === billingId)?.stateName;
+	}, [formValues.billing_to, customerBranches]);
 
 	const shippingToState = React.useMemo(() => {
 		const shippingId = String(formValues.shipping_to ?? "");
 		if (!shippingId) return undefined;
-		return branchAddresses.find((a) => a.id === shippingId)?.stateName;
-	}, [formValues.shipping_to, branchAddresses]);
+		return customerBranches.find((b) => b.id === shippingId)?.stateName;
+	}, [formValues.shipping_to, customerBranches]);
+
+	// Clear party-dependent fields when customer changes
+	const prevPartyRef = React.useRef<string>("");
+	React.useEffect(() => {
+		if (mode === "view") return;
+		const currentParty = String(formValues.party ?? "");
+		if (prevPartyRef.current !== "" && prevPartyRef.current !== currentParty) {
+			setFormValues((prev) => ({ ...prev, party_branch: "", billing_to: "", shipping_to: "" }));
+		}
+		prevPartyRef.current = currentParty;
+	}, [formValues.party, mode, setFormValues]);
 
 	// Line items
 	const {
@@ -426,7 +437,6 @@ function SalesOrderTransactionPageContent() {
 		brokerOptions,
 		transporterOptions,
 		quotationOptions,
-		branchAddressOptions,
 		itemGroupOptions,
 		getItemGroupLabel,
 		getItemOptions,
@@ -452,7 +462,6 @@ function SalesOrderTransactionPageContent() {
 		brokerOptions,
 		transporterOptions,
 		quotationOptions,
-		branchAddressOptions,
 		quotationRequired,
 		mode,
 		headerFieldsDisabled,

@@ -40,6 +40,7 @@ export const buildDefaultFormValues = () => ({
 	delivery_timeline: "",
 	project: "",
 	expense_type: "",
+	po_type: "",
 	contact_person: "",
 	contact_no: "",
 	footer_note: "",

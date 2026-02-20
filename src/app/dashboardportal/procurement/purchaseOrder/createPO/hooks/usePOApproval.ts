@@ -26,10 +26,28 @@ import {
   setPODetails: React.Dispatch<React.SetStateAction<PODetails | null>>;
 };
 
+const PO_INDEX_PATH = "/dashboardportal/procurement/purchaseOrder";
+
+/**
+ * Returns true when `err` is a backend 403 approval-level restriction:
+ * e.g. "User does not have approval permission..." or
+ *      "User approval level (X) does not match current...".
+ */
+function isApprovalPermissionError(err: unknown): boolean {
+  const msg = err instanceof Error ? err.message : String(err ?? "");
+  const lower = msg.toLowerCase();
+  return (
+    lower.includes("approval permission") ||
+    lower.includes("approval level") ||
+    lower.includes("does not match current")
+  );
+}
+
 /**
  * Centralises approval-state derivation and the action handlers (open/cancel/approve/etc.).
  */
 export const usePOApproval = ({ mode, requestedId, formValues, poDetails, coId, getMenuId, setPODetails }: UsePOApprovalParams) => {
+  const router = useRouter();
   const [approvalLoading, setApprovalLoading] = React.useState(false);
 
   /**
@@ -202,11 +220,20 @@ export const usePOApproval = ({ mode, requestedId, formValues, poDetails, coId, 
       toast({ title: "PO sent for approval successfully" });
       await refreshDetails();
     } catch (error) {
-      toast({ variant: "destructive", title: "Unable to send for approval", description: error instanceof Error ? error.message : "Please try again." });
+      if (isApprovalPermissionError(error)) {
+        toast({
+          variant: "destructive",
+          title: "Send for approval not permitted",
+          description: "You do not have permission to send this purchase order for approval. Returning to the PO list.",
+        });
+        router.push(PO_INDEX_PATH);
+      } else {
+        toast({ variant: "destructive", title: "Unable to send for approval", description: error instanceof Error ? error.message : "Please try again." });
+      }
     } finally {
       setApprovalLoading(false);
     }
-  }, [requestedId, branchIdFromForm, getMenuId, refreshDetails]);
+  }, [requestedId, branchIdFromForm, getMenuId, refreshDetails, router]);
 
   const handleApprove = React.useCallback(async () => {
     if (!requestedId) return;
@@ -222,11 +249,20 @@ export const usePOApproval = ({ mode, requestedId, formValues, poDetails, coId, 
       toast({ title: "PO approved successfully" });
       await refreshDetails();
     } catch (error) {
-      toast({ variant: "destructive", title: "Unable to approve PO", description: error instanceof Error ? error.message : "Please try again." });
+      if (isApprovalPermissionError(error)) {
+        toast({
+          variant: "destructive",
+          title: "Approval not permitted",
+          description: "You do not have the required approval level for this purchase order. Returning to the PO list.",
+        });
+        router.push(PO_INDEX_PATH);
+      } else {
+        toast({ variant: "destructive", title: "Unable to approve PO", description: error instanceof Error ? error.message : "Please try again." });
+      }
     } finally {
       setApprovalLoading(false);
     }
-  }, [requestedId, branchIdFromForm, getMenuId, refreshDetails]);
+  }, [requestedId, branchIdFromForm, getMenuId, refreshDetails, router]);
 
   const handleReject = React.useCallback(
     async (reason: string) => {
@@ -243,16 +279,25 @@ export const usePOApproval = ({ mode, requestedId, formValues, poDetails, coId, 
         toast({ title: "PO rejected successfully" });
         await refreshDetails();
       } catch (error) {
-        toast({
-          variant: "destructive",
-          title: "Unable to reject PO",
-          description: error instanceof Error ? error.message : "Please try again.",
-        });
+        if (isApprovalPermissionError(error)) {
+          toast({
+            variant: "destructive",
+            title: "Rejection not permitted",
+            description: "You do not have the required approval level to reject this purchase order. Returning to the PO list.",
+          });
+          router.push(PO_INDEX_PATH);
+        } else {
+          toast({
+            variant: "destructive",
+            title: "Unable to reject PO",
+            description: error instanceof Error ? error.message : "Please try again.",
+          });
+        }
       } finally {
         setApprovalLoading(false);
       }
     },
-    [requestedId, branchIdFromForm, getMenuId, refreshDetails],
+    [requestedId, branchIdFromForm, getMenuId, refreshDetails, router],
   );
 
   const handleViewApprovalLog = React.useCallback(() => {

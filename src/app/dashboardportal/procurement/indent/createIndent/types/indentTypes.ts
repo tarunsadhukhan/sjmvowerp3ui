@@ -110,6 +110,8 @@ export type ItemValidationResult = {
 	branchStock: number;
 	minqty: number | null;
 	maxqty: number | null;
+	/** Calculated minimum indent qty (may be a multiple of reorder qty, always >= minqty). Used for UI validation. */
+	minIndentQty: number | null;
 	minOrderQty: number | null;
 	leadTime: number | null;
 	outstandingIndentQty: number;

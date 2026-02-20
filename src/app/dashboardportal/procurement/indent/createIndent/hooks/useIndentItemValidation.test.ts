@@ -30,17 +30,15 @@ describe("useIndentItemValidation", () => {
 	});
 
 	describe("getQuantityError — backend errors take priority", () => {
-		it("should return backend error when has_minmax is false (no min/max configured)", async () => {
-			const errorMsg =
-				"Min/Max stock levels not configured for this item at this branch. Please configure item min/max before raising an indent.";
-
+		it("should allow any quantity when has_minmax is false in Logic 1 (Regular/BOM)", async () => {
+			// Logic 1: no min/max configured → user may enter any value (no error)
 			mockValidate.mockResolvedValueOnce({
 				validation_logic: 1,
 				item_id: 10,
 				branch_id: 1,
 				indent_type: "Regular",
 				expense_type_name: "General",
-				errors: [errorMsg],
+				errors: [],
 				branch_stock: 0,
 				minqty: null,
 				maxqty: null,
@@ -62,14 +60,17 @@ describe("useIndentItemValidation", () => {
 
 			const { result } = renderHook(() => useIndentItemValidation(defaultParams));
 
-			// Trigger validation for a line
 			await act(async () => {
 				await result.current.validateLine("line-1", "10");
 			});
 
-			// Should return the backend error
-			const err = result.current.getQuantityError("line-1", "5");
-			expect(err).toBe(errorMsg);
+			// No error — free entry when min/max not configured in Logic 1
+			const err = result.current.getQuantityError("line-1", "999");
+			expect(err).toBeNull();
+
+			// Should also pass allLinesValid
+			const valid = result.current.allLinesValid(["line-1"], { "line-1": "999" });
+			expect(valid).toBe(true);
 		});
 
 		it("should return backend error when stock exceeds max", async () => {
@@ -149,6 +150,121 @@ describe("useIndentItemValidation", () => {
 			expect(err).toBeNull();
 		});
 
+		it("should return error when qty is not a multiple of reorder qty", async () => {
+			mockValidate.mockResolvedValueOnce({
+				validation_logic: 1,
+				item_id: 10,
+				branch_id: 1,
+				indent_type: "Regular",
+				expense_type_name: "General",
+				errors: [],
+				branch_stock: 0,
+				minqty: 10,
+				maxqty: 100,
+				min_order_qty: 8,
+				lead_time: null,
+				outstanding_indent_qty: 0,
+				has_open_indent: false,
+				stock_exceeds_max: false,
+				max_indent_qty: 104,
+				min_indent_qty: 10,
+				has_minmax: true,
+				fy_indent_exists: false,
+				fy_indent_no: null,
+				fy_duplicate_indent_no: null,
+				regular_bom_outstanding: 0,
+				forced_qty: null,
+				warnings: [],
+			});
+
+			const { result } = renderHook(() => useIndentItemValidation(defaultParams));
+
+			await act(async () => {
+				await result.current.validateLine("line-1", "10");
+			});
+
+			// 15 is not a multiple of 8
+			const err = result.current.getQuantityError("line-1", "15");
+			expect(err).toContain("multiple of the reorder qty");
+			expect(err).toContain("8");
+		});
+
+		it("should return null when qty is a valid multiple of reorder qty", async () => {
+			mockValidate.mockResolvedValueOnce({
+				validation_logic: 1,
+				item_id: 10,
+				branch_id: 1,
+				indent_type: "Regular",
+				expense_type_name: "General",
+				errors: [],
+				branch_stock: 0,
+				minqty: 10,
+				maxqty: 100,
+				min_order_qty: 8,
+				lead_time: null,
+				outstanding_indent_qty: 0,
+				has_open_indent: false,
+				stock_exceeds_max: false,
+				max_indent_qty: 104,
+				min_indent_qty: 10,
+				has_minmax: true,
+				fy_indent_exists: false,
+				fy_indent_no: null,
+				fy_duplicate_indent_no: null,
+				regular_bom_outstanding: 0,
+				forced_qty: null,
+				warnings: [],
+			});
+
+			const { result } = renderHook(() => useIndentItemValidation(defaultParams));
+
+			await act(async () => {
+				await result.current.validateLine("line-1", "10");
+			});
+
+			// 24 is a multiple of 8
+			const err = result.current.getQuantityError("line-1", "24");
+			expect(err).toBeNull();
+		});
+
+		it("should return error when qty is below min indent qty", async () => {
+			mockValidate.mockResolvedValueOnce({
+				validation_logic: 1,
+				item_id: 10,
+				branch_id: 1,
+				indent_type: "Regular",
+				expense_type_name: "General",
+				errors: [],
+				branch_stock: 0,
+				minqty: 10,
+				maxqty: 100,
+				min_order_qty: 8,
+				lead_time: null,
+				outstanding_indent_qty: 0,
+				has_open_indent: false,
+				stock_exceeds_max: false,
+				max_indent_qty: 104,
+				min_indent_qty: 10,
+				has_minmax: true,
+				fy_indent_exists: false,
+				fy_indent_no: null,
+				fy_duplicate_indent_no: null,
+				regular_bom_outstanding: 0,
+				forced_qty: null,
+				warnings: [],
+			});
+
+			const { result } = renderHook(() => useIndentItemValidation(defaultParams));
+
+			await act(async () => {
+				await result.current.validateLine("line-1", "10");
+			});
+
+			// 5 is below min indent qty of 10
+			const err = result.current.getQuantityError("line-1", "5");
+			expect(err).toContain("at least 10");
+		});
+
 		it("should return qty exceeded error when qty > maxIndentQty (no backend errors)", async () => {
 			mockValidate.mockResolvedValueOnce({
 				validation_logic: 1,
@@ -188,14 +304,21 @@ describe("useIndentItemValidation", () => {
 	});
 
 	describe("allLinesValid — blocks submission when errors exist", () => {
-		it("should return false when a line has backend errors", async () => {
+		it("should return false when a line has backend errors (Logic 2 no min/max)", async () => {
+			const openParams = {
+				branchId: "1",
+				indentType: "Open",
+				expenseTypeName: "General",
+				expenseTypeId: "3",
+			};
+
 			mockValidate.mockResolvedValueOnce({
-				validation_logic: 1,
+				validation_logic: 2,
 				item_id: 10,
 				branch_id: 1,
-				indent_type: "Regular",
+				indent_type: "Open",
 				expense_type_name: "General",
-				errors: ["Min/Max stock levels not configured for this item at this branch."],
+				errors: ["No max/min quantity defined for this item. Cannot create open indent."],
 				branch_stock: 0,
 				minqty: null,
 				maxqty: null,
@@ -207,6 +330,46 @@ describe("useIndentItemValidation", () => {
 				max_indent_qty: null,
 				min_indent_qty: null,
 				has_minmax: false,
+				fy_indent_exists: false,
+				fy_indent_no: null,
+				fy_duplicate_indent_no: null,
+				regular_bom_outstanding: 0,
+				forced_qty: null,
+				warnings: [],
+			});
+
+			const { result } = renderHook(() => useIndentItemValidation(openParams));
+
+			await act(async () => {
+				await result.current.validateLine("line-1", "10");
+			});
+
+			const valid = result.current.allLinesValid(["line-1"], { "line-1": "5" });
+			expect(valid).toBe(false);
+		});
+
+		it("should return false when a line has stock_exceeds_max error (Logic 1)", async () => {
+			const errorMsg =
+				"Branch stock (90) + outstanding indent qty (20) exceeds max qty (100). Cannot create indent.";
+
+			mockValidate.mockResolvedValueOnce({
+				validation_logic: 1,
+				item_id: 10,
+				branch_id: 1,
+				indent_type: "Regular",
+				expense_type_name: "General",
+				errors: [errorMsg],
+				branch_stock: 90,
+				minqty: 20,
+				maxqty: 100,
+				min_order_qty: 10,
+				lead_time: null,
+				outstanding_indent_qty: 20,
+				has_open_indent: false,
+				stock_exceeds_max: true,
+				max_indent_qty: null,
+				min_indent_qty: null,
+				has_minmax: true,
 				fy_indent_exists: false,
 				fy_indent_no: null,
 				fy_duplicate_indent_no: null,

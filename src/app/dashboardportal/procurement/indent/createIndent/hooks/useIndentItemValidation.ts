@@ -82,6 +82,7 @@ export function useIndentItemValidation({
 					branchStock: apiResult.branch_stock,
 					minqty: apiResult.minqty,
 					maxqty: apiResult.maxqty,
+					minIndentQty: apiResult.min_indent_qty ?? null,
 					minOrderQty: apiResult.min_order_qty,
 					leadTime: apiResult.lead_time,
 					outstandingIndentQty: apiResult.outstanding_indent_qty,
@@ -118,7 +119,7 @@ export function useIndentItemValidation({
 		(lineId: string, quantity: string): string | null => {
 			const state = validationMap[lineId];
 			if (!state?.result) return null;
-			const { errors, validationLogic, maxIndentQty, fyDuplicateIndentNo } = state.result;
+			const { errors, validationLogic, maxIndentQty, minIndentQty, minOrderQty, fyDuplicateIndentNo } = state.result;
 
 			// Backend errors take priority (includes has_minmax=false, stock_exceeds_max, etc.)
 			if (errors.length > 0) {
@@ -129,10 +130,21 @@ export function useIndentItemValidation({
 				return `An open indent already exists for this item in the current FY (Indent #${fyDuplicateIndentNo}).`;
 			}
 
-			if (validationLogic === 1 && maxIndentQty != null) {
+			if (validationLogic === 1) {
 				const qty = parseFloat(quantity);
-				if (!Number.isNaN(qty) && qty > maxIndentQty) {
-					return `Quantity exceeds the maximum allowed (${maxIndentQty.toFixed(2)}).`;
+				if (!Number.isNaN(qty) && qty > 0) {
+					// Check min indent qty (calculated, may be higher than raw minqty)
+					if (minIndentQty != null && minIndentQty > 0 && qty < minIndentQty) {
+						return `Quantity must be at least ${minIndentQty} (minimum indent quantity).`;
+					}
+					// Check max indent qty
+					if (maxIndentQty != null && qty > maxIndentQty) {
+						return `Quantity exceeds the maximum allowed (${maxIndentQty.toFixed(2)}).`;
+					}
+					// Check reorder qty multiple
+					if (minOrderQty != null && minOrderQty > 0 && qty % minOrderQty !== 0) {
+						return `Quantity must be a multiple of the reorder qty (${minOrderQty}).`;
+					}
 				}
 			}
 

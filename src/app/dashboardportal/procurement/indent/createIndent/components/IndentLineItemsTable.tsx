@@ -1,7 +1,8 @@
 import React from "react";
 import { SearchableSelect, type TransactionLineColumn } from "@/components/ui/transaction";
 import { Input } from "@/components/ui/input";
-import type { EditableLineItem, IndentLabelResolvers, ItemOption, Option } from "../types/indentTypes";
+import Tooltip from "@mui/material/Tooltip";
+import type { EditableLineItem, IndentLabelResolvers, ItemOption, ItemValidationResult, LineItemValidationState, Option } from "../types/indentTypes";
 
 type UseIndentLineItemColumnsParams = {
 	canEdit: boolean;
@@ -13,7 +14,62 @@ type UseIndentLineItemColumnsParams = {
 	getMakeOptions: (groupId: string) => Option[];
 	getUomOptions: (groupId: string, itemId: string) => Option[];
 	handleLineFieldChange: (id: string, field: keyof EditableLineItem, value: string) => void;
+	/** Per-line validation map from useIndentItemValidation */
+	validationMap?: Record<string, LineItemValidationState>;
+	/** Returns an error string if the quantity is invalid for a given line */
+	getQuantityError?: (lineId: string, quantity: string) => string | null;
+	/** Returns non-blocking warning strings for a given line */
+	getLineWarnings?: (lineId: string) => string[];
 };
+
+/** Build a hint string from validation result (Min / Max / Reorder). */
+function buildQtyHint(r: ItemValidationResult | null | undefined): string | null {
+	if (!r || r.maxIndentQty == null) return null;
+	const parts: string[] = [];
+	if (r.minIndentQty != null && r.minIndentQty > 0) parts.push(`Min: ${r.minIndentQty}`);
+	parts.push(`Max: ${r.maxIndentQty}`);
+	if (r.minOrderQty != null && r.minOrderQty > 0) parts.push(`Reorder: ${r.minOrderQty}`);
+	return parts.join(" · ");
+}
+
+/** Input with a focus-activated tooltip showing qty hints. */
+function QtyInputWithTooltip({
+	value,
+	onChange,
+	readOnly,
+	hasError,
+	hint,
+}: {
+	value: string;
+	onChange: (v: string) => void;
+	readOnly: boolean;
+	hasError: boolean;
+	hint: string | null;
+}) {
+	const [focused, setFocused] = React.useState(false);
+	return (
+		<Tooltip
+			title={hint ?? ""}
+			open={focused && !!hint}
+			arrow
+			placement="top"
+			disableHoverListener
+			disableTouchListener
+		>
+			<Input
+				type="number"
+				inputMode="decimal"
+				value={value}
+				onChange={(e) => onChange(e.target.value)}
+				onFocus={() => setFocused(true)}
+				onBlur={() => setFocused(false)}
+				placeholder="0"
+				readOnly={readOnly}
+				className={`h-7 px-1.5 py-0.5 text-sm border-0 bg-transparent focus-visible:ring-1 focus-visible:ring-blue-500 focus-visible:outline-none${hasError ? " text-red-600" : ""}${readOnly ? " bg-slate-50 cursor-not-allowed" : ""}`}
+			/>
+		</Tooltip>
+	);
+}
 
 /**
  * Generates the column definitions for the Indent line items table.
@@ -28,6 +84,9 @@ export const useIndentLineItemColumns = ({
 	getMakeOptions,
 	getUomOptions,
 	handleLineFieldChange,
+	validationMap,
+	getQuantityError,
+	getLineWarnings,
 }: UseIndentLineItemColumnsParams): TransactionLineColumn<EditableLineItem>[] => {
 	const adjustTextareaHeight = React.useCallback((event: React.FormEvent<HTMLTextAreaElement>) => {
 		const element = event.currentTarget;
@@ -106,7 +165,13 @@ export const useIndentLineItemColumns = ({
 				header: "Item",
 				width: "2.4fr",
 				minWidth: "225px",
+				className: "flex flex-col gap-0.5",
 				renderCell: ({ item }) => {
+					const lineValidation = validationMap?.[item.id];
+					const itemErrors = lineValidation?.result?.errors ?? [];
+					const itemWarnings = getLineWarnings?.(item.id) ?? [];
+					const isValidating = lineValidation?.loading ?? false;
+
 					if (!canEdit) {
 						return (
 							<span className="block truncate text-sm text-slate-700">
@@ -120,21 +185,38 @@ export const useIndentLineItemColumns = ({
 					const waitingForGroup = Boolean(item.itemGroup) && !options.length && itemGroupLoading[item.itemGroup];
 
 					return (
-						<SearchableSelect<ItemOption>
-							options={options}
-							value={value}
-							onChange={(next) => handleLineFieldChange(item.id, "item", next?.value ?? "")}
-							getOptionLabel={(option) => option.label}
-							isOptionEqualToValue={(option, valueOption) => option.value === valueOption.value}
-							placeholder={waitingForGroup ? "Loading items..." : "Search item"}
-							disabled={!item.itemGroup || waitingForGroup}
-							loading={waitingForGroup}
-							noOptionsText={waitingForGroup ? "Loading..." : "No options"}
-						/>
+						<div className="flex flex-col gap-0.5 w-full">
+							<SearchableSelect<ItemOption>
+								options={options}
+								value={value}
+								onChange={(next) => handleLineFieldChange(item.id, "item", next?.value ?? "")}
+								getOptionLabel={(option) => option.label}
+								isOptionEqualToValue={(option, valueOption) => option.value === valueOption.value}
+								placeholder={waitingForGroup ? "Loading items..." : "Search item"}
+								disabled={!item.itemGroup || waitingForGroup}
+								loading={waitingForGroup}
+								noOptionsText={waitingForGroup ? "Loading..." : "No options"}
+							/>
+							{isValidating && (
+								<span className="text-[11px] leading-tight text-blue-500">Validating...</span>
+							)}
+							{!isValidating && itemErrors.length > 0 && (
+								<span className="text-[11px] leading-tight text-red-600 font-medium">
+									{itemErrors[0]}
+								</span>
+							)}
+							{!isValidating && itemErrors.length === 0 && itemWarnings.length > 0 && (
+								<span className="text-[11px] leading-tight text-amber-600">
+									{itemWarnings[0]}
+								</span>
+							)}
+						</div>
 					);
 				},
 				getTooltip: ({ item }) => {
 					const label = labelResolvers.item(item.itemGroup, item.item);
+					const errors = validationMap?.[item.id]?.result?.errors ?? [];
+					if (errors.length > 0) return `⚠ ${errors[0]}`;
 					return label && label !== "-" ? label : undefined;
 				},
 			},
@@ -179,8 +261,13 @@ export const useIndentLineItemColumns = ({
 				header: "Qty",
 				width: "0.7fr",
 				minWidth: "70px",
-				className: "flex flex-col gap-1",
+				className: "flex flex-col gap-0.5",
 				renderCell: ({ item }) => {
+					const qtyError = getQuantityError?.(item.id, item.quantity) ?? null;
+					const lineResult = validationMap?.[item.id]?.result;
+					const isForcedQty = lineResult?.forcedQty != null;
+					const hint = buildQtyHint(lineResult);
+
 					if (!canEdit) {
 						return (
 							<span className="block truncate text-sm text-slate-700">
@@ -190,18 +277,26 @@ export const useIndentLineItemColumns = ({
 					}
 
 					return (
-						<Input
-							type="number"
-							inputMode="decimal"
-							value={item.quantity}
-							onChange={(event) => handleLineFieldChange(item.id, "quantity", event.target.value)}
-							placeholder="0"
-							className="h-7 px-1.5 py-0.5 text-sm border-0 bg-transparent focus-visible:ring-1 focus-visible:ring-blue-500 focus-visible:outline-none"
-						/>
+						<div className="flex flex-col gap-0.5 w-full">
+							<QtyInputWithTooltip
+								value={item.quantity}
+								onChange={(v) => handleLineFieldChange(item.id, "quantity", v)}
+								readOnly={isForcedQty}
+								hasError={!!qtyError}
+								hint={hint}
+							/>
+							{qtyError && (
+								<span className="text-[11px] leading-tight text-red-600 font-medium">
+									{qtyError}
+								</span>
+							)}
+						</div>
 					);
 				},
 				getTooltip: ({ item }) => {
 					const qty = item.quantity.trim();
+					const err = getQuantityError?.(item.id, item.quantity);
+					if (err) return `⚠ ${err}`;
 					return qty ? qty : undefined;
 				},
 			},
@@ -287,6 +382,9 @@ export const useIndentLineItemColumns = ({
 			itemGroupOptions,
 			labelResolvers,
 			itemGroupLoading,
+			validationMap,
+			getQuantityError,
+			getLineWarnings,
 		]
 	);
 };

@@ -77,3 +77,40 @@ export const isPercentageDiscountMode = (mode?: number | null): mode is typeof D
 export const isAmountDiscountMode = (mode?: number | null): mode is typeof DISCOUNT_MODE.AMOUNT =>
 	mode === DISCOUNT_MODE.AMOUNT;
 
+/**
+ * PO type identifiers used when determining validation logic.
+ */
+export const PO_TYPE = {
+	REGULAR: "Regular",
+	OPEN: "Open",
+} as const;
+
+export type POType = (typeof PO_TYPE)[keyof typeof PO_TYPE];
+
+/**
+ * Validation logic identifiers for direct PO line item validation.
+ * Logic 1: Stock + max/min check (Regular + General/Maintenance/Production/Overhaul)
+ * Logic 2: FY check + forced max qty (Open + General/Maintenance/Production)
+ * Logic 3: No validation / free entry (Regular + Capital, and fallback)
+ */
+export const PO_VALIDATION_LOGIC = {
+	LOGIC_1: 1,
+	LOGIC_2: 2,
+	LOGIC_3: 3,
+} as const;
+
+/**
+ * Invalid PO Type + Expense Type name combinations that must be blocked at the header level.
+ * Open PO with Capital or Overhaul expense is not a valid combination.
+ */
+export const INVALID_PO_TYPE_EXPENSE_COMBOS: ReadonlySet<string> = new Set([
+	"Open|Capital",
+	"Open|Overhaul",
+]);
+
+/**
+ * Returns true if the given po_type + expense_type_name combination is valid.
+ */
+export const isValidPOTypeExpenseCombo = (poType: string, expenseTypeName: string): boolean =>
+	!INVALID_PO_TYPE_EXPENSE_COMBOS.has(`${poType}|${expenseTypeName}`);
+

@@ -87,6 +87,18 @@ export const usePOHeaderSchema = ({
         grid: { xs: 12, md: 4 },
       },
       { name: "expense_type", label: "Expense Type", type: "select", options: expenseOptions, required: true, disabled: headerFieldsDisabled, grid: { xs: 12, md: 4 } },
+      {
+        name: "po_type",
+        label: "PO Type",
+        type: "select",
+        options: [
+          { label: "Regular", value: "Regular" },
+          { label: "Open", value: "Open" },
+        ],
+        required: true,
+        disabled: headerFieldsDisabled,
+        grid: { xs: 12, md: 4 },
+      },
       { name: "project", label: "Project", type: "select", options: projectOptions, required: false, disabled: headerFieldsDisabled, grid: { xs: 12, md: 4 } },
       { name: "contact_person", label: "Contact Person", type: "text", disabled: headerFieldsDisabled, grid: { xs: 12, md: 4 } },
       { name: "contact_no", label: "Contact No.", type: "text", disabled: headerFieldsDisabled, grid: { xs: 12, md: 4 } },

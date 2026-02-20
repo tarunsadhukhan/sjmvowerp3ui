@@ -77,14 +77,22 @@ export const usePOLineItemColumns = ({
           const options = getItemOptions(item.itemGroup);
           const value = options.find((o) => o.value === item.item) ?? null;
           return (
-            <SearchableSelect<Option>
-              options={options}
-              value={value}
-              onChange={(next) => onFieldChange(item.id, "item", next?.value ?? "")}
-              getOptionLabel={(o) => o.label}
-              isOptionEqualToValue={(a, b) => a.value === b.value}
-              placeholder="Select item"
-            />
+            <div className="flex flex-col gap-0.5 w-full">
+              <SearchableSelect<Option>
+                options={options}
+                value={value}
+                onChange={(next) => onFieldChange(item.id, "item", next?.value ?? "")}
+                getOptionLabel={(o) => o.label}
+                isOptionEqualToValue={(a, b) => a.value === b.value}
+                placeholder="Select item"
+              />
+              {item.rowError && (
+                <p className="text-xs text-red-600 leading-tight">{item.rowError}</p>
+              )}
+              {!item.rowError && item.rowWarning && (
+                <p className="text-xs text-amber-600 leading-tight">{item.rowWarning}</p>
+              )}
+            </div>
           );
         },
         getTooltip: ({ item }) => getItemLabel(item.itemGroup, item.item, item.itemCode) || undefined,
@@ -113,18 +121,41 @@ export const usePOLineItemColumns = ({
         header: "Quantity",
         width: "0.8fr",
         minWidth: "80px",
-        renderCell: ({ item }) =>
-          canEdit ? (
-            <Input
-              type="text"
-              value={item.quantity}
-              onChange={(e) => onFieldChange(item.id, "quantity", e.target.value)}
-              placeholder="0"
-              className="h-8 text-sm"
-            />
-          ) : (
-            <span className="block truncate text-sm">{item.quantity || "-"}</span>
-          ),
+        renderCell: ({ item }) => {
+          if (!canEdit) {
+            return <span className="block truncate text-sm">{item.quantity || "-"}</span>;
+          }
+          // Lock quantity for Logic 2 (Open PO) only
+          if (item.isQuantityLocked) {
+            return (
+              <div className="flex flex-col gap-0.5 w-full">
+                <span
+                  className="text-sm h-8 flex items-center px-2 bg-muted rounded cursor-not-allowed text-muted-foreground"
+                  title="Quantity is fixed for this item"
+                >
+                  {item.quantity || "0"}
+                </span>
+                {item.rowError && (
+                  <p className="text-xs text-red-600 leading-tight">{item.rowError}</p>
+                )}
+              </div>
+            );
+          }
+          return (
+            <div className="flex flex-col gap-0.5 w-full">
+              <Input
+                type="text"
+                value={item.quantity}
+                onChange={(e) => onFieldChange(item.id, "quantity", e.target.value)}
+                placeholder="0"
+                className="h-8 text-sm"
+              />
+              {item.rowError && (
+                <p className="text-xs text-red-600 leading-tight">{item.rowError}</p>
+              )}
+            </div>
+          );
+        },
         getTooltip: ({ item }) => (item.quantity ? `Quantity: ${item.quantity}` : undefined),
       },
       {

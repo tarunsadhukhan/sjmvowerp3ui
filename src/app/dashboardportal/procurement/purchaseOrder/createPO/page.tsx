@@ -275,6 +275,7 @@ function POTransactionPageContent() {
     handleLineFieldChange,
     handleIndentItemsConfirm: handleIndentItemsFromHook,
     mapLineToEditable,
+    revalidateLoadedLines,
     filledLineItems,
     lineItemsValid,
     itemGroupsFromLineItems,
@@ -288,6 +289,10 @@ function POTransactionPageContent() {
     ensureItemGroupData,
     itemGroups,
     allowManualEntry: manualEntryAllowed,
+    poType: String(formValues.po_type ?? "Regular"),
+    expenseTypeId: formValues.expense_type ? String(formValues.expense_type) : undefined,
+    branchId: branchIdForSetup ?? undefined,
+    coId: coId ?? undefined,
   });
 
   // Additional charges hook
@@ -404,6 +409,15 @@ function POTransactionPageContent() {
 
         const normalizedLines = (details.lines ?? []).map((line) => mapLineToEditable(line));
         replaceItems(normalizedLines);
+
+        // Populate validation state for all loaded lines so quantity rules
+        // are enforced immediately when the user edits in this mode.
+        revalidateLoadedLines(normalizedLines, {
+          branchId: resolvedBranchValue || undefined,
+          coId: coId || undefined,
+          expenseTypeId: nextValues.expense_type ? String(nextValues.expense_type) : undefined,
+          poType: nextValues.po_type ? String(nextValues.po_type) : "Regular",
+        });
 
         // Map additional charges if present
         const rawAdditionalCharges = (details as unknown as { additionalCharges?: POAdditionalChargeRaw[] })?.additionalCharges ?? [];
@@ -547,13 +561,32 @@ function POTransactionPageContent() {
     itemGroupCache,
   });
 
+  // For Open PO, Capital and Overhaul are invalid expense combinations — filter them out
+  const filteredExpenseOptions = React.useMemo(() => {
+    const currentPoType = String(formValues.po_type ?? "Regular");
+    if (currentPoType === "Open") {
+      return expenseOptions.filter((opt) => !["Capital", "Overhaul"].includes(opt.label));
+    }
+    return expenseOptions;
+  }, [expenseOptions, formValues.po_type]);
+
+  // If the user switches to Open PO and the currently selected expense type is Capital/Overhaul, clear it
+  React.useEffect(() => {
+    if (String(formValues.po_type ?? "") !== "Open") return;
+    if (!formValues.expense_type) return;
+    const selectedExpense = expenseOptions.find((opt) => String(opt.value) === String(formValues.expense_type));
+    if (selectedExpense && ["Capital", "Overhaul"].includes(selectedExpense.label)) {
+      setFormValues((prev) => ({ ...prev, expense_type: "" }));
+    }
+  }, [formValues.po_type, formValues.expense_type, expenseOptions, setFormValues]);
+
   const headerSchema = usePOHeaderSchema({
     branchOptions: resolvedBranchOptions,
     supplierOptions,
     supplierBranchOptions,
     branchAddressOptions,
     projectOptions,
-    expenseOptions,
+    expenseOptions: filteredExpenseOptions,
     coConfig,
     billingState,
     shippingState,
@@ -572,8 +605,23 @@ function POTransactionPageContent() {
 
   const canEdit = mode !== "view";
 
+  // Required header fields must be filled before the user can interact with line items.
+  // In edit/view mode this is always satisfied (data is already saved).
+  const headerFilled = React.useMemo(() => {
+    if (mode !== "create") return true;
+    return Boolean(
+      formValues.branch &&
+      formValues.supplier &&
+      formValues.supplier_branch &&
+      formValues.expense_type &&
+      formValues.po_type,
+    );
+  }, [mode, formValues.branch, formValues.supplier, formValues.supplier_branch, formValues.expense_type, formValues.po_type]);
+
+  const lineItemsCanEdit = canEdit && headerFilled;
+
   const lineItemColumns = usePOLineItemColumns({
-    canEdit,
+    canEdit: lineItemsCanEdit,
     itemGroupOptions,
     getItemGroupLabel,
     getItemOptions,
@@ -805,11 +853,13 @@ function POTransactionPageContent() {
       lineItems={{
         items: lineItems,
         getItemId: (item) => item.id,
-        canEdit,
+        canEdit: lineItemsCanEdit,
         columns: lineItemColumns,
-        placeholder: manualEntryAllowed
-          ? "Add line items by selecting from indent or manually entering items"
-          : "Select items from an indent to populate the PO line items",
+        placeholder: !headerFilled
+          ? "Fill in Branch, Supplier, Expense Type and PO Type to add line items"
+          : manualEntryAllowed
+            ? "Add line items by selecting from indent or manually entering items"
+            : "Select items from an indent to populate the PO line items",
         selectionColumnWidth: "28px",
       }}
       footer={
@@ -864,7 +914,7 @@ function POTransactionPageContent() {
         onValuesChange={handleMainFormValuesChange}
         showIndentButton={mode !== "view"}
         onIndentSelect={handleIndentSelect}
-        indentButtonDisabled={!isMounted || !selectedBranches || selectedBranches.length === 0}
+        indentButtonDisabled={!isMounted || !selectedBranches || selectedBranches.length === 0 || !headerFilled}
       />
 
       <IndentLineItemsDialog

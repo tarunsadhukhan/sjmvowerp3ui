@@ -342,6 +342,7 @@ const apiRoutesPortalMasters = {
     PO_SEND_FOR_APPROVAL: `${API_URL}/procurementPO/send_po_for_approval`,
     PO_REJECT: `${API_URL}/procurementPO/reject_po`,
     PO_CLONE: `${API_URL}/procurementPO/clone_po`,
+    PO_VALIDATE_ITEM: `${API_URL}/procurementPO/validate_item_for_po`,
 
     INWARD_TABLE: `${API_URL}/procurementInward/get_inward_table`,
     GET_INWARD_SETUP_1: `${API_URL}/procurementInward/get_inward_setup_1`,

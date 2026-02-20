@@ -2,6 +2,7 @@
 
 import React, { Suspense } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
+import { TextField } from "@mui/material";
 import TransactionWrapper from "@/components/ui/TransactionWrapper";
 import { Button } from "@/components/ui/button";
 import type { MuiFormMode } from "@/components/ui/muiform";
@@ -571,6 +572,20 @@ function SalesOrderTransactionPageContent() {
 		void formRef.current.submit();
 	}, [formRef]);
 
+	// Wrap submit to inject notes fields (rendered outside MuiForm) into the submitted values
+	const handleFormSubmitWithNotes = React.useCallback(
+		async (values: Record<string, unknown>) => {
+			const merged = {
+				...values,
+				footer_note: formValues.footer_note ?? "",
+				internal_note: formValues.internal_note ?? "",
+				terms_conditions: formValues.terms_conditions ?? "",
+			};
+			await handleFormSubmit(merged);
+		},
+		[handleFormSubmit, formValues.footer_note, formValues.internal_note, formValues.terms_conditions],
+	);
+
 	const pageTitle = React.useMemo(() => {
 		if (mode === "create") return "Create Sales Order";
 		if (mode === "edit") {
@@ -603,36 +618,68 @@ function SalesOrderTransactionPageContent() {
 				placeholder: "Add line items to the sales order",
 				selectionColumnWidth: "28px",
 			}}
-			footer={
-				<div className="space-y-6 pt-4 border-t">
-					<SalesOrderTotalsDisplay
-						grossAmount={totals.grossAmount}
-						totalTax={totals.totalTax}
-						freightCharges={totals.freightCharges}
-						netAmount={totals.netAmount}
-						taxType={taxType || undefined}
-					/>
-					<SalesOrderApprovalBar
-						approvalInfo={approvalInfo}
-						permissions={approvalPermissions}
-						loading={approvalLoading}
-						onApprove={handleApprove}
-						onReject={handleReject}
-						onOpen={handleOpen}
-						onCancelDraft={handleCancelDraft}
-						onReopen={handleReopen}
-						onSendForApproval={handleSendForApproval}
-						onViewApprovalLog={handleViewApprovalLog}
-					/>
-					{mode !== "view" ? (
-						<div className="flex justify-end pt-2">
-							<Button type="button" onClick={handleSaveClick} disabled={saving || setupLoading || !isLineItemsReady}>
-								{saving ? "Processing..." : primaryActionLabel}
-							</Button>
+				footer={
+					<div className="space-y-6 pt-4 border-t">
+						<SalesOrderTotalsDisplay
+							grossAmount={totals.grossAmount}
+							totalTax={totals.totalTax}
+							freightCharges={totals.freightCharges}
+							netAmount={totals.netAmount}
+							taxType={taxType || undefined}
+						/>
+						<div className="grid grid-cols-1 gap-4 pt-2">
+							<TextField
+								label="Footer Note"
+								multiline
+								minRows={2}
+								fullWidth
+								size="small"
+								value={String(formValues.footer_note ?? "")}
+								onChange={(e) => setFormValues((prev) => ({ ...prev, footer_note: e.target.value }))}
+								disabled={mode === "view"}
+							/>
+							<TextField
+								label="Internal Note"
+								multiline
+								minRows={2}
+								fullWidth
+								size="small"
+								value={String(formValues.internal_note ?? "")}
+								onChange={(e) => setFormValues((prev) => ({ ...prev, internal_note: e.target.value }))}
+								disabled={mode === "view"}
+							/>
+							<TextField
+								label="Terms and Conditions"
+								multiline
+								minRows={3}
+								fullWidth
+								size="small"
+								value={String(formValues.terms_conditions ?? "")}
+								onChange={(e) => setFormValues((prev) => ({ ...prev, terms_conditions: e.target.value }))}
+								disabled={mode === "view"}
+							/>
 						</div>
-					) : null}
-				</div>
-			}
+						<SalesOrderApprovalBar
+							approvalInfo={approvalInfo}
+							permissions={approvalPermissions}
+							loading={approvalLoading}
+							onApprove={handleApprove}
+							onReject={handleReject}
+							onOpen={handleOpen}
+							onCancelDraft={handleCancelDraft}
+							onReopen={handleReopen}
+							onSendForApproval={handleSendForApproval}
+							onViewApprovalLog={handleViewApprovalLog}
+						/>
+						{mode !== "view" ? (
+							<div className="flex justify-end pt-2">
+								<Button type="button" onClick={handleSaveClick} disabled={saving || setupLoading || !isLineItemsReady}>
+									{saving ? "Processing..." : primaryActionLabel}
+								</Button>
+							</div>
+						) : null}
+					</div>
+				}
 		>
 			<SalesOrderHeaderForm
 				schema={headerSchema}
@@ -640,7 +687,7 @@ function SalesOrderTransactionPageContent() {
 				initialValues={initialValues}
 				mode={mode}
 				formRef={formRef}
-				onSubmit={handleFormSubmit}
+				onSubmit={handleFormSubmitWithNotes}
 				onValuesChange={handleFormValuesChange}
 				showQuotationButton={quotationRequired && mode !== "view"}
 				onQuotationSelect={handleQuotationSelect}

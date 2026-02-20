@@ -57,7 +57,7 @@ export type SalesOrderDetails = {
   branch: string;
   quotation?: string | null;
   quotationNo?: string | null;
-  party: string;
+  party?: string | null;
   partyName?: string;
   partyBranch?: string | null;
   broker?: string | null;
@@ -109,7 +109,7 @@ export type QuotationLinesResponse = {
 export type CreateSalesOrderRequest = {
   branch: string;
   date: string;
-  party: string;
+  party?: string | null;
   party_branch?: string;
   quotation?: string | null;
   invoice_type?: number | null;
@@ -293,7 +293,7 @@ export async function updateSalesOrder(
   const updatePayload = {
     id: payload.id,
     branch: payload.branch ?? "",
-    party: payload.party ?? "",
+    party: payload.party ?? undefined,
     party_branch: payload.partyBranch ?? undefined,
     date: payload.salesOrderDate ?? "",
     quotation: payload.quotation ?? undefined,

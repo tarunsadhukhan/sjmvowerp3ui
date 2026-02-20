@@ -9,7 +9,11 @@
       "Bash(npx next lint:*)",
       "Bash(npx eslint:*)",
       "Bash(pnpm lint:*)",
-      "Bash(git commit:*)"
+      "Bash(git commit:*)",
+      "Bash(python -c:*)",
+      "Bash(git status:*)",
+      "Bash(git add:*)",
+      "Bash(git push:*)"
     ]
   }
 }

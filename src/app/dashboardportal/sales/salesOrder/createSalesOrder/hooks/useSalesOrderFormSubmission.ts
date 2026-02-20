@@ -70,7 +70,7 @@ export const useSalesOrderFormSubmission = ({
 					await updateSalesOrder({
 						id: requestedId,
 						branch: String(values.branch ?? ""),
-						party: String(values.party ?? ""),
+						party: values.party ? String(values.party) : undefined,
 						partyBranch: values.party_branch ? String(values.party_branch) : undefined,
 						salesOrderDate: String(values.date ?? ""),
 						salesOrderExpiryDate: values.expiry_date ? String(values.expiry_date) : undefined,
@@ -98,7 +98,7 @@ export const useSalesOrderFormSubmission = ({
 					const payload: CreateSalesOrderRequest = {
 						branch: String(values.branch ?? ""),
 						date: String(values.date ?? ""),
-						party: String(values.party ?? ""),
+						party: values.party ? String(values.party) : undefined,
 						party_branch: values.party_branch ? String(values.party_branch) : undefined,
 						quotation: values.quotation ? String(values.quotation) : undefined,
 						invoice_type: values.invoice_type ? Number(values.invoice_type) : undefined,

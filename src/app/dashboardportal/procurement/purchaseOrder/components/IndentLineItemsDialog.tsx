@@ -176,16 +176,7 @@ export function IndentLineItemsDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent
-        className="max-w-4xl max-h-[80vh] overflow-hidden flex flex-col"
-        onInteractOutside={(e) => {
-          // Prevent dialog from closing when clicking on Autocomplete dropdown
-          const target = e.target as HTMLElement;
-          if (target.closest('.MuiAutocomplete-popper') || target.closest('.MuiAutocomplete-listbox')) {
-            e.preventDefault();
-          }
-        }}
-      >
+      <DialogContent className="max-w-4xl max-h-[80vh] flex flex-col overflow-y-visible">
         <DialogHeader>
           <DialogTitle>Select Indent and Line Items</DialogTitle>
           <DialogDescription>
@@ -193,7 +184,7 @@ export function IndentLineItemsDialog({
           </DialogDescription>
         </DialogHeader>
 
-        <div className="space-y-4 flex-1 overflow-hidden flex flex-col min-h-0">
+        <div className="space-y-4 flex-1 flex flex-col min-h-0 overflow-visible">
           <div>
             <label className="text-sm font-medium mb-2 block">Select Approved Indent</label>
             <Autocomplete<Option, false, false, false>
@@ -241,11 +232,12 @@ export function IndentLineItemsDialog({
               disabled={loadingIndents}
               loading={loadingIndents}
               noOptionsText="No indents available"
+              disablePortal
               openOnFocus
               blurOnSelect
               selectOnFocus
               handleHomeEndKeys
-              ListboxProps={{ style: { maxHeight: 320, overflowY: "auto" } }}
+              ListboxProps={{ style: { maxHeight: 260, overflowY: "auto" } }}
               renderOption={(props, option) => {
                 const { key, ...otherProps } = props;
                 return (

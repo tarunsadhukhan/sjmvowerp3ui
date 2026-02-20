@@ -206,7 +206,8 @@ function POTransactionPageContent() {
   });
 
   // Determine if header fields should be disabled (when branch is not selected in create mode)
-  const headerFieldsDisabled = React.useMemo(() => {
+  // This is the base value — may be overridden after approval state is known
+  const headerFieldsDisabledBase = React.useMemo(() => {
     if (mode === "view") return true; // Always disabled in view mode
     if (mode === "edit") return false; // Never disabled in edit mode (data is loaded)
     // In create mode, disable if branch is not selected
@@ -580,6 +581,39 @@ function POTransactionPageContent() {
     }
   }, [formValues.po_type, formValues.expense_type, expenseOptions, setFormValues]);
 
+  // Approval hook must be called before canEdit so we can gate editing by approval status
+  const {
+    approvalLoading,
+    approvalInfo,
+    approvalPermissions,
+    statusChipProps,
+    handleApprove,
+    handleReject,
+    handleOpen,
+    handleCancelDraft,
+    handleReopen,
+    handleSendForApproval,
+    handleViewApprovalLog,
+    handleClone,
+  } = usePOApproval({
+    mode,
+    requestedId,
+    formValues,
+    poDetails,
+    coId,
+    getMenuId,
+    setPODetails,
+  });
+
+  // Editing is allowed only when not in view mode AND the status permits saving
+  // (e.g. Approved POs have canSave = false, so they become view-only even in edit mode)
+  const canEditByMode = mode !== "view";
+  const canSave = canEditByMode && approvalPermissions.canSave !== false;
+  const canEdit = canSave;
+
+  // Header fields are disabled in view mode, or when approval status prevents editing (e.g. Approved)
+  const headerFieldsDisabled = headerFieldsDisabledBase || !canEdit;
+
   const headerSchema = usePOHeaderSchema({
     branchOptions: resolvedBranchOptions,
     supplierOptions,
@@ -594,6 +628,7 @@ function POTransactionPageContent() {
     expectedDate,
     mode,
     headerFieldsDisabled,
+    hasLineItems: filledLineItems.length > 0,
   });
 
   const footerSchema = usePOFooterSchema({
@@ -602,8 +637,6 @@ function POTransactionPageContent() {
     shippingState,
     taxType,
   });
-
-  const canEdit = mode !== "view";
 
   // Required header fields must be filled before the user can interact with line items.
   // In edit/view mode this is always satisfied (data is already saved).
@@ -629,29 +662,6 @@ function POTransactionPageContent() {
     getUomOptions,
     getUomLabel,
     onFieldChange: handleLineFieldChange,
-  });
-
-  const {
-    approvalLoading,
-    approvalInfo,
-    approvalPermissions,
-    statusChipProps,
-    handleApprove,
-    handleReject,
-    handleOpen,
-    handleCancelDraft,
-    handleReopen,
-    handleSendForApproval,
-    handleViewApprovalLog,
-    handleClone,
-  } = usePOApproval({
-    mode,
-    requestedId,
-    formValues,
-    poDetails,
-    coId,
-    getMenuId,
-    setPODetails,
   });
 
   const branchLabel = React.useMemo(() => {
@@ -855,6 +865,10 @@ function POTransactionPageContent() {
         getItemId: (item) => item.id,
         canEdit: lineItemsCanEdit,
         columns: lineItemColumns,
+        onRemoveSelected: (ids: string[]) => {
+          if (mode === "view" || !ids.length) return;
+          removeLineItems(ids);
+        },
         placeholder: !headerFilled
           ? "Fill in Branch, Supplier, Expense Type and PO Type to add line items"
           : manualEntryAllowed
@@ -894,7 +908,7 @@ function POTransactionPageContent() {
             onViewApprovalLog={handleViewApprovalLog}
             onClone={handleClone}
           />
-          {mode !== "view" ? (
+          {canSave ? (
             <div className="flex justify-end pt-2">
               <Button type="button" onClick={handleSaveClick} disabled={saving || setupLoading || !isLineItemsReady}>
                 {saving ? "Processing..." : primaryActionLabel}
@@ -912,7 +926,7 @@ function POTransactionPageContent() {
         formRef={formRef}
         onSubmit={handleFormSubmit}
         onValuesChange={handleMainFormValuesChange}
-        showIndentButton={mode !== "view"}
+        showIndentButton={canEdit}
         onIndentSelect={handleIndentSelect}
         indentButtonDisabled={!isMounted || !selectedBranches || selectedBranches.length === 0 || !headerFilled}
       />

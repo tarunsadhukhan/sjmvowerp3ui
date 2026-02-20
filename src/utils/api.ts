@@ -321,6 +321,10 @@ const apiRoutesPortalMasters = {
     BATCH_DAILY_ASSIGN_APPROVE: `${API_URL}/batchDailyAssign/approve_assigns`,
     BATCH_DAILY_ASSIGN_REJECT: `${API_URL}/batchDailyAssign/reject_assigns`,
 
+    // Jute Reports
+    JUTE_REPORT_STOCK: `${API_URL}/juteReports/stock`,
+    JUTE_REPORT_BATCH_COST: `${API_URL}/juteReports/batch-cost`,
+
     GET_INDENT_SETUP_1: `${API_URL}/procurementIndent/get_indent_setup_1`,
     GET_INDENT_SETUP_2: `${API_URL}/procurementIndent/get_indent_setup_2`,
     INDENT_CREATE: `${API_URL}/procurementIndent/create_indent`,

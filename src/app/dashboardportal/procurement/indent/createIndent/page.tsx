@@ -424,7 +424,32 @@ function IndentTransactionPageContent() {
 		getMakeOptions,
 		getUomOptions,
 		handleLineFieldChange: handleLineFieldChangeWithValidation,
+		validationMap,
+		getQuantityError,
+		getLineWarnings,
 	});
+
+	// Auto-fill forcedQty from validation result (Logic 2 — Open indent: qty = maxqty)
+	React.useEffect(() => {
+		if (mode === "view") return;
+		for (const [lineId, state] of Object.entries(validationMap)) {
+			if (!state?.result || state.loading) continue;
+			const { forcedQty, errors } = state.result;
+			// Only auto-fill when there are no blocking errors and a forced qty is set
+			if (forcedQty != null && errors.length === 0) {
+				setLineItems((prev) => {
+					const target = prev.find((li) => li.id === lineId);
+					if (!target) return prev;
+					const currentQty = target.quantity.trim();
+					const forcedStr = String(forcedQty);
+					if (currentQty === forcedStr) return prev;
+					return prev.map((li) =>
+						li.id === lineId ? { ...li, quantity: forcedStr } : li
+					);
+				});
+			}
+		}
+	}, [validationMap, mode, setLineItems]);
 
 	// Form submit handler
 	const handleFormSubmit = React.useCallback(

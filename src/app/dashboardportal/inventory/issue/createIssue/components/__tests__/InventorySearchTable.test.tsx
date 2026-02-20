@@ -215,8 +215,10 @@ describe("InventorySearchTable", () => {
 			// Click the header checkbox (first one)
 			fireEvent.click(checkboxes[0]);
 
-			// Button should show 2 selected
-			expect(screen.getByText(/Insert to Issue \(2\)/)).toBeInTheDocument();
+			// Button should show 2 selected (wait for state update to be applied)
+			await waitFor(() => {
+				expect(screen.getByText(/Insert to Issue \(2\)/)).toBeInTheDocument();
+			});
 		});
 
 		it("should deselect all when header checkbox clicked again", async () => {

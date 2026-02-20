@@ -6,7 +6,8 @@ export type UseQuotationHeaderSchemaParams = {
 	branchOptions: Option[];
 	customerOptions: Option[];
 	brokerOptions: Option[];
-	branchAddressOptions: Option[];
+	/** Customer branch options for billing and shipping address dropdowns. */
+	customerBranchOptions: Option[];
 	coConfig?: { india_gst?: number };
 	billingState?: string;
 	shippingState?: string;
@@ -29,7 +30,7 @@ export const useQuotationHeaderSchema = ({
 	branchOptions,
 	customerOptions,
 	brokerOptions,
-	branchAddressOptions,
+	customerBranchOptions,
 	coConfig,
 	billingState,
 	shippingState,
@@ -51,8 +52,8 @@ export const useQuotationHeaderSchema = ({
 			{ name: "quotation_date", label: "Quotation Date", type: "date", required: true, disabled: mode === "view", grid: { xs: 12, md: 4 } },
 			{ name: "customer", label: "Customer", type: "select", options: customerOptions, required: true, disabled: headerFieldsDisabled, grid: { xs: 12, md: 4 } },
 			{ name: "broker", label: "Broker", type: "select", options: brokerOptions, required: false, disabled: headerFieldsDisabled, grid: { xs: 12, md: 4 } },
-			{ name: "billing_address", label: "Billing Address", type: "select", options: branchAddressOptions, required: true, disabled: headerFieldsDisabled, grid: { xs: 12, md: 4 } },
-			{ name: "shipping_address", label: "Shipping Address", type: "select", options: branchAddressOptions, required: true, disabled: headerFieldsDisabled, grid: { xs: 12, md: 4 } },
+			{ name: "billing_address", label: "Billing Address", type: "select", options: customerBranchOptions, required: true, disabled: headerFieldsDisabled, grid: { xs: 12, md: 4 } },
+			{ name: "shipping_address", label: "Shipping Address", type: "select", options: customerBranchOptions, required: true, disabled: headerFieldsDisabled, grid: { xs: 12, md: 4 } },
 			{ name: "brokerage_percentage", label: "Brokerage %", type: "text", placeholder: "%", disabled: headerFieldsDisabled, grid: { xs: 12, md: 4 } },
 			{ name: "payment_terms", label: "Payment Terms", type: "text", disabled: headerFieldsDisabled, grid: { xs: 12, md: 4 } },
 			{ name: "delivery_terms", label: "Delivery Terms", type: "text", disabled: headerFieldsDisabled, grid: { xs: 12, md: 4 } },
@@ -65,7 +66,7 @@ export const useQuotationHeaderSchema = ({
 		branchOptions,
 		customerOptions,
 		brokerOptions,
-		branchAddressOptions,
+		customerBranchOptions,
 		coConfig,
 		billingState,
 		shippingState,

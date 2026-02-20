@@ -62,7 +62,7 @@ When a PO is created against an indent, the Expense Type is **inherited from the
 
 ### 3.1 Indent-Based PO
 
-When creating a PO against indents, the header fields are determined as follows:
+When creating a PO against indents, the header fields are determined as follows this is at the line item level:
 
 | Field | Behaviour |
 |-------|-----------|
@@ -71,7 +71,7 @@ When creating a PO against indents, the header fields are determined as follows:
 | **Party (Supplier)** | User selects from Party Master (filtered to party_type = 'supplier'). |
 | **Rate** | Manual entry per line item. |
 
-**Indent selection:** The user is presented with a list of approved indents that have outstanding (unfulfilled) quantities. Multiple indents can be selected and clubbed into a single PO (see Section 5 for FIFO consumption logic).
+**Indent selection:** The user selects from a list of approved indents that have outstanding (unfulfilled) quantities. Multiple indents can be selected and clubbed into a single PO (see Section 5 for FIFO consumption logic).
 
 ### 3.2 Direct PO (No Indent)
 
@@ -109,16 +109,12 @@ The PO listing view displays the following fields:
 ## 5. Indent-Based PO — Line Item Logic
 
 When a PO is created against indents, the system **trusts the indent-stage validation**. No re-validation of stock levels or max/min quantities is performed at PO creation time. The primary control is ensuring PO quantities do not exceed indent outstanding quantities (subject to tolerance).
+unless this indent type was open. in this case it needs to use the formula --> max qty for branch - po balance qty for branch - current stock for branch (all 3 for that item)
+
 
 ### 5.1 Quantity Control — Tolerance
 
-Each item in the Item Master carries a **tolerance percentage** field. The maximum PO quantity against an indent line item is calculated as:
-
-```
-max_po_qty = indent_outstanding_qty × (1 + tolerance_pct / 100)
-```
-
-If no tolerance is defined for the item, the PO quantity must **exactly match or be less than** the indent outstanding quantity (i.e., tolerance = 0%).
+not applicable 
 
 ### 5.2 FIFO Consumption Logic (Multi-Indent Clubbing)
 
@@ -176,6 +172,7 @@ When the source indent is of type **Open**, the PO inherits the Open PO type. Th
 - The **rate** is entered manually by the user (this is the only additional field vs the indent).
 - Financial year scoping from the indent carries through.
 
+
 ---
 
 ## 6. Direct PO — Line Item Validation Logic
@@ -201,7 +198,7 @@ When the user selects an item, the system checks if an open indent already exist
 Additionally, the system checks if an open/active PO already exists for the same item. If it does, display an **error message** and prevent selection.
 
 **Step 3 — Check stock + outstanding against max quantity**
-The system evaluates: `branch_stock + outstanding_indent_qty + outstanding_po_qty > max_qty`
+The system evaluates: `branch_stock + outstanding_po_qty > max_qty`
 
 - If **no max quantity exists** for the item, the user may enter any value. Skip Step 4.
 - If the above condition is **true**, display an error message and prevent entry.

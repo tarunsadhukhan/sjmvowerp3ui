@@ -20,6 +20,8 @@ export type IndentLineItem = {
   indent_dtl_id: number;
   indent_id: number;
   indent_no: string;
+  /** Indent type from proc_indent.indent_type_id — e.g. "Regular", "Open", "BOM" */
+  indent_type?: string;
   item_id: number;
   item_code: string;
   item_name: string;
@@ -27,6 +29,10 @@ export type IndentLineItem = {
   item_grp_code: string;
   item_grp_name: string;
   qty: number;
+  /** Outstanding (unfulfilled) qty for this indent line — from vw_proc_indent_outstanding */
+  outstanding_qty?: number;
+  /** Minimum order quantity step from item master */
+  min_order_qty?: number;
   uom_id: number;
   uom_name: string;
   item_make_id?: number;
@@ -311,6 +317,11 @@ export function IndentLineItemsDialog({
                         <div className="col-span-2">
                           <div className="text-muted-foreground text-xs">Quantity</div>
                           <div>{item.qty || 0} {item.uom_name || ""}</div>
+                          {item.outstanding_qty !== undefined && item.outstanding_qty !== null && (
+                            <div className="text-xs text-amber-600 mt-0.5">
+                              Outstanding: {item.outstanding_qty} {item.uom_name || ""}
+                            </div>
+                          )}
                         </div>
                         <div className="col-span-2">
                           <div className="text-muted-foreground text-xs">Make</div>

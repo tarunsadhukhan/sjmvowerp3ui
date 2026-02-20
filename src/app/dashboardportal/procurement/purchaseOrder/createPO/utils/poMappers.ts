@@ -325,6 +325,7 @@ export const mapPODetailsToFormValues = (
 		deliveryTimeline?: number | null;
 		project?: unknown;
 		expenseType?: unknown;
+		poType?: string;
 		contactPerson?: string;
 		contactNo?: string;
 		footerNote?: string;
@@ -355,6 +356,7 @@ export const mapPODetailsToFormValues = (
 				: toStringValue(defaultValues.delivery_timeline),
 		project: toStringValue(details.project ?? defaultValues.project),
 		expense_type: toStringValue(details.expenseType ?? defaultValues.expense_type),
+		po_type: toStringValue(details.poType ?? defaultValues.po_type),
 		contact_person: toStringValue(details.contactPerson ?? defaultValues.contact_person),
 		contact_no: toStringValue(details.contactNo ?? defaultValues.contact_no),
 		footer_note: toStringValue(details.footerNote ?? defaultValues.footer_note),

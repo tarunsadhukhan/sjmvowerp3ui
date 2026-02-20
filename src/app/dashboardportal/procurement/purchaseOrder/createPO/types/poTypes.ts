@@ -95,6 +95,49 @@ export type EditableLineItem = {
 	cgstAmount?: number;
 	sgstAmount?: number;
 	taxAmount?: number;
+	// Validation fields (direct PO and indent-based)
+	rowError?: string;
+	rowWarning?: string;
+	maxPoQty?: number;
+	minPoQty?: number;
+	validationLogic?: 1 | 2 | 3;
+	/** When true the quantity cell is auto-set from item master and locked (Logic 2 / Open indent) */
+	isQuantityLocked?: boolean;
+	/** Available outstanding qty from linked indent lines; enforced live for indent-based POs */
+	availableIndentQty?: number;
+	/** Minimum order quantity step from item master — entered qty must be a multiple of this */
+	minOrderQty?: number;
+};
+
+/**
+ * Response shape returned by GET /procurementPO/validate_item_for_po
+ */
+export type POItemValidationResult = {
+	validation_logic: 1 | 2 | 3;
+	po_type: string;
+	expense_type_name: string;
+	errors: string[];
+	warnings: string[];
+	// Logic 1
+	branch_stock: number | null;
+	outstanding_indent_qty: number | null;
+	outstanding_po_qty: number | null;
+	minqty: number | null;
+	maxqty: number | null;
+	min_order_qty: number | null;
+	has_open_indent: boolean;
+	has_open_po: boolean;
+	stock_exceeds_max: boolean;
+	max_po_qty: number | null;
+	min_po_qty: number | null;
+	// Logic 2
+	fy_po_exists: boolean;
+	fy_po_no: string | null;
+	fy_indent_exists: boolean;
+	fy_indent_no: string | null;
+	has_minmax: boolean;
+	regular_bom_outstanding: number | null;
+	forced_qty: number | null;
 };
 
 /**

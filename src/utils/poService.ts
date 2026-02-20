@@ -62,6 +62,7 @@ export type PODetails = {
   shippingState?: string;
   project?: string;
   expenseType?: string;
+  poType?: string;
   creditTerm?: number;
   deliveryTimeline?: number;
   contactPerson?: string;
@@ -124,6 +125,7 @@ export type CreatePORequest = {
   delivery_timeline: number;
   project: string;
   expense_type: string;
+  po_type?: string;
   contact_person?: string;
   contact_no?: string;
   footer_note?: string;
@@ -591,6 +593,71 @@ export async function clonePO(poId: string, branchId: string, menuId: string): P
 
   if (!data) {
     throw new Error("Empty response from clone API");
+  }
+
+  return data;
+}
+
+// ---------------------------------------------------------------------------
+// Item validation for direct PO (Logic 1 / 2 / 3)
+// ---------------------------------------------------------------------------
+
+export type POItemValidationResult = {
+  validation_logic: 1 | 2 | 3;
+  po_type: string;
+  expense_type_name: string;
+  errors: string[];
+  warnings: string[];
+  // Logic 1
+  branch_stock: number | null;
+  outstanding_indent_qty: number | null;
+  outstanding_po_qty: number | null;
+  minqty: number | null;
+  maxqty: number | null;
+  min_order_qty: number | null;
+  has_open_indent: boolean;
+  has_open_po: boolean;
+  stock_exceeds_max: boolean;
+  max_po_qty: number | null;
+  min_po_qty: number | null;
+  // Logic 2
+  fy_po_exists: boolean;
+  fy_po_no: string | null;
+  fy_indent_exists: boolean;
+  fy_indent_no: string | null;
+  has_minmax: boolean;
+  regular_bom_outstanding: number | null;
+  forced_qty: number | null;
+};
+
+export type ValidateItemForPOParams = {
+  coId: string;
+  branchId: string;
+  itemId: string;
+  poType: string;
+  expenseTypeId: string;
+};
+
+export async function validateItemForPO(params: ValidateItemForPOParams): Promise<POItemValidationResult> {
+  const query = new URLSearchParams({
+    co_id: params.coId,
+    branch_id: params.branchId,
+    item_id: params.itemId,
+    po_type: params.poType,
+    expense_type_id: params.expenseTypeId,
+  });
+
+  const { data, error } = await fetchWithCookie<POItemValidationResult>(
+    `${apiRoutesPortalMasters.PO_VALIDATE_ITEM}?${query.toString()}`,
+    "GET"
+  );
+
+  if (error) {
+    throw new Error(error);
+  }
+
+  if (!data) {
+    throw new Error("Empty response from validate_item_for_po");
   }
 
   return data;

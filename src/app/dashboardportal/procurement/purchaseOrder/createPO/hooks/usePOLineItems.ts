@@ -3,6 +3,7 @@ import { useLineItems } from "@/components/ui/transaction";
 import type { MuiFormMode } from "@/components/ui/muiform";
 import { toast } from "@/hooks/use-toast";
 import type { POLine } from "@/utils/poService";
+import { validateItemForPO } from "@/utils/poService";
 import type { IndentLineItem } from "../../components/IndentLineItemsDialog";
 import type { EditableLineItem, ItemGroupCacheEntry, ItemGroupRecord } from "../types/poTypes";
 import { createBlankLine, generateLineId } from "../utils/poFactories";
@@ -28,6 +29,14 @@ type UsePOLineItemsParams = {
 	ensureItemGroupData: (groupId: string) => void;
 	itemGroups: ReadonlyArray<ItemGroupRecord>;
 	allowManualEntry: boolean;
+	/** Current PO type — "Regular" or "Open". Used for direct-entry validation. */
+	poType?: string;
+	/** Expense type ID selected in the PO header. Used for direct-entry validation. */
+	expenseTypeId?: string;
+	/** Branch ID for the PO — used to call the validation API. */
+	branchId?: string;
+	/** Company ID for the PO — used to call the validation API. */
+	coId?: string;
 };
 
 /**
@@ -43,6 +52,10 @@ export const usePOLineItems = ({
 	ensureItemGroupData,
 	itemGroups,
 	allowManualEntry,
+	poType,
+	expenseTypeId,
+	branchId,
+	coId,
 }: UsePOLineItemsParams) => {
 	const {
 		items: lineItems,
@@ -136,9 +149,54 @@ export const usePOLineItems = ({
 							cgstAmount: tax.cgst,
 							sgstAmount: tax.sgst,
 							taxAmount: tax.total,
-						};
+							// Reset any previous validation state for this row
+							rowError: undefined,
+							rowWarning: undefined,
+							validationLogic: undefined,
+							isQuantityLocked: false,
+							maxPoQty: undefined,
+							minPoQty: undefined,						minOrderQty: undefined,						};
 					});
 				});
+
+				// Async validation for direct (manual) PO entry
+				if (allowManualEntry && value && coId && branchId && expenseTypeId) {
+					void (async () => {
+						try {
+							const result = await validateItemForPO({
+								coId,
+								branchId,
+								itemId: value,
+								poType: poType ?? "Regular",
+								expenseTypeId,
+							});
+							if (!result) return;
+							setLineItems((prev) =>
+								prev.map((line) => {
+									// Stale check: skip if row was already changed or cleared
+									if (line.id !== id || line.item !== value) return line;
+									const update: Partial<EditableLineItem> = {
+										validationLogic: result.validation_logic,
+										rowError: result.errors.length ? result.errors.join(" ") : undefined,
+										rowWarning: result.warnings.length ? result.warnings.join(" ") : undefined,
+									};
+									if (result.validation_logic === 1) {
+										update.maxPoQty = result.max_po_qty ?? undefined;
+										update.minPoQty = result.min_po_qty ?? undefined;
+										update.minOrderQty = result.min_order_qty ?? undefined;
+									} else if (result.validation_logic === 2 && !result.errors.length && result.forced_qty != null) {
+										// Logic 2: auto-fill and lock the quantity
+										update.quantity = String(result.forced_qty);
+										update.isQuantityLocked = true;
+									}
+									return { ...line, ...update };
+								}),
+							);
+						} catch {
+							// Silently ignore network errors — do not block the user
+						}
+					})();
+				}
 				return;
 			}
 
@@ -167,6 +225,38 @@ export const usePOLineItems = ({
 						updated.cgstAmount = tax.cgst;
 						updated.sgstAmount = tax.sgst;
 						updated.taxAmount = tax.total;
+
+						// Live quantity bounds validation
+						if (field === "quantity" && qty > 0) {
+							const moq = updated.minOrderQty && updated.minOrderQty > 0 ? updated.minOrderQty : null;
+							const isValidMultiple = moq === null || Math.abs(Math.round(qty / moq) - qty / moq) < 0.0001;
+							if (updated.indentDtlId && updated.availableIndentQty != null) {
+								// Indent-based line: qty must not exceed available outstanding
+								if (qty > updated.availableIndentQty) {
+									updated.rowError = `Cannot exceed outstanding indent qty (${updated.availableIndentQty})`;
+								} else if (!isValidMultiple) {
+									updated.rowError = `Qty must be a multiple of min order qty (${moq})`;
+								} else {
+									updated.rowError = undefined;
+								}
+							} else if (updated.validationLogic === 1) {
+								// Logic 1: check max and min bounds, then multiple-of-moq
+								if (updated.maxPoQty != null && qty > updated.maxPoQty) {
+									updated.rowError = `Qty exceeds max PO qty (${updated.maxPoQty})`;
+								} else if (updated.minPoQty != null && qty < updated.minPoQty) {
+									updated.rowError = `Qty below min PO qty (${updated.minPoQty})`;
+								} else if (!isValidMultiple) {
+									updated.rowError = `Qty must be a multiple of min order qty (${moq})`;
+								} else {
+									updated.rowError = undefined;
+								}
+							}
+						} else if (field === "quantity" && qty === 0) {
+							// Clear bound errors when qty is cleared
+							if (!updated.indentDtlId || updated.validationLogic === 1) {
+								updated.rowError = undefined;
+							}
+						}
 
 						return updated;
 					}),
@@ -285,7 +375,7 @@ export const usePOLineItems = ({
 				}),
 			);
 		},
-		[coConfig, ensureItemGroupData, itemGroupCache, itemGroupLoading, mode, setLineItems, shippingState, supplierBranchState],
+		[allowManualEntry, branchId, coConfig, coId, ensureItemGroupData, expenseTypeId, itemGroupCache, itemGroupLoading, mode, poType, setLineItems, shippingState, supplierBranchState],
 	);
 
 	const handleIndentItemsConfirm = React.useCallback(
@@ -324,21 +414,30 @@ export const usePOLineItems = ({
 					}
 				});
 
-				const newLines = newItems.map((item) => ({
-					id: generateLineId(),
-					indentDtlId: String(item.indent_dtl_id),
-					indentNo: item.indent_no,
-					itemGroup: String(item.item_grp_id),
-					item: String(item.item_id),
-					itemCode: item.item_code,
-					itemMake: item.item_make_id ? String(item.item_make_id) : "",
-					quantity: String(item.qty || 0),
-					rate: "",
-					uom: String(item.uom_id),
-					discountValue: "",
-					remarks: item.remarks || "",
-					taxPercentage: item.tax_percentage,
-				}));
+				const newLines = newItems.map((item) => {
+					// Prefer outstanding qty (unfulfilled) over original indent qty
+					const availableQty = item.outstanding_qty != null ? item.outstanding_qty : (item.qty ?? 0);
+					return {
+						id: generateLineId(),
+						indentDtlId: String(item.indent_dtl_id),
+						indentNo: item.indent_no,
+						itemGroup: String(item.item_grp_id),
+						item: String(item.item_id),
+						itemCode: item.item_code,
+						itemMake: item.item_make_id ? String(item.item_make_id) : "",
+						quantity: String(availableQty),
+						rate: "",
+						uom: String(item.uom_id),
+						discountValue: "",
+						remarks: item.remarks || "",
+						taxPercentage: item.tax_percentage,
+						/** Max enterable qty for indent-based row = outstanding */
+						availableIndentQty: availableQty,
+						/** Qty is always editable for indent items (inc. open indent); validation enforces the cap and MOQ multiples */
+						isQuantityLocked: false,
+						minOrderQty: item.min_order_qty ?? undefined,
+					};
+				});
 
 				newItems.forEach((item) => {
 					const groupId = String(item.item_grp_id);
@@ -386,6 +485,108 @@ export const usePOLineItems = ({
 		return Array.from(groups.values());
 	}, [itemGroupCache, itemGroups, lineItems]);
 
+	/**
+	 * Re-runs item validation for all lines loaded in edit mode.
+	 *
+	 * - Indent-based lines: immediately sets `availableIndentQty` to the loaded quantity
+	 *   (conservative cap), then asynchronously fetches `minOrderQty` for the item.
+	 * - Direct-entry lines: fires the full `validateItemForPO` call to populate
+	 *   `validationLogic`, `maxPoQty`, `minPoQty`, and `minOrderQty`.
+	 *
+	 * Pass `overrideParams` to supply the freshly-loaded header values (branch ID,
+	 * expense type, PO type) before React has flushed the `setFormValues` state update.
+	 */
+	const revalidateLoadedLines = React.useCallback(
+		(
+			lines: EditableLineItem[],
+			overrideParams?: {
+				branchId?: string;
+				coId?: string;
+				expenseTypeId?: string;
+				poType?: string;
+			},
+		) => {
+			if (mode === "view") return;
+
+			const resolvedBranchId = overrideParams?.branchId ?? branchId;
+			const resolvedCoId = overrideParams?.coId ?? coId;
+			const resolvedExpenseTypeId = overrideParams?.expenseTypeId ?? expenseTypeId;
+			const resolvedPoType = overrideParams?.poType ?? poType ?? "Regular";
+
+			lines.forEach((line) => {
+				if (!line.item) return;
+
+				if (line.indentDtlId) {
+					// Indent-based line: cap available qty to the committed qty in the PO
+					const currentQty = Number(line.quantity) || 0;
+					setLineItems((prev) =>
+						prev.map((l) => (l.id === line.id ? { ...l, availableIndentQty: currentQty } : l)),
+					);
+
+					// Fire validation API to retrieve minOrderQty (non-blocking)
+					if (resolvedCoId && resolvedBranchId && resolvedExpenseTypeId) {
+						void (async () => {
+							try {
+								const result = await validateItemForPO({
+									coId: resolvedCoId,
+									branchId: resolvedBranchId,
+									itemId: line.item!,
+									poType: resolvedPoType,
+									expenseTypeId: resolvedExpenseTypeId,
+								});
+								if (!result) return;
+								setLineItems((prev) =>
+									prev.map((l) =>
+										l.id === line.id ? { ...l, minOrderQty: result.min_order_qty ?? undefined } : l,
+									),
+								);
+							} catch {
+								// Silently ignore — do not block editing
+							}
+						})();
+					}
+					return;
+				}
+
+				// Direct-entry line: run full validation to populate bounds
+				if (allowManualEntry && resolvedCoId && resolvedBranchId && resolvedExpenseTypeId) {
+					void (async () => {
+						try {
+							const result = await validateItemForPO({
+								coId: resolvedCoId,
+								branchId: resolvedBranchId,
+								itemId: line.item!,
+								poType: resolvedPoType,
+								expenseTypeId: resolvedExpenseTypeId,
+							});
+							if (!result) return;
+							setLineItems((prev) =>
+								prev.map((l) => {
+									if (l.id !== line.id) return l;
+									const update: Partial<EditableLineItem> = {
+										validationLogic: result.validation_logic,
+										rowWarning: result.warnings.length ? result.warnings.join(" ") : undefined,
+										minOrderQty: result.min_order_qty ?? undefined,
+									};
+									if (result.validation_logic === 1) {
+										update.maxPoQty = result.max_po_qty ?? undefined;
+										update.minPoQty = result.min_po_qty ?? undefined;
+									}
+									// In edit mode we do NOT auto-fill qty from forced_qty (logic 2) —
+									// the user already has a qty; only validate from here on.
+									return { ...l, ...update };
+								}),
+							);
+						} catch {
+							// Silently ignore — do not block editing
+						}
+					})();
+				}
+			});
+		},
+		[allowManualEntry, branchId, coId, expenseTypeId, mode, poType, setLineItems],
+	);
+
 	return {
 		lineItems,
 		setLineItems,
@@ -394,6 +595,7 @@ export const usePOLineItems = ({
 		handleLineFieldChange,
 		handleIndentItemsConfirm,
 		mapLineToEditable,
+		revalidateLoadedLines,
 		lineHasAnyData,
 		lineIsComplete,
 		filledLineItems,

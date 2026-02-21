@@ -124,7 +124,7 @@ docker build \
   --build-arg NEXT_PUBLIC_API_BASE_URL=/api \
   --build-arg USE_NEXT_PROXY=true \
   -t vowerp-frontend .
-
+////
 
   docker run -d \
   --name vowerp-frontend \

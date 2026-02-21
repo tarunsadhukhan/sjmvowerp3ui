@@ -40,6 +40,13 @@ export const useQuotationFormSubmission = ({
 				return;
 			}
 
+			const hasCustomer = Boolean(values.customer);
+			const hasBroker = Boolean(values.broker);
+			if (!hasCustomer && !hasBroker) {
+				toast({ variant: "destructive", title: "Missing party", description: "At least one of Customer or Broker is required." });
+				return;
+			}
+
 			const itemsPayload: CreateQuotationRequest["items"] = filledLineItems.map((item) => ({
 				item_id: item.item || "",
 				item_make_id: item.itemMake || undefined,
@@ -69,10 +76,10 @@ export const useQuotationFormSubmission = ({
 			const payload: CreateQuotationRequest = {
 				branch_id: String(values.branch ?? ""),
 				quotation_date: String(values.quotation_date ?? ""),
-				party_id: String(values.customer ?? ""),
+				party_id: values.customer ? String(values.customer) : undefined,
 				sales_broker_id: values.broker ? String(values.broker) : undefined,
-				billing_address_id: String(values.billing_address ?? ""),
-				shipping_address_id: String(values.shipping_address ?? ""),
+				billing_address_id: values.billing_address ? String(values.billing_address) : undefined,
+				shipping_address_id: values.shipping_address ? String(values.shipping_address) : undefined,
 				brokerage_percentage: values.brokerage_percentage ? Number(values.brokerage_percentage) : undefined,
 				payment_terms: values.payment_terms ? String(values.payment_terms) : undefined,
 				delivery_terms: values.delivery_terms ? String(values.delivery_terms) : undefined,

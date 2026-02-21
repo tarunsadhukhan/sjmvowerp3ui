@@ -3,6 +3,7 @@ import type {
 	BranchAddressRecord,
 	BrokerRecord,
 	CustomerRecord,
+	CustomerBranchRecord,
 	ItemGroupCacheEntry,
 	ItemGroupRecord,
 	Option,
@@ -11,6 +12,11 @@ import type {
 type UseQuotationSelectOptionsParams = {
 	customers: ReadonlyArray<CustomerRecord>;
 	brokers: ReadonlyArray<BrokerRecord>;
+	/** All customer branch addresses across all customers. */
+	customerBranches: ReadonlyArray<CustomerBranchRecord>;
+	/** The currently selected customer ID; limits billing/shipping address options. */
+	selectedCustomerId?: string;
+	/** Company branch addresses – used for "shipping from" info display only. */
 	branchAddresses: ReadonlyArray<BranchAddressRecord>;
 	itemGroupsFromLineItems: ReadonlyArray<ItemGroupRecord>;
 	itemGroupCache?: Partial<Record<string, ItemGroupCacheEntry>>;
@@ -22,6 +28,8 @@ type UseQuotationSelectOptionsParams = {
 export const useQuotationSelectOptions = ({
 	customers,
 	brokers,
+	customerBranches,
+	selectedCustomerId,
 	branchAddresses,
 	itemGroupsFromLineItems,
 	itemGroupCache = {},
@@ -46,6 +54,24 @@ export const useQuotationSelectOptions = ({
 			.filter((opt) => opt.value);
 	}, [brokers]);
 
+	/**
+	 * Customer branch options for billing and shipping address dropdowns.
+	 * Filtered to only show branches belonging to the selected customer.
+	 */
+	const customerBranchOptions = React.useMemo<Option[]>(() => {
+		if (!customerBranches?.length) return [];
+		const filtered = selectedCustomerId
+			? customerBranches.filter((b) => b.partyId === selectedCustomerId)
+			: customerBranches;
+		return filtered
+			.map((b) => ({
+				label: b.address || b.branchName || b.id,
+				value: b.id,
+			}))
+			.filter((opt) => opt.value);
+	}, [customerBranches, selectedCustomerId]);
+
+	/** Company branch address options – intended for "shipping from" display only. */
 	const branchAddressOptions = React.useMemo<Option[]>(
 		() => branchAddresses.map((a) => ({ label: a.fullAddress || a.address1 || a.name || a.id, value: a.id })),
 		[branchAddresses],
@@ -122,6 +148,9 @@ export const useQuotationSelectOptions = ({
 	return {
 		customerOptions,
 		brokerOptions,
+		/** Billing and shipping address options (customer branches filtered by selected customer). */
+		customerBranchOptions,
+		/** Company branch address options (shipping from – display only). */
 		branchAddressOptions,
 		itemGroupOptions,
 		getItemGroupLabel,

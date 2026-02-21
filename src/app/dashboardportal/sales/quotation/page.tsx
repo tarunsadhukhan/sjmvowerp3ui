@@ -15,6 +15,7 @@ type QuotationRow = {
 	quotation_date_raw?: string;
 	party_name: string;
 	net_amount: number | null;
+	branch_id?: string | number;
 	branch_name: string;
 	status: string;
 };
@@ -158,6 +159,7 @@ export default function SalesQuotationIndexPage() {
 					quotation_date: formatDate(normalizedRaw),
 					party_name: row.party_name ?? row.customer_name ?? "",
 					net_amount: row.net_amount ?? row.gross_amount ?? null,
+					branch_id: row.branch_id ?? undefined,
 					branch_name: row.branch_name ?? "",
 					status: row.status_name ?? row.status ?? "Pending",
 				};
@@ -198,7 +200,8 @@ export default function SalesQuotationIndexPage() {
 		(row: QuotationRow) => {
 			const id = row.id ?? row.quotation_no;
 			if (!id) return;
-			router.push(`/dashboardportal/sales/quotation/createQuotation?mode=view&id=${encodeURIComponent(String(id))}`);
+			const branchId = row.branch_id ? `&branch_id=${encodeURIComponent(String(row.branch_id))}` : "";
+			router.push(`/dashboardportal/sales/quotation/createQuotation?mode=view&id=${encodeURIComponent(String(id))}${branchId}`);
 		},
 		[router]
 	);
@@ -207,7 +210,8 @@ export default function SalesQuotationIndexPage() {
 		(row: QuotationRow) => {
 			const id = row.id ?? row.quotation_no;
 			if (!id) return;
-			router.push(`/dashboardportal/sales/quotation/createQuotation?mode=edit&id=${encodeURIComponent(String(id))}`);
+			const branchId = row.branch_id ? `&branch_id=${encodeURIComponent(String(row.branch_id))}` : "";
+			router.push(`/dashboardportal/sales/quotation/createQuotation?mode=edit&id=${encodeURIComponent(String(id))}${branchId}`);
 		},
 		[router]
 	);

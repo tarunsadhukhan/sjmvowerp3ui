@@ -188,7 +188,24 @@ function QuotationTransactionPageContent() {
 			onError: handleItemGroupError,
 		});
 
-	const { billingState, shippingState } = useQuotationAddresses({ branchAddresses, formValues });
+	const { billingState, shippingState } = useQuotationAddresses({
+		branchAddresses,
+		customerBranches,
+		formValues,
+		branchId: branchIdForSetup,
+	});
+
+	// Cascade: when the customer changes in create/edit mode, clear the customer-linked address fields.
+	const prevCustomerRef = React.useRef<string>("");
+	React.useEffect(() => {
+		if (mode === "view") return;
+		const currentCustomer = formValues.customer != null ? String(formValues.customer) : "";
+		if (prevCustomerRef.current !== "" && prevCustomerRef.current !== currentCustomer) {
+			setFormValues((prev) => ({ ...prev, billing_address: "", shipping_address: "" }));
+			setFormKey((k) => k + 1);
+		}
+		prevCustomerRef.current = currentCustomer;
+	}, [formValues.customer, mode, setFormValues, setFormKey]);
 
 	const {
 		lineItems,
@@ -234,21 +251,8 @@ function QuotationTransactionPageContent() {
 
 	const totals = React.useMemo(() => calculateTotals(filledLineItems), [filledLineItems]);
 
-	// Fetch quotation details for edit/view mode
-	const detailsFetchKey = React.useMemo(
-		() => [mode, requestedId || "", branchIdForSetup || branchIdFromUrl || "", coId || ""].join("|"),
-		[mode, requestedId, branchIdForSetup, branchIdFromUrl, coId],
-	);
-
-	const lastDetailsKeyRef = React.useRef<string | null>(null);
-	const detailsFetchedRef = React.useRef(false);
-
-	React.useEffect(() => {
-		if (lastDetailsKeyRef.current !== detailsFetchKey) {
-			lastDetailsKeyRef.current = detailsFetchKey;
-			detailsFetchedRef.current = false;
-		}
-	}, [detailsFetchKey]);
+	// Fetch quotation details for edit/view mode — simple effect pattern (matches indent page)
+	const [detailsRefreshIndex, setDetailsRefreshIndex] = React.useState(0);
 
 	React.useEffect(() => {
 		if (mode === "create") {
@@ -266,15 +270,14 @@ function QuotationTransactionPageContent() {
 		}
 
 		if (!coId) return;
-		if (detailsFetchedRef.current) return;
-
-		detailsFetchedRef.current = true;
 
 		let cancelled = false;
-		const fetchDetails = async () => {
-			setLoading(true);
-			try {
-				const details = await getQuotationById(requestedId, coId || undefined, getMenuId() || undefined);
+		setLoading(true);
+
+		const menuId = getMenuId();
+
+		getQuotationById(requestedId, coId || undefined, menuId || undefined)
+			.then((details) => {
 				if (cancelled) return;
 
 				setQuotationDetails(details);
@@ -286,7 +289,6 @@ function QuotationTransactionPageContent() {
 				const resolvedBranchValue = (() => {
 					if (branchIdFromDetails != null && branchIdFromDetails !== "") return String(branchIdFromDetails);
 					if (branchIdFromUrl) return String(branchIdFromUrl);
-					if (branchValue && /^\d+$/.test(branchValue)) return branchValue;
 					const mappedValue = nextValues.branch != null ? String(nextValues.branch) : "";
 					return /^\d+$/.test(mappedValue) ? mappedValue : "";
 				})();
@@ -304,25 +306,21 @@ function QuotationTransactionPageContent() {
 				replaceItems(normalizedLines);
 
 				setPageError(null);
-			} catch (error) {
+			})
+			.catch((error) => {
 				if (cancelled) return;
 				const description = error instanceof Error ? error.message : "Unable to load quotation.";
 				setQuotationDetails(null);
 				setPageError(description);
 				toast({ variant: "destructive", title: "Unable to load quotation", description });
-			} finally {
+			})
+			.finally(() => {
 				if (!cancelled) setLoading(false);
-			}
-		};
+			});
 
-		void fetchDetails();
 		return () => { cancelled = true; };
-	}, [
-		mode, requestedId, coId, getMenuId,
-		setInitialValues, setFormValues, setFormKey,
-		replaceItems, mapLineToEditable,
-		branchIdFromUrl, branchValue,
-	]);
+	// eslint-disable-next-line react-hooks/exhaustive-deps
+	}, [mode, requestedId, coId, detailsRefreshIndex, getMenuId, setInitialValues, setFormValues, setFormKey, replaceItems, mapLineToEditable]);
 
 	// Pre-load item group data for existing line items
 	React.useEffect(() => {
@@ -340,9 +338,12 @@ function QuotationTransactionPageContent() {
 		return lineItemsValid;
 	}, [lineItemsValid, mode, pageError, setupError]);
 
+	const selectedCustomerId = formValues.customer != null ? String(formValues.customer) : undefined;
+
 	const {
 		customerOptions,
 		brokerOptions,
+		customerBranchOptions,
 		branchAddressOptions,
 		itemGroupOptions,
 		getItemOptions,
@@ -356,6 +357,8 @@ function QuotationTransactionPageContent() {
 	} = useQuotationSelectOptions({
 		customers,
 		brokers,
+		customerBranches,
+		selectedCustomerId,
 		branchAddresses,
 		itemGroupsFromLineItems,
 		itemGroupCache,
@@ -365,7 +368,7 @@ function QuotationTransactionPageContent() {
 		branchOptions: resolvedBranchOptions,
 		customerOptions,
 		brokerOptions,
-		branchAddressOptions,
+		customerBranchOptions,
 		coConfig,
 		billingState,
 		shippingState,
@@ -397,9 +400,7 @@ function QuotationTransactionPageContent() {
 	});
 
 	const handleRefresh = React.useCallback(() => {
-		detailsFetchedRef.current = false;
-		lastDetailsKeyRef.current = null;
-		setLoading(true);
+		setDetailsRefreshIndex((i) => i + 1);
 	}, []);
 
 	const {
@@ -439,13 +440,13 @@ function QuotationTransactionPageContent() {
 
 	const billingAddressLabel = React.useMemo(() => {
 		const value = formValues.billing_address ?? quotationDetails?.billingAddress;
-		return getOptionLabel(branchAddressOptions, value) ?? (typeof value === "string" ? value : undefined);
-	}, [formValues.billing_address, quotationDetails?.billingAddress, branchAddressOptions, getOptionLabel]);
+		return getOptionLabel(customerBranchOptions, value) ?? (typeof value === "string" ? value : undefined);
+	}, [formValues.billing_address, quotationDetails?.billingAddress, customerBranchOptions, getOptionLabel]);
 
 	const shippingAddressLabel = React.useMemo(() => {
 		const value = formValues.shipping_address ?? quotationDetails?.shippingAddress;
-		return getOptionLabel(branchAddressOptions, value) ?? (typeof value === "string" ? value : undefined);
-	}, [formValues.shipping_address, quotationDetails?.shippingAddress, branchAddressOptions, getOptionLabel]);
+		return getOptionLabel(customerBranchOptions, value) ?? (typeof value === "string" ? value : undefined);
+	}, [formValues.shipping_address, quotationDetails?.shippingAddress, customerBranchOptions, getOptionLabel]);
 
 	const statusLabel = React.useMemo(() => statusChipProps?.label ?? quotationDetails?.status, [statusChipProps?.label, quotationDetails?.status]);
 

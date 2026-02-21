@@ -44,6 +44,12 @@ export type QuotationDetails = {
   broker: string;
   billingAddress: string;
   shippingAddress: string;
+  /** State name for the customer billing address (used for GST type determination). */
+  billingAddressState?: string;
+  /** State name for the customer shipping address. */
+  shippingAddressState?: string;
+  /** State name for the company's selected branch (shipping-from state). */
+  branchStateName?: string;
   brokeragePercentage?: number | null;
   paymentTerms?: string;
   deliveryTerms?: string;
@@ -84,7 +90,7 @@ export type QuotationSetup2Response = {
 export type CreateQuotationRequest = {
   branch_id: number | string;
   quotation_date: string;
-  party_id: number | string;
+  party_id?: number | string | null;
   sales_broker_id?: number | string | null;
   billing_address_id?: number | string | null;
   shipping_address_id?: number | string | null;

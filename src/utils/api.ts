@@ -310,6 +310,21 @@ const apiRoutesPortalMasters = {
     JUTE_ISSUE_APPROVE: `${API_URL}/juteIssue/approve_issues`,
     JUTE_ISSUE_REJECT: `${API_URL}/juteIssue/reject_issues`,
 
+    // Batch Daily Assign
+    BATCH_DAILY_ASSIGN_TABLE: `${API_URL}/batchDailyAssign/get_assign_table`,
+    BATCH_DAILY_ASSIGN_BY_DATE: `${API_URL}/batchDailyAssign/get_assigns_by_date`,
+    BATCH_DAILY_ASSIGN_CREATE_SETUP: `${API_URL}/batchDailyAssign/get_assign_create_setup`,
+    BATCH_DAILY_ASSIGN_MAX_DATE: `${API_URL}/batchDailyAssign/get_max_assign_date`,
+    BATCH_DAILY_ASSIGN_CREATE: `${API_URL}/batchDailyAssign/create_assign`,
+    BATCH_DAILY_ASSIGN_DELETE: `${API_URL}/batchDailyAssign/delete_assign`,
+    BATCH_DAILY_ASSIGN_OPEN: `${API_URL}/batchDailyAssign/open_assigns`,
+    BATCH_DAILY_ASSIGN_APPROVE: `${API_URL}/batchDailyAssign/approve_assigns`,
+    BATCH_DAILY_ASSIGN_REJECT: `${API_URL}/batchDailyAssign/reject_assigns`,
+
+    // Jute Reports
+    JUTE_REPORT_STOCK: `${API_URL}/juteReports/stock`,
+    JUTE_REPORT_BATCH_COST: `${API_URL}/juteReports/batch-cost`,
+
     GET_INDENT_SETUP_1: `${API_URL}/procurementIndent/get_indent_setup_1`,
     GET_INDENT_SETUP_2: `${API_URL}/procurementIndent/get_indent_setup_2`,
     INDENT_CREATE: `${API_URL}/procurementIndent/create_indent`,

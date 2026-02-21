@@ -22,6 +22,8 @@ export type UsePOHeaderSchemaParams = {
   expectedDate: string;
   mode: "create" | "edit" | "view";
   headerFieldsDisabled: boolean;
+  /** When true, expense type and PO type are locked (line items already exist). */
+  hasLineItems: boolean;
 };
 
 export type UsePOFooterSchemaParams = {
@@ -48,6 +50,7 @@ export const usePOHeaderSchema = ({
   expectedDate,
   mode,
   headerFieldsDisabled,
+  hasLineItems,
 }: UsePOHeaderSchemaParams): Schema =>
   React.useMemo(() => {
     const fields: Field[] = [
@@ -86,7 +89,7 @@ export const usePOHeaderSchema = ({
         ),
         grid: { xs: 12, md: 4 },
       },
-      { name: "expense_type", label: "Expense Type", type: "select", options: expenseOptions, required: true, disabled: headerFieldsDisabled, grid: { xs: 12, md: 4 } },
+      { name: "expense_type", label: "Expense Type", type: "select", options: expenseOptions, required: true, disabled: headerFieldsDisabled || hasLineItems, grid: { xs: 12, md: 4 } },
       {
         name: "po_type",
         label: "PO Type",
@@ -96,7 +99,7 @@ export const usePOHeaderSchema = ({
           { label: "Open", value: "Open" },
         ],
         required: true,
-        disabled: headerFieldsDisabled,
+        disabled: headerFieldsDisabled || hasLineItems,
         grid: { xs: 12, md: 4 },
       },
       { name: "project", label: "Project", type: "select", options: projectOptions, required: false, disabled: headerFieldsDisabled, grid: { xs: 12, md: 4 } },
@@ -119,6 +122,7 @@ export const usePOHeaderSchema = ({
     expectedDate,
     mode,
     headerFieldsDisabled,
+    hasLineItems,
   ]);
 
 /** Builds the schema for footer-only fields rendered below the line items. */

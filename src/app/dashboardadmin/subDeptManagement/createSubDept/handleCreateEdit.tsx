@@ -26,7 +26,7 @@ const HandleCreateEditDept = () => {  const router = useRouter();
     const fetchData = async () => {
       setLoading(true);
       if (deptId) {        // Edit flow
-        const { data } = await fetchWithCookie(`${apiRoutesconsole.GET_DEPARTMENT_BY_ID}${deptId}`);
+        const { data } = await fetchWithCookie(`${apiRoutesconsole.GET_DEPARTMENT_BY_ID}/${deptId}`);
         if (data) {
           console.log("Edit department data:", data);
           

@@ -24,7 +24,7 @@ const HandleCreateEditBranch = () => {  const router = useRouter();
     const fetchData = async () => {
       setLoading(true);
       if (branchId) {        // Edit flow
-        const { data } = await fetchWithCookie(`${apiRoutesconsole.GET_BRANCH_BY_ID}${branchId}`);
+        const { data } = await fetchWithCookie(`${apiRoutesconsole.GET_BRANCH_BY_ID}/${branchId}`);
         if (data) {
           console.log("Edit branch data:", data);
           

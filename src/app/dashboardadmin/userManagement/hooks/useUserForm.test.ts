@@ -14,8 +14,8 @@ vi.mock("@/utils/api", () => ({
   apiRoutes: {
     PORTAL_USER_CREATE_FULL: "/api/admin/PortalData/get_user_create_setup_data",
     CREATE_PORTAL_USER: "/api/admin/PortalData/create_user_portal",
-    EDIT_PORTAL_USER: "/api/admin/PortalData/edit_user_portal/",
-    PORTAL_USER_EDIT_BY_USERID: "/api/admin/PortalData/get_user_edit_setup_data/",
+    EDIT_PORTAL_USER: "/api/admin/PortalData/edit_user_portal",
+    PORTAL_USER_EDIT_BY_USERID: "/api/admin/PortalData/get_user_edit_setup_data",
   },
 }));
 

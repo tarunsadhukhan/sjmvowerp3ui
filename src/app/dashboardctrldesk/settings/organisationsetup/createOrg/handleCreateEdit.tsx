@@ -24,7 +24,7 @@ const HandleCreateEditOrg = () => {
       setLoading(true);
       if (orgId) {
         // Edit flow
-        const { data } = await fetchWithCookie(`${apiRoutesconsole.GET_ORG_BY_ID}${orgId}`);
+        const { data } = await fetchWithCookie(`${apiRoutesconsole.GET_ORG_BY_ID}/${orgId}`);
         if (data) {
           setAllModules(data.allModules || []);
           setCountries(data.countries || []);

@@ -62,7 +62,7 @@ function CreateRoleAdminContent() {
             try {
                 if (roleId) {
                     // Fetch role data for editing
-                    const response = await fetchWithCookie(`${apiRoutesconsole.ADMIN_CTRLDSK_MODULE_BY_ORGID}${roleId}`, 'GET');
+                    const response = await fetchWithCookie(`${apiRoutesconsole.ADMIN_CTRLDSK_MODULE_BY_ORGID}/${roleId}`, 'GET');
                     if (response.error) {
                         throw new Error(response.error);
                     }
@@ -122,7 +122,7 @@ function CreateRoleAdminContent() {
 
                 // Fetch the role data for the given roleId
                 if (roleId) {
-                    const roleResponse = await fetchWithCookie(`${apiRoutesconsole.ADMIN_CTRLDSK_MODULE_BY_ORGID}${roleId}`, 'GET');
+                    const roleResponse = await fetchWithCookie(`${apiRoutesconsole.ADMIN_CTRLDSK_MODULE_BY_ORGID}/${roleId}`, 'GET');
                     if (roleResponse.error) {
                         throw new Error(roleResponse.error);
                     }

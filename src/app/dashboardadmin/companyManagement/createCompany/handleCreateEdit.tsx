@@ -25,7 +25,7 @@ const HandleCreateEditCo = () => {
       setLoading(true);
       if (coId) {
         // Edit flow
-        const { data } = await fetchWithCookie(`${apiRoutesconsole.GET_CO_BY_ID}${coId}`);
+        const { data } = await fetchWithCookie(`${apiRoutesconsole.GET_CO_BY_ID}/${coId}`);
         if (data) {
           setAllModules(data.allModules || []);
           setCountries(data.countries || []);

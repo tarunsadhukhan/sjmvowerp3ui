@@ -42,7 +42,7 @@ const PORTAL_DROPDOWN_OPTIONS = [
 ];
 
 const fetchMenu = async (roleId: string | null): Promise<{ data: MenuItem[]; roleName?: string }> => {
-    const apiUrl = roleId ? `${apiRoutes.GET_PORTAL_MENU_BY_ROLEID}${roleId}` : apiRoutes.PORTAL_MENU_FULL;
+    const apiUrl = roleId ? `${apiRoutes.GET_PORTAL_MENU_BY_ROLEID}/${roleId}` : apiRoutes.PORTAL_MENU_FULL;
 
     const { data, error } = await fetchWithCookie(apiUrl);
 

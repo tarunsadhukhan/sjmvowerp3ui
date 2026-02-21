@@ -54,7 +54,7 @@ function CreateRoleAdminContent() {
             try {
                 if (roleId) {
                     // Fetch role data for editing
-                    const response = await fetchWithCookie(`${apiRoutesconsole.ADMIN_CTRLDSK_MENU_BY_ROLEID}${roleId}`, 'GET');
+                    const response = await fetchWithCookie(`${apiRoutesconsole.ADMIN_CTRLDSK_MENU_BY_ROLEID}/${roleId}`, 'GET');
                     if (response.error) {
                         throw new Error(response.error);
                     }

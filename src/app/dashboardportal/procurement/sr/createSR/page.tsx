@@ -107,9 +107,6 @@ function SRTransactionPageContent() {
 				additional_charges?: SRAdditionalChargeRaw[];
 			};
 
-			// Debug: Log warehouses received from API
-			console.log("Warehouses from API:", result.warehouses);
-
 			// Map header
 			const mappedHeader = mapSRHeader(result.header);
 			setHeader(mappedHeader);
@@ -124,11 +121,9 @@ function SRTransactionPageContent() {
 			// Map warehouse options (filter by branch if needed, dedupe by warehouse_id)
 			const warehouseData = result.warehouses ?? [];
 			const branchId = mappedHeader.branch_id;
-			console.log("Branch ID for warehouse filtering:", branchId);
 			const filteredWarehouses = branchId
 				? warehouseData.filter((wh) => !wh.branch_id || wh.branch_id === branchId)
 				: warehouseData;
-			console.log("Filtered warehouses:", filteredWarehouses);
 			
 			// Dedupe by warehouse_id to avoid duplicate key errors
 			const seenIds = new Set<string>();
@@ -144,6 +139,20 @@ function SRTransactionPageContent() {
 				value: String(wh.warehouse_id),
 				branchId: wh.branch_id,
 			}));
+
+			// Ensure any warehouse referenced by line items is included in options
+			// (handles case where the warehouse list from API doesn't include the saved value)
+			const warehouseValueSet = new Set(mappedWarehouses.map((w) => w.value));
+			for (const li of mappedItems) {
+				if (li.warehouse_id && !warehouseValueSet.has(String(li.warehouse_id))) {
+					mappedWarehouses.push({
+						label: li.warehouse_name || `Warehouse ${li.warehouse_id}`,
+						value: String(li.warehouse_id),
+					});
+					warehouseValueSet.add(String(li.warehouse_id));
+				}
+			}
+
 			setWarehouseOptions(mappedWarehouses);
 
 			// Map additional charge options
@@ -205,16 +214,27 @@ function SRTransactionPageContent() {
 
 	// Build actions for TransactionWrapper
 	const primaryActions = React.useMemo(() => {
-		const actions = [];
+		const actions: Array<{
+			label: string;
+			onClick: () => void;
+			disabled: boolean;
+			loading: boolean;
+			variant: "default" | "outline" | "destructive";
+		}> = [];
 
-		if (canEdit && !isViewMode && isDraft) {
+		// Save button — always available when editing is possible
+		if (canEdit && !isViewMode) {
 			actions.push({
-				label: "Save Draft",
+				label: "Save",
 				onClick: handleSave,
 				disabled: saving,
 				loading: saving,
 				variant: "outline" as const,
 			});
+		}
+
+		// Open for Approval — only available in Draft
+		if (canEdit && !isViewMode && isDraft) {
 			actions.push({
 				label: "Open for Approval",
 				onClick: handleOpen,
@@ -224,6 +244,7 @@ function SRTransactionPageContent() {
 			});
 		}
 
+		// Approve / Reject — only available in Open status
 		if (isOpen) {
 			actions.push({
 				label: "Reject",

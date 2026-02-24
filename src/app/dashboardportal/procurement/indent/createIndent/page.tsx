@@ -16,6 +16,7 @@ import {
 	fetchIndentSetup2,
 	getIndentById,
 	updateIndent,
+	fetchIndentLinesByTitle,
 	type IndentDetails,
 } from "@/utils/indentService";
 import { toast } from "@/hooks/use-toast";
@@ -27,7 +28,7 @@ import type { MuiFormMode } from "@/components/ui/muiform";
 import type { EditableLineItem, IndentSetupData, ItemGroupCacheEntry } from "./types/indentTypes";
 
 // Utils
-import { EMPTY_DEPARTMENTS, EMPTY_EXPENSES, EMPTY_ITEM_GROUPS, EMPTY_PROJECTS, EMPTY_SETUP_PARAMS } from "./utils/indentConstants";
+import { EMPTY_DEPARTMENTS, EMPTY_EXPENSES, EMPTY_ITEM_GROUPS, EMPTY_PROJECTS, EMPTY_INDENT_TITLES, EMPTY_SETUP_PARAMS } from "./utils/indentConstants";
 import { buildDefaultFormValues, createBlankLine } from "./utils/indentFactories";
 import { mapIndentSetupResponse, mapItemGroupDetailResponse } from "./utils/indentMappers";
 
@@ -43,6 +44,15 @@ import { useIndentItemValidation } from "./hooks/useIndentItemValidation";
 import { IndentHeaderForm } from "./components/IndentHeaderForm";
 import { IndentApprovalBar } from "./components/IndentApprovalBar";
 import { useIndentLineItemColumns } from "./components/IndentLineItemsTable";
+import {
+	Dialog,
+	DialogContent,
+	DialogHeader,
+	DialogFooter,
+	DialogTitle,
+	DialogDescription,
+} from "@/components/ui/dialog";
+import { Button } from "@/components/ui/button";
 
 // Loading fallback for Suspense
 function IndentPageLoading() {
@@ -141,6 +151,20 @@ function IndentTransactionPageContent() {
 	const [loading, setLoading] = React.useState<boolean>(mode !== "create");
 	const [saving, setSaving] = React.useState(false);
 	const [pageError, setPageError] = React.useState<string | null>(null);
+
+	// ── Template reuse state ───────────────────────────────────────────
+	/** Name of the indent title currently used as template source (null if none) */
+	const [templateSourceName, setTemplateSourceName] = React.useState<string | null>(null);
+	/** Whether the replace confirmation dialog is visible */
+	const [showReplaceConfirmDialog, setShowReplaceConfirmDialog] = React.useState(false);
+	/** Whether the rename dialog is visible (triggered on first line modification after template load) */
+	const [showRenameDialog, setShowRenameDialog] = React.useState(false);
+	/** The new indent name typed by the user in the rename dialog */
+	const [renameInputValue, setRenameInputValue] = React.useState("");
+	/** The indent title the user wants to apply (stored while the confirm dialog is open) */
+	const [pendingTemplateName, setPendingTemplateName] = React.useState<string | null>(null);
+	/** Whether the template is currently being fetched */
+	const [templateLoading, setTemplateLoading] = React.useState(false);
 
 	// Item group cache
 	const { cache: itemGroupCache, loading: itemGroupLoading, ensure: ensureItemGroupData, reset: resetItemGroupCache } =
@@ -289,6 +313,7 @@ function IndentTransactionPageContent() {
 	const projects = setupData?.projects ?? EMPTY_PROJECTS;
 	const expenses = setupData?.expenses ?? EMPTY_EXPENSES;
 	const itemGroups = setupData?.itemGroups ?? EMPTY_ITEM_GROUPS;
+	const indentTitles = setupData?.indentTitles ?? EMPTY_INDENT_TITLES;
 
 	// Resolve the expense type name from the selected expense type ID
 	const resolvedExpenseTypeName = React.useMemo(() => {
@@ -349,9 +374,98 @@ function IndentTransactionPageContent() {
 			if (field === "itemGroup") {
 				clearLineValidation(id);
 			}
+
+			// If user modifies a line while a template is active, prompt for rename
+			if (templateSourceName && ["itemGroup", "item", "quantity", "uom", "department", "itemMake"].includes(field)) {
+				setRenameInputValue(templateSourceName);
+				setShowRenameDialog(true);
+			}
 		},
-		[handleLineFieldChange, validateLine, clearLineValidation]
+		[handleLineFieldChange, validateLine, clearLineValidation, templateSourceName]
 	);
+
+	// ── Template reuse handlers ────────────────────────────────────────
+
+	/** Apply template lines fetched from the backend */
+	const applyTemplateLines = React.useCallback(
+		async (title: string) => {
+			if (!coId || !branchIdForSetup) return;
+			setTemplateLoading(true);
+			try {
+				const resp = await fetchIndentLinesByTitle(coId, branchIdForSetup, title);
+				if (!resp.lines.length) {
+					toast({ variant: "destructive", title: "No lines found", description: `No line items found for indent name "${title}".` });
+					setTemplateSourceName(null);
+					return;
+				}
+				const mapped: EditableLineItem[] = resp.lines.map((l) => ({
+					id: crypto.randomUUID?.() ?? String(Date.now() + Math.random()),
+					department: l.department ?? "",
+					itemGroup: l.itemGroup ?? "",
+					item: l.item ?? "",
+					itemMake: l.itemMake ?? "",
+					quantity: l.quantity != null ? String(l.quantity) : "",
+					uom: l.uom ?? "",
+					remarks: l.remarks ?? "",
+				}));
+				// Ensure item group caches are populated
+				const groupIds = [...new Set(mapped.map((l) => l.itemGroup).filter(Boolean))];
+				await Promise.all(groupIds.map((gid) => ensureItemGroupData(gid)));
+				replaceItems(mapped);
+				setTemplateSourceName(title);
+				toast({ title: "Template applied", description: `Loaded ${mapped.length} line(s) from "${title}".` });
+			} catch (err) {
+				toast({ variant: "destructive", title: "Template error", description: err instanceof Error ? err.message : "Failed to fetch template lines." });
+				setTemplateSourceName(null);
+			} finally {
+				setTemplateLoading(false);
+			}
+		},
+		[coId, branchIdForSetup, replaceItems, ensureItemGroupData]
+	);
+
+	/** Called when the user selects an existing indent title from the autocomplete */
+	const handleIndentTitleSelect = React.useCallback(
+		(title: string) => {
+			if (filledLineItems.length > 0) {
+				// There are existing lines — ask for confirmation before replacing
+				setPendingTemplateName(title);
+				setShowReplaceConfirmDialog(true);
+			} else {
+				void applyTemplateLines(title);
+			}
+		},
+		[filledLineItems.length, applyTemplateLines]
+	);
+
+	/** User confirmed replacing existing lines with the template */
+	const handleConfirmReplace = React.useCallback(() => {
+		setShowReplaceConfirmDialog(false);
+		if (pendingTemplateName) {
+			void applyTemplateLines(pendingTemplateName);
+			setPendingTemplateName(null);
+		}
+	}, [pendingTemplateName, applyTemplateLines]);
+
+	/** User dismissed the replace confirmation — keep current lines */
+	const handleCancelReplace = React.useCallback(() => {
+		setShowReplaceConfirmDialog(false);
+		setPendingTemplateName(null);
+	}, []);
+
+	/** User chose to save the new indent name from the rename dialog */
+	const handleRenameAccept = React.useCallback(() => {
+		setShowRenameDialog(false);
+		setTemplateSourceName(null);
+		// Set the requester field to the new name entered in the dialog
+		setFormValues((prev) => ({ ...prev, requester: renameInputValue.trim() }));
+	}, [setFormValues, renameInputValue]);
+
+	/** User chose to keep the template name despite line modifications */
+	const handleRenameDismiss = React.useCallback(() => {
+		setShowRenameDialog(false);
+		// Keep the template source name — user is okay with the current name
+	}, []);
 
 	// Expense type validation on indent type change
 	React.useEffect(() => {
@@ -364,6 +478,23 @@ function IndentTransactionPageContent() {
 			setFormValues((prev) => ({ ...prev, expense_type: "" }));
 		}
 	}, [formValues.indent_type, formValues.expense_type, mode, setFormValues]);
+
+	// Clear requester / template state when indent_type switches away from BOM
+	React.useEffect(() => {
+		if (mode === "view") return;
+		const indentType = String(formValues.indent_type ?? "");
+		if (indentType && indentType !== "BOM") {
+			// Clear Indent Name field and any active template
+			setFormValues((prev) => {
+				if (prev.requester) return { ...prev, requester: "" };
+				return prev;
+			});
+			setTemplateSourceName(null);
+			setPendingTemplateName(null);
+			setShowReplaceConfirmDialog(false);
+			setShowRenameDialog(false);
+		}
+	}, [formValues.indent_type, mode, setFormValues]);
 
 	// Check if header fields are complete for line item entry
 	const headerFieldsComplete = React.useMemo(() => {
@@ -384,6 +515,9 @@ function IndentTransactionPageContent() {
 		expenseOptions,
 		projectOptions,
 		hasLineItemData,
+		indentTypeValue: String(formValues.indent_type ?? ""),
+		indentTitles,
+		onIndentTitleSelect: handleIndentTitleSelect,
 	});
 
 	// Approval hook
@@ -761,6 +895,7 @@ function IndentTransactionPageContent() {
 	const getLineItemId = React.useCallback((item: EditableLineItem) => item.id, []);
 
 	return (
+		<>
 		<TransactionWrapper
 			title={pageTitle}
 			subtitle={subtitle}
@@ -826,5 +961,65 @@ function IndentTransactionPageContent() {
 				onValuesChange={setFormValues}
 			/>
 		</TransactionWrapper>
+
+		{/* ── Replace Confirmation Dialog ──────────────────────────────── */}
+		<Dialog open={showReplaceConfirmDialog} onOpenChange={(open) => { if (!open) handleCancelReplace(); }}>
+			<DialogContent className="sm:max-w-md">
+				<DialogHeader>
+					<DialogTitle>Replace existing lines?</DialogTitle>
+					<DialogDescription>
+						Selecting the template &ldquo;{pendingTemplateName}&rdquo; will replace all
+						current line items. This cannot be undone.
+					</DialogDescription>
+				</DialogHeader>
+				<DialogFooter className="gap-2 sm:gap-0">
+					<Button variant="outline" onClick={handleCancelReplace}>
+						Cancel
+					</Button>
+					<Button variant="destructive" onClick={handleConfirmReplace}>
+						Replace
+					</Button>
+				</DialogFooter>
+			</DialogContent>
+		</Dialog>
+
+		{/* ── Rename Dialog (triggered on line modification after template load) */}
+		<Dialog open={showRenameDialog} onOpenChange={(open) => { if (!open) handleRenameDismiss(); }}>
+			<DialogContent className="sm:max-w-md">
+				<DialogHeader>
+					<DialogTitle>Lines modified</DialogTitle>
+					<DialogDescription>
+						You&apos;ve modified the line items loaded from &ldquo;{templateSourceName}&rdquo;.
+						Enter a new indent name or keep the current one.
+					</DialogDescription>
+				</DialogHeader>
+				<div className="py-2">
+					<label htmlFor="rename-indent-input" className="text-sm font-medium text-muted-foreground mb-1 block">
+						New indent name
+					</label>
+					<input
+						id="rename-indent-input"
+						type="text"
+						className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm transition-colors placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+						value={renameInputValue}
+						onChange={(e) => setRenameInputValue(e.target.value)}
+						placeholder="Enter new indent name"
+						autoFocus
+					/>
+				</div>
+				<DialogFooter className="gap-2 sm:gap-0">
+					<Button variant="outline" onClick={handleRenameDismiss}>
+						Keep current name
+					</Button>
+					<Button
+						onClick={handleRenameAccept}
+						disabled={!renameInputValue.trim() || renameInputValue.trim() === templateSourceName}
+					>
+						Save indent name
+					</Button>
+				</DialogFooter>
+			</DialogContent>
+		</Dialog>
+		</>
 	);
 }

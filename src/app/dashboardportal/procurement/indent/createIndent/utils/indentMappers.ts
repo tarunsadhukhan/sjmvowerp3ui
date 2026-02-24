@@ -83,11 +83,13 @@ export const mapItemGroupRecords = (records: unknown[]): ItemGroupRecord[] =>
  */
 export const mapIndentSetupResponse = (response: unknown): IndentSetupData => {
 	const result = response as Record<string, unknown>;
+	const rawTitles = Array.isArray(result?.indent_titles) ? result.indent_titles : [];
 	return {
 		departments: mapDepartmentRecords((result?.departments as unknown[]) ?? []),
 		projects: mapProjectRecords((result?.projects as unknown[]) ?? []),
 		expenses: mapExpenseRecords((result?.expense_types as unknown[]) ?? []),
 		itemGroups: mapItemGroupRecords((result?.item_groups as unknown[]) ?? []),
+		indentTitles: rawTitles.filter((t): t is string => typeof t === "string" && t.trim() !== ""),
 	} satisfies IndentSetupData;
 };
 

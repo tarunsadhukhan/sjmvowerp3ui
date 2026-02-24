@@ -88,6 +88,7 @@ export type IndentSetupData = {
 	projects: ProjectRecord[];
 	expenses: ExpenseRecord[];
 	itemGroups: ItemGroupRecord[];
+	indentTitles: string[];
 };
 
 /**

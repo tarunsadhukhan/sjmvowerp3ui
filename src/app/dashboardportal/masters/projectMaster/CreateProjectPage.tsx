@@ -30,8 +30,6 @@ export default function CreateProjectPage({ open = false, onClose, existingRows 
         const params = new URLSearchParams();
         if (co_id) params.append("co_id", co_id);
         if (sidebar_selectedBranches) params.append("branch_id", sidebar_selectedBranches);
-  // Surface the selected branches to the UI instead of logging to console (Stage A)
-  setError(`Selected branches: ${sidebar_selectedBranches}`);
 
 //        const params = new URLSearchParams({ co_id, branch_id: branch_ids });
         const url = `${apiRoutesPortalMasters.PROJECT_MASTER_CREATE_SETUP}?${params}`;

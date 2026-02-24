@@ -563,3 +563,38 @@ export async function validateItemForIndent(params: {
 
   return data;
 }
+
+// ─── Indent Template (reuse by name) ──────────────────────────────────────
+
+export type IndentLinesByTitleResponse = {
+  lines: IndentLine[];
+};
+
+/**
+ * Fetch line items from the most recent indent matching the given title,
+ * scoped by co_id and branch_id.  Used for template pre-fill.
+ */
+export async function fetchIndentLinesByTitle(
+  coId: string,
+  branchId: string,
+  indentTitle: string
+): Promise<IndentLinesByTitleResponse> {
+  const query = new URLSearchParams({
+    co_id: coId,
+    branch_id: branchId,
+    indent_title: indentTitle,
+  });
+
+  const { data, error } = await fetchWithCookie<{ data: IndentLinesByTitleResponse }>(
+    `${apiRoutesPortalMasters.GET_INDENT_LINES_BY_TITLE}?${query.toString()}`,
+    "GET"
+  );
+
+  if (error) {
+    throw new Error(error);
+  }
+
+  // The backend wraps the payload in { data: { lines: [...] } }
+  const payload = (data as unknown as { data?: IndentLinesByTitleResponse })?.data ?? (data as unknown as IndentLinesByTitleResponse);
+  return { lines: payload?.lines ?? [] };
+}

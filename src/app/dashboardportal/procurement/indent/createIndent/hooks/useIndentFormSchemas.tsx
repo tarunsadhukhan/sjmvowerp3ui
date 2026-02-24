@@ -1,7 +1,9 @@
 import React from "react";
-import type { Schema, MuiFormMode } from "@/components/ui/muiform";
+import type { Schema, MuiFormMode, CustomFieldRenderProps } from "@/components/ui/muiform";
 import type { Option } from "../types/indentTypes";
 import { INDENT_TYPE_OPTIONS, OPEN_INDENT_ALLOWED_EXPENSE_IDS } from "../utils/indentConstants";
+import Autocomplete from "@mui/material/Autocomplete";
+import TextField from "@mui/material/TextField";
 
 type UseIndentFormSchemaParams = {
 	mode: MuiFormMode;
@@ -10,6 +12,12 @@ type UseIndentFormSchemaParams = {
 	projectOptions: readonly Option[];
 	/** When true, indent_type and expense_type are disabled to prevent changes after line item entry */
 	hasLineItemData?: boolean;
+	/** Current indent type value — template selector is only enabled for "BOM" */
+	indentTypeValue?: string;
+	/** Existing indent title suggestions for the creatable autocomplete */
+	indentTitles?: readonly string[];
+	/** Called when the user selects an existing indent title (template reuse) */
+	onIndentTitleSelect?: (title: string) => void;
 };
 
 /**
@@ -21,7 +29,11 @@ export const useIndentFormSchema = ({
 	expenseOptions,
 	projectOptions,
 	hasLineItemData = false,
+	indentTypeValue = "",
+	indentTitles = [],
+	onIndentTitleSelect,
 }: UseIndentFormSchemaParams): Schema => {
+	const isBOM = indentTypeValue === "BOM";
 	return React.useMemo(
 		() => ({
 			fields: [
@@ -88,8 +100,41 @@ export const useIndentFormSchema = ({
 				{
 					name: "requester",
 					label: "Indent Name",
-					type: "text",
+					type: "custom" as const,
 					grid: { xs: 12, md: 6 },
+					render: ({ value, onChange, disabled }: CustomFieldRenderProps) => {
+						const strVal = typeof value === "string" ? value : "";
+						const fieldDisabled = disabled || !isBOM;
+						return (
+							<Autocomplete
+								freeSolo
+								size="small"
+								options={isBOM ? (indentTitles as string[]) : []}
+								value={strVal}
+								inputValue={strVal}
+								disabled={fieldDisabled}
+								onChange={(_event: unknown, newValue: string | null) => {
+									if (!isBOM) return;
+									const selected = typeof newValue === "string" ? newValue : "";
+									onChange(selected);
+									if (selected && (indentTitles as string[]).includes(selected) && onIndentTitleSelect) {
+										onIndentTitleSelect(selected);
+									}
+								}}
+								onInputChange={(_event: unknown, newInput: string, reason: string) => {
+									if (!isBOM) return;
+									if (reason === "input" || reason === "reset") onChange(newInput);
+								}}
+								renderInput={(params) => (
+									<TextField
+										{...params}
+										placeholder={isBOM ? "Type a new name or select an existing one" : "Available for BOM indent type only"}
+										fullWidth
+									/>
+								)}
+							/>
+						);
+					},
 				},
 				{
 					name: "remarks",
@@ -101,6 +146,6 @@ export const useIndentFormSchema = ({
 				},
 			],
 		}),
-		[branchOptions, mode, expenseOptions, projectOptions, hasLineItemData]
+		[branchOptions, mode, expenseOptions, projectOptions, hasLineItemData, isBOM, indentTitles, onIndentTitleSelect]
 	);
 };

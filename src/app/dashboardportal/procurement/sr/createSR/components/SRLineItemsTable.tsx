@@ -175,14 +175,23 @@ export const useSRLineItemColumns = ({
 						);
 					}
 
-					const selectedOption = warehouseOptions.find(
+					// Find the matching option, or build a fallback from the item's own data
+					let selectedOption = warehouseOptions.find(
 						(opt) => String(opt.value) === String(item.warehouse_id)
 					) ?? null;
+
+					// If not in the dropdown list, inject a synthetic option so the
+					// Autocomplete `value` always matches one of the `options`.
+					let effectiveOptions = warehouseOptions;
+					if (!selectedOption && item.warehouse_id && item.warehouse_name) {
+						selectedOption = { label: item.warehouse_name, value: String(item.warehouse_id) };
+						effectiveOptions = [...warehouseOptions, selectedOption];
+					}
 
 					return (
 						<Autocomplete
 							size="small"
-							options={warehouseOptions}
+							options={effectiveOptions}
 							value={selectedOption}
 							onChange={(_, newValue) => {
 								onLineItemChange(item.id, "warehouse_id", newValue ? Number(newValue.value) : null);

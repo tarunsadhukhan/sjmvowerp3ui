@@ -229,6 +229,85 @@ No quantity validation is applied. The user can enter any value for the indent q
 
 ---
 
+## 9. Backend Validation Views (Data Sources)
+
+Three database views provide pre-computed data for the validation logic described above. These eliminate the need for ad-hoc queries when checking stock, outstanding quantities, and min/max values.
+
+### 9.1 `vw_item_balance_qty_by_branch_new` — Primary Validation Source
+
+**ORM Model:** `VwItemBalanceQtyByBranchNew` (in `src/models/procurement.py`)
+
+This is the **main view used for min/max validation** on indent creation. It aggregates per `branch_id` + `item_id`:
+
+| View Column | Maps to Validation Term | Description |
+|-------------|------------------------|-------------|
+| `cur_stock` | `branch_stock` | Current stock at branch (inward − drcr − issue) |
+| `bal_qty_ind_to_validate` | `outstanding_indent_qty` (Logic 1) | Outstanding indent qty from Regular/BOM indents only (excludes Open) |
+| `bal_tot_ind_qty` | Total outstanding indent qty | All indent types combined |
+| `open_bal_ind_tot_qty` | Open indent outstanding qty | Outstanding from Open-type indents only |
+| `bal_tot_po_qty` | Total outstanding PO qty | All PO types combined |
+| `open_bal_tot_po_qty` | Open PO outstanding qty | Outstanding from Open-type POs only |
+| `maxqty` | `max_qty` | Max stock qty from `item_minmax_mst` (0 if not set) |
+| `minqty` | `min_qty` | Min order qty from `item_minmax_mst` (0 if not set) |
+| `min_order_qty` | `reorder_qty` | Reorder qty from `item_minmax_mst` (0 if not set) |
+
+**Usage in Logic 1 (Step 2 & 3):**
+```
+-- Step 2: Check if entry is blocked
+cur_stock + bal_qty_ind_to_validate > maxqty  →  blocked
+
+-- Step 3: Calculate max indent qty
+available = maxqty - cur_stock - bal_qty_ind_to_validate
+max_indent_qty = IF(available < min_order_qty, min_order_qty, ROUNDUP(available / min_order_qty, 0) * min_order_qty)
+min_indent_qty = minqty
+```
+
+**Usage in Logic 2 (Step 3 — informational check):**
+```
+-- Check if Regular/BOM outstanding exists for the item
+bal_qty_ind_to_validate > 0  →  show warning (informational only)
+```
+
+### 9.2 `vw_proc_indent_outstanding_new` — Per-Line Indent Outstanding
+
+**ORM Model:** `VwProcIndentOutstandingNew` (in `src/models/procurement.py`)
+
+Provides per-indent-detail-line outstanding quantities for approved/closed indents (`status_id IN (3, 5)`).
+
+| View Column | Description |
+|-------------|-------------|
+| `indent_dtl_id` | Primary key — unique indent detail line |
+| `branch_id` | Branch scope |
+| `item_id` / `item_name` | Item reference with display name |
+| `indent_qty` | Original indent quantity |
+| `bal_ind_qty` | Balance outstanding (for Open = full qty; for Regular/BOM = indent_qty − cancelled − PO consumed) |
+| `indent_type_id` | 'Regular', 'Open', or 'BOM' |
+| `expense_type_id` / `expense_type_name` | Expense type reference |
+
+**Key behaviour:** For Open indent types, `bal_ind_qty` always equals `indent_qty` (the full quantity is always "outstanding" since open indents are recurring/flexible).
+
+**Usage:** Used by `vw_item_balance_qty_by_branch_new` as a source for indent outstanding aggregation. Can also be queried directly to check whether an open indent exists for a specific item (Logic 1 Step 1, Logic 2 Step 1).
+
+### 9.3 `vw_proc_po_outstanding_new` — Per-Line PO Outstanding
+
+**ORM Model:** `VwProcPoOutstandingNew` (in `src/models/procurement.py`)
+
+Provides per-PO-detail-line outstanding quantities. Joins PO header/detail with inward and debit/credit note adjustments.
+
+| View Column | Description |
+|-------------|-------------|
+| `po_dtl_id` | Primary key — unique PO detail line |
+| `branch_id` | Branch scope |
+| `po_type` | 'Regular' or 'Open' |
+| `item_id` / `item_code` | Item reference |
+| `qty` / `rate` | Original PO quantity and rate |
+| `bal_po_qty` | Balance outstanding (po_qty − inward_qty + drcr_qty) |
+| `maxqty` / `minqty` / `min_order_qty` | Min/max/reorder from `item_minmax_mst` |
+
+**Usage:** Used by `vw_item_balance_qty_by_branch_new` as a source for PO outstanding aggregation. Not directly needed for indent validation but provides context for PO-stage checks.
+
+---
+
 ## 8. Error & Message Reference
 
 | Trigger | Message Type | User Action |

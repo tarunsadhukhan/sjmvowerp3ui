@@ -341,6 +341,7 @@ const apiRoutesPortalMasters = {
     INDENT_SEND_FOR_APPROVAL: `${API_URL}/procurementIndent/send_indent_for_approval`,
     INDENT_REJECT: `${API_URL}/procurementIndent/reject_indent`,
     VALIDATE_ITEM_FOR_INDENT: `${API_URL}/procurementIndent/validate_item_for_indent`,
+    GET_INDENT_LINES_BY_TITLE: `${API_URL}/procurementIndent/get_indent_lines_by_title`,
     PO_TABLE: `${API_URL}/procurementPO/get_po_table`,
     GET_PO_SETUP_1: `${API_URL}/procurementPO/get_po_setup_1`,
     GET_PO_SETUP_2: `${API_URL}/procurementPO/get_po_setup_2`,

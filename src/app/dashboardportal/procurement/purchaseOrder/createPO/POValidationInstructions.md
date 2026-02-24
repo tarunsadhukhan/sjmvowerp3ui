@@ -381,6 +381,100 @@ No error messages. Free entry is allowed.
 
 ---
 
+## 10.5. Backend Validation Views (Data Sources)
+
+Three database views provide pre-computed data for the validation logic described above. These eliminate the need for ad-hoc queries when checking stock, outstanding quantities, and min/max values.
+
+### `vw_item_balance_qty_by_branch_new` — Primary Validation Source
+
+**ORM Model:** `VwItemBalanceQtyByBranchNew` (in `src/models/procurement.py`)
+
+This is the **main view used for min/max validation** on both indent and PO creation. It aggregates per `branch_id` + `item_id`:
+
+| View Column | Maps to Validation Term | Description |
+|-------------|------------------------|-------------|
+| `cur_stock` | `branch_stock` | Current stock at branch (inward − drcr − issue) |
+| `bal_qty_ind_to_validate` | `outstanding_indent_qty` | Outstanding indent qty from Regular/BOM indents only (excludes Open) |
+| `bal_tot_ind_qty` | Total outstanding indent qty | All indent types combined |
+| `open_bal_ind_tot_qty` | Open indent outstanding qty | Outstanding from Open-type indents only |
+| `bal_tot_po_qty` | Total outstanding PO qty | All PO types combined |
+| `open_bal_tot_po_qty` | Open PO outstanding qty | Outstanding from Open-type POs only |
+| `maxqty` | `max_qty` | Max stock qty from `item_minmax_mst` (0 if not set) |
+| `minqty` | `min_qty` | Min order qty from `item_minmax_mst` (0 if not set) |
+| `min_order_qty` | `reorder_qty` | Reorder qty from `item_minmax_mst` (0 if not set) |
+
+**Usage in Direct PO Logic 1 (Step 3 & 4):**
+```
+-- For direct PO, outstanding_po_qty excludes Open PO qty:
+outstanding_po_qty = bal_tot_po_qty - open_bal_tot_po_qty
+
+-- Step 3: Check if entry is blocked
+cur_stock + bal_qty_ind_to_validate + outstanding_po_qty > maxqty  →  blocked
+
+-- Step 4: Calculate max PO qty
+available = maxqty - cur_stock - bal_qty_ind_to_validate - outstanding_po_qty
+max_po_qty = IF(available < min_order_qty, min_order_qty, ROUNDUP(available / min_order_qty, 0) * min_order_qty)
+min_po_qty = minqty
+```
+
+**Usage in Indent-Based Open PO (Section 5.3):**
+```
+-- Formula for Open PO from Open indent:
+max_qty_for_branch - po_balance_qty_for_branch - current_stock_for_branch
+= maxqty - bal_tot_po_qty - cur_stock
+```
+
+**Usage in Direct PO Logic 2 (Step 3 & 4):**
+```
+-- Check if max/min exists
+maxqty = 0 AND minqty = 0  →  error, cannot proceed
+
+-- Outstanding Regular/BOM indent check
+bal_qty_ind_to_validate > 0  →  show warning (informational only)
+```
+
+### `vw_proc_indent_outstanding_new` — Per-Line Indent Outstanding
+
+**ORM Model:** `VwProcIndentOutstandingNew` (in `src/models/procurement.py`)
+
+Provides per-indent-detail-line outstanding quantities for approved/closed indents (`status_id IN (3, 5)`).
+
+| View Column | Description |
+|-------------|-------------|
+| `indent_dtl_id` | Primary key — unique indent detail line |
+| `branch_id` | Branch scope |
+| `item_id` / `item_name` | Item reference with display name |
+| `indent_qty` | Original indent quantity |
+| `bal_ind_qty` | Balance outstanding (for Open = full qty; for Regular/BOM = indent_qty − cancelled − PO consumed) |
+| `indent_type_id` | 'Regular', 'Open', or 'BOM' |
+| `expense_type_id` / `expense_type_name` | Expense type reference |
+
+**Key behaviour:** For Open indent types, `bal_ind_qty` always equals `indent_qty` (the full quantity is always "outstanding" since open indents are recurring).
+
+**Usage for PO creation:** This view provides the list of approved indents with outstanding quantities for the indent-selection step (Section 5). Filter by `branch_id` and `bal_ind_qty > 0` to get available indent lines.
+
+### `vw_proc_po_outstanding_new` — Per-Line PO Outstanding
+
+**ORM Model:** `VwProcPoOutstandingNew` (in `src/models/procurement.py`)
+
+Provides per-PO-detail-line outstanding quantities. Joins PO header/detail with inward and debit/credit note adjustments.
+
+| View Column | Description |
+|-------------|-------------|
+| `po_dtl_id` | Primary key — unique PO detail line |
+| `branch_id` | Branch scope |
+| `po_type` | 'Regular' or 'Open' |
+| `item_id` / `item_code` | Item reference |
+| `qty` / `rate` | Original PO quantity and rate |
+| `bal_po_qty` | Balance outstanding (po_qty − inward_qty + drcr_qty) |
+| `maxqty` / `minqty` / `min_order_qty` | Min/max/reorder from `item_minmax_mst` |
+
+**Usage for Direct PO Logic 1 (Step 2):** Query this view to check if an active PO exists for the same item: `SELECT * FROM vw_proc_po_outstanding_new WHERE item_id = :item_id AND branch_id = :branch_id AND bal_po_qty > 0`.
+
+**Usage for Direct PO Logic 2 (Step 1):** Check for existing open PO in current FY: filter by `po_type = 'Open'` and `po_date` within the current financial year.
+
+---
+
 ## 11. Configuration Dependencies
 
 | Config Key | Location | Impact |

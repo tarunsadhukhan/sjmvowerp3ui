@@ -61,6 +61,7 @@ export const EMPTY_DEPARTMENTS: ReadonlyArray<DepartmentRecord> = Object.freeze(
 export const EMPTY_PROJECTS: ReadonlyArray<ProjectRecord> = Object.freeze([]);
 export const EMPTY_EXPENSES: ReadonlyArray<ExpenseRecord> = Object.freeze([]);
 export const EMPTY_ITEM_GROUPS: ReadonlyArray<ItemGroupRecord> = Object.freeze([]);
+export const EMPTY_INDENT_TITLES: ReadonlyArray<string> = Object.freeze([]);
 export const EMPTY_OPTIONS: ReadonlyArray<Option> = Object.freeze([]);
 export const EMPTY_LINE_ITEMS: ReadonlyArray<EditableLineItem> = Object.freeze([]);
 

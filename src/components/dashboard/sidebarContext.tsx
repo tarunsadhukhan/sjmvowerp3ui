@@ -150,24 +150,24 @@ export const SidebarProvider = ({ children }: { children: ReactNode }) => {
   const handleCompanyChange = useCallback((companyId: number) => {
     const company = companies.find(c => c.co_id === companyId);
     if (company) {
-      // only reload if the company actually changed
+      // only redirect if the company actually changed
       const prevId = selectedCompany?.co_id;
       setSelectedCompany(company);
       const defaultBranches = company.branches.length > 0 ? [company.branches[0].branch_id] : [];
       setSelectedBranches(defaultBranches);
       if (prevId !== companyId) {
-        // reload to refresh data for the newly selected company
-        setTimeout(() => window.location.reload(), 50);
+        // redirect to portal home to refresh data for the newly selected company
+        setTimeout(() => { window.location.href = '/dashboardportal'; }, 50);
       }
     }
   }, [companies]);
 
   const handleBranchChange = useCallback((branchIds: number[]) => {
-    // only reload when branches actually change
+    // only redirect when branches actually change
     const same = branchIds.length === selectedBranches.length && branchIds.every(id => selectedBranches.includes(id));
     setSelectedBranches(branchIds);
     if (!same) {
-      setTimeout(() => window.location.reload(), 50);
+      setTimeout(() => { window.location.href = '/dashboardportal'; }, 50);
     }
   }, []);
 

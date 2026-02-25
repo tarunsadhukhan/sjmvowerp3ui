@@ -2,26 +2,31 @@ import React from "react";
 import { SearchableSelect } from "@/components/ui/transaction";
 import { Input } from "@/components/ui/input";
 import type { TransactionLineColumn } from "@/components/ui/transaction";
-import type { EditableLineItem, Option } from "../types/salesOrderTypes";
+import type { EditableLineItem, Option, UomConversionEntry } from "../types/salesOrderTypes";
+import { computeConvertedRate } from "@/utils/uomConversion";
 
 type UseSalesOrderLineItemColumnsParams = {
 	canEdit: boolean;
+	invoiceTypeId?: string;
 	itemGroupOptions: Option[];
 	itemGroupLoading: Partial<Record<string, boolean>>;
 	getItemOptions: (groupId: string) => Option[];
 	getMakeOptions: (groupId: string) => Option[];
 	getUomOptions: (groupId: string, itemId: string) => Option[];
+	getUomConversions?: (groupId: string, itemId: string) => UomConversionEntry[] | undefined;
 	getItemGroupLabel: (groupId: string) => string;
 	handleLineFieldChange: (id: string, field: keyof EditableLineItem, value: string | number) => void;
 };
 
 export const useSalesOrderLineItemColumns = ({
 	canEdit,
+	invoiceTypeId,
 	itemGroupOptions,
 	itemGroupLoading,
 	getItemOptions,
 	getMakeOptions,
 	getUomOptions,
+	getUomConversions,
 	getItemGroupLabel,
 	handleLineFieldChange,
 }: UseSalesOrderLineItemColumnsParams): TransactionLineColumn<EditableLineItem>[] =>
@@ -147,19 +152,52 @@ export const useSalesOrderLineItemColumns = ({
 				header: "Rate",
 				width: "0.8fr",
 				minWidth: "80px",
-				renderCell: ({ item }) =>
-					canEdit ? (
-						<Input
-							type="text"
-							value={item.rate}
-							onChange={(e) => handleLineFieldChange(item.id, "rate", e.target.value)}
-							placeholder="0.00"
-							className="h-8 text-sm"
-						/>
-					) : (
-						<span className="block truncate text-sm">{item.rate || "-"}</span>
-					),
-				getTooltip: ({ item }) => (item.rate ? `Rate: ${item.rate}` : undefined),
+				renderCell: ({ item }) => {
+					const showConversion = invoiceTypeId === "2";
+					const conversion = showConversion && getUomConversions
+						? computeConvertedRate(item.rate, item.uom, getUomConversions(item.itemGroup, item.item))
+						: null;
+
+					if (canEdit) {
+						return (
+							<div className="flex flex-col gap-0.5">
+								<Input
+									type="text"
+									value={item.rate}
+									onChange={(e) => handleLineFieldChange(item.id, "rate", e.target.value)}
+									placeholder="0.00"
+									className="h-8 text-sm"
+								/>
+								{conversion ? (
+									<span className="text-[11px] text-muted-foreground leading-tight truncate">
+										{"\u2248"} {conversion.convertedRate} / {conversion.otherUomName}
+									</span>
+								) : null}
+							</div>
+						);
+					}
+
+					return (
+						<div className="flex flex-col gap-0.5">
+							<span className="block truncate text-sm">{item.rate || "-"}</span>
+							{conversion ? (
+								<span className="text-[11px] text-muted-foreground leading-tight truncate">
+									{"\u2248"} {conversion.convertedRate} / {conversion.otherUomName}
+								</span>
+							) : null}
+						</div>
+					);
+				},
+				getTooltip: ({ item }) => {
+					const showConversion = invoiceTypeId === "2";
+					const conversion = showConversion && getUomConversions
+						? computeConvertedRate(item.rate, item.uom, getUomConversions(item.itemGroup, item.item))
+						: null;
+					const parts: string[] = [];
+					if (item.rate) parts.push(`Rate: ${item.rate}`);
+					if (conversion) parts.push(`\u2248 ${conversion.convertedRate} / ${conversion.otherUomName}`);
+					return parts.length ? parts.join("\n") : undefined;
+				},
 			},
 			{
 				id: "amount",
@@ -200,5 +238,5 @@ export const useSalesOrderLineItemColumns = ({
 					),
 			},
 		],
-		[canEdit, itemGroupOptions, itemGroupLoading, getItemOptions, getMakeOptions, getUomOptions, getItemGroupLabel, handleLineFieldChange],
+		[canEdit, invoiceTypeId, itemGroupOptions, itemGroupLoading, getItemOptions, getMakeOptions, getUomOptions, getUomConversions, getItemGroupLabel, handleLineFieldChange],
 	);

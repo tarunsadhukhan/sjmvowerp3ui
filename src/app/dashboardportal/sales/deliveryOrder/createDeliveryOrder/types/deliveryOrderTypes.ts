@@ -2,6 +2,9 @@
  * Delivery Order specific shared TypeScript definitions.
  */
 
+import type { UomConversionEntry } from "@/utils/uomConversion";
+export type { UomConversionEntry } from "@/utils/uomConversion";
+
 export type Option = {
 	label: string;
 	value: string;
@@ -14,6 +17,7 @@ export type CustomerBranchRecord = {
 	stateName?: string;
 	stateId?: number;
 	gstNo?: string;
+	fullAddress?: string;
 };
 
 export type CustomerRecord = {
@@ -29,12 +33,23 @@ export type TransporterRecord = {
 	code?: string;
 };
 
+export type BrokerRecord = {
+	id: string;
+	name: string;
+	code?: string;
+};
+
 export type ApprovedSalesOrderRecord = {
 	id: string;
 	salesNo: string;
 	salesOrderDate?: string;
 	partyName?: string;
 	netAmount?: number;
+};
+
+export type InvoiceTypeRecord = {
+	id: string;
+	name: string;
 };
 
 export type ItemGroupRecord = {
@@ -59,6 +74,7 @@ export type ItemGroupCacheEntry = {
 	uomLabelByItemId: Record<string, Record<string, string>>;
 	itemRateById: Record<string, number>;
 	itemTaxById: Record<string, number>;
+	uomConversionsByItemId: Record<string, UomConversionEntry[]>;
 };
 
 export type EditableLineItem = {
@@ -91,8 +107,10 @@ export type EditableLineItem = {
 export type DOSetupData = {
 	customers: CustomerRecord[];
 	transporters: TransporterRecord[];
+	brokers: BrokerRecord[];
 	approvedSalesOrders: ApprovedSalesOrderRecord[];
 	itemGroups: ItemGroupRecord[];
+	invoiceTypes: InvoiceTypeRecord[];
 };
 
 // Raw API response types
@@ -128,6 +146,15 @@ export type TransporterRecordRaw = {
 	name?: string;
 };
 
+export type BrokerRecordRaw = {
+	id?: string | number;
+	broker_id?: string | number;
+	party_id?: string | number;
+	broker_name?: string;
+	broker_code?: string;
+	name?: string;
+};
+
 export type ApprovedSalesOrderRecordRaw = {
 	id?: string | number;
 	sales_order_id?: string | number;
@@ -136,6 +163,11 @@ export type ApprovedSalesOrderRecordRaw = {
 	sales_order_date?: string;
 	party_name?: string;
 	net_amount?: number;
+};
+
+export type InvoiceTypeRecordRaw = {
+	invoice_type_id?: string | number;
+	invoice_type_name?: string;
 };
 
 export type ItemGroupRecordRaw = {
@@ -172,13 +204,19 @@ export type ItemUomOptionRaw = {
 	mapToId?: string | number;
 	uom_id?: string | number;
 	uom_name?: string;
+	map_from_id?: string | number;
+	map_from_name?: string;
+	relation_value?: number | null;
+	rounding?: number | null;
 };
 
 export type DOSetup1ResponseRaw = {
 	customers?: CustomerRecordRaw[];
 	transporters?: TransporterRecordRaw[];
+	brokers?: BrokerRecordRaw[];
 	approved_sales_orders?: ApprovedSalesOrderRecordRaw[];
 	item_groups?: ItemGroupRecordRaw[];
+	invoice_types?: InvoiceTypeRecordRaw[];
 	branches?: unknown[];
 };
 

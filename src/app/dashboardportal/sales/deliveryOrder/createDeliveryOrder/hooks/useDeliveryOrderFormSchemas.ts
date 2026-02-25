@@ -7,7 +7,9 @@ export type UseHeaderSchemaParams = {
 	customerOptions: Option[];
 	customerBranchOptions: Option[];
 	transporterOptions: Option[];
+	brokerOptions: Option[];
 	salesOrderOptions: Option[];
+	invoiceTypeOptions: Option[];
 	mode: "create" | "edit" | "view";
 	headerFieldsDisabled: boolean;
 };
@@ -18,7 +20,7 @@ export type UseFooterSchemaParams = {
 
 export const useDeliveryOrderHeaderSchema = ({
 	branchOptions, customerOptions, customerBranchOptions,
-	transporterOptions, salesOrderOptions, mode, headerFieldsDisabled,
+	transporterOptions, brokerOptions, salesOrderOptions, invoiceTypeOptions, mode, headerFieldsDisabled,
 }: UseHeaderSchemaParams): Schema =>
 	React.useMemo(() => {
 		const fields: Field[] = [
@@ -26,8 +28,9 @@ export const useDeliveryOrderHeaderSchema = ({
 			{ name: "date", label: "DO Date", type: "date", required: true, disabled: mode === "view", grid: { xs: 12, md: 4 } },
 			{ name: "expected_delivery_date", label: "Expected Delivery Date", type: "date", disabled: headerFieldsDisabled, grid: { xs: 12, md: 4 } },
 			{ name: "party", label: "Customer", type: "select", options: customerOptions, required: true, disabled: headerFieldsDisabled, grid: { xs: 12, md: 4 } },
-			{ name: "party_branch", label: "Customer Branch", type: "select", options: customerBranchOptions, disabled: headerFieldsDisabled, grid: { xs: 12, md: 4 } },
+			{ name: "broker", label: "Broker", type: "select", options: brokerOptions, disabled: headerFieldsDisabled, grid: { xs: 12, md: 4 } },
 			{ name: "sales_order", label: "Sales Order", type: "select", options: salesOrderOptions, disabled: headerFieldsDisabled, grid: { xs: 12, md: 4 } },
+			{ name: "invoice_type", label: "Invoice Type", type: "select", options: invoiceTypeOptions, disabled: headerFieldsDisabled, grid: { xs: 12, md: 4 } },
 			{ name: "billing_to", label: "Billing To", type: "select", options: customerBranchOptions, disabled: headerFieldsDisabled, grid: { xs: 12, md: 4 } },
 			{ name: "shipping_to", label: "Shipping To", type: "select", options: customerBranchOptions, disabled: headerFieldsDisabled, grid: { xs: 12, md: 4 } },
 			{ name: "transporter", label: "Transporter", type: "select", options: transporterOptions, disabled: headerFieldsDisabled, grid: { xs: 12, md: 4 } },
@@ -38,7 +41,7 @@ export const useDeliveryOrderHeaderSchema = ({
 			{ name: "eway_bill_date", label: "E-Way Bill Date", type: "date", disabled: headerFieldsDisabled, grid: { xs: 12, md: 4 } },
 		];
 		return { fields } satisfies Schema;
-	}, [branchOptions, customerOptions, customerBranchOptions, transporterOptions, salesOrderOptions, mode, headerFieldsDisabled]);
+	}, [branchOptions, customerOptions, customerBranchOptions, transporterOptions, brokerOptions, salesOrderOptions, invoiceTypeOptions, mode, headerFieldsDisabled]);
 
 export const useDeliveryOrderFooterSchema = ({ mode }: UseFooterSchemaParams): Schema =>
 	React.useMemo(() => {

@@ -2,6 +2,8 @@
  * Sales Order specific shared TypeScript definitions.
  */
 
+export type { UomConversionEntry } from "@/utils/uomConversion";
+
 export type Option = {
 	label: string;
 	value: string;
@@ -15,6 +17,7 @@ export type CustomerBranchRecord = {
 	id: string;
 	address: string;
 	stateName?: string;
+	fullAddress?: string;
 };
 
 export type CustomerRecord = {
@@ -60,6 +63,11 @@ export type ItemGroupRecord = {
 	label: string;
 };
 
+export type InvoiceTypeRecord = {
+	id: string;
+	name: string;
+};
+
 export type ItemOption = Option & {
 	defaultUomId?: string;
 	defaultUomLabel?: string;
@@ -77,6 +85,7 @@ export type ItemGroupCacheEntry = {
 	uomLabelByItemId: Record<string, Record<string, string>>;
 	itemRateById: Record<string, number>;
 	itemTaxById: Record<string, number>;
+	uomConversionsByItemId: Record<string, import("@/utils/uomConversion").UomConversionEntry[]>;
 };
 
 export type SalesOrderSetupData = {
@@ -86,6 +95,7 @@ export type SalesOrderSetupData = {
 	approvedQuotations: ApprovedQuotationRecord[];
 	itemGroups: ItemGroupRecord[];
 	branchAddresses: BranchAddressRecord[];
+	invoiceTypes: InvoiceTypeRecord[];
 	coConfig?: {
 		india_gst?: number;
 		quotation_required?: number | boolean;
@@ -175,6 +185,11 @@ export type BranchAddressRecordRaw = {
 	state_id?: number;
 };
 
+export type InvoiceTypeRecordRaw = {
+	invoice_type_id?: string | number;
+	invoice_type_name?: string;
+};
+
 export type ItemGroupRecordRaw = {
 	id?: string | number;
 	item_grp_id?: string | number;
@@ -205,10 +220,14 @@ export type ItemMakeOptionRaw = {
 export type ItemUomOptionRaw = {
 	id?: string | number;
 	item_id?: string | number;
+	map_from_id?: string | number;
+	map_from_name?: string;
 	map_to_id?: string | number;
 	mapToId?: string | number;
 	uom_id?: string | number;
 	uom_name?: string;
+	relation_value?: number | null;
+	rounding?: number | null;
 };
 
 export type SalesOrderSetup1ResponseRaw = {
@@ -217,6 +236,7 @@ export type SalesOrderSetup1ResponseRaw = {
 	transporters?: TransporterRecordRaw[];
 	approved_quotations?: ApprovedQuotationRecordRaw[];
 	item_groups?: ItemGroupRecordRaw[];
+	invoice_types?: InvoiceTypeRecordRaw[];
 	co_config?: Record<string, unknown>;
 	branches?: Array<Record<string, unknown>>;
 };

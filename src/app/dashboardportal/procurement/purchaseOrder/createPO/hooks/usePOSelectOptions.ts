@@ -1,6 +1,7 @@
 import React from "react";
 import type {
   BranchAddressRecord,
+  BrokerRecord,
   ExpenseRecord,
   ItemGroupCacheEntry,
   ItemGroupRecord,
@@ -12,6 +13,7 @@ import type {
 
 type UsePOSelectOptionsParams = {
   suppliers: ReadonlyArray<SupplierRecord>;
+  brokers: ReadonlyArray<BrokerRecord>;
   supplierBranches: ReadonlyArray<SupplierBranchRecord>;
   branchAddresses: ReadonlyArray<BranchAddressRecord>;
   projects: ReadonlyArray<ProjectRecord>;
@@ -26,6 +28,7 @@ type UsePOSelectOptionsParams = {
  */
 export const usePOSelectOptions = ({
   suppliers,
+  brokers,
   supplierBranches,
   branchAddresses,
   projects,
@@ -42,6 +45,11 @@ export const usePOSelectOptions = ({
       }))
       .filter((opt) => opt.value);
   }, [suppliers]);
+
+  const brokerOptions = React.useMemo<Option[]>(
+    () => brokers.map((b) => ({ label: b.name || b.id, value: b.id })),
+    [brokers],
+  );
 
   const supplierBranchOptions = React.useMemo<Option[]>(
     () => supplierBranches.map((b) => ({ label: b.address || b.id, value: b.id })),
@@ -129,6 +137,7 @@ export const usePOSelectOptions = ({
 
   return {
     supplierOptions,
+    brokerOptions,
     supplierBranchOptions,
     branchAddressOptions,
     projectOptions,

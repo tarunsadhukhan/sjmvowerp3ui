@@ -179,6 +179,8 @@ export const SRPreview: React.FC<SRPreviewProps> = ({
 							<th style={{ border: "1px solid #ddd", padding: "8px" }}>UOM</th>
 							<th style={{ border: "1px solid #ddd", padding: "8px", textAlign: "right" }}>Qty</th>
 							<th style={{ border: "1px solid #ddd", padding: "8px", textAlign: "right" }}>Rate</th>
+							<th style={{ border: "1px solid #ddd", padding: "8px", textAlign: "right" }}>Disc.</th>
+							<th style={{ border: "1px solid #ddd", padding: "8px", textAlign: "right" }}>Disc. Amt</th>
 							<th style={{ border: "1px solid #ddd", padding: "8px" }}>Warehouse</th>
 							<th style={{ border: "1px solid #ddd", padding: "8px", textAlign: "right" }}>Amount</th>
 							<th style={{ border: "1px solid #ddd", padding: "8px", textAlign: "right" }}>Tax %</th>
@@ -204,6 +206,16 @@ export const SRPreview: React.FC<SRPreviewProps> = ({
 								</td>
 								<td style={{ border: "1px solid #ddd", padding: "8px", textAlign: "right" }}>
 									{item.accepted_rate.toFixed(2)}
+								</td>
+								<td style={{ border: "1px solid #ddd", padding: "8px", textAlign: "right" }}>
+									{item.discount_mode === 1
+										? `${item.discount_value ?? 0}%`
+										: item.discount_mode === 2
+											? (item.discount_value ?? 0).toFixed(2)
+											: "-"}
+								</td>
+								<td style={{ border: "1px solid #ddd", padding: "8px", textAlign: "right" }}>
+									{item.discount_amount > 0 ? item.discount_amount.toFixed(2) : "-"}
 								</td>
 								<td style={{ border: "1px solid #ddd", padding: "8px" }}>
 									{item.warehouse_name || "-"}

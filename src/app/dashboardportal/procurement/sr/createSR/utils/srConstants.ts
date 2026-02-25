@@ -2,6 +2,29 @@ import type { ApprovalStatusId } from "@/components/ui/transaction";
 import type { SRLineItem, Option } from "../types/srTypes";
 
 /**
+ * Discount mode identifiers supported by the SR flow.
+ * Mirrors the PO discount mode convention.
+ */
+export const DISCOUNT_MODE = {
+	PERCENTAGE: 1,
+	AMOUNT: 2,
+} as const;
+
+export type DiscountMode = (typeof DISCOUNT_MODE)[keyof typeof DISCOUNT_MODE];
+
+/**
+ * Utility to determine if a discount mode expects percentage logic.
+ */
+export const isPercentageDiscountMode = (mode?: number | null): mode is typeof DISCOUNT_MODE.PERCENTAGE =>
+	mode === DISCOUNT_MODE.PERCENTAGE;
+
+/**
+ * Utility to determine if a discount mode expects flat amount logic.
+ */
+export const isAmountDiscountMode = (mode?: number | null): mode is typeof DISCOUNT_MODE.AMOUNT =>
+	mode === DISCOUNT_MODE.AMOUNT;
+
+/**
  * Standard SR status identifiers used throughout the workflow.
  */
 export const SR_STATUS_IDS = {

@@ -160,6 +160,15 @@ export type SupplierRecord = {
 };
 
 /**
+ * Broker record as consumed by the PO UI.
+ */
+export type BrokerRecord = {
+	id: string;
+	name: string;
+	code?: string;
+};
+
+/**
  * Company branch/billing address details as consumed by the PO UI.
  */
 export type BranchAddressRecord = {
@@ -228,6 +237,7 @@ export type ItemGroupCacheEntry = {
  */
 export type POSetupData = {
 	suppliers: SupplierRecord[];
+	brokers: BrokerRecord[];
 	projects: ProjectRecord[];
 	expenses: ExpenseRecord[];
 	itemGroups: ItemGroupRecord[];
@@ -276,6 +286,18 @@ export type SupplierBranchRecordRaw = {
 	branch_address2?: string;
 	state_name?: string;
 	state?: string;
+};
+
+/**
+ * Raw broker representation from API responses.
+ */
+export type BrokerRecordRaw = {
+	id?: string | number;
+	broker_id?: string | number;
+	party_id?: string | number;
+	broker_name?: string;
+	broker_code?: string;
+	name?: string;
 };
 
 /**
@@ -367,6 +389,7 @@ export type ItemUomOptionRaw = {
  */
 export type POSetup1ResponseRaw = {
 	suppliers?: SupplierRecordRaw[];
+	brokers?: BrokerRecordRaw[];
 	projects?: ProjectRecordRaw[];
 	expense_types?: ExpenseRecordRaw[];
 	item_groups?: ItemGroupRecordRaw[];

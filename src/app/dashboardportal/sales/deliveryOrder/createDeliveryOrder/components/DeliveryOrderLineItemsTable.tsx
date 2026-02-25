@@ -2,7 +2,8 @@ import React from "react";
 import { SearchableSelect } from "@/components/ui/transaction";
 import { Input } from "@/components/ui/input";
 import type { TransactionLineColumn } from "@/components/ui/transaction";
-import type { EditableLineItem, Option } from "../types/deliveryOrderTypes";
+import type { EditableLineItem, Option, UomConversionEntry } from "../types/deliveryOrderTypes";
+import { computeConvertedRate } from "@/utils/uomConversion";
 import { DISCOUNT_TYPE } from "../utils/deliveryOrderConstants";
 
 const DISCOUNT_TYPE_OPTIONS: Option[] = [
@@ -20,6 +21,8 @@ type UseDOLineItemColumnsParams = {
 	getUomOptions: (groupId: string, itemId: string) => Option[];
 	getUomLabel: (groupId: string, itemId: string, uomId: string) => string;
 	onFieldChange: (id: string, field: keyof EditableLineItem, value: string | number) => void;
+	invoiceTypeId?: string;
+	getUomConversions?: (groupId: string, itemId: string) => UomConversionEntry[] | undefined;
 };
 
 export const useDOLineItemColumns = ({
@@ -31,6 +34,8 @@ export const useDOLineItemColumns = ({
 	getUomOptions,
 	getUomLabel,
 	onFieldChange,
+	invoiceTypeId,
+	getUomConversions,
 }: UseDOLineItemColumnsParams): TransactionLineColumn<EditableLineItem>[] =>
 	React.useMemo(
 		() => [
@@ -88,19 +93,53 @@ export const useDOLineItemColumns = ({
 				header: "Rate",
 				width: "0.8fr",
 				minWidth: "80px",
-				renderCell: ({ item }) =>
-					canEdit ? (
-						<Input
-							type="text"
-							value={item.rate}
-							onChange={(e) => onFieldChange(item.id, "rate", e.target.value)}
-							placeholder="0.00"
-							className="h-8 text-sm"
-						/>
-					) : (
-						<span className="block truncate text-sm">{item.rate || "-"}</span>
-					),
-				getTooltip: ({ item }) => (item.rate ? `Rate: ${item.rate}` : undefined),
+				renderCell: ({ item }) => {
+					const showConversion = invoiceTypeId === "2";
+					const conversion = showConversion && getUomConversions
+						? computeConvertedRate(item.rate, item.uom, getUomConversions(item.itemGroup, item.item))
+						: null;
+
+					if (canEdit) {
+						return (
+							<div className="flex flex-col gap-0.5">
+								<Input
+									type="text"
+									value={item.rate}
+									onChange={(e) => onFieldChange(item.id, "rate", e.target.value)}
+									placeholder="0.00"
+									className="h-8 text-sm"
+								/>
+								{conversion ? (
+									<span className="text-[11px] text-muted-foreground leading-tight truncate">
+										{"\u2248"} {conversion.convertedRate} / {conversion.otherUomName}
+									</span>
+								) : null}
+							</div>
+						);
+					}
+
+					return (
+						<div className="flex flex-col gap-0.5">
+							<span className="block truncate text-sm">{item.rate || "-"}</span>
+							{conversion ? (
+								<span className="text-[11px] text-muted-foreground leading-tight truncate">
+									{"\u2248"} {conversion.convertedRate} / {conversion.otherUomName}
+								</span>
+							) : null}
+						</div>
+					);
+				},
+				getTooltip: ({ item }) => {
+					if (!item.rate) return undefined;
+					const showConversion = invoiceTypeId === "2";
+					const conversion = showConversion && getUomConversions
+						? computeConvertedRate(item.rate, item.uom, getUomConversions(item.itemGroup, item.item))
+						: null;
+					if (conversion) {
+						return `Rate: ${item.rate} (\u2248 ${conversion.convertedRate} / ${conversion.otherUomName})`;
+					}
+					return `Rate: ${item.rate}`;
+				},
 			},
 			{
 				id: "quantity",
@@ -236,7 +275,7 @@ export const useDOLineItemColumns = ({
 				getTooltip: ({ item }) => (item.remarks ? item.remarks : undefined),
 			},
 		],
-		[canEdit, itemGroupOptions, getItemGroupLabel, getItemOptions, getItemLabel, getUomOptions, getUomLabel, onFieldChange],
+		[canEdit, itemGroupOptions, getItemGroupLabel, getItemOptions, getItemLabel, getUomOptions, getUomLabel, onFieldChange, invoiceTypeId, getUomConversions],
 	);
 
 export default useDOLineItemColumns;

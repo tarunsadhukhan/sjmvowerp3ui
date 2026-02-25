@@ -11,6 +11,7 @@ import type { Option } from "../types/poTypes";
 export type UsePOHeaderSchemaParams = {
   branchOptions: Option[];
   supplierOptions: Option[];
+  brokerOptions: Option[];
   supplierBranchOptions: Option[];
   branchAddressOptions: Option[];
   projectOptions: Option[];
@@ -39,6 +40,7 @@ export type UsePOFooterSchemaParams = {
 export const usePOHeaderSchema = ({
   branchOptions,
   supplierOptions,
+  brokerOptions,
   supplierBranchOptions,
   branchAddressOptions,
   projectOptions,
@@ -65,6 +67,7 @@ export const usePOHeaderSchema = ({
       },
       { name: "date", label: "PO Date", type: "date", required: true, disabled: mode === "view", grid: { xs: 12, md: 4 } },
       { name: "supplier", label: "Supplier", type: "select", options: supplierOptions, required: true, disabled: headerFieldsDisabled, grid: { xs: 12, md: 4 } },
+      { name: "broker", label: "Broker", type: "select", options: brokerOptions, disabled: headerFieldsDisabled, grid: { xs: 12, md: 4 } },
       { name: "supplier_branch", label: "Supplier Branch", type: "select", options: supplierBranchOptions, required: true, disabled: headerFieldsDisabled, grid: { xs: 12, md: 4 } },
       { name: "billing_address", label: "Billing Address", type: "select", options: branchAddressOptions, required: true, disabled: headerFieldsDisabled, grid: { xs: 12, md: 4 } },
       { name: "shipping_address", label: "Shipping Address", type: "select", options: branchAddressOptions, required: true, disabled: headerFieldsDisabled, grid: { xs: 12, md: 4 } },
@@ -111,6 +114,7 @@ export const usePOHeaderSchema = ({
   }, [
     branchOptions,
     supplierOptions,
+    brokerOptions,
     supplierBranchOptions,
     branchAddressOptions,
     projectOptions,

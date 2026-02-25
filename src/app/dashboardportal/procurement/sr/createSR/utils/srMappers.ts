@@ -1,5 +1,5 @@
 import type { SRHeader, SRHeaderRaw, SRLineItem, SRLineItemRaw } from "../types/srTypes";
-import { calculateLineTax, calculateLineAmount } from "./srCalculations";
+import { calculateLineTax, calculateLineAmountWithDiscount, calculateLineAmount } from "./srCalculations";
 
 /**
  * Maps raw API header response to normalized SRHeader type.
@@ -104,8 +104,22 @@ export const mapSRLineItem = (
 ): SRLineItem => {
 	const acceptedRate = raw.accepted_rate ?? raw.po_rate ?? raw.rate ?? 0;
 	const approvedQty = raw.approved_qty ?? 0;
-	const discountAmount = raw.discount_amount ?? 0;
-	const amount = calculateLineAmount(approvedQty, acceptedRate, discountAmount);
+	const discountMode = raw.discount_mode ?? null;
+	const discountValue = raw.discount_value ?? null;
+
+	// If discount mode/value are set, compute discount amount from them;
+	// otherwise fall back to the raw discount_amount from API
+	let discountAmount: number;
+	let amount: number;
+	if (discountMode && discountValue) {
+		const calc = calculateLineAmountWithDiscount(approvedQty, acceptedRate, discountMode, discountValue);
+		discountAmount = calc.discountAmount;
+		amount = calc.amount;
+	} else {
+		discountAmount = raw.discount_amount ?? 0;
+		amount = calculateLineAmount(approvedQty, acceptedRate, discountAmount);
+	}
+
 	const taxPercentage = raw.tax_percentage ?? 0;
 
 	// Calculate GST based on states
@@ -134,8 +148,8 @@ export const mapSRLineItem = (
 		po_rate: raw.po_rate ?? raw.rate ?? 0,
 		accepted_rate: acceptedRate,
 		amount,
-		discount_mode: raw.discount_mode ?? null,
-		discount_value: raw.discount_value ?? null,
+		discount_mode: discountMode,
+		discount_value: discountValue,
 		discount_amount: discountAmount,
 		tax_percentage: taxPercentage,
 		igst_amount: tax.igst,

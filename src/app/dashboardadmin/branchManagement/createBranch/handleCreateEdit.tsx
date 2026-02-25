@@ -17,7 +17,6 @@ const HandleCreateEditBranch = () => {  const router = useRouter();
   const [initialValues, setInitialValues] = useState<any>(null);
   const [companies, setCompanies] = useState<any[]>([]);
   const [countries, setCountries] = useState<any[]>([]);
-  const [cities, setCities] = useState<any[]>([]);
   const [states, setStates] = useState<any[]>([]);
 
   useEffect(() => {
@@ -49,7 +48,6 @@ const HandleCreateEditBranch = () => {  const router = useRouter();
           setCompanies(enhancedCompanies);
           setCountries(data.countries || []);
           setStates(data.states || []);
-          setCities(data.cities || []);
           
           // Find the selected objects based on IDs
           // Use companyId from URL if available, otherwise from API response
@@ -57,7 +55,6 @@ const HandleCreateEditBranch = () => {  const router = useRouter();
           const selectedCompany = enhancedCompanies.find((c: any) => c.co_id === co_id);
           const selectedCountry = data.countries?.find((c: any) => c.country_id === data.data.country_id);
           const selectedState = data.states?.find((s: any) => s.state_id === data.data.state_id);
-          const selectedCity = data.cities?.find((c: any) => c.city_id === data.data.city_id);
             const formValues = {
             co_id: companyId || data.data.co_id?.toString() || "",
             branch_name: data.data.branch_name || "",
@@ -69,7 +66,6 @@ const HandleCreateEditBranch = () => {  const router = useRouter();
             contact_no: data.data.contact_no || "",
             country_id: data.data.country_id?.toString() || "",
             state_id: data.data.state_id?.toString() || "",
-            city_id: data.data.city_id?.toString() || "",
             active: data.data.active === 1 || data.data.active === true
           };
           
@@ -100,7 +96,6 @@ const HandleCreateEditBranch = () => {  const router = useRouter();
           setCompanies(enhancedCompanies);
           setCountries(data.countries || []);
           setStates(data.states || []);
-          setCities(data.cities || []);
           setInitialValues(null); // BranchForm will use its own default values
         }
       }
@@ -117,7 +112,6 @@ const HandleCreateEditBranch = () => {  const router = useRouter();
         co_id: formData.co_id ? Number(formData.co_id) : null,
         country_id: formData.country_id ? Number(formData.country_id) : null,
         state_id: formData.state_id ? Number(formData.state_id) : null,
-        city_id: formData.city_id ? Number(formData.city_id) : null,
         active: formData.active ? 1 : 0
       };
       
@@ -151,7 +145,6 @@ const HandleCreateEditBranch = () => {  const router = useRouter();
         companies={companies}
         countries={countries}
         states={states}
-        cities={cities}
         onSubmit={handleSubmit}
         loading={loading}
         isEdit={!!branchId}

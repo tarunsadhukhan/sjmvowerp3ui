@@ -21,7 +21,6 @@ type BranchRow = {
   address_additional?: string;
   zip_code?: number | string;
   state?: string;
-  city?: string;
   gst_no?: string;
   contact_person?: string;
   contact_no?: string;
@@ -36,7 +35,6 @@ export default function CreateParty({ open, onClose, mode = 'create', editId, on
   const [branches, setBranches] = useState<BranchRow[]>([]);
   const [initialBranches, setInitialBranches] = useState<BranchRow[]>([]);
   const [statesByCountry, setStatesByCountry] = useState<Record<string, any[]>>({});
-  const [citiesByState, setCitiesByState] = useState<Record<string, any[]>>({});
   const [selectedCountry, setSelectedCountry] = useState<string | undefined>(undefined);
   // party types handled by MuiForm multiselect
 
@@ -61,23 +59,15 @@ export default function CreateParty({ open, onClose, mode = 'create', editId, on
   // countries: country_id/country
   const countries = countriesRaw.map((c: any) => ({ label: c.country ?? c.name ?? String(c.country_id ?? c.id), value: String(c.country_id ?? c.id) }));
 
-        // build state and city maps if provided in setup
+        // build state maps if provided in setup
         const statesRaw = data.states ?? [];
-        const citiesRaw = data.cities ?? [];
         const sMap: Record<string, any[]> = {};
         for (const s of statesRaw) {
           const cId = String(s.country_id ?? s.countryId ?? s.co_id ?? s.country);
           sMap[cId] = sMap[cId] ?? [];
           sMap[cId].push({ id: s.state_id ?? s.id, name: s.state ?? s.state_name ?? s.name });
         }
-        const cMap: Record<string, any[]> = {};
-        for (const c of citiesRaw) {
-          const sId = String(c.state_id ?? c.st_id ?? c.state);
-          cMap[sId] = cMap[sId] ?? [];
-          cMap[sId].push({ id: c.city_id ?? c.id, name: c.city_name ?? c.name });
-        }
         setStatesByCountry(sMap);
-        setCitiesByState(cMap);
   const partyTypes = (data.party_types ?? []).map((p: any) => ({ label: p.party_types_mst_name ?? p.name ?? String(p.party_types_mst_id), value: String(p.party_types_mst_id ?? p.id) }));
 
     const s: Schema = {
@@ -150,9 +140,8 @@ export default function CreateParty({ open, onClose, mode = 'create', editId, on
             address: br.address,
             address_additional: br.address_additional,
             zip_code: br.zip_code,
-            // store ids for state and city
+            // store ids for state
             state: String(br.state_id ?? br.state ?? ''),
-            city: String(br.city_id ?? br.city ?? ''),
             gst_no: br.gst_no,
             contact_person: br.contact_person,
             contact_no: br.contact_no,
@@ -180,7 +169,7 @@ export default function CreateParty({ open, onClose, mode = 'create', editId, on
       copy[idx] = { ...copy[idx], ...next };
       // ensure trailing empty row
       const last = copy[copy.length - 1];
-      const isEmpty = (r: BranchRow) => !r.address && !r.address_additional && !r.zip_code && !r.state && !r.city && !r.gst_no && !r.contact_person && !r.contact_no;
+      const isEmpty = (r: BranchRow) => !r.address && !r.address_additional && !r.zip_code && !r.state && !r.gst_no && !r.contact_person && !r.contact_no;
       if (!isEmpty(last)) copy.push({});
       return copy;
     });
@@ -220,11 +209,6 @@ export default function CreateParty({ open, onClose, mode = 'create', editId, on
     return statesByCountry[countryId] ?? [];
   };
 
-  const availableCities = (stateId?: string) => {
-    if (!stateId) return [] as { id?: any; name?: string }[];
-    return citiesByState[stateId] ?? [];
-  };
-
   return (
     <Dialog open={open} onClose={onClose} fullWidth maxWidth="md">
       <DialogTitle>{mode === 'edit' ? 'Edit Party' : 'Create Party'}</DialogTitle>
@@ -249,7 +233,6 @@ export default function CreateParty({ open, onClose, mode = 'create', editId, on
                   <TableCell sx={{ minWidth: 220 }}>Address Additional</TableCell>
                   <TableCell sx={{ minWidth: 100 }}>Zip</TableCell>
                   <TableCell sx={{ minWidth: 160 }}>State</TableCell>
-                  <TableCell sx={{ minWidth: 160 }}>City</TableCell>
                   <TableCell sx={{ minWidth: 160 }}>GST No</TableCell>
                   <TableCell sx={{ minWidth: 180 }}>Contact Person</TableCell>
                   <TableCell sx={{ minWidth: 150 }}>Contact No</TableCell>
@@ -276,7 +259,7 @@ export default function CreateParty({ open, onClose, mode = 'create', editId, on
                           labelId={`state-label-${i}`}
                           value={b.state ?? ''}
                           label="State"
-                          onChange={(e) => upsertBranchRow(i, { state: String(e.target.value), city: '' })}
+                          onChange={(e) => upsertBranchRow(i, { state: String(e.target.value) })}
                         >
                           <MenuItem value="">Select state</MenuItem>
                           {(availableStates(selectedCountry) ?? []).map((s: any) => (
@@ -285,23 +268,7 @@ export default function CreateParty({ open, onClose, mode = 'create', editId, on
                         </Select>
                       </FormControl>
                     </TableCell>
-                    <TableCell sx={{ minWidth: 160 }}>
-                      <FormControl fullWidth size="small">
-                        <InputLabel id={`city-label-${i}`}>City</InputLabel>
-                        <Select
-                          labelId={`city-label-${i}`}
-                          value={b.city ?? ''}
-                          label="City"
-                          onChange={(e) => upsertBranchRow(i, { city: String(e.target.value) })}
-                          disabled={!b.state}
-                        >
-                          <MenuItem value="">Select city</MenuItem>
-                          {(availableCities(b.state) ?? []).map((c: any) => (
-                            <MenuItem key={c.id ?? c.city_id} value={String(c.id ?? c.city_id ?? c.name)}>{c.name ?? c.city_name ?? c.display}</MenuItem>
-                          ))}
-                        </Select>
-                      </FormControl>
-                    </TableCell>
+
                     <TableCell sx={{ minWidth: 160 }}>
                       <TextField fullWidth size="small" value={b.gst_no ?? ''} onChange={(e) => upsertBranchRow(i, { gst_no: e.target.value })} placeholder="GST No" />
                     </TableCell>

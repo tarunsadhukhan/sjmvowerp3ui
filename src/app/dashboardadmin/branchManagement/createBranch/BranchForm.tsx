@@ -28,7 +28,6 @@ interface BranchFormData {
   branch_zipcode: string;
   country_id: string;
   state_id: string;
-  city_id: string;
   co_id: string;
   branch_email: string;
   contact_no: string;
@@ -40,7 +39,6 @@ interface BranchFormProps {
   companies: any[];
   countries: any[];
   states: any[];
-  cities: any[];
   alert_email_id?: string[];  // Optional for backward compatibility
   onSubmit: (data: BranchFormData) => void;
   loading: boolean;
@@ -52,7 +50,6 @@ const BranchForm: React.FC<BranchFormProps> = ({
   companies,
   countries,
   states,
-  cities,
   onSubmit,
   loading,
   isEdit,
@@ -66,7 +63,6 @@ const BranchForm: React.FC<BranchFormProps> = ({
       branch_zipcode: "",
       country_id: "",
       state_id: "",
-      city_id: "",
       co_id: "",
       branch_email: "",
       contact_no: "",
@@ -75,13 +71,11 @@ const BranchForm: React.FC<BranchFormProps> = ({
   });
   const { handleSubmit, watch, control, reset, setValue, getValues, formState: { errors }, setError, clearErrors } = methods;
   const watchedCountry = watch("country_id");
-  const watchedState = watch("state_id");
   const watchedCompany = watch("co_id");
   const watchedBranchName = watch("branch_name");
   
   // States for filtered options
   const [filteredStates, setFilteredStates] = useState<any[]>([]);
-  const [filteredCities, setFilteredCities] = useState<any[]>([]);
   const [existingBranches, setExistingBranches] = useState<string[]>([]);
   
   // For debounced validation
@@ -174,10 +168,8 @@ const BranchForm: React.FC<BranchFormProps> = ({
       
       setFilteredStates(filtered);
       
-      // Reset state and city when country changes
+      // Reset state when country changes
       setValue("state_id", "");
-      setValue("city_id", "");
-      setFilteredCities([]);
     }
   }, [watchedCountry, states, setValue]);
     // Effect to trigger debounced branch name validation
@@ -196,53 +188,21 @@ const BranchForm: React.FC<BranchFormProps> = ({
     };
   }, [watchedBranchName, watchedCompany, checkBranchNameUniqueness]);
   
-  // Effect to filter cities when state changes
-  useEffect(() => {
-    if (watchedState) {
-      console.log(`State selected: ${watchedState}`);
-      
-      // Filter cities for the selected state
-      const filtered = cities.filter(city => 
-        city.state_id.toString() === watchedState
-      );
-      
-      setFilteredCities(filtered);
-      
-      // Reset city when state changes if current city isn't valid for this state
-      const currentCityId = getValues("city_id");
-      if (currentCityId) {
-        const cityExists = filtered.some(city => city.city_id.toString() === currentCityId);
-        if (!cityExists) {
-          setValue("city_id", "");
-        }
-      }
-    } else {
-      setFilteredCities([]);
-    }
-  }, [watchedState, cities, setValue, getValues]);
-  
   // Handle initial values loading
   useEffect(() => {
     if (initialValues && !loading) {
       console.log("Setting form values from initialValues:", initialValues);
       reset(initialValues);
       
-      // If we have a country and state from initial values, make sure to load the associated states and cities
+      // If we have a country from initial values, load the associated states
       if (initialValues.country_id) {
         const filtered = states.filter(state => 
           state.country_id.toString() === initialValues.country_id
         );
         setFilteredStates(filtered);
-        
-        if (initialValues.state_id) {
-          const filteredCities = cities.filter(city => 
-            city.state_id.toString() === initialValues.state_id
-          );
-          setFilteredCities(filteredCities);
-        }
       }
     }
-  }, [initialValues, reset, loading, states, cities]);  // Function to validate branch name uniqueness (used by react-hook-form validation)
+  }, [initialValues, reset, loading, states]);  // Function to validate branch name uniqueness (used by react-hook-form validation)
   const validateBranchName = (value: string) => {
     if (!value) return "Branch Name is required";
     
@@ -477,37 +437,11 @@ const BranchForm: React.FC<BranchFormProps> = ({
                     disabled={!watchedCountry}
                     onChange={(e) => {
                       field.onChange(e);
-                      // Clear city when state changes
-                      setValue("city_id", "");
                     }}
                   >
                     {filteredStates.map((s) => (
                       <MenuItem key={s.state_id} value={s.state_id.toString()}>
                         {s.state}
-                      </MenuItem>
-                    ))}
-                  </Select>
-                  {error && <FormHelperText>{error.message}</FormHelperText>}
-                </FormControl>
-              )}
-            />
-            
-            <Controller
-              name="city_id"
-              control={control}
-              rules={{ required: "City is required" }}
-              render={({ field, fieldState: { error } }) => (
-                <FormControl fullWidth margin="normal" error={!!error} required>
-                  <InputLabel>City</InputLabel>
-                  <Select
-                    {...field}
-                    label="City"
-                    value={field.value || ""}
-                    disabled={!watchedState}
-                  >
-                    {filteredCities.map((c) => (
-                      <MenuItem key={c.city_id} value={c.city_id.toString()}>
-                        {c.city_name}
                       </MenuItem>
                     ))}
                   </Select>

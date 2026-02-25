@@ -2,7 +2,8 @@
  * Bill Pass Service
  *
  * API service functions for Bill Pass (payment consolidation) module.
- * Bill Pass is a read-only view that consolidates SR and DRCR Notes for final payment.
+ * Bill Pass consolidates SR and DRCR Notes for final payment.
+ * Editable until marked complete (billpass_status = 1).
  */
 
 import { fetchWithCookie } from "./apiClient2";
@@ -22,10 +23,10 @@ export type BillPassListItem = {
   inward_date: string | null;
   supplier_id: number | null;
   supplier_name: string;
-  invoice_no: string;
   invoice_date: string | null;
   branch_name: string;
   sr_status_name: string;
+  billpass_status: number; // 0 = editable, 1 = complete
   // Totals
   sr_total: number;
   sr_taxable: number;
@@ -122,19 +123,32 @@ export type BillPassDetail = {
   inward_date: string | null;
   supplier_id: number | null;
   supplier_name: string;
-  invoice_no: string;
   invoice_date: string | null;
-  invoice_amt: number;
+  invoice_amount: number;
+  invoice_recvd_date: string | null;
+  invoice_due_date: string | null;
   branch_name: string;
   sr_status_name: string;
   sr_remarks: string;
   challan_no: string;
   challan_date: string | null;
-  freight: number;
+  round_off_value: number;
+  billpass_status: number; // 0 = editable, 1 = complete
   summary: BillPassSummary;
   sr_lines: BillPassSRLine[];
   debit_notes: BillPassDRCRNote[];
   credit_notes: BillPassDRCRNote[];
+};
+
+/** Bill Pass update payload */
+export type BillPassUpdatePayload = {
+  invoice_date?: string | null;
+  invoice_amount?: number | null;
+  invoice_recvd_date?: string | null;
+  invoice_due_date?: string | null;
+  round_off_value?: number | null;
+  sr_remarks?: string | null;
+  bill_pass_complete?: number; // 1 = complete
 };
 
 // =============================================================================
@@ -178,6 +192,18 @@ export async function fetchBillPassById(
   return fetchWithCookie(url, "GET");
 }
 
+/**
+ * Update Bill Pass fields (invoice details, remarks).
+ * Set bill_pass_complete = 1 to finalize.
+ */
+export async function updateBillPass(
+  inwardId: number | string,
+  payload: BillPassUpdatePayload
+): Promise<{ data: { message: string; inward_id: number; billpass_status: number } | null; error: string | null }> {
+  const url = `${apiRoutesPortalMasters.BILL_PASS_UPDATE}/${inwardId}`;
+  return fetchWithCookie(url, "PUT", payload);
+}
+
 // =============================================================================
 // FORMATTING HELPERS
 // =============================================================================
@@ -186,8 +212,8 @@ export async function fetchBillPassById(
  * Format amount as Indian currency.
  */
 export function formatCurrency(amount: number | null | undefined): string {
-  if (amount == null) return "₹ 0.00";
-  return `₹ ${amount.toLocaleString("en-IN", {
+  if (amount == null) return "\u20B9 0.00";
+  return `\u20B9 ${amount.toLocaleString("en-IN", {
     minimumFractionDigits: 2,
     maximumFractionDigits: 2,
   })}`;
@@ -199,14 +225,52 @@ export function formatCurrency(amount: number | null | undefined): string {
 export function formatBillPassDate(dateStr: string | null | undefined): string {
   if (!dateStr) return "-";
   try {
-    const date = new Date(dateStr);
-    if (Number.isNaN(date.getTime())) return dateStr;
+    const trimmed = dateStr.trim();
+    const ymdMatch = trimmed.match(/^([0-9]{4})-([0-9]{2})-([0-9]{2})$/);
+    let d: Date | null = null;
+    if (ymdMatch) {
+      const [, year, month, day] = ymdMatch;
+      d = new Date(Number(year), Number(month) - 1, Number(day));
+    } else {
+      const parsed = new Date(trimmed);
+      if (!Number.isNaN(parsed.getTime())) {
+        d = parsed;
+      }
+    }
+    if (!d || Number.isNaN(d.getTime())) return trimmed;
     return new Intl.DateTimeFormat("en-GB", {
       day: "2-digit",
       month: "short",
       year: "numeric",
-    }).format(date);
+    }).format(d);
   } catch {
     return dateStr;
   }
+}
+
+/**
+ * Build a map of inward_dtl_id -> DRCR adjustment lines from debit/credit notes.
+ * Used to display inline DR/CR adjustments per SR line item.
+ */
+export function buildDrcrLinesByInwardDtl(
+  debitNotes: BillPassDRCRNote[],
+  creditNotes: BillPassDRCRNote[]
+): Map<number, (BillPassDRCRLine & { note_type: number; note_type_name: string })[]> {
+  const map = new Map<number, (BillPassDRCRLine & { note_type: number; note_type_name: string })[]>();
+
+  for (const note of [...debitNotes, ...creditNotes]) {
+    for (const line of note.lines) {
+      const key = line.inward_dtl_id;
+      if (!map.has(key)) {
+        map.set(key, []);
+      }
+      map.get(key)!.push({
+        ...line,
+        note_type: note.note_type,
+        note_type_name: note.note_type_name,
+      });
+    }
+  }
+
+  return map;
 }

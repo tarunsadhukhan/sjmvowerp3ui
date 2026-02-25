@@ -93,6 +93,11 @@ const apiRoutesconsole = {
     ORGS_DROPDOWN_CTRLDSK_ADMIN: `${API_URL}/ctrldskAdmin/admin_ctrldsk_dropdown_org`,
     EDIT_ORG_MODULE_MAP_CTRLDSK: `${API_URL}/ctrldskAdmin/edit_org_module_map_ctrldesk`,
 
+    // Portal admin user management (ctrldesk)
+    GET_ORGS_DROPDOWN_PORTAL_USER: `${API_URL}/ctrldskAdmin/get_orgs_dropdown_portal_user`,
+    CREATE_PORTAL_ADMIN_USER: `${API_URL}/ctrldskAdmin/create_portal_admin_user`,
+    GET_PORTAL_ADMIN_USERS: `${API_URL}/ctrldskAdmin/get_portal_admin_users`,
+
 
     GET_BRANCH_ALL: `${API_URL}/companyAdmin/get_branch_data_all`,
     GET_BRANCH_BY_ID: `${API_URL}/companyAdmin/get_branch_data_by_id`,
@@ -105,6 +110,9 @@ const apiRoutesconsole = {
     EDIT_DEPARTMENT: `${API_URL}/companyAdmin/edit_department_data`,
     GET_DEPARTMENT_BY_ID: `${API_URL}/companyAdmin/get_department_data_by_id`,
     GET_SUBDEPARTMENT_ALL: `${API_URL}/companyAdmin/get_subdepartment_data_all`,
+
+    CO_INVOICE_TYPE_MAP_SETUP: `${API_URL}/companyAdmin/co_invoice_type_map_setup`,
+    CO_INVOICE_TYPE_MAP_SAVE: `${API_URL}/companyAdmin/co_invoice_type_map_save`,
 };
 
 const apiRoutesPortalMasters = {
@@ -325,6 +333,12 @@ const apiRoutesPortalMasters = {
     JUTE_REPORT_STOCK: `${API_URL}/juteReports/stock`,
     JUTE_REPORT_BATCH_COST: `${API_URL}/juteReports/batch-cost`,
 
+    // Jute SQC - Morrah Weight QC
+    MORRAH_WT_TABLE: `${API_URL}/juteSQC/get_morrah_wt_table`,
+    MORRAH_WT_BY_ID: `${API_URL}/juteSQC/get_morrah_wt_by_id`,
+    MORRAH_WT_CREATE_SETUP: `${API_URL}/juteSQC/get_morrah_wt_create_setup`,
+    MORRAH_WT_CREATE: `${API_URL}/juteSQC/create_morrah_wt`,
+
     GET_INDENT_SETUP_1: `${API_URL}/procurementIndent/get_indent_setup_1`,
     GET_INDENT_SETUP_2: `${API_URL}/procurementIndent/get_indent_setup_2`,
     INDENT_CREATE: `${API_URL}/procurementIndent/create_indent`,
@@ -395,6 +409,7 @@ const apiRoutesPortalMasters = {
     // Bill Pass endpoints
     BILL_PASS_LIST: `${API_URL}/billPass/get_bill_pass_list`,
     BILL_PASS_GET_BY_ID: `${API_URL}/billPass/get_bill_pass_by_id`,
+    BILL_PASS_UPDATE: `${API_URL}/billPass/update_bill_pass`,
 
     // Inventory Issue endpoints
     ISSUE_TABLE: `${API_URL}/inventoryIssue/get_issue_table`,

@@ -29,8 +29,10 @@ export default function CreateDepartmentPage({ open = true, onClose, existingRow
         const selectedCompany = localStorage.getItem("sidebar_selectedCompany");
         const sidebar_selectedBranches = localStorage.getItem("sidebar_selectedBranches");
         const co_id = selectedCompany ? JSON.parse(selectedCompany).co_id : "";
-  const params = sidebar_selectedBranches;
-  const url = `${apiRoutesPortalMasters.DEPT_MASTER_CREATE_SETUP}?${params}`;
+        const params = new URLSearchParams();
+        if (co_id) params.append("co_id", co_id);
+        if (sidebar_selectedBranches) params.append("branch_id", sidebar_selectedBranches);
+        const url = `${apiRoutesPortalMasters.DEPT_MASTER_CREATE_SETUP}?${params}`;
         const { data, error } = await fetchWithCookie(url, "GET") as any;
         if (error || !data) {
           throw new Error(error || "Failed to load setup");

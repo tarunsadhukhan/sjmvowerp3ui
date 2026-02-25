@@ -15,9 +15,11 @@ interface SidebarProps {
   onToggle: () => void;
   onMouseEnter?: () => void;
   onMouseLeave?: () => void;
+  isMobile?: boolean;
+  onClose?: () => void;
 }
 
-export default function Sidebar({ isCollapsed, onToggle, onMouseEnter, onMouseLeave }: SidebarProps) {
+export default function Sidebar({ isCollapsed, onToggle, onMouseEnter, onMouseLeave, isMobile, onClose }: SidebarProps) {
   const { compshow } = urlcheck();
   const {
     companies, setCompanies,
@@ -134,7 +136,7 @@ export default function Sidebar({ isCollapsed, onToggle, onMouseEnter, onMouseLe
               {isExpanded ? <ChevronDown className="h-4 w-4 transition-transform duration-200" /> : <ChevronRight className="h-4 w-4 transition-transform duration-200" />}
             </div>
           )}
-          <a href={`/dashboardportal/${menu.menu_path}`} className="text-sm flex-1 sidebar-menu-title hover:text-gray-200">{menu.menu_name}</a>
+          <a href={`/dashboardportal/${menu.menu_path}`} className="text-sm flex-1 sidebar-menu-title hover:text-gray-200" onClick={isMobile ? onClose : undefined}>{menu.menu_name}</a>
         </div>
         {isParent && isExpanded && (
           <div className="overflow-hidden transition-all duration-300 ease-in-out">
@@ -147,12 +149,12 @@ export default function Sidebar({ isCollapsed, onToggle, onMouseEnter, onMouseLe
 
   return (
     <div 
-      className={`sidebar-container ${isCollapsed ? "w-20" : "w-56"}`}
-      onMouseEnter={onMouseEnter}
-      onMouseLeave={onMouseLeave}
+      className={`sidebar-container ${isMobile ? "w-full" : isCollapsed ? "w-20" : "w-56"}`}
+      onMouseEnter={isMobile ? undefined : onMouseEnter}
+      onMouseLeave={isMobile ? undefined : onMouseLeave}
     >
       <div className="sidebar-container">
-        <LogoSection isCollapsed={isCollapsed} onToggle={onToggle} logoSrc="path/to/logo.png" title="Your Title" />
+        <LogoSection isCollapsed={isCollapsed} onToggle={onToggle} logoSrc="path/to/logo.png" title="Your Title" isMobile={isMobile} onClose={onClose} />
         <div className="px-4 py-3 sidebar-section-border">
           {isClient && compshow === 2 && !isCollapsed ? (
             <>

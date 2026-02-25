@@ -1,19 +1,17 @@
 'use client';
 import Image from "next/image";
-// import logo from "@/components/assets/images/logo.png";
-import { 
-    ChevronLeft,
-  } from "lucide-react"
-  // import { cn } from "@/utils/protected"
- // import { CompanySelection } from "./CompanySelection";
+import { X } from "lucide-react"
+
 interface LogoSectionProps {
   isCollapsed: boolean;
   onToggle: () => void;
   logoSrc: string;
   title: string;
+  isMobile?: boolean;
+  onClose?: () => void;
 }
 
-const LogoSection = ({ isCollapsed, onToggle }: LogoSectionProps) => {
+const LogoSection = ({ isCollapsed, onToggle, isMobile, onClose }: LogoSectionProps) => {
   const handleChangeDashboard = () => {
     window.location.href = "/dashboard";
   };
@@ -45,6 +43,15 @@ const LogoSection = ({ isCollapsed, onToggle }: LogoSectionProps) => {
                 priority
                 onClick={handleChangeDashboard} />
               </div>
+        )}
+        {isMobile && (
+          <button
+            onClick={onClose}
+            className="text-white p-1 hover:bg-[#005580] rounded"
+            aria-label="Close menu"
+          >
+            <X size={20} />
+          </button>
         )}
         </div>
   );

@@ -42,7 +42,14 @@ export function useGateEntryLineItems({
 		setLineItems((prev) => {
 			if (prev.length === 0) return prev;
 
-			return recalculateLineItemWeights(prev, headerChallanWeight, headerActualWeight);
+			const next = recalculateLineItemWeights(prev, headerChallanWeight, headerActualWeight);
+			// Skip update if weights didn't actually change (prevents unnecessary re-renders)
+			const changed = next.some(
+				(item, i) =>
+					item.challanWeight !== prev[i]?.challanWeight ||
+					item.actualWeight !== prev[i]?.actualWeight
+			);
+			return changed ? next : prev;
 		});
 	}, [headerChallanWeight, headerActualWeight, mode, setLineItems]);
 

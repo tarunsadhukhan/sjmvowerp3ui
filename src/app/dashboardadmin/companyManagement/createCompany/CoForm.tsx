@@ -28,7 +28,6 @@ interface CoFormData {
   co_zipcode: string;
   country_id: string;
   state_id: string;
-  city_id: string;
   co_cin_no: string;
   co_email_id: string;
   co_pan_no: string;
@@ -40,7 +39,6 @@ interface CoFormProps {
   allModules: any[];
   countries: any[];
   states: any[];
-  cities: any[];
   alert_email_id: string[];  
   onSubmit: (data: CoFormData) => void;
   loading: boolean;
@@ -52,7 +50,6 @@ const CoForm: React.FC<CoFormProps> = ({
   allModules,
   countries,
   states,
-  cities,
   onSubmit,
   loading,
   isEdit,
@@ -66,7 +63,6 @@ const CoForm: React.FC<CoFormProps> = ({
       co_zipcode: "",
       country_id: "",
       state_id: "",
-      city_id: "",
       co_cin_no: "",
       co_email_id: "",
       co_pan_no: "",
@@ -74,13 +70,11 @@ const CoForm: React.FC<CoFormProps> = ({
     },
   });
 
-  const { handleSubmit, watch, control, reset, setValue, getValues } = methods;
+  const { handleSubmit, watch, control, reset, setValue } = methods;
   const watchedCountry = watch("country_id");
-  const watchedState = watch("state_id");
   
   // States for filtered options
   const [filteredStates, setFilteredStates] = useState<any[]>([]);
-  const [filteredCities, setFilteredCities] = useState<any[]>([]);
   
   // Effect to update states when country changes
   useEffect(() => {
@@ -94,37 +88,10 @@ const CoForm: React.FC<CoFormProps> = ({
       
       setFilteredStates(filtered);
       
-      // Reset state and city when country changes
+      // Reset state when country changes
       setValue("state_id", "");
-      setValue("city_id", "");
-      setFilteredCities([]);
     }
   }, [watchedCountry, states, setValue]);
-  
-  // Effect to filter cities when state changes
-  useEffect(() => {
-    if (watchedState) {
-      console.log(`State selected: ${watchedState}`);
-      
-      // Filter cities for the selected state
-      const filtered = cities.filter(city => 
-        city.state_id.toString() === watchedState
-      );
-      
-      setFilteredCities(filtered);
-      
-      // Reset city when state changes if current city isn't valid for this state
-      const currentCityId = getValues("city_id");
-      if (currentCityId) {
-        const cityExists = filtered.some(city => city.city_id.toString() === currentCityId);
-        if (!cityExists) {
-          setValue("city_id", "");
-        }
-      }
-    } else {
-      setFilteredCities([]);
-    }
-  }, [watchedState, cities, setValue, getValues]);
   
   // Handle initial values loading
   useEffect(() => {
@@ -132,22 +99,15 @@ const CoForm: React.FC<CoFormProps> = ({
       console.log("Setting form values from initialValues:", initialValues);
       reset(initialValues);
       
-      // If we have a country and state from initial values, make sure to load the associated states and cities
+      // If we have a country from initial values, load the associated states
       if (initialValues.country_id) {
         const filtered = states.filter(state => 
           state.country_id.toString() === initialValues.country_id
         );
         setFilteredStates(filtered);
-        
-        if (initialValues.state_id) {
-          const filteredCities = cities.filter(city => 
-            city.state_id.toString() === initialValues.state_id
-          );
-          setFilteredCities(filteredCities);
-        }
       }
     }
-  }, [initialValues, reset, loading, states, cities]);
+  }, [initialValues, reset, loading, states]);
 
   if (loading) return <CircularProgress />;
 
@@ -307,8 +267,6 @@ const CoForm: React.FC<CoFormProps> = ({
                     disabled={!watchedCountry}
                     onChange={(e) => {
                       field.onChange(e);
-                      // Clear city when state changes
-                      setValue("city_id", "");
                     }}
                   >
                     {filteredStates.map((s) => (
@@ -322,30 +280,6 @@ const CoForm: React.FC<CoFormProps> = ({
               )}
             />
             
-            <Controller
-              name="city_id"
-              control={control}
-              rules={{ required: "City is required" }}
-              render={({ field, fieldState: { error } }) => (
-                <FormControl fullWidth margin="normal" error={!!error} required>
-                  <InputLabel>City</InputLabel>
-                  <Select
-                    {...field}
-                    label="City"
-                    value={field.value || ""}
-                    disabled={!watchedState}
-                  >
-                    {filteredCities.map((c) => (
-                      <MenuItem key={c.city_id} value={c.city_id.toString()}>
-                        {c.city_name}
-                      </MenuItem>
-                    ))}
-                  </Select>
-                  {error && <FormHelperText>{error.message}</FormHelperText>}
-                </FormControl>
-              )}
-            />
-
             <Controller
               name="co_cin_no"
               control={control}

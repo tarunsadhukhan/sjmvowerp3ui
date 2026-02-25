@@ -76,7 +76,6 @@ const BranchForm: React.FC<DeptFormProps> = ({
   
   // States for filtered options
   const [filteredStates, setFilteredStates] = useState<any[]>([]);
-  const [filteredCities, setFilteredCities] = useState<any[]>([]);
   const [existingBranches, setExistingBranches] = useState<string[]>([]);
   const [filteredBranches, setFilteredBranches] = useState<any[]>([]);
   

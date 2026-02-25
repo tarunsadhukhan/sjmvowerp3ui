@@ -16,7 +16,6 @@ const HandleCreateEditCo = () => {
   const [initialValues, setInitialValues] = useState<any>(null);
   const [allModules, setAllModules] = useState<any[]>([]);
   const [countries, setCountries] = useState<any[]>([]);
-  const [cities, setCities] = useState<any[]>([]);
   const [states, setStates] = useState<any[]>([]);
 
 
@@ -31,13 +30,9 @@ const HandleCreateEditCo = () => {
           setCountries(data.countries || []);
           setStates(data.states || []);
           
-
-          setCities(data.cities || []);
-          
-          // Find the country, state, and city objects based on IDs
+          // Find the country and state objects based on IDs
           const selectedCountry = data.countries?.find((c: any) => c.country_id === data.data.country_id);
           const selectedState = data.states?.find((s: any) => s.state_id === data.data.state_id);
-          const selectedCity = data.cities?.find((c: any) => c.city_id === data.data.city_id);
           
           console.log("Loading company data:", data.data);
           
@@ -49,7 +44,6 @@ const HandleCreateEditCo = () => {
             co_zipcode: data.data.co_zipcode?.toString() || "",
             country_id: data.data.country_id?.toString() || "",
             state_id: data.data.state_id?.toString() || "",
-            city_id: data.data.city_id?.toString() || "",
             co_cin_no: data.data.co_cin_no || "",
             co_email_id: data.data.co_email_id || "",
             co_pan_no: data.data.co_pan_no || "",
@@ -68,11 +62,6 @@ const HandleCreateEditCo = () => {
           setCountries(data.countries || []);
           setStates(data.states || []);
           
- 
-          setCities(data.cities || []);
-          
-
-          setCities(data.cities.length ? data.cities : []);
           setInitialValues(null); // CoForm will use its own default values
         }
       }
@@ -88,7 +77,6 @@ const HandleCreateEditCo = () => {
         co_zipcode: formData.co_zipcode ? Number(formData.co_zipcode) : "",
         country_id: formData.country_id ? Number(formData.country_id) : null,
         state_id: formData.state_id ? Number(formData.state_id) : null,
-        city_id: formData.city_id ? Number(formData.city_id) : null,
       };
       
       let apiUrl = "";
@@ -121,7 +109,6 @@ const HandleCreateEditCo = () => {
         allModules={allModules}
         countries={countries}
         states={states}
-        cities={cities}
         alert_email_id={initialValues?.alert_email_id ?? []}
         onSubmit={handleSubmit}
         loading={loading}

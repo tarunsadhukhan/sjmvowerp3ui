@@ -19,7 +19,6 @@ const HandleCreateEditDept = () => {  const router = useRouter();
   const [initialValues, setInitialValues] = useState<any>(null);
   const [companies, setCompanies] = useState<any[]>([]);
   const [branches, setBranches] = useState<any[]>([]);
-  const [cities, setCities] = useState<any[]>([]);
   const [states, setStates] = useState<any[]>([]);
 
   useEffect(() => {

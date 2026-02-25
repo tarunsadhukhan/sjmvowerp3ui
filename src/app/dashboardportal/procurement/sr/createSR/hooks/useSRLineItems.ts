@@ -92,7 +92,7 @@ export const useSRLineItems = ({ header }: UseSRLineItemsParams): UseSRLineItems
 
 					// Handle accepted_rate change: recalculate everything
 					if (field === "accepted_rate") {
-						const updated = { ...item, [field]: value };
+						const updated = { ...item, accepted_rate: value as number };
 						return recalculateLineItem(updated);
 					}
 

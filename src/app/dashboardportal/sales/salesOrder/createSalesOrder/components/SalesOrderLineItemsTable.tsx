@@ -109,19 +109,53 @@ export const useSalesOrderLineItemColumns = ({
 				header: "Qty",
 				width: "0.8fr",
 				minWidth: "80px",
-				renderCell: ({ item }) =>
-					canEdit ? (
-						<Input
-							type="text"
-							value={item.quantity}
-							onChange={(e) => handleLineFieldChange(item.id, "quantity", e.target.value)}
-							placeholder="0"
-							className="h-8 text-sm"
-						/>
-					) : (
-						<span className="block truncate text-sm">{item.quantity || "-"}</span>
-					),
-				getTooltip: ({ item }) => (item.quantity ? `Quantity: ${item.quantity}` : undefined),
+				renderCell: ({ item }) => {
+					const isHessian = invoiceTypeId === "2";
+					// Hessian: qty input is bales, show MT annotation
+					const displayValue = isHessian ? (item.qtyBales ?? "") : item.quantity;
+					const fieldKey: keyof EditableLineItem = isHessian ? "qtyBales" : "quantity";
+					const mtAnnotation = isHessian && item.quantity && Number(item.quantity)
+						? `\u2248 ${Number(item.quantity).toFixed(4)} MT`
+						: null;
+
+					if (canEdit) {
+						return (
+							<div className="flex flex-col gap-0.5">
+								<Input
+									type="text"
+									value={displayValue}
+									onChange={(e) => handleLineFieldChange(item.id, fieldKey, e.target.value)}
+									placeholder={isHessian ? "Bales" : "0"}
+									className="h-8 text-sm"
+								/>
+								{mtAnnotation ? (
+									<span className="text-[11px] text-muted-foreground leading-tight truncate">
+										{mtAnnotation}
+									</span>
+								) : null}
+							</div>
+						);
+					}
+
+					return (
+						<div className="flex flex-col gap-0.5">
+							<span className="block truncate text-sm">{displayValue || "-"}</span>
+							{mtAnnotation ? (
+								<span className="text-[11px] text-muted-foreground leading-tight truncate">
+									{mtAnnotation}
+								</span>
+							) : null}
+						</div>
+					);
+				},
+				getTooltip: ({ item }) => {
+					const isHessian = invoiceTypeId === "2";
+					const parts: string[] = [];
+					if (isHessian && item.qtyBales) parts.push(`Bales: ${item.qtyBales}`);
+					if (isHessian && item.quantity) parts.push(`\u2248 ${item.quantity} MT`);
+					if (!isHessian && item.quantity) parts.push(`Quantity: ${item.quantity}`);
+					return parts.length ? parts.join("\n") : undefined;
+				},
 			},
 			{
 				id: "uom",
@@ -153,8 +187,55 @@ export const useSalesOrderLineItemColumns = ({
 				width: "0.8fr",
 				minWidth: "80px",
 				renderCell: ({ item }) => {
-					const showConversion = invoiceTypeId === "2";
-					const conversion = showConversion && getUomConversions
+					const isHessian = invoiceTypeId === "2";
+
+					if (isHessian) {
+						// Hessian mode: input is rawRateMt (pre-brokerage rate per MT)
+						const displayValue = item.rawRateMt ?? item.rate ?? "";
+						const annotations: { label: string }[] = [];
+						if (item.ratePerBale != null && item.ratePerBale > 0) {
+							annotations.push({ label: `\u2248 ${item.ratePerBale.toFixed(2)} / Bale` });
+						}
+						if (item.billingRateMt != null && item.billingRateMt > 0) {
+							annotations.push({ label: `Billing: ${item.billingRateMt.toFixed(2)} / MT` });
+						}
+						if (item.billingRateBale != null && item.billingRateBale > 0) {
+							annotations.push({ label: `Billing: ${item.billingRateBale.toFixed(2)} / Bale` });
+						}
+
+						if (canEdit) {
+							return (
+								<div className="flex flex-col gap-0.5">
+									<Input
+										type="text"
+										value={displayValue}
+										onChange={(e) => handleLineFieldChange(item.id, "rawRateMt", e.target.value)}
+										placeholder="Rate / MT"
+										className="h-8 text-sm"
+									/>
+									{annotations.map((a, i) => (
+										<span key={i} className="text-[11px] text-muted-foreground leading-tight truncate">
+											{a.label}
+										</span>
+									))}
+								</div>
+							);
+						}
+
+						return (
+							<div className="flex flex-col gap-0.5">
+								<span className="block truncate text-sm">{displayValue || "-"}</span>
+								{annotations.map((a, i) => (
+									<span key={i} className="text-[11px] text-muted-foreground leading-tight truncate">
+										{a.label}
+									</span>
+								))}
+							</div>
+						);
+					}
+
+					// Non-hessian: existing conversion annotation behaviour
+					const conversion = getUomConversions
 						? computeConvertedRate(item.rate, item.uom, getUomConversions(item.itemGroup, item.item))
 						: null;
 
@@ -189,13 +270,19 @@ export const useSalesOrderLineItemColumns = ({
 					);
 				},
 				getTooltip: ({ item }) => {
-					const showConversion = invoiceTypeId === "2";
-					const conversion = showConversion && getUomConversions
-						? computeConvertedRate(item.rate, item.uom, getUomConversions(item.itemGroup, item.item))
-						: null;
+					const isHessian = invoiceTypeId === "2";
 					const parts: string[] = [];
-					if (item.rate) parts.push(`Rate: ${item.rate}`);
-					if (conversion) parts.push(`\u2248 ${conversion.convertedRate} / ${conversion.otherUomName}`);
+					if (isHessian) {
+						if (item.rawRateMt) parts.push(`Rate: ${item.rawRateMt} / MT`);
+						if (item.ratePerBale) parts.push(`\u2248 ${item.ratePerBale.toFixed(2)} / Bale`);
+						if (item.billingRateMt) parts.push(`Billing: ${item.billingRateMt.toFixed(2)} / MT`);
+					} else {
+						const conversion = getUomConversions
+							? computeConvertedRate(item.rate, item.uom, getUomConversions(item.itemGroup, item.item))
+							: null;
+						if (item.rate) parts.push(`Rate: ${item.rate}`);
+						if (conversion) parts.push(`\u2248 ${conversion.convertedRate} / ${conversion.otherUomName}`);
+					}
 					return parts.length ? parts.join("\n") : undefined;
 				},
 			},

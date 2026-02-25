@@ -15,6 +15,13 @@ export type SalesOrderLineGst = {
   gstTotal?: number | null;
 };
 
+export type SalesOrderLineHessian = {
+  qtyBales?: number | null;
+  ratePerBale?: number | null;
+  billingRateMt?: number | null;
+  billingRateBale?: number | null;
+};
+
 export type SalesOrderLine = {
   id: string;
   quotationLineitemId?: number | null;
@@ -34,6 +41,7 @@ export type SalesOrderLine = {
   totalAmount?: number | null;
   remarks?: string;
   gst?: SalesOrderLineGst | null;
+  hessian?: SalesOrderLineHessian | null;
 };
 
 export type ApprovalActionPermissions = {
@@ -134,7 +142,7 @@ export type CreateSalesOrderRequest = {
     quotation_lineitem_id?: number | null;
     hsn_code?: string | null;
     quantity?: string | number;
-    uom?: string;
+    qty_uom?: string;
     rate?: string | number;
     discount_type?: number | null;
     discounted_rate?: number | null;
@@ -151,6 +159,12 @@ export type CreateSalesOrderRequest = {
       sgst_percent?: number | null;
       gst_total?: number | null;
     };
+    hessian?: {
+      qty_bales?: number | null;
+      rate_per_bale?: number | null;
+      billing_rate_mt?: number | null;
+      billing_rate_bale?: number | null;
+    } | null;
   }>;
 };
 

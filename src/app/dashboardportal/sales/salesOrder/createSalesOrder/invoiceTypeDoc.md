@@ -32,16 +32,38 @@ This document describes each invoice type available in the sales order workflow,
 
 ### 2. Hessian (invoice_type_id = 2)
 
-**Purpose:** Sales orders for hessian (jute fabric) products. Hessian orders may involve specific grading, weight-based pricing, and jute-industry-specific fields.
+**Purpose:** Sales orders for hessian (jute fabric) products. Pricing is rate-per-MT with brokerage deduction; quantities are entered in bales and converted to MT for the main record via `uom_item_map_mst`.
 
-**Planned header behavior changes:**
-- May require additional fields for lot/grade specification.
-- Pricing may be weight-based (per kg/per bale) rather than per unit.
+**Header behavior:**
+- Standard header fields are active.
+- `broker_commission_percent` (brokerage %) is used to derive the billing rate. Changing brokerage recalculates all line billing rates in real time.
 
-**Planned line item behavior changes:**
-- Item groups filtered to hessian-related groups only.
-- Additional columns for bale count, weight per bale, gross/net weight.
-- Rate calculation may differ (rate per kg vs rate per unit).
+**Line item behavior — Qty column:**
+- User enters quantity in **bales** (stored in `sales_order_dtl_hessian.qty_bales`).
+- The MT equivalent is computed: `qty_mt = qty_bales / conversion_factor` and stored in `sales_order_dtl.quantity`.
+- An annotation below the input shows "≈ X MT".
+
+**Line item behavior — Rate column:**
+- User enters the **raw rate per MT** (pre-brokerage). This is NOT stored directly in the main table.
+- Derived values:
+  - `rate_per_bale = raw_rate_mt / conversion_factor` → stored in `sales_order_dtl_hessian.rate_per_bale`
+  - `billing_rate_mt = raw_rate_mt − (raw_rate_mt × brokerage%) / 100` → stored in both `sales_order_dtl.rate` and `sales_order_dtl_hessian.billing_rate_mt`
+  - `billing_rate_bale = billing_rate_mt / conversion_factor` → stored in `sales_order_dtl_hessian.billing_rate_bale`
+- Annotations below the input show: "≈ X / Bale", "Billing: X / MT", "Billing: X / Bale".
+
+**Line item behavior — Amount:**
+- `amount = qty_mt × billing_rate_mt − discount` (discount is applied on the billing rate, after brokerage deduction).
+- Tax is calculated on the post-discount amount as usual.
+
+**Conversion factor source:**
+- `uom_item_map_mst` where `map_from_id` = the item's default UOM (MT) and `map_to_id` = Bales.
+- `relation_value` = bales per MT (e.g., 5 means 1 MT = 5 Bales).
+- Resolved per-item when the item is selected, stored as `conversionFactor` on the line.
+
+**Extension table:** `sales_order_dtl_hessian`
+- One row per line item (FK: `sales_order_dtl_id`, unique).
+- Columns: `qty_bales`, `rate_per_bale`, `billing_rate_mt`, `billing_rate_bale`, `updated_by`, `updated_date_time`.
+- Created/updated alongside `sales_order_dtl`; hard-deleted on update before re-insert.
 
 ---
 
@@ -115,7 +137,7 @@ This document describes each invoice type available in the sales order workflow,
 | Invoice Type   | ID | Dynamic Dropdown | Header Changes | Line Item Changes |
 |----------------|----|------------------|----------------|-------------------|
 | Regular        | 1  | Done             | N/A (baseline) | N/A (baseline)    |
-| Hessian        | 2  | Done             | Planned        | Planned           |
+| Hessian        | 2  | Done             | Done           | Done              |
 | Govt Sacking   | 3  | Done             | Planned        | Planned           |
 | Yarn           | 4  | Done             | Planned        | Planned           |
 | Raw Jute       | 5  | Done             | Planned        | Planned           |
@@ -126,6 +148,7 @@ This document describes each invoice type available in the sales order workflow,
 - `invoice_type_mst` — Master list of all invoice types (columns: `invoice_type_id`, `invoice_type_name`, `invoice_type_remarks`)
 - `invoice_type_co_map` — Company-to-invoice-type mapping (columns: `invoice_type_co_map_id`, `co_id`, `invoice_type_id`, `active`, `updated_by`, `updated_date_time`)
 - `sales_order.invoice_type` — Stores the selected `invoice_type_id` on each sales order header
+- `sales_order_dtl_hessian` — Per-line extension for Hessian (invoice_type=2). Columns: `sales_order_dtl_hessian_id` PK, `sales_order_dtl_id` FK (unique), `qty_bales`, `rate_per_bale`, `billing_rate_mt`, `billing_rate_bale`, `updated_by`, `updated_date_time`
 
 ## Backend Endpoint
 

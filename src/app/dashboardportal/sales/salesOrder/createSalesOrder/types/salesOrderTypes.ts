@@ -126,6 +126,19 @@ export type EditableLineItem = {
 	cgstAmount?: number;
 	sgstAmount?: number;
 	taxAmount?: number;
+	// --- Hessian (invoice_type_id = 2) ---
+	/** Qty entered in bales (user-entered); quantity field stores the MT equivalent */
+	qtyBales?: string;
+	/** Raw rate per MT before brokerage deduction (user-entered); rate field stores billing rate */
+	rawRateMt?: string;
+	/** Converted rate per bale (rawRateMt / conversionFactor) */
+	ratePerBale?: number;
+	/** billing rate = rawRateMt − (rawRateMt × brokerage%) */
+	billingRateMt?: number;
+	/** billing rate per bale = billingRateMt / conversionFactor */
+	billingRateBale?: number;
+	/** Bales-to-MT conversion factor from uom_item_map_mst */
+	conversionFactor?: number;
 };
 
 // ---------------------------------------------------------------------------
@@ -146,22 +159,29 @@ export type CustomerRecordRaw = {
 export type CustomerBranchRecordRaw = {
 	id?: string | number;
 	party_mst_branch_id?: string | number;
-	branch_address1?: string;
-	branch_address2?: string;
+	address?: string;
+	address_additional?: string;
+	zip_code?: string | number;
 	state_name?: string;
 	state?: string;
 };
 
 export type BrokerRecordRaw = {
 	id?: string | number;
+	broker_id?: string | number;
 	party_id?: string | number;
+	broker_name?: string;
+	broker_code?: string;
 	party_name?: string;
 	name?: string;
 };
 
 export type TransporterRecordRaw = {
 	id?: string | number;
+	transporter_id?: string | number;
 	party_id?: string | number;
+	transporter_name?: string;
+	transporter_code?: string;
 	party_name?: string;
 	name?: string;
 };

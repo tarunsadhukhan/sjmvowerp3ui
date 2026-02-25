@@ -266,6 +266,8 @@ function SalesOrderTransactionPageContent() {
 		itemGroupLoading,
 		ensureItemGroupData,
 		itemGroups,
+		invoiceTypeId: String(formValues.invoice_type ?? ""),
+		brokeragePercent: formValues.broker_commission_percent ? Number(formValues.broker_commission_percent) : undefined,
 	});
 
 	// Seed an initial blank line in create mode

@@ -184,7 +184,7 @@ export const extractFormValuesFromDetails = (details: GateEntryDetails): GateEnt
 		transporter: details.transporter ?? "",
 		poId: details.po_id ? String(details.po_id) : "",
 		juteUom: details.jute_uom ?? "LOOSE",
-		mukam: details.mukam ?? "",
+		mukam: details.mukam_id ? String(details.mukam_id) : "",
 		supplier: String(details.jute_supplier_id ?? ""),
 		party: details.party_id ? String(details.party_id) : "",
 		grossWeight: String(details.gross_weight ?? ""),

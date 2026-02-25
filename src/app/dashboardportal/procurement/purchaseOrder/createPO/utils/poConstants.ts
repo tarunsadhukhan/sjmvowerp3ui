@@ -2,6 +2,7 @@ import type { ApprovalStatusId } from "@/components/ui/transaction";
 import type {
 	AdditionalChargeOption,
 	BranchAddressRecord,
+	BrokerRecord,
 	EditableLineItem,
 	ExpenseRecord,
 	ItemGroupRecord,
@@ -51,6 +52,7 @@ export const PO_STATUS_LABELS: Record<ApprovalStatusId, string> = {
  * Immutable fallbacks to avoid recreating empty arrays on every render.
  */
 export const EMPTY_SUPPLIERS: ReadonlyArray<SupplierRecord> = Object.freeze([]);
+export const EMPTY_BROKERS: ReadonlyArray<BrokerRecord> = Object.freeze([]);
 export const EMPTY_SUPPLIER_BRANCHES: ReadonlyArray<SupplierBranchRecord> = Object.freeze([]);
 export const EMPTY_BRANCH_ADDRESSES: ReadonlyArray<BranchAddressRecord> = Object.freeze([]);
 export const EMPTY_PROJECTS: ReadonlyArray<ProjectRecord> = Object.freeze([]);

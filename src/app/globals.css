@@ -225,10 +225,16 @@
 @layer components {
   .transaction-grid-container {
     @apply border border-slate-300 bg-white;
+    width: fit-content;
+    min-width: 100%;
   }
 
   .transaction-grid-header {
     @apply grid gap-x-1 bg-slate-100 px-1.5 py-1 text-[13px] font-semibold uppercase tracking-wide text-slate-700 border-b border-slate-300;
+  }
+
+  .transaction-grid-header > span {
+    @apply text-center;
   }
 
   .transaction-grid-row {

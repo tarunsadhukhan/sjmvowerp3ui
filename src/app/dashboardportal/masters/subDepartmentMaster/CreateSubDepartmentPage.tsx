@@ -22,6 +22,7 @@ export default function CreateSubDepartmentPage({ open = true, onClose, existing
   const [error, setError] = useState<string | null>(null);
   const [nameError, setNameError] = useState<string | null>(null);
   const [codeError, setCodeError] = useState<string | null>(null);
+  const [orderByError, setOrderByError] = useState<string | null>(null);
 
   useEffect(() => {
     setLoading(true);
@@ -73,6 +74,7 @@ export default function CreateSubDepartmentPage({ open = true, onClose, existing
   useEffect(() => {
     setNameError(null);
     setCodeError(null);
+    setOrderByError(null);
   }, [setupData, form.branch_id, form.dept_id]);
 
   const getCandidates = (propsExistingRows?: any[]) => {
@@ -123,6 +125,7 @@ export default function CreateSubDepartmentPage({ open = true, onClose, existing
     setError(null);
     if (name === 'subdept_name') setNameError(null);
     if (name === 'subdept_code') setCodeError(null);
+    if (name === 'order_by') setOrderByError(null);
     // when branch changes, filter departments to those belonging to branch (if raw data has branch linkage)
     if (name === 'branch_id') {
       const b = String(value);
@@ -147,11 +150,27 @@ export default function CreateSubDepartmentPage({ open = true, onClose, existing
     }
   };
 
+  const validateOrderBy = (): boolean => {
+    const val = form.order_by?.toString().trim();
+    if (!val) {
+      setOrderByError("Order By is required");
+      return false;
+    }
+    const num = Number(val);
+    if (!Number.isInteger(num) || num < 0) {
+      setOrderByError("Order By must be a non-negative integer");
+      return false;
+    }
+    setOrderByError(null);
+    return true;
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     const okName = validateName(existingRows);
     const okCode = validateCode(existingRows);
-    if (!okName || !okCode) return setError("Fix validation errors");
+    const okOrder = validateOrderBy();
+    if (!okName || !okCode || !okOrder) return setError("Fix validation errors");
     setSubmitting(true);
     try {
       const selectedCompany = localStorage.getItem("sidebar_selectedCompany");
@@ -165,8 +184,13 @@ export default function CreateSubDepartmentPage({ open = true, onClose, existing
         dept_id: form.dept_id,
         order_by: form.order_by,
       };
-  const { data, error } = await fetchWithCookie(apiRoutesPortalMasters.SUBDEPT_MASTER_CREATE, "POST", payload) as any;
-      if (error || !data) throw new Error(error || "Create failed");
+  const { data, error: apiError } = await fetchWithCookie(apiRoutesPortalMasters.SUBDEPT_MASTER_CREATE, "POST", payload) as any;
+      if (apiError || !data) {
+        // Extract meaningful error from API response
+        const errMsg = typeof apiError === "string" ? apiError
+          : apiError?.detail ?? apiError?.message ?? data?.detail ?? "Create failed";
+        throw new Error(errMsg);
+      }
       if (onClose) onClose();
     } catch (err: any) {
       setError(err?.message || String(err));
@@ -185,14 +209,14 @@ export default function CreateSubDepartmentPage({ open = true, onClose, existing
       </TextField>
       <TextField name="subdept_name" label="Subdepartment" value={form.subdept_name} onChange={handleChange} onBlur={() => validateName(existingRows)} error={!!nameError} helperText={nameError ?? undefined} fullWidth margin="normal" required />
       <TextField name="subdept_code" label="Subdepartment Code" value={form.subdept_code} onChange={handleChange} onBlur={() => validateCode(existingRows)} error={!!codeError} helperText={codeError ?? undefined} fullWidth margin="normal" required />
-      <TextField name="order_by" label="Order By" value={form.order_by} onChange={handleChange} fullWidth margin="normal" />
+      <TextField name="order_by" label="Order By" type="number" value={form.order_by} onChange={handleChange} onBlur={() => validateOrderBy()} error={!!orderByError} helperText={orderByError ?? undefined} fullWidth margin="normal" required />
       <FormControlLabel control={<Switch checked={!!form.active} onChange={(e) => setForm((f) => ({ ...f, active: e.target.checked }))} />} label="Active" />
       {nameError && <FormHelperText error>{nameError}</FormHelperText>}
       {codeError && <FormHelperText error>{codeError}</FormHelperText>}
       {error && <FormHelperText error>{error}</FormHelperText>}
       <Box sx={{ mt: 2, display: 'flex', justifyContent: 'flex-end' }}>
         {typeof open === 'boolean' && <Button onClick={() => onClose && onClose()} color="secondary" sx={{ mr: 2 }} disabled={submitting}>Cancel</Button>}
-        <Button type="submit" variant="contained" color="primary" disabled={submitting || loading || !!nameError || !!codeError}>{submitting ? <CircularProgress size={20} /> : 'Create'}</Button>
+        <Button type="submit" variant="contained" color="primary" disabled={submitting || loading || !!nameError || !!codeError || !!orderByError}>{submitting ? <CircularProgress size={20} /> : 'Create'}</Button>
       </Box>
     </Box>
   );

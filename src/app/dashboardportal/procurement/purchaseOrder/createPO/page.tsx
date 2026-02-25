@@ -46,6 +46,7 @@ import { calculateExpectedDate, calculateTotals } from "./utils/poCalculations";
 import { buildDefaultFormValues, createBlankLine } from "./utils/poFactories";
 import {
   EMPTY_BRANCH_ADDRESSES,
+  EMPTY_BROKERS,
   EMPTY_EXPENSES,
   EMPTY_ITEM_GROUPS,
   EMPTY_PROJECTS,
@@ -216,6 +217,7 @@ function POTransactionPageContent() {
 
   // Extract data from setupData - use direct access since setupData is memoized in the hook
   const suppliers = setupData?.suppliers ?? EMPTY_SUPPLIERS;
+  const brokers = setupData?.brokers ?? EMPTY_BROKERS;
   const projects = setupData?.projects ?? EMPTY_PROJECTS;
   const expenses = setupData?.expenses ?? EMPTY_EXPENSES;
   const itemGroups = setupData?.itemGroups ?? EMPTY_ITEM_GROUPS;
@@ -539,6 +541,7 @@ function POTransactionPageContent() {
   // Line item field handlers and columns
   const {
     supplierOptions,
+    brokerOptions,
     supplierBranchOptions,
     branchAddressOptions,
     projectOptions,
@@ -554,6 +557,7 @@ function POTransactionPageContent() {
     getOptionLabel,
   } = usePOSelectOptions({
     suppliers,
+    brokers,
     supplierBranches,
     branchAddresses,
     projects,
@@ -617,6 +621,7 @@ function POTransactionPageContent() {
   const headerSchema = usePOHeaderSchema({
     branchOptions: resolvedBranchOptions,
     supplierOptions,
+    brokerOptions,
     supplierBranchOptions,
     branchAddressOptions,
     projectOptions,

@@ -43,8 +43,10 @@ import { buildDefaultFormValues, createBlankLine } from "./utils/deliveryOrderFa
 import {
 	EMPTY_CUSTOMERS,
 	EMPTY_TRANSPORTERS,
+	EMPTY_BROKERS,
 	EMPTY_APPROVED_SALES_ORDERS,
 	EMPTY_ITEM_GROUPS,
+	EMPTY_INVOICE_TYPES,
 	EMPTY_SETUP_PARAMS,
 } from "./utils/deliveryOrderConstants";
 
@@ -148,8 +150,10 @@ function DOTransactionPageContent() {
 
 	const customers = setupData?.customers ?? EMPTY_CUSTOMERS;
 	const transporters = setupData?.transporters ?? EMPTY_TRANSPORTERS;
+	const brokers = setupData?.brokers ?? EMPTY_BROKERS;
 	const approvedSalesOrders = setupData?.approvedSalesOrders ?? EMPTY_APPROVED_SALES_ORDERS;
 	const itemGroups = setupData?.itemGroups ?? EMPTY_ITEM_GROUPS;
+	const invoiceTypes = setupData?.invoiceTypes ?? EMPTY_INVOICE_TYPES;
 
 	const fetchItemGroupDetail = React.useCallback(async (itemGroupId: string) => {
 		if (!itemGroupId || !/^\d+$/.test(itemGroupId)) {
@@ -351,14 +355,16 @@ function DOTransactionPageContent() {
 	);
 
 	const {
-		customerOptions, customerBranchOptions, transporterOptions, salesOrderOptions,
-		itemGroupOptions, getItemGroupLabel,
+		customerOptions, customerBranchOptions, transporterOptions, brokerOptions, salesOrderOptions,
+		invoiceTypeOptions, itemGroupOptions, getItemGroupLabel,
 		getItemOptions, getMakeOptions, getUomOptions,
-		getItemLabel, getMakeLabel, getUomLabel, getOptionLabel,
+		getItemLabel, getMakeLabel, getUomLabel, getUomConversions, getOptionLabel,
 	} = useDeliveryOrderSelectOptions({
 		customers,
 		transporters,
+		brokers,
 		approvedSalesOrders,
+		invoiceTypes,
 		itemGroupsFromLineItems,
 		itemGroupCache,
 		selectedPartyId,
@@ -369,7 +375,9 @@ function DOTransactionPageContent() {
 		customerOptions,
 		customerBranchOptions,
 		transporterOptions,
+		brokerOptions,
 		salesOrderOptions,
+		invoiceTypeOptions,
 		mode,
 		headerFieldsDisabled,
 	});
@@ -387,6 +395,8 @@ function DOTransactionPageContent() {
 		getUomOptions,
 		getUomLabel,
 		onFieldChange: handleLineFieldChange,
+		invoiceTypeId: String(formValues.invoice_type ?? ""),
+		getUomConversions,
 	});
 
 	const {

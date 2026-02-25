@@ -9,6 +9,7 @@ export type UseSalesOrderHeaderSchemaParams = {
 	brokerOptions: Option[];
 	transporterOptions: Option[];
 	quotationOptions: Option[];
+	invoiceTypeOptions: Option[];
 	quotationRequired: boolean;
 	mode: "create" | "edit" | "view";
 	headerFieldsDisabled: boolean;
@@ -21,6 +22,7 @@ export const useSalesOrderHeaderSchema = ({
 	brokerOptions,
 	transporterOptions,
 	quotationOptions,
+	invoiceTypeOptions,
 	quotationRequired,
 	mode,
 	headerFieldsDisabled,
@@ -48,7 +50,6 @@ export const useSalesOrderHeaderSchema = ({
 				disabled: headerFieldsDisabled,
 				grid: { xs: 12, md: 4 },
 			},
-			{ name: "party_branch", label: "Customer Branch", type: "select", options: customerBranchOptions, disabled: headerFieldsDisabled, grid: { xs: 12, md: 4 } },
 		];
 
 		if (quotationRequired) {
@@ -63,7 +64,7 @@ export const useSalesOrderHeaderSchema = ({
 		}
 
 		fields.push(
-			{ name: "invoice_type", label: "Invoice Type", type: "select", options: [{ label: "GST Invoice", value: "1" }, { label: "Bill of Supply", value: "2" }], disabled: headerFieldsDisabled, grid: { xs: 12, md: 4 } },
+			{ name: "invoice_type", label: "Invoice Type", type: "select", options: invoiceTypeOptions, disabled: headerFieldsDisabled, grid: { xs: 12, md: 4 } },
 			{
 				name: "broker",
 				label: "Broker",
@@ -88,5 +89,5 @@ export const useSalesOrderHeaderSchema = ({
 	}, [
 		branchOptions, customerOptions, customerBranchOptions,
 		brokerOptions, transporterOptions, quotationOptions,
-		quotationRequired, mode, headerFieldsDisabled,
+		invoiceTypeOptions, quotationRequired, mode, headerFieldsDisabled,
 	]);

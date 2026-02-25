@@ -2,23 +2,28 @@ import React from "react";
 import type {
 	CustomerRecord,
 	TransporterRecord,
+	BrokerRecord,
 	ApprovedDeliveryOrderRecord,
+	InvoiceTypeRecord,
 	ItemGroupCacheEntry,
 	ItemGroupRecord,
 	Option,
+	UomConversionEntry,
 } from "../types/salesInvoiceTypes";
 
 type Params = {
 	customers: ReadonlyArray<CustomerRecord>;
 	transporters: ReadonlyArray<TransporterRecord>;
+	brokers: ReadonlyArray<BrokerRecord>;
 	approvedDeliveryOrders: ReadonlyArray<ApprovedDeliveryOrderRecord>;
+	invoiceTypes: ReadonlyArray<InvoiceTypeRecord>;
 	itemGroupsFromLineItems: ReadonlyArray<ItemGroupRecord>;
 	itemGroupCache?: Partial<Record<string, ItemGroupCacheEntry>>;
 	selectedPartyId?: string;
 };
 
 export const useSalesInvoiceSelectOptions = ({
-	customers, transporters, approvedDeliveryOrders,
+	customers, transporters, brokers, approvedDeliveryOrders, invoiceTypes,
 	itemGroupsFromLineItems, itemGroupCache = {}, selectedPartyId,
 }: Params) => {
 	const customerOptions = React.useMemo<Option[]>(() => {
@@ -33,7 +38,7 @@ export const useSalesInvoiceSelectOptions = ({
 		const customer = customers.find((c) => c.id === selectedPartyId);
 		if (!customer?.branches?.length) return [];
 		return customer.branches.map((b) => ({
-			label: b.name || b.address || b.id,
+			label: b.fullAddress || b.address || b.id,
 			value: b.id,
 		}));
 	}, [customers, selectedPartyId]);
@@ -43,6 +48,11 @@ export const useSalesInvoiceSelectOptions = ({
 		return transporters.map((t) => ({ label: t.name || t.code || t.id, value: t.id }));
 	}, [transporters]);
 
+	const brokerOptions = React.useMemo<Option[]>(
+		() => brokers.map((b) => ({ label: b.name || b.id, value: b.id })),
+		[brokers],
+	);
+
 	const deliveryOrderOptions = React.useMemo<Option[]>(() => {
 		if (!approvedDeliveryOrders?.length) return [];
 		return approvedDeliveryOrders.map((doRec) => ({
@@ -50,6 +60,11 @@ export const useSalesInvoiceSelectOptions = ({
 			value: doRec.id,
 		}));
 	}, [approvedDeliveryOrders]);
+
+	const invoiceTypeOptions = React.useMemo<Option[]>(
+		() => invoiceTypes.map((t) => ({ label: t.name || t.id, value: t.id })),
+		[invoiceTypes],
+	);
 
 	const itemGroupOptions = React.useMemo<Option[]>(
 		() => itemGroupsFromLineItems.map((grp) => ({ label: grp.label || grp.id, value: grp.id })),
@@ -107,6 +122,12 @@ export const useSalesInvoiceSelectOptions = ({
 		[itemGroupCache],
 	);
 
+	const getUomConversions = React.useCallback(
+		(groupId: string, itemId: string): UomConversionEntry[] | undefined =>
+			itemGroupCache[groupId]?.uomConversionsByItemId?.[itemId],
+		[itemGroupCache],
+	);
+
 	const getOptionLabel = React.useCallback(
 		(options: ReadonlyArray<{ label: string; value: string }>, value?: unknown): string | undefined => {
 			if (value === null || typeof value === "undefined") return undefined;
@@ -117,9 +138,9 @@ export const useSalesInvoiceSelectOptions = ({
 	);
 
 	return {
-		customerOptions, customerBranchOptions, transporterOptions, deliveryOrderOptions,
-		itemGroupOptions, getItemGroupLabel,
+		customerOptions, customerBranchOptions, transporterOptions, brokerOptions, deliveryOrderOptions,
+		invoiceTypeOptions, itemGroupOptions, getItemGroupLabel,
 		getItemOptions, getMakeOptions, getUomOptions,
-		getItemLabel, getMakeLabel, getUomLabel, getOptionLabel,
+		getItemLabel, getMakeLabel, getUomLabel, getUomConversions, getOptionLabel,
 	};
 };

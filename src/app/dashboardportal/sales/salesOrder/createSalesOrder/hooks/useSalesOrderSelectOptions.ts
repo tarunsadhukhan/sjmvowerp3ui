@@ -5,10 +5,12 @@ import type {
 	CustomerBranchRecord,
 	CustomerRecord,
 	ApprovedQuotationRecord,
+	InvoiceTypeRecord,
 	ItemGroupCacheEntry,
 	ItemGroupRecord,
 	Option,
 	TransporterRecord,
+	UomConversionEntry,
 } from "../types/salesOrderTypes";
 
 type UseSalesOrderSelectOptionsParams = {
@@ -18,6 +20,7 @@ type UseSalesOrderSelectOptionsParams = {
 	transporters: ReadonlyArray<TransporterRecord>;
 	approvedQuotations: ReadonlyArray<ApprovedQuotationRecord>;
 	branchAddresses: ReadonlyArray<BranchAddressRecord>;
+	invoiceTypes: ReadonlyArray<InvoiceTypeRecord>;
 	itemGroupsFromLineItems: ReadonlyArray<ItemGroupRecord>;
 	itemGroupCache?: Partial<Record<string, ItemGroupCacheEntry>>;
 };
@@ -29,6 +32,7 @@ export const useSalesOrderSelectOptions = ({
 	transporters,
 	approvedQuotations,
 	branchAddresses,
+	invoiceTypes,
 	itemGroupsFromLineItems,
 	itemGroupCache = {},
 }: UseSalesOrderSelectOptionsParams) => {
@@ -38,7 +42,7 @@ export const useSalesOrderSelectOptions = ({
 	);
 
 	const customerBranchOptions = React.useMemo<Option[]>(
-		() => customerBranches.map((b) => ({ label: b.address || b.id, value: b.id })),
+		() => customerBranches.map((b) => ({ label: b.fullAddress || b.address || b.id, value: b.id })),
 		[customerBranches],
 	);
 
@@ -58,6 +62,11 @@ export const useSalesOrderSelectOptions = ({
 			value: q.id,
 		})),
 		[approvedQuotations],
+	);
+
+	const invoiceTypeOptions = React.useMemo<Option[]>(
+		() => invoiceTypes.map((t) => ({ label: t.name || t.id, value: t.id })),
+		[invoiceTypes],
 	);
 
 	const branchAddressOptions = React.useMemo<Option[]>(
@@ -121,11 +130,17 @@ export const useSalesOrderSelectOptions = ({
 		[itemGroupCache],
 	);
 
+	const getUomConversions = React.useCallback(
+		(groupId: string, itemId: string): UomConversionEntry[] | undefined =>
+			itemGroupCache[groupId]?.uomConversionsByItemId?.[itemId],
+		[itemGroupCache],
+	);
+
 	return {
 		customerOptions, customerBranchOptions,
 		brokerOptions, transporterOptions, quotationOptions,
-		branchAddressOptions, itemGroupOptions,
+		invoiceTypeOptions, branchAddressOptions, itemGroupOptions,
 		getItemGroupLabel, getItemOptions, getMakeOptions, getUomOptions,
-		getItemLabel, getMakeLabel, getUomLabel,
+		getItemLabel, getMakeLabel, getUomLabel, getUomConversions,
 	};
 };

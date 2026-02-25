@@ -2,7 +2,9 @@ import type { ApprovalStatusId } from "@/components/ui/transaction";
 import type {
 	CustomerRecord,
 	TransporterRecord,
+	BrokerRecord,
 	ApprovedSalesOrderRecord,
+	InvoiceTypeRecord,
 	ItemGroupRecord,
 	Option,
 	EditableLineItem,
@@ -37,8 +39,10 @@ export const DO_STATUS_LABELS: Record<ApprovalStatusId, string> = {
 
 export const EMPTY_CUSTOMERS: ReadonlyArray<CustomerRecord> = Object.freeze([]);
 export const EMPTY_TRANSPORTERS: ReadonlyArray<TransporterRecord> = Object.freeze([]);
+export const EMPTY_BROKERS: ReadonlyArray<BrokerRecord> = Object.freeze([]);
 export const EMPTY_APPROVED_SALES_ORDERS: ReadonlyArray<ApprovedSalesOrderRecord> = Object.freeze([]);
 export const EMPTY_ITEM_GROUPS: ReadonlyArray<ItemGroupRecord> = Object.freeze([]);
+export const EMPTY_INVOICE_TYPES: ReadonlyArray<InvoiceTypeRecord> = Object.freeze([]);
 export const EMPTY_OPTIONS: ReadonlyArray<Option> = Object.freeze([]);
 export const EMPTY_LINE_ITEMS: ReadonlyArray<EditableLineItem> = Object.freeze([]);
 

@@ -1,4 +1,5 @@
 import type { SRLineItem, SRTotals } from "../types/srTypes";
+import { isPercentageDiscountMode, isAmountDiscountMode } from "./srConstants";
 
 /**
  * Calculates the GST split for a line item based on supplier/shipping states.
@@ -33,6 +34,53 @@ export const calculateLineTax = (
 		cgst: 0,
 		sgst: 0,
 		total: Number(taxAmount.toFixed(2)),
+	};
+};
+
+/**
+ * Computes discount amount using either percentage or flat modes.
+ * - Percentage: discount_amount = (discountValue / 100) * rate * qty
+ * - Amount (PriceDiscount): discount_amount = discountValue * qty (per-item reduction)
+ */
+export const calculateDiscountAmount = (
+	qty: number,
+	rate: number,
+	discountMode?: number | null,
+	discountValue?: number | null,
+): number => {
+	if (!qty || !rate || !discountMode || !discountValue) {
+		return 0;
+	}
+
+	if (isPercentageDiscountMode(discountMode)) {
+		// Percentage discount: (discountValue% of rate) * qty
+		return (discountValue / 100) * rate * qty;
+	}
+
+	if (isAmountDiscountMode(discountMode)) {
+		// PriceDiscount: per-item reduction * qty
+		return discountValue * qty;
+	}
+
+	return 0;
+};
+
+/**
+ * Calculates net amount after discount along with the computed discount amount.
+ * When discountMode/discountValue are provided, computes discountAmount from them.
+ * Otherwise falls back to the provided discountAmount.
+ */
+export const calculateLineAmountWithDiscount = (
+	qty: number,
+	rate: number,
+	discountMode?: number | null,
+	discountValue?: number | null,
+): { discountAmount: number; amount: number } => {
+	const discountAmount = calculateDiscountAmount(qty, rate, discountMode, discountValue);
+	const baseAmount = qty * rate;
+	return {
+		discountAmount: Number(discountAmount.toFixed(2)),
+		amount: Math.max(0, Number((baseAmount - discountAmount).toFixed(2))),
 	};
 };
 

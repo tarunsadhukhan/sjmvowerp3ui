@@ -43,8 +43,10 @@ import { buildDefaultFormValues, createBlankLine } from "./utils/salesInvoiceFac
 import {
 	EMPTY_CUSTOMERS,
 	EMPTY_TRANSPORTERS,
+	EMPTY_BROKERS,
 	EMPTY_APPROVED_DELIVERY_ORDERS,
 	EMPTY_ITEM_GROUPS,
+	EMPTY_INVOICE_TYPES,
 	EMPTY_SETUP_PARAMS,
 } from "./utils/salesInvoiceConstants";
 
@@ -148,8 +150,10 @@ function InvoiceTransactionPageContent() {
 
 	const customers = setupData?.customers ?? EMPTY_CUSTOMERS;
 	const transporters = setupData?.transporters ?? EMPTY_TRANSPORTERS;
+	const brokers = setupData?.brokers ?? EMPTY_BROKERS;
 	const approvedDeliveryOrders = setupData?.approvedDeliveryOrders ?? EMPTY_APPROVED_DELIVERY_ORDERS;
 	const itemGroups = setupData?.itemGroups ?? EMPTY_ITEM_GROUPS;
+	const invoiceTypes = setupData?.invoiceTypes ?? EMPTY_INVOICE_TYPES;
 
 	const fetchItemGroupDetail = React.useCallback(async (itemGroupId: string) => {
 		if (!itemGroupId || !/^\d+$/.test(itemGroupId)) {
@@ -351,14 +355,16 @@ function InvoiceTransactionPageContent() {
 	);
 
 	const {
-		customerOptions, customerBranchOptions, transporterOptions, deliveryOrderOptions,
-		itemGroupOptions, getItemGroupLabel,
+		customerOptions, customerBranchOptions, transporterOptions, brokerOptions, deliveryOrderOptions,
+		invoiceTypeOptions, itemGroupOptions, getItemGroupLabel,
 		getItemOptions, getMakeOptions, getUomOptions,
-		getItemLabel, getMakeLabel, getUomLabel, getOptionLabel,
+		getItemLabel, getMakeLabel, getUomLabel, getUomConversions, getOptionLabel,
 	} = useSalesInvoiceSelectOptions({
 		customers,
 		transporters,
+		brokers,
 		approvedDeliveryOrders,
+		invoiceTypes,
 		itemGroupsFromLineItems,
 		itemGroupCache,
 		selectedPartyId,
@@ -369,7 +375,9 @@ function InvoiceTransactionPageContent() {
 		customerOptions,
 		customerBranchOptions,
 		transporterOptions,
+		brokerOptions,
 		deliveryOrderOptions,
+		invoiceTypeOptions,
 		mode,
 		headerFieldsDisabled,
 	});
@@ -387,6 +395,8 @@ function InvoiceTransactionPageContent() {
 		getUomOptions,
 		getUomLabel,
 		onFieldChange: handleLineFieldChange,
+		invoiceTypeId: String(formValues.invoice_type ?? ""),
+		getUomConversions,
 	});
 
 	const {

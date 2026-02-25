@@ -9,6 +9,8 @@ import type {
 	CustomerRecordRaw,
 	ApprovedQuotationRecord,
 	ApprovedQuotationRecordRaw,
+	InvoiceTypeRecord,
+	InvoiceTypeRecordRaw,
 	ItemGroupCacheEntry,
 	ItemGroupRecord,
 	ItemGroupRecordRaw,
@@ -22,6 +24,7 @@ import type {
 	SalesOrderSetupData,
 	TransporterRecord,
 	TransporterRecordRaw,
+	UomConversionEntry,
 } from "../types/salesOrderTypes";
 
 // ---------------------------------------------------------------------------
@@ -34,13 +37,17 @@ export const mapCustomerBranchRecords = (records: unknown[]): CustomerBranchReco
 			const data = row as CustomerBranchRecordRaw;
 			const id = data?.party_mst_branch_id ?? data?.id;
 			if (!id) return null;
-			const addr1 = data?.branch_address1 ?? "";
-			const addr2 = data?.branch_address2 ?? "";
-			const address = [addr1, addr2].filter(Boolean).join(", ");
+			const addr = data?.address ?? "";
+			const addrAdditional = data?.address_additional ?? "";
+			const zipCode = data?.zip_code != null ? String(data.zip_code) : "";
+			const stateName = data?.state_name ?? data?.state ?? "";
+			const address = [addr, addrAdditional].filter(Boolean).join(", ");
+			const fullAddress = [addr, addrAdditional, stateName, zipCode].filter(Boolean).join(", ") || String(id);
 			return {
 				id: String(id),
 				address: address || String(id),
-				stateName: data?.state_name ?? data?.state,
+				stateName: stateName || undefined,
+				fullAddress,
 			} satisfies CustomerBranchRecord;
 		})
 		.filter(Boolean) as CustomerBranchRecord[];
@@ -72,11 +79,11 @@ export const mapBrokerRecords = (records: unknown[]): BrokerRecord[] =>
 	records
 		.map((row) => {
 			const data = row as BrokerRecordRaw;
-			const id = data?.party_id ?? data?.id;
+			const id = data?.broker_id ?? data?.party_id ?? data?.id;
 			if (!id) return null;
 			return {
 				id: String(id),
-				name: data?.party_name ?? data?.name ?? String(id),
+				name: data?.broker_name ?? data?.party_name ?? data?.name ?? String(id),
 			} satisfies BrokerRecord;
 		})
 		.filter(Boolean) as BrokerRecord[];
@@ -85,11 +92,11 @@ export const mapTransporterRecords = (records: unknown[]): TransporterRecord[] =
 	records
 		.map((row) => {
 			const data = row as TransporterRecordRaw;
-			const id = data?.party_id ?? data?.id;
+			const id = data?.transporter_id ?? data?.party_id ?? data?.id;
 			if (!id) return null;
 			return {
 				id: String(id),
-				name: data?.party_name ?? data?.name ?? String(id),
+				name: data?.transporter_name ?? data?.party_name ?? data?.name ?? String(id),
 			} satisfies TransporterRecord;
 		})
 		.filter(Boolean) as TransporterRecord[];
@@ -164,6 +171,23 @@ export const mapItemGroupRecords = (records: unknown[]): ItemGroupRecord[] =>
 		.filter(Boolean) as ItemGroupRecord[];
 
 // ---------------------------------------------------------------------------
+// Invoice type mapping
+// ---------------------------------------------------------------------------
+
+export const mapInvoiceTypeRecords = (records: unknown[]): InvoiceTypeRecord[] =>
+	records
+		.map((row) => {
+			const data = row as InvoiceTypeRecordRaw;
+			const id = data?.invoice_type_id;
+			if (!id) return null;
+			return {
+				id: String(id),
+				name: data?.invoice_type_name ?? String(id),
+			} satisfies InvoiceTypeRecord;
+		})
+		.filter(Boolean) as InvoiceTypeRecord[];
+
+// ---------------------------------------------------------------------------
 // Setup response mapper
 // ---------------------------------------------------------------------------
 
@@ -177,6 +201,7 @@ export const mapSalesOrderSetupResponse = (response: unknown): SalesOrderSetupDa
 			approvedQuotations: mapApprovedQuotationRecords(result?.approved_quotations ?? []),
 			itemGroups: mapItemGroupRecords(result?.item_groups ?? []),
 			branchAddresses: mapBranchAddressRecords(result?.branches ?? []),
+			invoiceTypes: mapInvoiceTypeRecords(result?.invoice_types ?? []),
 			coConfig: result?.co_config as SalesOrderSetupData["coConfig"],
 		} satisfies SalesOrderSetupData;
 	} catch (error) {
@@ -251,6 +276,41 @@ export const mapItemGroupDetailResponse = (response: unknown): ItemGroupCacheEnt
 		uomLabelByItemId[itemKey][uomKey] = label;
 	});
 
+	// Build UOM conversion data per item
+	const uomConversionsByItemId: Record<string, UomConversionEntry[]> = {};
+
+	uomsRaw.forEach((row) => {
+		const data = row as ItemUomOptionRaw;
+		const itemId = data?.item_id ?? data?.id;
+		const mapFromId = data?.map_from_id;
+		const mapToId = data?.map_to_id ?? data?.uom_id ?? data?.mapToId;
+		const relationValue = data?.relation_value;
+
+		if (!itemId || !mapFromId || !mapToId || relationValue == null || relationValue === 0) return;
+
+		const itemKey = String(itemId);
+		if (!uomConversionsByItemId[itemKey]) uomConversionsByItemId[itemKey] = [];
+
+		const fromKey = String(mapFromId);
+		const toKey = String(mapToId);
+		if (uomConversionsByItemId[itemKey].some(
+			(c) => c.mapFromId === fromKey && c.mapToId === toKey
+		)) return;
+
+		const mapFromName = data?.map_from_name ?? fromKey;
+		const mapToName = data?.uom_name ?? toKey;
+		const rounding = data?.rounding ?? 2;
+
+		uomConversionsByItemId[itemKey].push({
+			mapFromId: fromKey,
+			mapFromName,
+			mapToId: toKey,
+			mapToName,
+			relationValue: Number(relationValue),
+			rounding: Number(rounding),
+		});
+	});
+
 	items.forEach((item) => {
 		if (item.defaultUomId) {
 			const bucket = uomsByItemId[item.value] ?? [];
@@ -271,7 +331,7 @@ export const mapItemGroupDetailResponse = (response: unknown): ItemGroupCacheEnt
 	const makeLabelById: Record<string, string> = {};
 	makes.forEach((make) => { makeLabelById[make.value] = make.label; });
 
-	return { groupLabel, items, makes, uomsByItemId, itemLabelById, makeLabelById, uomLabelByItemId, itemRateById, itemTaxById };
+	return { groupLabel, items, makes, uomsByItemId, itemLabelById, makeLabelById, uomLabelByItemId, itemRateById, itemTaxById, uomConversionsByItemId };
 };
 
 // ---------------------------------------------------------------------------

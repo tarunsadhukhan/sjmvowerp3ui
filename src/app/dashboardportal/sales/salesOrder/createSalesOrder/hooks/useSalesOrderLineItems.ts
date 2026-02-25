@@ -5,6 +5,7 @@ import { toast } from "@/hooks/use-toast";
 import type { SalesOrderLine } from "@/utils/salesOrderService";
 import type { EditableLineItem, ItemGroupCacheEntry, ItemGroupRecord } from "../types/salesOrderTypes";
 import { createBlankLine } from "../utils/salesOrderFactories";
+import { computeHessianFields } from "../utils/hessianCalculations";
 
 export const lineHasAnyData = (line: EditableLineItem) =>
 	Boolean(line.itemGroup || line.item || line.itemMake || line.quantity || line.rate || line.uom || line.remarks);
@@ -30,6 +31,10 @@ type UseSalesOrderLineItemsParams = {
 	itemGroupLoading: Partial<Record<string, boolean>>;
 	ensureItemGroupData: (groupId: string) => void;
 	itemGroups: ReadonlyArray<ItemGroupRecord>;
+	/** Current invoice type from form header (\"2\" = Hessian) */
+	invoiceTypeId?: string;
+	/** Broker commission percent from form header */
+	brokeragePercent?: number;
 };
 
 export const useSalesOrderLineItems = ({
@@ -41,6 +46,8 @@ export const useSalesOrderLineItems = ({
 	itemGroupLoading,
 	ensureItemGroupData,
 	itemGroups,
+	invoiceTypeId,
+	brokeragePercent,
 }: UseSalesOrderLineItemsParams) => {
 	const {
 		items: lineItems,
@@ -76,27 +83,116 @@ export const useSalesOrderLineItems = ({
 		return { amount: Math.max(0, gross - discountAmount), discountAmount };
 	};
 
-	const mapLineToEditable = React.useCallback((line: SalesOrderLine): EditableLineItem => ({
-		id: line.id ? String(line.id) : generateLineId(),
-		quotationLineitemId: line.quotationLineitemId,
-		hsnCode: line.hsnCode,
-		itemGroup: line.itemGroup ? String(line.itemGroup) : "",
-		item: line.item ?? "",
-		itemMake: line.itemMake ?? "",
-		quantity: line.quantity != null ? String(line.quantity) : "",
-		rate: line.rate != null ? String(line.rate) : "",
-		uom: line.uom ?? "",
-		discountType: line.discountType ?? undefined,
-		discountValue: line.discountedRate != null ? String(line.discountedRate) : "",
-		discountAmount: line.discountAmount ?? undefined,
-		amount: line.totalAmount ?? undefined,
-		remarks: line.remarks ?? "",
-		taxPercentage: line.gst?.igstPercent ? Number(line.gst.igstPercent) : (line.gst?.cgstPercent ? Number(line.gst.cgstPercent) * 2 : undefined),
-		igstAmount: line.gst?.igstAmount ?? undefined,
-		cgstAmount: line.gst?.cgstAmount ?? undefined,
-		sgstAmount: line.gst?.sgstAmount ?? undefined,
-		taxAmount: line.gst?.gstTotal ?? undefined,
-	}), []);
+	const isHessian = invoiceTypeId === "2";
+
+	/**
+	 * Look up the Bales-per-MT conversion factor for an item.
+	 * Returns the relation_value from uom_item_map_mst where the
+	 * selected UOM (rate UOM / default UOM) is the "from" side (MT)
+	 * and the "to" side is Bales.
+	 * Convention: relation_value = bales per MT, e.g. 5 => 1 MT = 5 Bales.
+	 */
+	const getConversionFactor = React.useCallback(
+		(groupId: string, itemId: string, selectedUomId: string): number | undefined => {
+			const cache = itemGroupCache[groupId];
+			if (!cache) return undefined;
+			const conversions = cache.uomConversionsByItemId[itemId];
+			if (!conversions?.length) return undefined;
+			// Find a conversion where the selected UOM is the mapFrom (i.e. MT)
+			// and relation_value gives bales per MT
+			for (const conv of conversions) {
+				if (conv.mapFromId === selectedUomId && conv.relationValue > 0) {
+					return conv.relationValue;
+				}
+			}
+			return undefined;
+		},
+		[itemGroupCache],
+	);
+
+	/**
+	 * Apply hessian calculations to a line item.
+	 * Updates quantity (MT), rate (billingRateMt), and all hessian annotation fields.
+	 */
+	const applyHessianToLine = React.useCallback(
+		(line: EditableLineItem): EditableLineItem => {
+			const convFactor = line.conversionFactor || 0;
+			if (!convFactor) return line;
+
+			const qtyBales = Number(line.qtyBales) || 0;
+			const rawRateMt = Number(line.rawRateMt) || 0;
+			const brokPct = brokeragePercent ?? 0;
+
+			const h = computeHessianFields(qtyBales, rawRateMt, convFactor, brokPct);
+
+			// Main table values: quantity = MT, rate = billing rate MT
+			const updatedQuantity = String(h.qtyMt);
+			const updatedRate = String(h.billingRateMt);
+
+			const qty = h.qtyMt;
+			const rate = h.billingRateMt;
+			const { amount, discountAmount } = calculateLineAmount(qty, rate, line.discountType, Number(line.discountValue) || 0);
+			const tax = calculateLineTax(amount, line.taxPercentage || 0);
+
+			return {
+				...line,
+				quantity: updatedQuantity,
+				rate: updatedRate,
+				ratePerBale: h.ratePerBale,
+				billingRateMt: h.billingRateMt,
+				billingRateBale: h.billingRateBale,
+				discountAmount,
+				amount,
+				igstAmount: tax.igst,
+				cgstAmount: tax.cgst,
+				sgstAmount: tax.sgst,
+				taxAmount: tax.total,
+			};
+		},
+		[brokeragePercent, calculateLineAmount, calculateLineTax],
+	);
+
+	const mapLineToEditable = React.useCallback((line: SalesOrderLine): EditableLineItem => {
+		const base: EditableLineItem = {
+			id: line.id ? String(line.id) : generateLineId(),
+			quotationLineitemId: line.quotationLineitemId,
+			hsnCode: line.hsnCode,
+			itemGroup: line.itemGroup ? String(line.itemGroup) : "",
+			item: line.item ?? "",
+			itemMake: line.itemMake ?? "",
+			quantity: line.quantity != null ? String(line.quantity) : "",
+			rate: line.rate != null ? String(line.rate) : "",
+			uom: line.uom ?? "",
+			discountType: line.discountType ?? undefined,
+			discountValue: line.discountedRate != null ? String(line.discountedRate) : "",
+			discountAmount: line.discountAmount ?? undefined,
+			amount: line.totalAmount ?? undefined,
+			remarks: line.remarks ?? "",
+			taxPercentage: line.gst?.igstPercent ? Number(line.gst.igstPercent) : (line.gst?.cgstPercent ? Number(line.gst.cgstPercent) * 2 : undefined),
+			igstAmount: line.gst?.igstAmount ?? undefined,
+			cgstAmount: line.gst?.cgstAmount ?? undefined,
+			sgstAmount: line.gst?.sgstAmount ?? undefined,
+			taxAmount: line.gst?.gstTotal ?? undefined,
+		};
+
+		// Restore hessian fields when present (invoice_type = 2)
+		const h = line.hessian;
+		if (h) {
+			const qtyMt = Number(line.quantity) || 0;
+			const qtyBales = h.qtyBales ?? 0;
+			const convFactor = qtyMt > 0 ? (qtyBales ?? 0) / qtyMt : 0;
+			// raw rate MT = ratePerBale * conversionFactor
+			const rawRateMt = (h.ratePerBale ?? 0) * (convFactor || 1);
+			base.qtyBales = qtyBales ? String(qtyBales) : "";
+			base.rawRateMt = rawRateMt ? String(rawRateMt) : "";
+			base.ratePerBale = h.ratePerBale ?? undefined;
+			base.billingRateMt = h.billingRateMt ?? undefined;
+			base.billingRateBale = h.billingRateBale ?? undefined;
+			base.conversionFactor = convFactor || undefined;
+		}
+
+		return base;
+	}, []);
 
 	const handleLineFieldChange = React.useCallback(
 		(id: string, field: keyof EditableLineItem, rawValue: string | number) => {
@@ -133,14 +229,41 @@ export const useSalesOrderLineItems = ({
 						if (defaultUom && uomOptions.some((opt) => opt.value === defaultUom)) nextUom = defaultUom;
 						else if (uomOptions.length) nextUom = uomOptions[0].value;
 						const tax = calculateLineTax(0, defaultTax || 0);
-						return {
+						const updated: EditableLineItem = {
 							...item, item: value, uom: nextUom,
 							rate: defaultRate != null ? String(defaultRate) : item.rate,
 							taxPercentage: defaultTax,
 							igstAmount: tax.igst, cgstAmount: tax.cgst, sgstAmount: tax.sgst, taxAmount: tax.total,
 						};
+						// In hessian mode, also resolve the conversion factor for the new item
+						if (isHessian && value && nextUom) {
+							const convFactor = getConversionFactor(item.itemGroup, value, nextUom);
+							updated.conversionFactor = convFactor;
+							// Reset hessian user-entered fields — user must re-enter after item change
+							updated.qtyBales = "";
+							updated.rawRateMt = defaultRate != null ? String(defaultRate) : "";
+							updated.ratePerBale = undefined;
+							updated.billingRateMt = undefined;
+							updated.billingRateBale = undefined;
+							updated.quantity = "";
+							updated.rate = "";
+						}
+						return updated;
 					});
 				});
+				return;
+			}
+
+			// --- Hessian-specific fields (qtyBales, rawRateMt) ---
+			if (isHessian && (field === "qtyBales" || field === "rawRateMt")) {
+				const sanitized = value.replace(/[^0-9.]/g, "");
+				setLineItems((prev) =>
+					prev.map((item) => {
+						if (item.id !== id) return item;
+						const updated = { ...item, [field]: sanitized };
+						return applyHessianToLine(updated);
+					}),
+				);
 				return;
 			}
 
@@ -217,7 +340,7 @@ export const useSalesOrderLineItems = ({
 				prev.map((item) => (item.id === id ? { ...item, [field]: value } as EditableLineItem : item)),
 			);
 		},
-		[mode, setLineItems, itemGroupCache, itemGroupLoading, ensureItemGroupData, billingToState, shippingToState, coConfig],
+		[mode, setLineItems, itemGroupCache, itemGroupLoading, ensureItemGroupData, billingToState, shippingToState, coConfig, isHessian, getConversionFactor, applyHessianToLine],
 	);
 
 	const handleQuotationItemsConfirm = React.useCallback(
@@ -270,6 +393,23 @@ export const useSalesOrderLineItems = ({
 		});
 		return Array.from(groups.values());
 	}, [itemGroupCache, itemGroups, lineItems]);
+
+	// --- Hessian brokerage reactivity ---
+	// When broker_commission_percent changes in the header, recalculate all hessian line items.
+	const prevBrokerageRef = React.useRef(brokeragePercent);
+	React.useEffect(() => {
+		if (!isHessian) return;
+		if (mode === "view") return;
+		if (prevBrokerageRef.current === brokeragePercent) return;
+		prevBrokerageRef.current = brokeragePercent;
+
+		setLineItems((prev) =>
+			prev.map((line) => {
+				if (!line.conversionFactor || !line.rawRateMt) return line;
+				return applyHessianToLine(line);
+			}),
+		);
+	}, [brokeragePercent, isHessian, mode, setLineItems, applyHessianToLine]);
 
 	return {
 		lineItems, setLineItems, replaceItems, removeLineItems,

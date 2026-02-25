@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useEffect, useState } from "react";
-import { Box, Button, Dialog, DialogContent, DialogTitle, MenuItem, TextField, FormControlLabel, Switch, CircularProgress, FormHelperText } from "@mui/material";
+import { Box, Button, Dialog, DialogContent, DialogTitle, MenuItem, TextField, FormControlLabel, Switch, CircularProgress, FormHelperText, Autocomplete } from "@mui/material";
 import { fetchWithCookie } from "@/utils/apiClient2";
 import { apiRoutesPortalMasters } from "@/utils/api";
 
@@ -107,6 +107,23 @@ export default function CreateProjectPage({ open = false, onClose, existingRows 
     }));
   }, [initialValues]);
 
+  // Filter departments based on selected branch
+  useEffect(() => {
+    if (!allDepartments.length) return;
+    if (!form.branch_id) {
+      setDepartmentOptions(allDepartments);
+      return;
+    }
+    const filtered = allDepartments.filter((d) => String(d.raw?.branch_id ?? '') === String(form.branch_id));
+    setDepartmentOptions(filtered);
+    setForm((f) => {
+      if (f.dept_id && !filtered.some((d) => d.id === f.dept_id)) {
+        return { ...f, dept_id: filtered.length ? filtered[0].id : '' };
+      }
+      return f;
+    });
+  }, [form.branch_id, allDepartments]);
+
   const getCandidates = (props?: any[])=> {
     if (props && props.length) return props;
     const c = setupData?.projects || setupData?.project_mst || setupData?.data || [];
@@ -130,13 +147,7 @@ export default function CreateProjectPage({ open = false, onClose, existingRows 
     setNameError(null); return true;
   }
 
-  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => { const { name, value, type } = e.target; setForm((f)=> ({ ...f, [name!]: type === 'checkbox' ? (e.target as HTMLInputElement).checked : value })); setError(null); if (name === 'prj_name') setNameError(null); if (name === 'branch_id') {
-    const b = String(e.target.value);
-    const filtered = allDepartments.filter((d:any)=> String(d.raw?.branch_id ?? d.raw?.branch ?? d.raw?.branch_id ?? '') === b || String(d.raw?.branch_id ?? d.raw?.branch ?? '') === b);
-    const normalized = Array.isArray(filtered)? filtered.map((d:any)=> ({ id: String(d.id ?? d.dept_id ?? d.raw?.dept_id ?? ''), label: d.label ?? d.dept_name ?? d.raw?.dept_name ?? d.raw?.name, raw: d.raw ?? d })) : [];
-    setDepartmentOptions(normalized.length ? normalized : allDepartments);
-    if (normalized.length) setForm((f)=> ({ ...f, dept_id: normalized[0].id })); else setForm((f)=> ({ ...f, dept_id: '' }));
-  }};
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => { const { name, value, type } = e.target; setForm((f)=> ({ ...f, [name!]: type === 'checkbox' ? (e.target as HTMLInputElement).checked : value })); setError(null); if (name === 'prj_name') setNameError(null); };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -171,9 +182,18 @@ export default function CreateProjectPage({ open = false, onClose, existingRows 
       <TextField select label="Branch" name="branch_id" value={form.branch_id} onChange={handleChange} fullWidth margin="normal" disabled={readOnly}>
         {branchOptions.map(b=> <MenuItem key={b.id} value={b.id}>{b.label}</MenuItem>)}
       </TextField>
-      <TextField select label="Department" name="dept_id" value={form.dept_id} onChange={handleChange} fullWidth margin="normal" disabled={readOnly}>
-        {departmentOptions.map(d=> <MenuItem key={d.id} value={d.id}>{d.label}</MenuItem>)}
-      </TextField>
+      <Autocomplete
+        options={departmentOptions}
+        getOptionLabel={(option) => option.label || ''}
+        value={departmentOptions.find((d) => d.id === form.dept_id) || null}
+        onChange={(_, newValue) => {
+          setForm((f) => ({ ...f, dept_id: newValue?.id || '' }));
+          setError(null);
+        }}
+        disabled={readOnly}
+        isOptionEqualToValue={(option, value) => option.id === value.id}
+        renderInput={(params) => <TextField {...params} label="Department" margin="normal" fullWidth />}
+      />
       <TextField select label="Party" name="party_id" value={form.party_id} onChange={handleChange} fullWidth margin="normal" disabled={readOnly}>
         {partyOptions.map(p=> <MenuItem key={p.id} value={p.id}>{p.label}</MenuItem>)}
       </TextField>

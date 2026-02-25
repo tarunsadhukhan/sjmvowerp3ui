@@ -5,8 +5,12 @@ import type {
 	CustomerBranchRecordRaw,
 	TransporterRecord,
 	TransporterRecordRaw,
+	BrokerRecord,
+	BrokerRecordRaw,
 	ApprovedDeliveryOrderRecord,
 	ApprovedDeliveryOrderRecordRaw,
+	InvoiceTypeRecord,
+	InvoiceTypeRecordRaw,
 	ItemGroupRecord,
 	ItemGroupRecordRaw,
 	ItemGroupCacheEntry,
@@ -18,6 +22,7 @@ import type {
 	InvoiceSetup2ResponseRaw,
 	InvoiceSetupData,
 	Option,
+	UomConversionEntry,
 } from "../types/salesInvoiceTypes";
 
 export const mapCustomerBranchRecords = (records: unknown[]): CustomerBranchRecord[] =>
@@ -27,10 +32,14 @@ export const mapCustomerBranchRecords = (records: unknown[]): CustomerBranchReco
 			const id = data?.party_mst_branch_id ?? data?.id;
 			if (!id) return null;
 			const address = data?.fatory_address ?? data?.branch_address1 ?? "";
+			const stateName = data?.state_name ?? "";
+			const addressParts = [address, stateName].filter(Boolean);
+			const fullAddress = addressParts.length > 0 ? addressParts.join(", ") : String(id);
 			return {
 				id: String(id),
 				name: data?.party_branch_name ?? (address || String(id)),
 				address: address || String(id),
+				fullAddress,
 				stateName: data?.state_name,
 				stateId: data?.state_id,
 				gstNo: data?.gst_no,
@@ -69,6 +78,20 @@ export const mapTransporterRecords = (records: unknown[]): TransporterRecord[] =
 		})
 		.filter(Boolean) as TransporterRecord[];
 
+export const mapBrokerRecords = (records: unknown[]): BrokerRecord[] =>
+	records
+		.map((row) => {
+			const data = row as BrokerRecordRaw;
+			const id = data?.broker_id ?? data?.party_id ?? data?.id;
+			if (!id) return null;
+			return {
+				id: String(id),
+				name: data?.broker_name ?? data?.name ?? String(id),
+				code: data?.broker_code,
+			} satisfies BrokerRecord;
+		})
+		.filter(Boolean) as BrokerRecord[];
+
 export const mapApprovedDeliveryOrders = (records: unknown[]): ApprovedDeliveryOrderRecord[] =>
 	records
 		.map((row) => {
@@ -101,14 +124,29 @@ export const mapItemGroupRecords = (records: unknown[]): ItemGroupRecord[] =>
 		})
 		.filter(Boolean) as ItemGroupRecord[];
 
+export const mapInvoiceTypeRecords = (records: unknown[]): InvoiceTypeRecord[] =>
+	records
+		.map((row) => {
+			const data = row as InvoiceTypeRecordRaw;
+			const id = data?.invoice_type_id;
+			if (!id) return null;
+			return {
+				id: String(id),
+				name: data?.invoice_type_name ?? String(id),
+			} satisfies InvoiceTypeRecord;
+		})
+		.filter(Boolean) as InvoiceTypeRecord[];
+
 export const mapInvoiceSetupResponse = (response: unknown): InvoiceSetupData => {
 	try {
 		const result = response as InvoiceSetup1ResponseRaw;
 		return {
 			customers: mapCustomerRecords(result?.customers ?? []),
 			transporters: mapTransporterRecords(result?.transporters ?? []),
+			brokers: mapBrokerRecords(result?.brokers ?? []),
 			approvedDeliveryOrders: mapApprovedDeliveryOrders(result?.approved_delivery_orders ?? []),
 			itemGroups: mapItemGroupRecords(result?.item_groups ?? []),
+			invoiceTypes: mapInvoiceTypeRecords(result?.invoice_types ?? []),
 		} satisfies InvoiceSetupData;
 	} catch (error) {
 		console.error("Failed to map invoice setup response", error);
@@ -178,6 +216,37 @@ export const mapItemGroupDetailResponse = (response: unknown): ItemGroupCacheEnt
 		uomLabelByItemId[itemKey][uomKey] = label;
 	});
 
+	// Build UOM conversion data per item
+	const uomConversionsByItemId: Record<string, UomConversionEntry[]> = {};
+
+	uomsRaw.forEach((row) => {
+		const data = row as ItemUomOptionRaw;
+		const itemId = data?.item_id ?? data?.id;
+		const mapFromId = data?.map_from_id;
+		const mapToId = data?.map_to_id ?? data?.uom_id ?? data?.mapToId;
+		const relationValue = data?.relation_value;
+
+		if (!itemId || !mapFromId || !mapToId || relationValue == null || relationValue === 0) return;
+
+		const itemKey = String(itemId);
+		if (!uomConversionsByItemId[itemKey]) uomConversionsByItemId[itemKey] = [];
+
+		const fromKey = String(mapFromId);
+		const toKey = String(mapToId);
+		if (uomConversionsByItemId[itemKey].some(
+			(c) => c.mapFromId === fromKey && c.mapToId === toKey
+		)) return;
+
+		uomConversionsByItemId[itemKey].push({
+			mapFromId: fromKey,
+			mapFromName: data?.map_from_name ?? fromKey,
+			mapToId: toKey,
+			mapToName: data?.uom_name ?? toKey,
+			relationValue: Number(relationValue),
+			rounding: Number(data?.rounding ?? 2),
+		});
+	});
+
 	items.forEach((item) => {
 		if (item.defaultUomId) {
 			const bucket = uomsByItemId[item.value] ?? [];
@@ -198,7 +267,7 @@ export const mapItemGroupDetailResponse = (response: unknown): ItemGroupCacheEnt
 	const makeLabelById: Record<string, string> = {};
 	makes.forEach((make) => { makeLabelById[make.value] = make.label; });
 
-	return { groupLabel, items, makes, uomsByItemId, itemLabelById, makeLabelById, uomLabelByItemId, itemRateById, itemTaxById };
+	return { groupLabel, items, makes, uomsByItemId, itemLabelById, makeLabelById, uomLabelByItemId, itemRateById, itemTaxById, uomConversionsByItemId };
 };
 
 const toStringValue = (value: unknown): string => {

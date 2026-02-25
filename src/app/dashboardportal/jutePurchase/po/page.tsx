@@ -249,7 +249,7 @@ export default function JutePOIndexPage() {
 	const isRowEditable = React.useMemo(
 		() => createStatusBasedEditCheck<JutePORow>({
 			statusField: "status",
-			editableStatuses: ["Draft", "Open"],
+			editableStatuses: ["Draft", "Drafted", "Open"],
 			caseInsensitive: true,
 		}),
 		[]

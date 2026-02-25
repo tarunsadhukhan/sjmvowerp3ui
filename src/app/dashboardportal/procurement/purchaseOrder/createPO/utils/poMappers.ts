@@ -1,6 +1,8 @@
 import type {
 	BranchAddressRecord,
 	BranchAddressRecordRaw,
+	BrokerRecord,
+	BrokerRecordRaw,
 	ItemGroupCacheEntry,
 	ItemGroupRecord,
 	ItemGroupRecordRaw,
@@ -63,6 +65,23 @@ export const mapSupplierBranchRecords = (records: unknown[]): SupplierBranchReco
 			} satisfies SupplierBranchRecord;
 		})
 		.filter(Boolean) as SupplierBranchRecord[];
+
+/**
+ * Adapter that normalizes raw broker records returned from the API.
+ */
+export const mapBrokerRecords = (records: unknown[]): BrokerRecord[] =>
+	records
+		.map((row) => {
+			const data = row as BrokerRecordRaw;
+			const id = data?.broker_id ?? data?.party_id ?? data?.id;
+			if (!id) return null;
+			return {
+				id: String(id),
+				name: data?.broker_name ?? data?.name ?? String(id),
+				code: data?.broker_code,
+			} satisfies BrokerRecord;
+		})
+		.filter(Boolean) as BrokerRecord[];
 
 /**
  * Adapter for company branch/billing addresses.
@@ -172,6 +191,7 @@ export const mapPOSetupResponse = (response: unknown): POSetupData => {
 
 		const mapped = {
 			suppliers: mappedSuppliers,
+			brokers: mapBrokerRecords(result?.brokers ?? []),
 			projects: mapProjectRecords(result?.projects ?? []),
 			expenses: mapExpenseRecords(result?.expense_types ?? []),
 			itemGroups: mapItemGroupRecords(result?.item_groups ?? []),

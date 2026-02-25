@@ -2,6 +2,8 @@
  * Sales Order specific shared TypeScript definitions.
  */
 
+export type { UomConversionEntry } from "@/utils/uomConversion";
+
 export type Option = {
 	label: string;
 	value: string;
@@ -15,6 +17,7 @@ export type CustomerBranchRecord = {
 	id: string;
 	address: string;
 	stateName?: string;
+	fullAddress?: string;
 };
 
 export type CustomerRecord = {
@@ -60,6 +63,11 @@ export type ItemGroupRecord = {
 	label: string;
 };
 
+export type InvoiceTypeRecord = {
+	id: string;
+	name: string;
+};
+
 export type ItemOption = Option & {
 	defaultUomId?: string;
 	defaultUomLabel?: string;
@@ -77,6 +85,7 @@ export type ItemGroupCacheEntry = {
 	uomLabelByItemId: Record<string, Record<string, string>>;
 	itemRateById: Record<string, number>;
 	itemTaxById: Record<string, number>;
+	uomConversionsByItemId: Record<string, import("@/utils/uomConversion").UomConversionEntry[]>;
 };
 
 export type SalesOrderSetupData = {
@@ -86,6 +95,7 @@ export type SalesOrderSetupData = {
 	approvedQuotations: ApprovedQuotationRecord[];
 	itemGroups: ItemGroupRecord[];
 	branchAddresses: BranchAddressRecord[];
+	invoiceTypes: InvoiceTypeRecord[];
 	coConfig?: {
 		india_gst?: number;
 		quotation_required?: number | boolean;
@@ -116,6 +126,19 @@ export type EditableLineItem = {
 	cgstAmount?: number;
 	sgstAmount?: number;
 	taxAmount?: number;
+	// --- Hessian (invoice_type_id = 2) ---
+	/** Qty entered in bales (user-entered); quantity field stores the MT equivalent */
+	qtyBales?: string;
+	/** Raw rate per MT before brokerage deduction (user-entered); rate field stores billing rate */
+	rawRateMt?: string;
+	/** Converted rate per bale (rawRateMt / conversionFactor) */
+	ratePerBale?: number;
+	/** billing rate = rawRateMt − (rawRateMt × brokerage%) */
+	billingRateMt?: number;
+	/** billing rate per bale = billingRateMt / conversionFactor */
+	billingRateBale?: number;
+	/** Bales-to-MT conversion factor from uom_item_map_mst */
+	conversionFactor?: number;
 };
 
 // ---------------------------------------------------------------------------
@@ -136,22 +159,29 @@ export type CustomerRecordRaw = {
 export type CustomerBranchRecordRaw = {
 	id?: string | number;
 	party_mst_branch_id?: string | number;
-	branch_address1?: string;
-	branch_address2?: string;
+	address?: string;
+	address_additional?: string;
+	zip_code?: string | number;
 	state_name?: string;
 	state?: string;
 };
 
 export type BrokerRecordRaw = {
 	id?: string | number;
+	broker_id?: string | number;
 	party_id?: string | number;
+	broker_name?: string;
+	broker_code?: string;
 	party_name?: string;
 	name?: string;
 };
 
 export type TransporterRecordRaw = {
 	id?: string | number;
+	transporter_id?: string | number;
 	party_id?: string | number;
+	transporter_name?: string;
+	transporter_code?: string;
 	party_name?: string;
 	name?: string;
 };
@@ -173,6 +203,11 @@ export type BranchAddressRecordRaw = {
 	branch_zipcode?: string;
 	state_name?: string;
 	state_id?: number;
+};
+
+export type InvoiceTypeRecordRaw = {
+	invoice_type_id?: string | number;
+	invoice_type_name?: string;
 };
 
 export type ItemGroupRecordRaw = {
@@ -205,10 +240,14 @@ export type ItemMakeOptionRaw = {
 export type ItemUomOptionRaw = {
 	id?: string | number;
 	item_id?: string | number;
+	map_from_id?: string | number;
+	map_from_name?: string;
 	map_to_id?: string | number;
 	mapToId?: string | number;
 	uom_id?: string | number;
 	uom_name?: string;
+	relation_value?: number | null;
+	rounding?: number | null;
 };
 
 export type SalesOrderSetup1ResponseRaw = {
@@ -217,6 +256,7 @@ export type SalesOrderSetup1ResponseRaw = {
 	transporters?: TransporterRecordRaw[];
 	approved_quotations?: ApprovedQuotationRecordRaw[];
 	item_groups?: ItemGroupRecordRaw[];
+	invoice_types?: InvoiceTypeRecordRaw[];
 	co_config?: Record<string, unknown>;
 	branches?: Array<Record<string, unknown>>;
 };

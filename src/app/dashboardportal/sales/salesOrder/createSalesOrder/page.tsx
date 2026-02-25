@@ -46,6 +46,7 @@ import {
 	EMPTY_BRANCH_ADDRESSES,
 	EMPTY_BROKERS,
 	EMPTY_CUSTOMERS,
+	EMPTY_INVOICE_TYPES,
 	EMPTY_ITEM_GROUPS,
 	EMPTY_QUOTATIONS,
 	EMPTY_SETUP_PARAMS,
@@ -175,6 +176,7 @@ function SalesOrderTransactionPageContent() {
 	const approvedQuotations = setupData?.approvedQuotations ?? EMPTY_QUOTATIONS;
 	const itemGroups = setupData?.itemGroups ?? EMPTY_ITEM_GROUPS;
 	const coConfig = setupData?.coConfig;
+	const invoiceTypes = setupData?.invoiceTypes ?? EMPTY_INVOICE_TYPES;
 	const branchAddresses = setupData?.branchAddresses ?? EMPTY_BRANCH_ADDRESSES;
 
 	const quotationRequired = React.useMemo(
@@ -264,6 +266,8 @@ function SalesOrderTransactionPageContent() {
 		itemGroupLoading,
 		ensureItemGroupData,
 		itemGroups,
+		invoiceTypeId: String(formValues.invoice_type ?? ""),
+		brokeragePercent: formValues.broker_commission_percent ? Number(formValues.broker_commission_percent) : undefined,
 	});
 
 	// Seed an initial blank line in create mode
@@ -438,11 +442,13 @@ function SalesOrderTransactionPageContent() {
 		brokerOptions,
 		transporterOptions,
 		quotationOptions,
+		invoiceTypeOptions,
 		itemGroupOptions,
 		getItemGroupLabel,
 		getItemOptions,
 		getMakeOptions,
 		getUomOptions,
+		getUomConversions,
 		getItemLabel,
 		getUomLabel,
 	} = useSalesOrderSelectOptions({
@@ -452,6 +458,7 @@ function SalesOrderTransactionPageContent() {
 		transporters,
 		approvedQuotations,
 		branchAddresses,
+		invoiceTypes,
 		itemGroupsFromLineItems,
 		itemGroupCache,
 	});
@@ -463,6 +470,7 @@ function SalesOrderTransactionPageContent() {
 		brokerOptions,
 		transporterOptions,
 		quotationOptions,
+		invoiceTypeOptions,
 		quotationRequired,
 		mode,
 		headerFieldsDisabled,
@@ -472,11 +480,13 @@ function SalesOrderTransactionPageContent() {
 
 	const lineItemColumns = useSalesOrderLineItemColumns({
 		canEdit,
+		invoiceTypeId: String(formValues.invoice_type ?? ""),
 		itemGroupOptions,
 		itemGroupLoading,
 		getItemOptions,
 		getMakeOptions,
 		getUomOptions,
+		getUomConversions,
 		getItemGroupLabel,
 		handleLineFieldChange,
 	});

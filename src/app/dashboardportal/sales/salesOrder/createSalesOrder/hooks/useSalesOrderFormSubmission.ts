@@ -33,13 +33,15 @@ export const useSalesOrderFormSubmission = ({
 				return;
 			}
 
+			const isHessian = values.invoice_type ? Number(values.invoice_type) === 2 : false;
+
 			const itemsPayload: CreateSalesOrderRequest["items"] = filledLineItems.map((item) => ({
 				item: item.item || undefined,
 				item_make: item.itemMake || undefined,
 				quotation_lineitem_id: item.quotationLineitemId ?? undefined,
 				hsn_code: item.hsnCode || undefined,
 				quantity: item.quantity || undefined,
-				uom: item.uom || undefined,
+				qty_uom: item.uom || undefined,
 				rate: item.rate || undefined,
 				discount_type: item.discountType ?? undefined,
 				discounted_rate: item.discountAmount != null ? Number(item.discountAmount) || undefined : undefined,
@@ -56,6 +58,12 @@ export const useSalesOrderFormSubmission = ({
 					sgst_percent: item.taxPercentage && item.sgstAmount ? item.taxPercentage / 2 : 0,
 					gst_total: item.taxAmount ?? 0,
 				},
+				hessian: isHessian && item.qtyBales ? {
+					qty_bales: Number(item.qtyBales) || null,
+					rate_per_bale: item.ratePerBale ?? null,
+					billing_rate_mt: item.billingRateMt ?? null,
+					billing_rate_bale: item.billingRateBale ?? null,
+				} : undefined,
 			}));
 
 			// Calculate totals

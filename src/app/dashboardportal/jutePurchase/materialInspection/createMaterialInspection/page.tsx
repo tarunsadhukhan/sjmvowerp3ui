@@ -152,27 +152,6 @@ function JuteGateEntryCreatePageContent() {
 		? Math.max(0, headerNetWeight - variableShortage)
 		: 0;
 
-	// Merge callback: preserves non-schema fields (entryTime, outDate, outTime, vehicleType)
-	// and returns the same reference when no values actually changed.
-	// This prevents the bidirectional binding between MuiForm ↔ formValues from
-	// causing cascading re-renders (React error #185 in production).
-	const handleFormValuesChange = React.useCallback(
-		(values: GateEntryFormValues) => {
-			setFormValues((prev) => {
-				let changed = false;
-				for (const key of Object.keys(values) as (keyof GateEntryFormValues)[]) {
-					if (prev[key] !== values[key]) {
-						changed = true;
-						break;
-					}
-				}
-				if (!changed) return prev;
-				return { ...prev, ...values };
-			});
-		},
-		[setFormValues]
-	);
-
 	// Line items hook
 	const {
 		lineItems,
@@ -324,10 +303,7 @@ function JuteGateEntryCreatePageContent() {
 		// Only clear party if NOT coming from a PO selection
 		// When PO is selected, party is set together with supplier
 		if (!isFillingFromPORef.current) {
-			setFormValues((prev) => {
-				if (prev.party === "") return prev;
-				return { ...prev, party: "" };
-			});
+			setFormValues((prev) => ({ ...prev, party: "" }));
 		}
 
 		if (!supplierId || !coId) {
@@ -374,14 +350,9 @@ function JuteGateEntryCreatePageContent() {
 	}, [formValues.supplier, coId, setFormValues, setInitialValues, bumpFormKey]);
 
 	// Fetch qualities when item is selected in line items
-	// Use a ref for qualitiesByItem so the callback doesn't get a new reference
-	// each time qualities are fetched (prevents cascading re-renders).
-	const qualitiesByItemRef = React.useRef(qualitiesByItem);
-	qualitiesByItemRef.current = qualitiesByItem;
-
 	const fetchQualitiesForItem = React.useCallback(
 		async (itemId: string) => {
-			if (!itemId || !coId || qualitiesByItemRef.current[itemId]) return;
+			if (!itemId || !coId || qualitiesByItem[itemId]) return;
 
 			try {
 				const url = `${apiRoutesPortalMasters.JUTE_GATE_ENTRY_QUALITIES_BY_ITEM}/${itemId}?co_id=${coId}`;
@@ -404,20 +375,20 @@ function JuteGateEntryCreatePageContent() {
 				console.error("Error fetching qualities:", err);
 			}
 		},
-		[coId]
+		[coId, qualitiesByItem]
 	);
 
 	// Watch line items for item changes to fetch qualities
 	React.useEffect(() => {
 		for (const li of lineItems) {
-			if (li.challanItem && !qualitiesByItemRef.current[li.challanItem]) {
+			if (li.challanItem && !qualitiesByItem[li.challanItem]) {
 				void fetchQualitiesForItem(li.challanItem);
 			}
-			if (li.actualItem && !qualitiesByItemRef.current[li.actualItem]) {
+			if (li.actualItem && !qualitiesByItem[li.actualItem]) {
 				void fetchQualitiesForItem(li.actualItem);
 			}
 		}
-	}, [lineItems, fetchQualitiesForItem]);
+	}, [lineItems, qualitiesByItem, fetchQualitiesForItem]);
 
 	// Handle PO selection - auto-fill data
 	const prevPoIdRef = React.useRef<string>("");
@@ -962,7 +933,7 @@ function JuteGateEntryCreatePageContent() {
 					mode={mode}
 					formRef={formRef}
 					onSubmit={handleFormSubmit}
-					onValuesChange={handleFormValuesChange}
+					onValuesChange={setFormValues}
 				/>
 			)}
 

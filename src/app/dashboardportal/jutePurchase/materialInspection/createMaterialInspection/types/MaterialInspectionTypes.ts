@@ -166,6 +166,7 @@ export type GateEntryDetails = {
 	supplier_name: string;
 	party_id: number | null;
 	party_name: string | null;
+	mukam_id: number | null;
 	mukam: string;
 	jute_uom: string;
 	gross_weight: number;

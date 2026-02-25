@@ -1,17 +1,9 @@
 "use client";
 
 /**
- * @component BillPassDetailPage
- * @description Bill Pass detail view showing SR lines, DRCR adjustments, and net payable.
- * This is a read-only view for payment consolidation.
- *
- * Layout:
- * - Header: Bill Pass info, Inward reference, Supplier, Invoice
- * - Summary Cards: SR Total, Debit Notes, Credit Notes, Net Payable
- * - SR Line Items Table
- * - Debit Notes Section (if any)
- * - Credit Notes Section (if any)
- * - Footer Totals
+ * @component BillPassViewPage
+ * @description Read-only detail page for Bill Pass.
+ * Shows SR line items with inline DR/CR adjustments, invoice info, and payment summary.
  */
 
 import * as React from "react";
@@ -28,28 +20,45 @@ import {
   Grid,
   Paper,
   Stack,
-  Table,
-  TableBody,
-  TableCell,
-  TableContainer,
-  TableHead,
-  TableRow,
   Typography,
 } from "@mui/material";
-import { ArrowLeft, FileText, Printer, Download, MinusCircle, PlusCircle, Receipt } from "lucide-react";
+import { ArrowLeft, Printer, FileText, MinusCircle, PlusCircle, Receipt } from "lucide-react";
 
 import {
   fetchBillPassById,
   formatCurrency,
   formatBillPassDate,
+  buildDrcrLinesByInwardDtl,
   type BillPassDetail,
-  type BillPassSRLine,
-  type BillPassDRCRNote,
+  type BillPassDRCRLine,
 } from "@/utils/billPassService";
 
-// =============================================================================
-// SUMMARY CARD COMPONENT
-// =============================================================================
+// ─── Helpers ──────────────────────────────────────────────────────────────────
+
+const formatAmount = (value?: number | null): string => {
+  if (value == null) return "0.00";
+  return new Intl.NumberFormat("en-IN", {
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
+  }).format(value);
+};
+
+type DrcrLineWithNote = BillPassDRCRLine & { note_type: number; note_type_name: string };
+
+// ─── Sub-components ───────────────────────────────────────────────────────────
+
+function InfoField({ label, value }: { label: string; value: React.ReactNode }) {
+  return (
+    <Box>
+      <Typography variant="caption" color="text.secondary" sx={{ display: "block", mb: 0.25 }}>
+        {label}
+      </Typography>
+      <Typography variant="body2" fontWeight={500}>
+        {value || "-"}
+      </Typography>
+    </Box>
+  );
+}
 
 type SummaryCardProps = {
   title: string;
@@ -69,14 +78,7 @@ function SummaryCard({ title, value, subtitle, color = "primary", icon }: Summar
   const colors = colorMap[color];
 
   return (
-    <Card
-      variant="outlined"
-      sx={{
-        bgcolor: colors.bg,
-        borderColor: colors.border,
-        height: "100%",
-      }}
-    >
+    <Card variant="outlined" sx={{ bgcolor: colors.bg, borderColor: colors.border, height: "100%" }}>
       <CardContent sx={{ py: 2, "&:last-child": { pb: 2 } }}>
         <Stack direction="row" alignItems="center" spacing={1} mb={1}>
           {icon && <Box sx={{ color: colors.text }}>{icon}</Box>}
@@ -97,81 +99,141 @@ function SummaryCard({ title, value, subtitle, color = "primary", icon }: Summar
   );
 }
 
-// =============================================================================
-// INFO ROW COMPONENT
-// =============================================================================
+function DrcrInlineRows({ lines }: { lines: DrcrLineWithNote[] }) {
+  if (lines.length === 0) return null;
 
-function InfoRow({ label, value }: { label: string; value: React.ReactNode }) {
   return (
-    <Grid container spacing={1} sx={{ py: 0.5 }}>
-      <Grid size={{ xs: 4 }}>
-        <Typography variant="body2" color="text.secondary">
-          {label}:
-        </Typography>
-      </Grid>
-      <Grid size={{ xs: 8 }}>
-        <Typography variant="body2" fontWeight={500}>
-          {value || "-"}
-        </Typography>
-      </Grid>
-    </Grid>
+    <>
+      {lines.map((line) => {
+        const isDebit = line.note_type === 1;
+        return (
+          <Box
+            key={line.drcr_note_dtl_id}
+            component="tr"
+            sx={{
+              bgcolor: isDebit ? "error.50" : "success.50",
+              borderLeft: `3px solid`,
+              borderLeftColor: isDebit ? "error.main" : "success.main",
+            }}
+          >
+            <Box component="td" colSpan={3} sx={{ p: 0.75, pl: 4, fontSize: "0.7rem" }}>
+              <Chip
+                label={isDebit ? "DEBIT" : "CREDIT"}
+                size="small"
+                color={isDebit ? "error" : "success"}
+                variant="outlined"
+                sx={{ fontSize: "0.6rem", height: 18, mr: 1 }}
+              />
+              <Typography component="span" variant="caption" color="text.secondary">
+                {line.adjustment_reason}
+              </Typography>
+            </Box>
+            <Box component="td" sx={{ p: 0.75, fontSize: "0.7rem", textAlign: "right" }}>
+              {formatAmount(line.quantity)}
+            </Box>
+            <Box component="td" sx={{ p: 0.75, fontSize: "0.7rem", textAlign: "right" }}>
+              {formatAmount(line.rate)}
+            </Box>
+            <Box
+              component="td"
+              colSpan={2}
+              sx={{
+                p: 0.75,
+                fontSize: "0.7rem",
+                textAlign: "right",
+                fontWeight: 600,
+                color: isDebit ? "error.main" : "success.main",
+              }}
+            >
+              {isDebit ? "-" : "+"}{formatAmount(line.line_amount)}
+            </Box>
+          </Box>
+        );
+      })}
+    </>
   );
 }
 
-// =============================================================================
-// MAIN COMPONENT
-// =============================================================================
+function SummaryRow({
+  label,
+  value,
+  bold,
+  indent,
+  color,
+  prefix,
+}: {
+  label: string;
+  value: number;
+  bold?: boolean;
+  indent?: boolean;
+  color?: string;
+  prefix?: string;
+}) {
+  return (
+    <Box display="flex" justifyContent="space-between" sx={{ px: 0.5, pl: indent ? 3 : 0.5 }}>
+      <Typography variant="body2" fontWeight={bold ? 600 : 400} color={color || "text.primary"}>
+        {label}
+      </Typography>
+      <Typography
+        variant="body2"
+        fontWeight={bold ? 600 : 400}
+        color={color || "text.primary"}
+        sx={{ fontFamily: "monospace" }}
+      >
+        {prefix ? `${prefix} ` : ""}{formatAmount(value)}
+      </Typography>
+    </Box>
+  );
+}
 
-export default function BillPassDetailPage() {
-  const params = useParams();
+// ─── Main Component ───────────────────────────────────────────────────────────
+
+export default function BillPassViewPage() {
   const router = useRouter();
+  const params = useParams();
   const inwardId = params?.id as string;
 
   const [loading, setLoading] = React.useState(true);
   const [error, setError] = React.useState<string | null>(null);
   const [detail, setDetail] = React.useState<BillPassDetail | null>(null);
 
-  // Fetch detail data
   React.useEffect(() => {
-    async function loadData() {
-      if (!inwardId) {
-        setError("Invalid Bill Pass ID");
-        setLoading(false);
-        return;
-      }
+    if (!inwardId) {
+      setError("Invalid Bill Pass ID");
+      setLoading(false);
+      return;
+    }
 
+    const load = async () => {
       setLoading(true);
       setError(null);
-
       const { data, error: fetchError } = await fetchBillPassById(inwardId);
-
       if (fetchError) {
         setError(fetchError);
-        setLoading(false);
-        return;
-      }
-
-      if (data) {
+      } else if (data) {
         setDetail(data);
       } else {
         setError("Bill Pass not found");
       }
-
       setLoading(false);
-    }
+    };
 
-    void loadData();
+    void load();
   }, [inwardId]);
 
-  const handleBack = () => {
-    router.push("/dashboardportal/procurement/billPass");
-  };
+  const drcrByLine = React.useMemo(() => {
+    if (!detail) return new Map<number, DrcrLineWithNote[]>();
+    return buildDrcrLinesByInwardDtl(detail.debit_notes, detail.credit_notes);
+  }, [detail]);
 
-  const handlePrint = () => {
-    window.print();
-  };
+  const netPayable = React.useMemo(() => {
+    if (!detail) return 0;
+    const s = detail.summary;
+    return s.sr_total - s.dr_total + s.cr_total + (detail.round_off_value || 0);
+  }, [detail]);
 
-  // Loading state
+  const handleBack = () => router.push("/dashboardportal/procurement/billPass");
+
   if (loading) {
     return (
       <Box display="flex" justifyContent="center" alignItems="center" minHeight="400px">
@@ -180,13 +242,10 @@ export default function BillPassDetailPage() {
     );
   }
 
-  // Error state
   if (error) {
     return (
       <Box p={3}>
-        <Alert severity="error" sx={{ mb: 2 }}>
-          {error}
-        </Alert>
+        <Alert severity="error" sx={{ mb: 2 }}>{error}</Alert>
         <Button variant="outlined" startIcon={<ArrowLeft size={16} />} onClick={handleBack}>
           Back to List
         </Button>
@@ -194,7 +253,6 @@ export default function BillPassDetailPage() {
     );
   }
 
-  // No data state
   if (!detail) {
     return (
       <Box p={3}>
@@ -206,60 +264,33 @@ export default function BillPassDetailPage() {
     );
   }
 
-  const { summary, sr_lines, debit_notes, credit_notes } = detail;
+  const { summary } = detail;
 
   return (
-    <Box p={3} className="print:p-0">
-      {/* Header Actions */}
-      <Stack direction="row" justifyContent="space-between" alignItems="center" mb={3} className="print:hidden">
-        <Button variant="outlined" startIcon={<ArrowLeft size={16} />} onClick={handleBack}>
-          Back to List
-        </Button>
-        <Stack direction="row" spacing={1}>
-          <Button variant="outlined" startIcon={<Printer size={16} />} onClick={handlePrint}>
-            Print
+    <Box p={2} className="print:p-0">
+      {/* ── Top Bar ──────────────────────────────────────────────────────── */}
+      <Stack direction="row" justifyContent="space-between" alignItems="center" mb={2} className="print:hidden">
+        <Box display="flex" alignItems="center" gap={2}>
+          <Button variant="outlined" size="small" startIcon={<ArrowLeft size={16} />} onClick={handleBack}>
+            Back
           </Button>
-        </Stack>
+          <Typography variant="h5" fontWeight={600}>
+            Bill Pass {detail.bill_pass_no ? `- ${detail.bill_pass_no}` : ""}
+          </Typography>
+          <Chip
+            label={detail.billpass_status === 1 ? "Complete" : "Pending"}
+            size="small"
+            color={detail.billpass_status === 1 ? "success" : "warning"}
+            variant="outlined"
+          />
+        </Box>
+        <Button variant="outlined" size="small" startIcon={<Printer size={16} />} onClick={() => window.print()}>
+          Print
+        </Button>
       </Stack>
 
-      {/* Title */}
-      <Paper elevation={0} sx={{ p: 3, mb: 3, border: "1px solid", borderColor: "divider" }}>
-        <Stack direction="row" alignItems="center" spacing={2} mb={2}>
-          <FileText size={28} />
-          <Box>
-            <Typography variant="h5" fontWeight={700}>
-              Bill Pass: {detail.bill_pass_no || "-"}
-            </Typography>
-            <Typography variant="body2" color="text.secondary">
-              Payment consolidation for Stores Receipt
-            </Typography>
-          </Box>
-          <Box flex={1} />
-          <Chip label={detail.sr_status_name} color="success" />
-        </Stack>
-
-        {/* Header Info Grid */}
-        <Grid container spacing={3}>
-          <Grid size={{ xs: 12, md: 4 }}>
-            <InfoRow label="Bill Pass Date" value={formatBillPassDate(detail.bill_pass_date)} />
-            <InfoRow label="Inward No" value={detail.inward_no} />
-            <InfoRow label="Inward Date" value={formatBillPassDate(detail.inward_date)} />
-          </Grid>
-          <Grid size={{ xs: 12, md: 4 }}>
-            <InfoRow label="Supplier" value={detail.supplier_name} />
-            <InfoRow label="Branch" value={detail.branch_name} />
-            <InfoRow label="Challan No" value={detail.challan_no} />
-          </Grid>
-          <Grid size={{ xs: 12, md: 4 }}>
-            <InfoRow label="Invoice No" value={detail.invoice_no} />
-            <InfoRow label="Invoice Date" value={formatBillPassDate(detail.invoice_date)} />
-            <InfoRow label="Invoice Amount" value={formatCurrency(detail.invoice_amt)} />
-          </Grid>
-        </Grid>
-      </Paper>
-
-      {/* Summary Cards */}
-      <Grid container spacing={2} mb={3}>
+      {/* ── Summary Cards ────────────────────────────────────────────────── */}
+      <Grid container spacing={2} mb={2}>
         <Grid size={{ xs: 12, sm: 6, md: 3 }}>
           <SummaryCard
             title="SR TOTAL"
@@ -290,7 +321,7 @@ export default function BillPassDetailPage() {
         <Grid size={{ xs: 12, sm: 6, md: 3 }}>
           <SummaryCard
             title="NET PAYABLE"
-            value={formatCurrency(summary.net_payable)}
+            value={formatCurrency(netPayable)}
             subtitle="Final amount to pay"
             color="primary"
             icon={<FileText size={18} />}
@@ -298,272 +329,247 @@ export default function BillPassDetailPage() {
         </Grid>
       </Grid>
 
-      {/* SR Line Items */}
-      <Paper elevation={0} sx={{ p: 2, mb: 3, border: "1px solid", borderColor: "divider" }}>
-        <Typography variant="h6" fontWeight={600} mb={2}>
-          Stores Receipt Line Items
-        </Typography>
-        <TableContainer>
-          <Table size="small">
-            <TableHead>
-              <TableRow sx={{ bgcolor: "grey.50" }}>
-                <TableCell>#</TableCell>
-                <TableCell>Item</TableCell>
-                <TableCell>Make</TableCell>
-                <TableCell align="right">Qty</TableCell>
-                <TableCell>UOM</TableCell>
-                <TableCell align="right">Rate</TableCell>
-                <TableCell align="right">Amount</TableCell>
-                <TableCell align="right">Tax</TableCell>
-                <TableCell align="right">Total</TableCell>
-              </TableRow>
-            </TableHead>
-            <TableBody>
-              {sr_lines.map((line, idx) => (
-                <TableRow key={line.inward_dtl_id} hover>
-                  <TableCell>{idx + 1}</TableCell>
-                  <TableCell>
-                    <Typography variant="body2" fontWeight={500}>
-                      {line.item_name}
-                    </Typography>
-                    <Typography variant="caption" color="text.secondary">
-                      {line.item_code}
-                    </Typography>
-                  </TableCell>
-                  <TableCell>{line.accepted_make_name || "-"}</TableCell>
-                  <TableCell align="right">{line.approved_qty}</TableCell>
-                  <TableCell>{line.uom_name}</TableCell>
-                  <TableCell align="right" sx={{ fontFamily: "monospace" }}>
-                    {formatCurrency(line.accepted_rate)}
-                  </TableCell>
-                  <TableCell align="right" sx={{ fontFamily: "monospace" }}>
-                    {formatCurrency(line.line_amount)}
-                  </TableCell>
-                  <TableCell align="right" sx={{ fontFamily: "monospace" }}>
-                    {formatCurrency(line.tax_amount)}
-                  </TableCell>
-                  <TableCell align="right" sx={{ fontFamily: "monospace", fontWeight: 600 }}>
-                    {formatCurrency(line.line_total)}
-                  </TableCell>
-                </TableRow>
-              ))}
-              {sr_lines.length === 0 && (
-                <TableRow>
-                  <TableCell colSpan={9} align="center">
-                    <Typography variant="body2" color="text.secondary">
-                      No line items
-                    </Typography>
-                  </TableCell>
-                </TableRow>
-              )}
-            </TableBody>
-          </Table>
-        </TableContainer>
-      </Paper>
-
-      {/* Debit Notes Section */}
-      {debit_notes.length > 0 && (
-        <Paper elevation={0} sx={{ p: 2, mb: 3, border: "1px solid", borderColor: "error.200", bgcolor: "error.50" }}>
-          <Stack direction="row" alignItems="center" spacing={1} mb={2}>
-            <MinusCircle size={20} color="var(--mui-palette-error-main)" />
-            <Typography variant="h6" fontWeight={600} color="error.dark">
-              Debit Note Adjustments
-            </Typography>
-          </Stack>
-          {debit_notes.map((note) => (
-            <Box key={note.drcr_note_id} mb={2}>
-              <Stack direction="row" spacing={2} alignItems="center" mb={1}>
-                <Chip label={`DN-${note.drcr_note_id}`} size="small" color="error" variant="outlined" />
-                <Typography variant="body2" color="text.secondary">
-                  {formatBillPassDate(note.note_date)}
-                </Typography>
-                <Typography variant="body2" fontWeight={600} color="error.dark">
-                  {formatCurrency(note.net_amount)}
-                </Typography>
-              </Stack>
-              {note.remarks && (
-                <Typography variant="body2" color="text.secondary" mb={1}>
-                  Remarks: {note.remarks}
-                </Typography>
-              )}
-              {note.lines.length > 0 && (
-                <TableContainer sx={{ bgcolor: "background.paper", borderRadius: 1 }}>
-                  <Table size="small">
-                    <TableHead>
-                      <TableRow>
-                        <TableCell>Item</TableCell>
-                        <TableCell>Reason</TableCell>
-                        <TableCell align="right">Qty</TableCell>
-                        <TableCell align="right">Rate</TableCell>
-                        <TableCell align="right">Amount</TableCell>
-                      </TableRow>
-                    </TableHead>
-                    <TableBody>
-                      {note.lines.map((line) => (
-                        <TableRow key={line.drcr_note_dtl_id}>
-                          <TableCell>{line.item_name}</TableCell>
-                          <TableCell>{line.adjustment_reason}</TableCell>
-                          <TableCell align="right">{line.quantity}</TableCell>
-                          <TableCell align="right" sx={{ fontFamily: "monospace" }}>
-                            {formatCurrency(line.rate)}
-                          </TableCell>
-                          <TableCell align="right" sx={{ fontFamily: "monospace" }}>
-                            {formatCurrency(line.line_amount)}
-                          </TableCell>
-                        </TableRow>
-                      ))}
-                    </TableBody>
-                  </Table>
-                </TableContainer>
-              )}
-            </Box>
-          ))}
-        </Paper>
-      )}
-
-      {/* Credit Notes Section */}
-      {credit_notes.length > 0 && (
-        <Paper elevation={0} sx={{ p: 2, mb: 3, border: "1px solid", borderColor: "success.200", bgcolor: "success.50" }}>
-          <Stack direction="row" alignItems="center" spacing={1} mb={2}>
-            <PlusCircle size={20} color="var(--mui-palette-success-main)" />
-            <Typography variant="h6" fontWeight={600} color="success.dark">
-              Credit Note Adjustments
-            </Typography>
-          </Stack>
-          {credit_notes.map((note) => (
-            <Box key={note.drcr_note_id} mb={2}>
-              <Stack direction="row" spacing={2} alignItems="center" mb={1}>
-                <Chip label={`CN-${note.drcr_note_id}`} size="small" color="success" variant="outlined" />
-                <Typography variant="body2" color="text.secondary">
-                  {formatBillPassDate(note.note_date)}
-                </Typography>
-                <Typography variant="body2" fontWeight={600} color="success.dark">
-                  {formatCurrency(note.net_amount)}
-                </Typography>
-              </Stack>
-              {note.remarks && (
-                <Typography variant="body2" color="text.secondary" mb={1}>
-                  Remarks: {note.remarks}
-                </Typography>
-              )}
-              {note.lines.length > 0 && (
-                <TableContainer sx={{ bgcolor: "background.paper", borderRadius: 1 }}>
-                  <Table size="small">
-                    <TableHead>
-                      <TableRow>
-                        <TableCell>Item</TableCell>
-                        <TableCell>Reason</TableCell>
-                        <TableCell align="right">Qty</TableCell>
-                        <TableCell align="right">Rate</TableCell>
-                        <TableCell align="right">Amount</TableCell>
-                      </TableRow>
-                    </TableHead>
-                    <TableBody>
-                      {note.lines.map((line) => (
-                        <TableRow key={line.drcr_note_dtl_id}>
-                          <TableCell>{line.item_name}</TableCell>
-                          <TableCell>{line.adjustment_reason}</TableCell>
-                          <TableCell align="right">{line.quantity}</TableCell>
-                          <TableCell align="right" sx={{ fontFamily: "monospace" }}>
-                            {formatCurrency(line.rate)}
-                          </TableCell>
-                          <TableCell align="right" sx={{ fontFamily: "monospace" }}>
-                            {formatCurrency(line.line_amount)}
-                          </TableCell>
-                        </TableRow>
-                      ))}
-                    </TableBody>
-                  </Table>
-                </TableContainer>
-              )}
-            </Box>
-          ))}
-        </Paper>
-      )}
-
-      {/* Footer Totals */}
-      <Paper elevation={0} sx={{ p: 3, border: "1px solid", borderColor: "divider" }}>
-        <Grid container spacing={2} justifyContent="flex-end">
-          <Grid size={{ xs: 12, md: 4 }}>
-            <Stack spacing={1}>
-              <Stack direction="row" justifyContent="space-between">
-                <Typography variant="body2">SR Subtotal:</Typography>
-                <Typography variant="body2" sx={{ fontFamily: "monospace" }}>
-                  {formatCurrency(summary.sr_taxable)}
-                </Typography>
-              </Stack>
-              {summary.sr_cgst > 0 && (
-                <Stack direction="row" justifyContent="space-between">
-                  <Typography variant="body2" color="text.secondary">
-                    CGST:
-                  </Typography>
-                  <Typography variant="body2" sx={{ fontFamily: "monospace" }}>
-                    {formatCurrency(summary.sr_cgst)}
-                  </Typography>
-                </Stack>
-              )}
-              {summary.sr_sgst > 0 && (
-                <Stack direction="row" justifyContent="space-between">
-                  <Typography variant="body2" color="text.secondary">
-                    SGST:
-                  </Typography>
-                  <Typography variant="body2" sx={{ fontFamily: "monospace" }}>
-                    {formatCurrency(summary.sr_sgst)}
-                  </Typography>
-                </Stack>
-              )}
-              {summary.sr_igst > 0 && (
-                <Stack direction="row" justifyContent="space-between">
-                  <Typography variant="body2" color="text.secondary">
-                    IGST:
-                  </Typography>
-                  <Typography variant="body2" sx={{ fontFamily: "monospace" }}>
-                    {formatCurrency(summary.sr_igst)}
-                  </Typography>
-                </Stack>
-              )}
-              <Divider />
-              <Stack direction="row" justifyContent="space-between">
-                <Typography variant="body1" fontWeight={600}>
-                  SR Total:
-                </Typography>
-                <Typography variant="body1" fontWeight={600} sx={{ fontFamily: "monospace" }}>
-                  {formatCurrency(summary.sr_total)}
-                </Typography>
-              </Stack>
-              {summary.dr_count > 0 && (
-                <Stack direction="row" justifyContent="space-between">
-                  <Typography variant="body2" color="error.main">
-                    Less: Debit Notes:
-                  </Typography>
-                  <Typography variant="body2" color="error.main" sx={{ fontFamily: "monospace" }}>
-                    -{formatCurrency(summary.dr_total)}
-                  </Typography>
-                </Stack>
-              )}
-              {summary.cr_count > 0 && (
-                <Stack direction="row" justifyContent="space-between">
-                  <Typography variant="body2" color="success.main">
-                    Add: Credit Notes:
-                  </Typography>
-                  <Typography variant="body2" color="success.main" sx={{ fontFamily: "monospace" }}>
-                    +{formatCurrency(summary.cr_total)}
-                  </Typography>
-                </Stack>
-              )}
-              <Divider sx={{ borderStyle: "double", borderWidth: 3 }} />
-              <Stack direction="row" justifyContent="space-between">
-                <Typography variant="h6" fontWeight={700} color="primary">
-                  NET PAYABLE:
-                </Typography>
-                <Typography variant="h6" fontWeight={700} color="primary" sx={{ fontFamily: "monospace" }}>
-                  {formatCurrency(summary.net_payable)}
-                </Typography>
-              </Stack>
-            </Stack>
+      {/* ── Header Info ──────────────────────────────────────────────────── */}
+      <Card sx={{ mb: 2 }}>
+        <CardContent>
+          <Grid container spacing={2}>
+            <Grid size={{ xs: 6, md: 3 }}>
+              <InfoField label="SR No." value={detail.bill_pass_no} />
+            </Grid>
+            <Grid size={{ xs: 6, md: 3 }}>
+              <InfoField label="SR Date" value={formatBillPassDate(detail.bill_pass_date)} />
+            </Grid>
+            <Grid size={{ xs: 6, md: 3 }}>
+              <InfoField label="Inward No." value={detail.inward_no} />
+            </Grid>
+            <Grid size={{ xs: 6, md: 3 }}>
+              <InfoField label="Inward Date" value={formatBillPassDate(detail.inward_date)} />
+            </Grid>
+            <Grid size={{ xs: 6, md: 3 }}>
+              <InfoField label="Supplier" value={detail.supplier_name} />
+            </Grid>
+            <Grid size={{ xs: 6, md: 3 }}>
+              <InfoField label="Branch" value={detail.branch_name} />
+            </Grid>
+            <Grid size={{ xs: 6, md: 3 }}>
+              <InfoField label="Challan No." value={detail.challan_no} />
+            </Grid>
+            <Grid size={{ xs: 6, md: 3 }}>
+              <InfoField label="Challan Date" value={formatBillPassDate(detail.challan_date)} />
+            </Grid>
           </Grid>
-        </Grid>
-      </Paper>
+        </CardContent>
+      </Card>
+
+      {/* ── Invoice Info ─────────────────────────────────────────────────── */}
+      <Card sx={{ mb: 2 }}>
+        <CardContent>
+          <Typography variant="subtitle1" fontWeight={600} mb={1}>
+            Invoice Details
+          </Typography>
+          <Grid container spacing={2}>
+            <Grid size={{ xs: 6, md: 3 }}>
+              <InfoField label="Invoice Date" value={formatBillPassDate(detail.invoice_date)} />
+            </Grid>
+            <Grid size={{ xs: 6, md: 3 }}>
+              <InfoField label="Invoice Amount" value={formatCurrency(detail.invoice_amount)} />
+            </Grid>
+            <Grid size={{ xs: 6, md: 3 }}>
+              <InfoField label="Invoice Received" value={formatBillPassDate(detail.invoice_recvd_date)} />
+            </Grid>
+            <Grid size={{ xs: 6, md: 3 }}>
+              <InfoField label="Payment Due" value={formatBillPassDate(detail.invoice_due_date)} />
+            </Grid>
+            {detail.sr_remarks && (
+              <Grid size={{ xs: 12, md: 6 }}>
+                <InfoField label="Remarks" value={detail.sr_remarks} />
+              </Grid>
+            )}
+          </Grid>
+        </CardContent>
+      </Card>
+
+      {/* ── SR Line Items with Inline DR/CR ──────────────────────────────── */}
+      <Card sx={{ mb: 2 }}>
+        <CardContent>
+          <Typography variant="subtitle1" fontWeight={600} mb={1}>
+            SR Line Items
+          </Typography>
+          <Typography variant="caption" color="text.secondary" mb={2} display="block">
+            {summary.sr_line_count} item(s) &mdash;
+            {summary.dr_count > 0 && ` ${summary.dr_count} debit note(s)`}
+            {summary.cr_count > 0 && ` ${summary.cr_count} credit note(s)`}
+            {summary.dr_count === 0 && summary.cr_count === 0 && " No DR/CR adjustments"}
+          </Typography>
+
+          <Box sx={{ overflowX: "auto" }}>
+            <Paper variant="outlined">
+              <Box component="table" sx={{ width: "100%", borderCollapse: "collapse" }}>
+                <Box component="thead" sx={{ bgcolor: "primary.main" }}>
+                  <Box component="tr">
+                    {["Item", "Make", "UOM", "Qty", "PO Rate", "Accepted Rate", "Amount", "Tax", "Total"].map(
+                      (h) => (
+                        <Box
+                          key={h}
+                          component="th"
+                          sx={{
+                            p: 1,
+                            color: "white",
+                            fontSize: "0.75rem",
+                            fontWeight: 600,
+                            textAlign: ["Item", "Make", "UOM"].includes(h) ? "left" : "right",
+                            whiteSpace: "nowrap",
+                          }}
+                        >
+                          {h}
+                        </Box>
+                      )
+                    )}
+                  </Box>
+                </Box>
+
+                <Box component="tbody">
+                  {detail.sr_lines.map((line, idx) => {
+                    const adjustments = drcrByLine.get(line.inward_dtl_id) ?? [];
+                    const drTotal = adjustments
+                      .filter((a) => a.note_type === 1)
+                      .reduce((s, a) => s + a.line_amount, 0);
+                    const crTotal = adjustments
+                      .filter((a) => a.note_type === 2)
+                      .reduce((s, a) => s + a.line_amount, 0);
+                    const lineNet = line.line_total - drTotal + crTotal;
+                    const hasAdjustments = adjustments.length > 0;
+
+                    return (
+                      <React.Fragment key={line.inward_dtl_id}>
+                        <Box
+                          component="tr"
+                          sx={{
+                            bgcolor: idx % 2 === 0 ? "grey.50" : "white",
+                            borderBottom: hasAdjustments ? "none" : undefined,
+                          }}
+                        >
+                          <Box component="td" sx={{ p: 1, fontSize: "0.75rem" }}>
+                            <Typography variant="caption" fontWeight={600} display="block">
+                              {line.item_name}
+                            </Typography>
+                            <Typography variant="caption" color="text.secondary">
+                              {line.item_code}
+                            </Typography>
+                          </Box>
+                          <Box component="td" sx={{ p: 1, fontSize: "0.75rem" }}>
+                            {line.accepted_make_name || "-"}
+                          </Box>
+                          <Box component="td" sx={{ p: 1, fontSize: "0.75rem" }}>
+                            {line.uom_name}
+                          </Box>
+                          <Box component="td" sx={{ p: 1, fontSize: "0.75rem", textAlign: "right" }}>
+                            {formatAmount(line.approved_qty)}
+                          </Box>
+                          <Box component="td" sx={{ p: 1, fontSize: "0.75rem", textAlign: "right" }}>
+                            {formatAmount(line.po_rate)}
+                          </Box>
+                          <Box component="td" sx={{ p: 1, fontSize: "0.75rem", textAlign: "right" }}>
+                            {formatAmount(line.accepted_rate)}
+                          </Box>
+                          <Box component="td" sx={{ p: 1, fontSize: "0.75rem", textAlign: "right" }}>
+                            {formatAmount(line.line_amount)}
+                          </Box>
+                          <Box component="td" sx={{ p: 1, fontSize: "0.75rem", textAlign: "right" }}>
+                            {formatAmount(line.tax_amount)}
+                          </Box>
+                          <Box component="td" sx={{ p: 1, fontSize: "0.75rem", textAlign: "right", fontWeight: 600 }}>
+                            {formatAmount(line.line_total)}
+                          </Box>
+                        </Box>
+
+                        <DrcrInlineRows lines={adjustments} />
+
+                        {hasAdjustments && (
+                          <Box
+                            component="tr"
+                            sx={{ bgcolor: "grey.100", borderBottom: "2px solid", borderBottomColor: "divider" }}
+                          >
+                            <Box
+                              component="td"
+                              colSpan={8}
+                              sx={{ p: 0.75, pl: 4, fontSize: "0.7rem", textAlign: "right", fontWeight: 600 }}
+                            >
+                              Line Net Payable:
+                            </Box>
+                            <Box
+                              component="td"
+                              sx={{
+                                p: 0.75,
+                                fontSize: "0.75rem",
+                                textAlign: "right",
+                                fontWeight: 700,
+                                color: "primary.main",
+                              }}
+                            >
+                              {formatAmount(lineNet)}
+                            </Box>
+                          </Box>
+                        )}
+                      </React.Fragment>
+                    );
+                  })}
+                </Box>
+              </Box>
+            </Paper>
+          </Box>
+        </CardContent>
+      </Card>
+
+      {/* ── Payment Summary Footer ───────────────────────────────────────── */}
+      <Card>
+        <CardContent>
+          <Typography variant="subtitle1" fontWeight={600} mb={2}>
+            Payment Summary
+          </Typography>
+          <Box sx={{ maxWidth: 500, ml: "auto" }}>
+            <SummaryRow label="SR Taxable" value={summary.sr_taxable} />
+            {summary.sr_cgst > 0 && <SummaryRow label="CGST" value={summary.sr_cgst} indent />}
+            {summary.sr_sgst > 0 && <SummaryRow label="SGST" value={summary.sr_sgst} indent />}
+            {summary.sr_igst > 0 && <SummaryRow label="IGST" value={summary.sr_igst} indent />}
+            <Divider sx={{ my: 1 }} />
+            <SummaryRow label="SR Total" value={summary.sr_total} bold />
+            {summary.dr_count > 0 && (
+              <SummaryRow
+                label={`Less: Debit Notes (${summary.dr_count})`}
+                value={summary.dr_total}
+                color="error.main"
+                prefix="-"
+              />
+            )}
+            {summary.cr_count > 0 && (
+              <SummaryRow
+                label={`Add: Credit Notes (${summary.cr_count})`}
+                value={summary.cr_total}
+                color="success.main"
+                prefix="+"
+              />
+            )}
+            {(detail.round_off_value || 0) !== 0 && (
+              <SummaryRow label="Round Off" value={detail.round_off_value} />
+            )}
+            <Divider sx={{ my: 1, borderWidth: 2 }} />
+            <Box display="flex" justifyContent="space-between" alignItems="center" sx={{ py: 1, px: 0.5 }}>
+              <Typography variant="subtitle1" fontWeight={700}>
+                NET PAYABLE
+              </Typography>
+              <Typography
+                variant="h6"
+                fontWeight={700}
+                color="primary.main"
+                sx={{ fontFamily: "monospace" }}
+              >
+                {formatCurrency(netPayable)}
+              </Typography>
+            </Box>
+          </Box>
+        </CardContent>
+      </Card>
     </Box>
   );
 }

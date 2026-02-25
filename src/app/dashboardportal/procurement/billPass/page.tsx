@@ -4,7 +4,7 @@
  * @component BillPassIndexPage
  * @description Bill Pass index page showing approved SRs with DRCR adjustments.
  * Bill Pass consolidates SR total, debit notes, credit notes to show net payable amount.
- * This is a read-only view - no create/edit functionality.
+ * Editable until marked complete (billpass_status = 1).
  */
 
 import * as React from "react";
@@ -13,6 +13,7 @@ import type { GridColDef, GridPaginationModel, GridRenderCellParams } from "@mui
 import { useRouter } from "next/navigation";
 
 import IndexWrapper from "@/components/ui/IndexWrapper";
+import { createNotEqualEditCheck } from "@/utils/editability";
 import {
   fetchBillPassList,
   formatCurrency,
@@ -21,6 +22,8 @@ import {
 } from "@/utils/billPassService";
 
 type BillPassRow = BillPassListItem;
+
+const isRowEditable = createNotEqualEditCheck<BillPassRow>("billpass_status", 1);
 
 export default function BillPassIndexPage() {
   const router = useRouter();
@@ -84,7 +87,7 @@ export default function BillPassIndexPage() {
     void fetchData();
   }, [fetchData]);
 
-  // Navigate to detail view
+  // Navigate to detail view (completed bill passes)
   const handleView = React.useCallback(
     (row: BillPassRow) => {
       const id = row.inward_id;
@@ -94,12 +97,22 @@ export default function BillPassIndexPage() {
     [router]
   );
 
+  // Navigate to edit page (non-complete bill passes)
+  const handleEdit = React.useCallback(
+    (row: BillPassRow) => {
+      const id = row.inward_id;
+      if (!id) return;
+      router.push(`/dashboardportal/procurement/billPass/edit?id=${id}`);
+    },
+    [router]
+  );
+
   // Column definitions
   const columns = React.useMemo<GridColDef[]>(
     () => [
       {
         field: "bill_pass_no",
-        headerName: "Bill Pass No.",
+        headerName: "SR No.",
         flex: 1,
         minWidth: 140,
         renderCell: (params: GridRenderCellParams<BillPassRow, string>) => (
@@ -110,7 +123,7 @@ export default function BillPassIndexPage() {
       },
       {
         field: "bill_pass_date",
-        headerName: "Bill Pass Date",
+        headerName: "SR Date",
         minWidth: 120,
         renderCell: (params: GridRenderCellParams<BillPassRow, string>) => (
           <Typography component="span" variant="body2">
@@ -134,16 +147,6 @@ export default function BillPassIndexPage() {
         headerName: "Supplier",
         flex: 1.2,
         minWidth: 160,
-      },
-      {
-        field: "invoice_no",
-        headerName: "Invoice No.",
-        minWidth: 120,
-        renderCell: (params: GridRenderCellParams<BillPassRow, string>) => (
-          <Typography component="span" variant="body2">
-            {params.value || "-"}
-          </Typography>
-        ),
       },
       {
         field: "sr_total",
@@ -222,6 +225,19 @@ export default function BillPassIndexPage() {
           />
         ),
       },
+      {
+        field: "billpass_status",
+        headerName: "Status",
+        minWidth: 110,
+        renderCell: (params: GridRenderCellParams<BillPassRow, number>) => (
+          <Chip
+            label={params.value === 1 ? "Complete" : "Pending"}
+            size="small"
+            color={params.value === 1 ? "success" : "warning"}
+            variant="outlined"
+          />
+        ),
+      },
     ],
     []
   );
@@ -253,6 +269,8 @@ export default function BillPassIndexPage() {
         debounceDelayMs: 1000,
       }}
       onView={handleView}
+      onEdit={handleEdit}
+      isRowEditable={isRowEditable}
     >
       {errorMessage ? (
         <Alert severity="error" sx={{ mt: 2 }}>

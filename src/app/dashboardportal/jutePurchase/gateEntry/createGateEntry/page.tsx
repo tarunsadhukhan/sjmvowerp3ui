@@ -113,6 +113,7 @@ type GateEntryDetails = {
   remarks: string | null;
   status_id: number | null;
   status: string | null;
+  qc_check: number | null;
 };
 
 // =============================================================================
@@ -249,6 +250,8 @@ function JuteGateEntryCreatePageContent() {
   const isStatusIN = currentStatusId === GATE_ENTRY_STATUS_IN;
   // OUT is determined by out_time presence, NOT status_id (status remains draft)
   const isOutComplete = Boolean(details?.out_time);
+  // QC checkpoint: qc_check=1 means QC is complete
+  const isQcComplete = details?.qc_check === 1;
 
   // Build branch options
   const branchOptions = React.useMemo<Option[]>(() => {
@@ -374,7 +377,9 @@ function JuteGateEntryCreatePageContent() {
 
   // Build payload from form values
   const buildPayload = React.useCallback(() => {
-    const tareWeightNum = parseFloat(formValues.tareWeight) || 0;
+    // QC checkpoint: zero out fields that require QC completion when QC is not done
+    const tareWeightNum = isQcComplete ? (parseFloat(formValues.tareWeight) || 0) : 0;
+    const variableShortageNum = isQcComplete ? (parseFloat(formValues.variableShortage) || 0) : 0;
     
     const payload: any = {
       co_id: parseInt(coId ?? "0", 10),
@@ -389,10 +394,10 @@ function JuteGateEntryCreatePageContent() {
       transporter: formValues.transporter,
       gross_weight: parseFloat(formValues.grossWeight) || 0,
       tare_weight: tareWeightNum,
-      variable_shortage: parseFloat(formValues.variableShortage) || 0,
+      variable_shortage: variableShortageNum,
       remarks: formValues.remarks || null,
-      out_date: formValues.outDate || null,
-      out_time: formValues.outTime || null,
+      out_date: isQcComplete ? (formValues.outDate || null) : null,
+      out_time: isQcComplete ? (formValues.outTime || null) : null,
     };
 
     // net_weight should not be sent if no tare weight is entered
@@ -401,7 +406,7 @@ function JuteGateEntryCreatePageContent() {
     }
 
     return payload;
-  }, [coId, formValues]);
+  }, [coId, formValues, isQcComplete]);
 
   // Handle IN submission (Create new entry)
   const handleSubmitIN = React.useCallback(async () => {
@@ -494,6 +499,12 @@ function JuteGateEntryCreatePageContent() {
       return;
     }
 
+    // QC checkpoint - prevent OUT if QC is not complete
+    if (!isQcComplete) {
+      setPageError("Vehicle cannot be marked as OUT until Quality Check (QC / Material Inspection) is completed.");
+      return;
+    }
+
     // Validate out date and time are provided
     if (!formValues.outDate || !formValues.outTime) {
       setPageError("Out Date and Out Time are required for OUT action");
@@ -537,7 +548,7 @@ function JuteGateEntryCreatePageContent() {
     } finally {
       setSaving(false);
     }
-  }, [coId, entryId, buildPayload, validateForm, router, formValues.outDate, formValues.outTime]);
+  }, [coId, entryId, buildPayload, validateForm, router, formValues.outDate, formValues.outTime, isQcComplete]);
 
   // Handle back navigation
   const handleBack = React.useCallback(() => {
@@ -738,6 +749,13 @@ function JuteGateEntryCreatePageContent() {
             visible and editable (except Remarks which is always editable).
           </Typography>
 
+          {/* QC checkpoint alert - show in edit mode when QC is not complete */}
+          {isEditMode && isStatusIN && !isQcComplete && (
+            <Alert severity="info" sx={{ mb: 2 }}>
+              Tare Weight, Variable Shortage, and Out Time are locked until the Quality Check (QC / Material Inspection) is completed for this entry.
+            </Alert>
+          )}
+
           {/* Row 4: Weights - Challan Weight, Gross Weight */}
           <Box
             sx={{
@@ -780,7 +798,7 @@ function JuteGateEntryCreatePageContent() {
               mb: 3,
             }}
           >
-            {/* Tare Weight */}
+            {/* Tare Weight - locked until QC is complete */}
             <TextField
               label="Tare Weight (Kg)"
               type="number"
@@ -788,7 +806,8 @@ function JuteGateEntryCreatePageContent() {
               value={formValues.tareWeight}
               onChange={(e) => handleFieldChange("tareWeight", e.target.value)}
               InputProps={{ inputProps: { min: 0, step: 0.01 } }}
-              disabled={isViewMode}
+              disabled={isViewMode || (isEditMode && !isQcComplete)}
+              helperText={isEditMode && !isQcComplete && !isViewMode ? "QC must be completed first" : undefined}
             />
 
             {/* Net Weight - Calculated/Disabled */}
@@ -801,7 +820,7 @@ function JuteGateEntryCreatePageContent() {
               InputProps={{ inputProps: { min: 0, step: 0.01 } }}
             />
 
-            {/* Variable Shortage */}
+            {/* Variable Shortage - locked until QC is complete */}
             <TextField
               label="Variable Shortage (Kg)"
               type="number"
@@ -809,7 +828,8 @@ function JuteGateEntryCreatePageContent() {
               value={formValues.variableShortage}
               onChange={(e) => handleFieldChange("variableShortage", e.target.value)}
               InputProps={{ inputProps: { min: 0, step: 0.01 } }}
-              disabled={isViewMode}
+              disabled={isViewMode || (isEditMode && !isQcComplete)}
+              helperText={isEditMode && !isQcComplete && !isViewMode ? "QC must be completed first" : undefined}
             />
 
             {/* Actual Weight - Calculated/Disabled */}
@@ -823,8 +843,8 @@ function JuteGateEntryCreatePageContent() {
             />
           </Box>
 
-          {/* Row 6: Out Date and Out Time - Only visible after tare weight is entered */}
-          {formValues.tareWeight && parseFloat(formValues.tareWeight) > 0 && (
+          {/* Row 6: Out Date and Out Time - Only visible after QC is complete */}
+          {isQcComplete && (
             <Box
               sx={{
                 display: "grid",
@@ -914,7 +934,8 @@ function JuteGateEntryCreatePageContent() {
               color="warning"
               endIcon={<LogOut size={18} />}
               onClick={handleSubmitOUT}
-              disabled={saving}
+              disabled={saving || !isQcComplete}
+              title={!isQcComplete ? "Quality Check must be completed before recording OUT" : undefined}
             >
               {saving ? "Saving..." : "OUT"}
             </Button>

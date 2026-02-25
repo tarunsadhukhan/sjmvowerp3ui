@@ -13,6 +13,7 @@ import { CircularProgress, Box } from "@mui/material";
 import TransactionWrapper, { type TransactionAction } from "@/components/ui/TransactionWrapper";
 import { useLineItems, SearchableSelect } from "@/components/ui/transaction";
 import useSelectedCompanyCoId from "@/hooks/use-selected-company-coid";
+import { useBranchOptions } from "@/utils/branchUtils";
 import { fetchWithCookie } from "@/utils/apiClient2";
 import { apiRoutesPortalMasters } from "@/utils/api";
 
@@ -46,7 +47,6 @@ import {
   mapLineItemsFromAPI,
   mapFormToCreatePayload,
   mapFormToUpdatePayload,
-  buildBranchOptions,
   extractFormValuesFromDetails,
 } from "./utils/jutePOMappers";
 
@@ -96,11 +96,25 @@ function JutePOCreatePageContent() {
   const [parties, setParties] = React.useState<Option[]>([]);
   const [qualitiesByItem, setQualitiesByItem] = React.useState<Record<string, Option[]>>({});
 
-  // Derived branch options from setup data
-  const branchOptions = React.useMemo(
-    () => (setupData ? buildBranchOptions(setupData.branches) : []),
-    [setupData]
-  );
+  // Branch options: only show branches selected in the sidebar context
+  const sidebarBranchOptions = useBranchOptions();
+
+  // In edit/view mode, ensure the saved branch value is always present in the dropdown
+  // even if it's no longer selected in the sidebar
+  const branchOptions = React.useMemo(() => {
+    const branchValue = formValues.branch;
+    if (!branchValue) return sidebarBranchOptions;
+    const exists = sidebarBranchOptions.some(
+      (opt) => String(opt.value) === String(branchValue)
+    );
+    if (exists) return sidebarBranchOptions;
+    // Fallback: look up branch name from setup data so edit/view displays correctly
+    const setupBranch = setupData?.branches.find(
+      (b) => String(b.branch_id) === String(branchValue)
+    );
+    const fallbackLabel = setupBranch?.branch_name ?? branchValue;
+    return [...sidebarBranchOptions, { label: fallbackLabel, value: branchValue }];
+  }, [sidebarBranchOptions, formValues.branch, setupData?.branches]);
 
   // Derived supplier options from setup data
   const supplierOptions = React.useMemo(

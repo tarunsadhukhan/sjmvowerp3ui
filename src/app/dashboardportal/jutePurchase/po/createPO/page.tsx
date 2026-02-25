@@ -99,23 +99,6 @@ function JutePOCreatePageContent() {
   // Branch options: only show branches selected in the sidebar context
   const sidebarBranchOptions = useBranchOptions();
 
-  // In edit/view mode, ensure the saved branch value is always present in the dropdown
-  // even if it's no longer selected in the sidebar
-  const branchOptions = React.useMemo(() => {
-    const branchValue = formValues.branch;
-    if (!branchValue) return sidebarBranchOptions;
-    const exists = sidebarBranchOptions.some(
-      (opt) => String(opt.value) === String(branchValue)
-    );
-    if (exists) return sidebarBranchOptions;
-    // Fallback: look up branch name from setup data so edit/view displays correctly
-    const setupBranch = setupData?.branches.find(
-      (b) => String(b.branch_id) === String(branchValue)
-    );
-    const fallbackLabel = setupBranch?.branch_name ?? branchValue;
-    return [...sidebarBranchOptions, { label: fallbackLabel, value: branchValue }];
-  }, [sidebarBranchOptions, formValues.branch, setupData?.branches]);
-
   // Derived supplier options from setup data
   const supplierOptions = React.useMemo(
     () =>
@@ -136,6 +119,23 @@ function JutePOCreatePageContent() {
     bumpFormKey,
     formRef,
   } = useJutePOFormState({ mode });
+
+  // In edit/view mode, ensure the saved branch value is always present in the dropdown
+  // even if it's no longer selected in the sidebar
+  const branchOptions = React.useMemo(() => {
+    const branchValue = formValues.branch;
+    if (!branchValue) return sidebarBranchOptions;
+    const exists = sidebarBranchOptions.some(
+      (opt) => String(opt.value) === String(branchValue)
+    );
+    if (exists) return sidebarBranchOptions;
+    // Fallback: look up branch name from setup data so edit/view displays correctly
+    const setupBranch = setupData?.branches.find(
+      (b) => String(b.branch_id) === String(branchValue)
+    );
+    const fallbackLabel = setupBranch?.branch_name ?? branchValue;
+    return [...sidebarBranchOptions, { label: fallbackLabel, value: branchValue }];
+  }, [sidebarBranchOptions, formValues.branch, setupData?.branches]);
 
   // Early status-based edit check (before hooks that need mode)
   // This allows us to treat non-editable statuses as "view" mode

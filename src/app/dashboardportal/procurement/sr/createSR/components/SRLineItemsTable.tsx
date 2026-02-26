@@ -258,7 +258,7 @@ export const useSRLineItemColumns = ({
 				minWidth: "150px",
 				renderCell: ({ item }) => {
 					if (!canEdit) {
-						const warehouseLabel = item.warehouse_id ? warehouseLabelMap[String(item.warehouse_id)] || item.warehouse_name : "-";
+						const warehouseLabel = item.warehouse_id ? warehouseLabelMap[String(item.warehouse_id)] || item.warehouse_path || item.warehouse_name : "-";
 						return (
 							<Typography variant="body2" noWrap>
 								{warehouseLabel}
@@ -274,8 +274,8 @@ export const useSRLineItemColumns = ({
 					// If not in the dropdown list, inject a synthetic option so the
 					// Autocomplete `value` always matches one of the `options`.
 					let effectiveOptions = warehouseOptions;
-					if (!selectedOption && item.warehouse_id && item.warehouse_name) {
-						selectedOption = { label: item.warehouse_name, value: String(item.warehouse_id) };
+					if (!selectedOption && item.warehouse_id && (item.warehouse_path || item.warehouse_name)) {
+						selectedOption = { label: item.warehouse_path || item.warehouse_name, value: String(item.warehouse_id) };
 						effectiveOptions = [...warehouseOptions, selectedOption];
 					}
 
@@ -312,7 +312,7 @@ export const useSRLineItemColumns = ({
 				},
 				getTooltip: ({ item }) => {
 					if (item.warehouse_id) {
-						return warehouseLabelMap[String(item.warehouse_id)] || item.warehouse_name || undefined;
+						return warehouseLabelMap[String(item.warehouse_id)] || item.warehouse_path || item.warehouse_name || undefined;
 					}
 					return "Warehouse is required";
 				},

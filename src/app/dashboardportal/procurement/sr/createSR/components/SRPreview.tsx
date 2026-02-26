@@ -218,7 +218,7 @@ export const SRPreview: React.FC<SRPreviewProps> = ({
 									{item.discount_amount > 0 ? item.discount_amount.toFixed(2) : "-"}
 								</td>
 								<td style={{ border: "1px solid #ddd", padding: "8px" }}>
-									{item.warehouse_name || "-"}
+									{item.warehouse_path || item.warehouse_name || "-"}
 								</td>
 								<td style={{ border: "1px solid #ddd", padding: "8px", textAlign: "right" }}>
 									{item.amount.toFixed(2)}

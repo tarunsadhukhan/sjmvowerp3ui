@@ -123,7 +123,7 @@ export const MuiForm = React.forwardRef(function MuiForm(
 		onCancel,
 		externalDirty,
 	}: MuiFormProps,
-	ref: React.ForwardedRef<{ submit: () => Promise<void>; isDirty: () => boolean } | null>
+	ref: React.ForwardedRef<{ submit: () => Promise<void>; isDirty: () => boolean; setValue: (name: string, value: unknown) => void } | null>
 ) {
 	const [mode, setMode] = React.useState<MuiFormMode>(modeProp ?? "create");
 	const [values, setValues] = React.useState<Record<string, unknown>>(
@@ -277,6 +277,8 @@ export const MuiForm = React.forwardRef(function MuiForm(
 		submit,
 		// expose dirty state so parents can show/hide their own submit buttons
 		isDirty: () => dirty,
+		// expose setValue so callers can imperatively update specific fields (e.g. auto-calculated disabled fields)
+		setValue,
 	}));
 
 	const renderField = (field: Field) => {

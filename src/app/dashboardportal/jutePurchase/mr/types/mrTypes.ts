@@ -58,6 +58,7 @@ export type JuteMRLineItemAPI = {
 	actual_item_id: number | null;
 	actual_quality_name: string | null;
 	actual_qty: number | null;
+	challan_weight: number | null;
 	actual_weight: number | null;
 	allowable_moisture: number | null;
 	actual_moisture: string | null;
@@ -86,6 +87,7 @@ export type MRLineItem = {
 	actualQualityId: number | null;
 	actualQualityName: string;
 	actualQty: number | null;
+	challanWeight: number | null;
 	actualWeight: number | null;
 	allowableMoisture: number | null;
 	actualMoisture: number | null;

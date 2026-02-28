@@ -7,6 +7,12 @@ import Autocomplete from "@mui/material/Autocomplete";
 
 export type MuiFormMode = "create" | "view" | "edit";
 
+export type MuiFormHandle = {
+	submit: () => Promise<void>;
+	isDirty: () => boolean;
+	setValue: (name: string, value: unknown) => void;
+};
+
 export type Option = {
 	label: string;
 	value: string | number;

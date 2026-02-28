@@ -2,7 +2,7 @@ import React from "react";
 import MuiForm, { type Schema, type MuiFormMode } from "@/components/ui/muiform";
 import { Button } from "@/components/ui/button";
 
-type FormRef = React.MutableRefObject<{ submit: () => Promise<void>; isDirty: () => boolean } | null>;
+type FormRef = React.MutableRefObject<{ submit: () => Promise<void>; isDirty: () => boolean; setValue: (name: string, value: unknown) => void } | null>;
 
 type POHeaderFormProps = {
   schema: Schema;

@@ -2,7 +2,7 @@ import React from "react";
 import type { MuiFormMode } from "@/components/ui/muiform";
 import { buildDefaultFormValues } from "../utils/quotationFactories";
 
-type FormRef = React.MutableRefObject<{ submit: () => Promise<void>; isDirty: () => boolean } | null>;
+type FormRef = React.MutableRefObject<{ submit: () => Promise<void>; isDirty: () => boolean; setValue: (name: string, value: unknown) => void } | null>;
 
 type UseQuotationFormStateParams = {
 	mode: MuiFormMode;
@@ -17,7 +17,7 @@ export const useQuotationFormState = ({ mode, requestedId, branchIdFromUrl }: Us
 	const [initialValues, setInitialValues] = React.useState<Record<string, unknown>>(() => buildDefaultFormValues());
 	const [formValues, setFormValues] = React.useState<Record<string, unknown>>(() => buildDefaultFormValues());
 	const [formKey, setFormKey] = React.useState(0);
-	const formRef = React.useRef<{ submit: () => Promise<void>; isDirty: () => boolean } | null>(null) as FormRef;
+	const formRef = React.useRef<{ submit: () => Promise<void>; isDirty: () => boolean; setValue: (name: string, value: unknown) => void } | null>(null) as FormRef;
 
 	const handleMainFormValuesChange = React.useCallback((incoming: Record<string, unknown>) => {
 		setFormValues((prev) => {

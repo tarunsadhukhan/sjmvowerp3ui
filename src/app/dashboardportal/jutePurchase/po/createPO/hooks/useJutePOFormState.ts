@@ -22,14 +22,14 @@ type UseJutePOFormStateReturn = {
   setFormValues: React.Dispatch<React.SetStateAction<JutePOFormValues>>;
   formKey: number;
   bumpFormKey: () => void;
-  formRef: React.RefObject<{ submit: () => Promise<void>; isDirty: () => boolean } | null>;
+  formRef: React.RefObject<{ submit: () => Promise<void>; isDirty: () => boolean; setValue: (name: string, value: unknown) => void } | null>;
 };
 
 export function useJutePOFormState({ mode }: UseJutePOFormStateParams): UseJutePOFormStateReturn {
   const [initialValues, setInitialValues] = React.useState<JutePOFormValues>(buildDefaultFormValues);
   const [formValues, setFormValues] = React.useState<JutePOFormValues>(buildDefaultFormValues);
   const [formKey, setFormKey] = React.useState(0);
-  const formRef = React.useRef<{ submit: () => Promise<void>; isDirty: () => boolean } | null>(null);
+  const formRef = React.useRef<{ submit: () => Promise<void>; isDirty: () => boolean; setValue: (name: string, value: unknown) => void } | null>(null);
   const createDefaultsSeededRef = React.useRef(false);
 
   const bumpFormKey = React.useCallback(() => setFormKey((prev) => prev + 1), []);
@@ -51,23 +51,22 @@ export function useJutePOFormState({ mode }: UseJutePOFormStateParams): UseJuteP
 
   // Auto-calculate expected date when poDate or deliveryTimeline changes
   React.useEffect(() => {
-    const { poDate, deliveryTimeline } = formValues;
+    const { poDate, deliveryTimeline, expectedDate: currentExpected } = formValues;
     const days = Number(deliveryTimeline);
-    
-    if (poDate && Number.isFinite(days) && days > 0) {
-      const expected = calculateExpectedDate(poDate, days);
-      setFormValues((prev) => {
-        // Only update if actually changed to prevent loops
-        if (prev.expectedDate === expected) return prev;
-        return { ...prev, expectedDate: expected };
-      });
-    } else {
-      setFormValues((prev) => {
-        // Only clear if not already empty
-        if (!prev.expectedDate) return prev;
-        return { ...prev, expectedDate: "" };
-      });
+
+    const expected =
+      poDate && Number.isFinite(days) && days > 0
+        ? calculateExpectedDate(poDate, days)
+        : "";
+
+    if (currentExpected !== expected) {
+      // Update external formValues state
+      setFormValues((prev) => ({ ...prev, expectedDate: expected }));
+      // Push directly into MuiForm's internal state so the disabled field displays the new value.
+      // (MuiForm won't pick up initialValues changes for existing fields when user has edited other fields.)
+      formRef.current?.setValue("expectedDate", expected);
     }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [formValues.poDate, formValues.deliveryTimeline]);
 
   return {

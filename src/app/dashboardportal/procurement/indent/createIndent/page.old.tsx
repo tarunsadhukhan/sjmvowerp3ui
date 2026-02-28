@@ -529,7 +529,7 @@ export default function IndentTransactionPage() {
       },
     });
 
-  const formRef = React.useRef<{ submit: () => Promise<void>; isDirty: () => boolean } | null>(null);
+  const formRef = React.useRef<{ submit: () => Promise<void>; isDirty: () => boolean; setValue: (name: string, value: unknown) => void } | null>(null);
   const createDefaultsSeededRef = React.useRef(false);
 
   const mapLineToEditable = React.useCallback((line: IndentLine): EditableLineItem => ({

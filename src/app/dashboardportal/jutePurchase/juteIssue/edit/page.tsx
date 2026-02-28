@@ -1072,7 +1072,7 @@ function JuteIssueEditPage() {
                           />
                         </TableCell>
                         <TableCell>{stock.jute_gate_entry_no || "-"}</TableCell>
-                        <TableCell>{stock.branch_mr_no}</TableCell>
+                        <TableCell>{stock.mr_num ?? stock.branch_mr_no}</TableCell>
                         <TableCell>{stock.jute_group_name || "-"}</TableCell>
                         <TableCell>{stock.item_name || "-"}</TableCell>
                         <TableCell>{stock.unit_conversion}</TableCell>
@@ -1136,7 +1136,7 @@ function JuteIssueEditPage() {
                   Selected Stock
                 </Typography>
                 <Typography>
-                  MR {selectedStock.branch_mr_no} / GE {selectedStock.jute_gate_entry_no ?? "-"} - {selectedStock.jute_group_name || "Unknown"} ({selectedStock.item_name || "N/A"})
+                  MR {selectedStock.mr_num ?? selectedStock.branch_mr_no} / GE {selectedStock.jute_gate_entry_no ?? "-"} - {selectedStock.jute_group_name || "Unknown"} ({selectedStock.item_name || "N/A"})
                 </Typography>
                 <Typography variant="body2" color="text.secondary">
                   Available: {selectedStock ? getAdjustedBalQty(selectedStock).toFixed(2) : "0"} unit({selectedStock?.unit_conversion}) | Rate: ₹{selectedStock?.actual_rate?.toFixed(2)}/qtl

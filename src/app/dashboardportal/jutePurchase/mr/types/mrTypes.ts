@@ -9,6 +9,7 @@ export type MuiFormMode = "create" | "edit" | "view";
 export type JuteMRHeader = {
 	jute_mr_id: number;
 	branch_mr_no: number | null;
+	mr_num: string | null;
 	jute_mr_date: string;
 	branch_id: number;
 	branch_name: string;
@@ -58,6 +59,7 @@ export type JuteMRLineItemAPI = {
 	actual_item_id: number | null;
 	actual_quality_name: string | null;
 	actual_qty: number | null;
+	challan_weight: number | null;
 	actual_weight: number | null;
 	allowable_moisture: number | null;
 	actual_moisture: string | null;
@@ -86,6 +88,7 @@ export type MRLineItem = {
 	actualQualityId: number | null;
 	actualQualityName: string;
 	actualQty: number | null;
+	challanWeight: number | null;
 	actualWeight: number | null;
 	allowableMoisture: number | null;
 	actualMoisture: number | null;

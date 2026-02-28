@@ -21,6 +21,7 @@ export type StockOutstandingItem = {
   warehouse_name?: string;
   branch_id: number;
   branch_mr_no: number;
+  mr_num?: string;
   jute_mr_id: number;
   item_grp_id: number;
   jute_group_name: string;
@@ -48,6 +49,7 @@ export type JuteIssueLineItem = {
   jute_mr_id: number;
   jute_gate_entry_no?: number;
   branch_mr_no: number;
+  mr_num?: string;
   item_grp_id?: number;
   jute_group_name?: string;
   item_id: number;
@@ -82,6 +84,7 @@ export type EditableLineItem = {
   // Display fields (from stock outstanding)
   jute_gate_entry_no?: number;
   branch_mr_no?: number;
+  mr_num?: string;
   item_name?: string;
   jute_group_name?: string;
   balqty?: number;

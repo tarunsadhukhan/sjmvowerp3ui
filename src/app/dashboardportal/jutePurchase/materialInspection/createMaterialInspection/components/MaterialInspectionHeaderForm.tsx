@@ -14,7 +14,7 @@ type GateEntryHeaderFormProps = {
 	formKey: number;
 	initialValues: GateEntryFormValues;
 	mode: MuiFormMode;
-	formRef: React.MutableRefObject<{ submit: () => Promise<void>; isDirty: () => boolean } | null>;
+	formRef: React.MutableRefObject<{ submit: () => Promise<void>; isDirty: () => boolean; setValue: (name: string, value: unknown) => void } | null>;
 	onSubmit: (values: Record<string, unknown>) => Promise<void>;
 	onValuesChange: (values: GateEntryFormValues) => void;
 	customValidate?: (value: unknown, values: Record<string, unknown>, fieldName: string) => string | null;

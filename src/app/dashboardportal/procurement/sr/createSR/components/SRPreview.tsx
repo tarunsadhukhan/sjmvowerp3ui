@@ -175,6 +175,7 @@ export const SRPreview: React.FC<SRPreviewProps> = ({
 					<thead>
 						<tr style={{ backgroundColor: "#f5f5f5" }}>
 							<th style={{ border: "1px solid #ddd", padding: "8px" }}>#</th>
+							<th style={{ border: "1px solid #ddd", padding: "8px" }}>PO No.</th>
 							<th style={{ border: "1px solid #ddd", padding: "8px" }}>Item</th>
 							<th style={{ border: "1px solid #ddd", padding: "8px" }}>UOM</th>
 							<th style={{ border: "1px solid #ddd", padding: "8px", textAlign: "right" }}>Qty</th>
@@ -192,6 +193,9 @@ export const SRPreview: React.FC<SRPreviewProps> = ({
 						{lineItems.map((item, idx) => (
 							<tr key={item.id}>
 								<td style={{ border: "1px solid #ddd", padding: "8px" }}>{idx + 1}</td>
+								<td style={{ border: "1px solid #ddd", padding: "8px" }}>
+									{item.po_no_formatted || "-"}
+								</td>
 								<td style={{ border: "1px solid #ddd", padding: "8px" }}>
 									{item.item_name}
 									{item.accepted_item_make_name && (
@@ -218,7 +222,7 @@ export const SRPreview: React.FC<SRPreviewProps> = ({
 									{item.discount_amount > 0 ? item.discount_amount.toFixed(2) : "-"}
 								</td>
 								<td style={{ border: "1px solid #ddd", padding: "8px" }}>
-									{item.warehouse_name || "-"}
+									{item.warehouse_path || item.warehouse_name || "-"}
 								</td>
 								<td style={{ border: "1px solid #ddd", padding: "8px", textAlign: "right" }}>
 									{item.amount.toFixed(2)}

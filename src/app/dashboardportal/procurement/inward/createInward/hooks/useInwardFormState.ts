@@ -18,7 +18,7 @@ export function useInwardFormState({ mode }: UseInwardFormStateParams) {
 	const [initialValues, setInitialValues] = React.useState<InwardFormValues>(buildDefaultFormValues);
 	const [formValues, setFormValues] = React.useState<InwardFormValues>(buildDefaultFormValues);
 	const [formKey, setFormKey] = React.useState(0);
-	const formRef = React.useRef<{ submit: () => Promise<void>; isDirty: () => boolean } | null>(null);
+	const formRef = React.useRef<{ submit: () => Promise<void>; isDirty: () => boolean; setValue: (name: string, value: unknown) => void } | null>(null);
 	const createDefaultsSeededRef = React.useRef(false);
 
 	const bumpFormKey = React.useCallback(() => setFormKey((prev) => prev + 1), []);

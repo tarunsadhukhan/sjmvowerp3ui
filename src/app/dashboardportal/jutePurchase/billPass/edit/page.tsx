@@ -32,11 +32,13 @@ import useSelectedCompanyCoId from "@/hooks/use-selected-company-coid";
 type BillPassHeader = {
 	jute_mr_id: number;
 	bill_pass_no: number | null;
+	bill_pass_num: string | null;
 	bill_pass_date: string | null;
 	bill_pass_complete: number | null;
 	mr_no: number | null;
+	mr_num: string | null;
 	mr_date: string | null;
-	gate_entry_no: number | null;
+	gate_entry_no: string | null;
 	gate_entry_date: string | null;
 	branch_id: number;
 	branch_name: string;
@@ -410,7 +412,7 @@ function BillPassEditPageContent() {
 						Back
 					</Button>
 					<Typography variant="h5" fontWeight={600}>
-						Bill Pass {header.bill_pass_no ? `#${header.bill_pass_no}` : ""}
+						Bill Pass {header.bill_pass_num ?? (header.bill_pass_no ? `#${header.bill_pass_no}` : "")}
 					</Typography>
 					{isComplete && (
 						<Typography variant="body2" color="success.main" sx={{ fontWeight: 500 }}>
@@ -455,14 +457,14 @@ function BillPassEditPageContent() {
 							<Typography variant="caption" color="text.secondary">
 								Bill Pass No
 							</Typography>
-							<Typography variant="body1">{header.bill_pass_no ?? "-"}</Typography>
+							<Typography variant="body1">{header.bill_pass_num ?? header.bill_pass_no ?? "-"}</Typography>
 						</Grid>
 						<Grid size={{ xs: 12, md: 6, lg: 3 }}>
 							<Typography variant="caption" color="text.secondary">
 								MR No
 							</Typography>
 							<Typography variant="body1">
-								{header.mr_no ?? "-"} ({formatDate(header.mr_date)})
+								{header.mr_num ?? header.mr_no ?? "-"} ({formatDate(header.mr_date)})
 							</Typography>
 						</Grid>
 						<Grid size={{ xs: 12, md: 6, lg: 3 }}>

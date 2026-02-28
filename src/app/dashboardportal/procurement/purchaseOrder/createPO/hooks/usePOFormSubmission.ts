@@ -41,10 +41,9 @@ export const usePOFormSubmission = ({
       const billingAddr = branchAddresses.find((a) => a.id === billingId);
       const shippingAddr = branchAddresses.find((a) => a.id === shippingId);
 
-      if (billingAddr?.stateName && shippingAddr?.stateName && billingAddr.stateName !== shippingAddr.stateName) {
-        toast({ variant: "destructive", title: "Invalid Address Selection", description: "Billing Address and Shipping Address must be in the same state." });
-        return;
-      }
+      // NOTE: Billing and shipping addresses CAN be in different states.
+      // GST type (IGST vs CGST/SGST) is determined by supplier state vs
+      // shipping state, which is already handled in calculateLineTax().
 
       if (!isLineItemsReady) {
         toast({ variant: "destructive", title: "Line items incomplete", description: "Add at least one item with valid quantity and rate." });

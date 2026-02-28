@@ -102,7 +102,7 @@ function SRTransactionPageContent() {
 			const result = data as { 
 				header?: SRHeaderRaw; 
 				line_items?: SRLineItemRaw[]; 
-				warehouses?: Array<{ warehouse_id: number; warehouse_name: string; branch_id?: number }>;
+				warehouses?: Array<{ warehouse_id: number; warehouse_name: string; warehouse_path?: string; branch_id?: number }>;
 				additional_charges_options?: AdditionalChargeOption[];
 				additional_charges?: SRAdditionalChargeRaw[];
 			};
@@ -135,7 +135,7 @@ function SRTransactionPageContent() {
 			});
 			
 			const mappedWarehouses: WarehouseOption[] = uniqueWarehouses.map((wh) => ({
-				label: wh.warehouse_name,
+				label: wh.warehouse_path || wh.warehouse_name,
 				value: String(wh.warehouse_id),
 				branchId: wh.branch_id,
 			}));
@@ -146,7 +146,7 @@ function SRTransactionPageContent() {
 			for (const li of mappedItems) {
 				if (li.warehouse_id && !warehouseValueSet.has(String(li.warehouse_id))) {
 					mappedWarehouses.push({
-						label: li.warehouse_name || `Warehouse ${li.warehouse_id}`,
+						label: li.warehouse_path || li.warehouse_name || `Warehouse ${li.warehouse_id}`,
 						value: String(li.warehouse_id),
 					});
 					warehouseValueSet.add(String(li.warehouse_id));

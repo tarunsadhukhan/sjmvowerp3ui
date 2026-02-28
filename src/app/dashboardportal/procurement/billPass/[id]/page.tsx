@@ -116,7 +116,7 @@ function DrcrInlineRows({ lines }: { lines: DrcrLineWithNote[] }) {
               borderLeftColor: isDebit ? "error.main" : "success.main",
             }}
           >
-            <Box component="td" colSpan={3} sx={{ p: 0.75, pl: 4, fontSize: "0.7rem" }}>
+            <Box component="td" colSpan={4} sx={{ p: 0.75, pl: 4, fontSize: "0.7rem" }}>
               <Chip
                 label={isDebit ? "DEBIT" : "CREDIT"}
                 size="small"
@@ -407,7 +407,7 @@ export default function BillPassViewPage() {
               <Box component="table" sx={{ width: "100%", borderCollapse: "collapse" }}>
                 <Box component="thead" sx={{ bgcolor: "primary.main" }}>
                   <Box component="tr">
-                    {["Item", "Make", "UOM", "Qty", "PO Rate", "Accepted Rate", "Amount", "Tax", "Total"].map(
+                    {["PO No.", "Item", "Make", "UOM", "Qty", "PO Rate", "Accepted Rate", "Amount", "Tax", "Total"].map(
                       (h) => (
                         <Box
                           key={h}
@@ -417,7 +417,7 @@ export default function BillPassViewPage() {
                             color: "white",
                             fontSize: "0.75rem",
                             fontWeight: 600,
-                            textAlign: ["Item", "Make", "UOM"].includes(h) ? "left" : "right",
+                            textAlign: ["PO No.", "Item", "Make", "UOM"].includes(h) ? "left" : "right",
                             whiteSpace: "nowrap",
                           }}
                         >
@@ -449,6 +449,11 @@ export default function BillPassViewPage() {
                             borderBottom: hasAdjustments ? "none" : undefined,
                           }}
                         >
+                          <Box component="td" sx={{ p: 1, fontSize: "0.75rem" }}>
+                            <Typography variant="caption" color="text.secondary">
+                              {line.po_no || "-"}
+                            </Typography>
+                          </Box>
                           <Box component="td" sx={{ p: 1, fontSize: "0.75rem" }}>
                             <Typography variant="caption" fontWeight={600} display="block">
                               {line.item_name}
@@ -492,7 +497,7 @@ export default function BillPassViewPage() {
                           >
                             <Box
                               component="td"
-                              colSpan={8}
+                              colSpan={9}
                               sx={{ p: 0.75, pl: 4, fontSize: "0.7rem", textAlign: "right", fontWeight: 600 }}
                             >
                               Line Net Payable:

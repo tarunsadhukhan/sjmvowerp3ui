@@ -25,6 +25,7 @@ import useSelectedCompanyCoId from "@/hooks/use-selected-company-coid";
  */
 type DrcrNoteLineItem = {
 	id: string;
+	po_no_formatted: string;
 	drcr_note_dtl_id: number;
 	inward_dtl_id: number;
 	item_desc: string;
@@ -208,6 +209,7 @@ function DrcrNoteViewPageContent() {
 			// Map line items
 			const items: DrcrNoteLineItem[] = (result.line_items || []).map((item: any, index: number) => ({
 				id: item.drcr_note_dtl_id ? String(item.drcr_note_dtl_id) : `line-${index}`,
+				po_no_formatted: item.po_no_formatted ?? "",
 				drcr_note_dtl_id: item.drcr_note_dtl_id ?? 0,
 				inward_dtl_id: item.inward_dtl_id ?? 0,
 				item_desc: item.item_name ?? item.item_desc ?? "",
@@ -352,6 +354,12 @@ function DrcrNoteViewPageContent() {
 	 * Column definitions
 	 */
 	const columns = React.useMemo<GridColDef<DrcrNoteLineItem>[]>(() => [
+		{
+			field: "po_no_formatted",
+			headerName: "PO No.",
+			flex: 1,
+			minWidth: 120,
+		},
 		{
 			field: "item_group_desc",
 			headerName: "Item Group",

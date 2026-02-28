@@ -12,6 +12,7 @@ afterEach(cleanup);
 
 const mockHeader: JuteMRHeader = {
 	jute_mr_id: 42,
+	mr_num: "MR-2426",
 	branch_mr_no: 2426,
 	jute_mr_date: "2025-05-23T00:00:00Z",
 	branch_id: 1,

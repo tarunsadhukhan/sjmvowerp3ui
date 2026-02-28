@@ -49,6 +49,7 @@ export type BillPassListResponse = {
 /** SR Line item in Bill Pass detail */
 export type BillPassSRLine = {
   inward_dtl_id: number;
+  po_no: string;
   item_id: number;
   item_name: string;
   item_code: string;
@@ -74,6 +75,7 @@ export type BillPassSRLine = {
 export type BillPassDRCRLine = {
   drcr_note_dtl_id: number;
   inward_dtl_id: number;
+  po_no: string;
   adjustment_reason: string;
   debitnote_type: number;
   quantity: number;

@@ -77,6 +77,7 @@ export type SRAdditionalChargeRaw = {
  */
 export type SRLineItem = {
 	id: string;
+	po_no_formatted: string;
 	inward_dtl_id: number;
 	item_id: number;
 	item_code: string;
@@ -171,6 +172,7 @@ export type SRTotals = {
  * Raw line item structure from API before mapping.
  */
 export type SRLineItemRaw = {
+	po_no_formatted?: string;
 	inward_dtl_id?: number;
 	item_id?: number;
 	item_code?: string;

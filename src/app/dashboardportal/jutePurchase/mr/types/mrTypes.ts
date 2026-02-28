@@ -9,6 +9,7 @@ export type MuiFormMode = "create" | "edit" | "view";
 export type JuteMRHeader = {
 	jute_mr_id: number;
 	branch_mr_no: number | null;
+	mr_num: string | null;
 	jute_mr_date: string;
 	branch_id: number;
 	branch_name: string;

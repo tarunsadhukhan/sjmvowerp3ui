@@ -94,6 +94,18 @@ export const useSRLineItemColumns = ({
 	return React.useMemo(
 		() => [
 			{
+				id: "po_no_formatted",
+				header: "PO No.",
+				width: "1fr",
+				minWidth: "100px",
+				renderCell: ({ item }) => (
+					<Typography variant="body2" noWrap title={item.po_no_formatted || undefined}>
+						{item.po_no_formatted || "-"}
+					</Typography>
+				),
+				getTooltip: ({ item }) => item.po_no_formatted || undefined,
+			},
+			{
 				id: "item_grp_name",
 				header: "Item Group",
 				width: "1.2fr",

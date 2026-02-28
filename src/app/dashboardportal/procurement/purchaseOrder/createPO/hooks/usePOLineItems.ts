@@ -88,6 +88,10 @@ export const usePOLineItems = ({
 		amount: line.amount,
 		remarks: line.remarks ?? "",
 		taxPercentage: line.taxPercentage,
+		igstAmount: line.igst,
+		cgstAmount: line.cgst,
+		sgstAmount: line.sgst,
+		taxAmount: line.taxAmount,
 	}), []);
 
 	const handleLineFieldChange = React.useCallback(

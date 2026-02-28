@@ -89,7 +89,7 @@ export const MRPreview: React.FC<MRPreviewProps> = ({ header, lineItems, totalAc
 			return;
 		}
 
-		const title = `Material Receipt - MR #${header?.branch_mr_no ?? header?.jute_mr_id ?? ""}`;
+		const title = `Material Receipt - MR #${header?.mr_num ?? header?.branch_mr_no ?? header?.jute_mr_id ?? ""}`;
 		win.document.open();
 		win.document.write(`<!DOCTYPE html><html><head><title>${title}</title></head><body><div id="root"></div></body></html>`);
 		win.document.close();
@@ -161,7 +161,7 @@ export const MRPreview: React.FC<MRPreviewProps> = ({ header, lineItems, totalAc
 						<tr>
 							<td style={{ width: "15%", fontWeight: 600 }}>MR NO</td>
 							<td style={{ width: "3%" }}>:</td>
-							<td style={{ width: "32%" }}>{header.branch_mr_no ?? "Draft"}</td>
+							<td style={{ width: "32%" }}>{header.mr_num ?? header.branch_mr_no ?? "Draft"}</td>
 							<td style={{ width: "18%", fontWeight: 600, textAlign: "right" }}>MR DATE :</td>
 							<td style={{ width: "32%" }}>{formatDate(header.jute_mr_date)}</td>
 						</tr>

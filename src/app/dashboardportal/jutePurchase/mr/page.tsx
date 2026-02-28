@@ -17,7 +17,7 @@ import { createStatusBasedEditCheck } from "@/utils/editability";
 
 type JuteMRRow = {
 	id: string | number;
-	mr_no: number | null;
+	mr_no: string | null;
 	mr_date: string;
 	mr_date_raw?: string;
 	branch_name: string;
@@ -80,7 +80,7 @@ export default function JuteMRIndexPage() {
 				headerName: "MR No",
 				flex: 0.8,
 				minWidth: 100,
-				renderCell: (params: GridRenderCellParams<JuteMRRow, number | null>) => (
+				renderCell: (params: GridRenderCellParams<JuteMRRow, string | null>) => (
 					<Typography component="span" variant="body2" color="primary" sx={{ fontWeight: 600 }}>
 						{params.value ?? "-"}
 					</Typography>
@@ -212,7 +212,7 @@ export default function JuteMRIndexPage() {
 
 				return {
 					id: (r.jute_mr_id ?? `jute-mr-${Math.random().toString(36).slice(2, 8)}`) as string | number,
-					mr_no: (r.branch_mr_no ?? null) as number | null,
+					mr_no: ((r.mr_num ?? r.branch_mr_no ?? null) as string | null),
 					mr_date_raw: normalizedRaw,
 					mr_date: formatDate(normalizedRaw),
 					branch_name: (r.branch_name ?? "") as string,

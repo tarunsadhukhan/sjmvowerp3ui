@@ -133,6 +133,7 @@ export const mapSRLineItem = (
 
 	return {
 		id: raw.inward_dtl_id ? String(raw.inward_dtl_id) : `line-${index}`,
+		po_no_formatted: raw.po_no_formatted ?? "",
 		inward_dtl_id: raw.inward_dtl_id ?? 0,
 		item_id: raw.item_id ?? 0,
 		item_code: raw.item_code ?? "",

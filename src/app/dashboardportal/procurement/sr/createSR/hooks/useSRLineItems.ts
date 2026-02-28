@@ -114,6 +114,46 @@ export const useSRLineItems = ({ header }: UseSRLineItemsParams): UseSRLineItems
 		};
 	}, [lineItems]);
 
+	// Recalculate GST for all line items when header states change.
+	// This mirrors PO's usePOTaxCalculations useEffect.
+	React.useEffect(() => {
+		if (!header?.india_gst) return;
+		const supplierState = header?.supplier_state_name;
+		const shippingState = header?.shipping_state_name || header?.billing_state_name;
+		if (!supplierState || !shippingState) return;
+
+		setLineItems((prev) =>
+			prev.map((item) => {
+				const tax = calculateLineTax(
+					item.amount || 0,
+					item.tax_percentage || 0,
+					supplierState,
+					shippingState,
+					true,
+				);
+
+				// Skip update if nothing changed to avoid unnecessary re-renders
+				if (
+					item.igst_amount === tax.igst &&
+					item.cgst_amount === tax.cgst &&
+					item.sgst_amount === tax.sgst &&
+					item.tax_amount === tax.total
+				) {
+					return item;
+				}
+
+				return {
+					...item,
+					igst_amount: tax.igst,
+					cgst_amount: tax.cgst,
+					sgst_amount: tax.sgst,
+					tax_amount: tax.total,
+					total_amount: (item.amount || 0) + tax.total,
+				};
+			}),
+		);
+	}, [header?.supplier_state_name, header?.shipping_state_name, header?.billing_state_name, header?.india_gst]);
+
 	return {
 		lineItems,
 		setLineItems,

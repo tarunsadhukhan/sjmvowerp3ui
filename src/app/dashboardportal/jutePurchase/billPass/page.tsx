@@ -18,10 +18,10 @@ import { createNotEqualEditCheck } from "@/utils/editability";
 
 type JuteBillPassRow = {
 	id: string | number;
-	bill_pass_no: number | null;
+	bill_pass_no: string | null;
 	bill_pass_date: string;
 	bill_pass_date_raw?: string;
-	mr_no: number | null;
+	mr_no: string | null;
 	mr_date: string;
 	supplier_name: string;
 	party_name: string | null;
@@ -126,7 +126,7 @@ export default function JuteBillPassIndexPage() {
 				headerName: "Bill Pass No",
 				flex: 0.8,
 				minWidth: 120,
-				renderCell: (params: GridRenderCellParams<JuteBillPassRow, number | null>) => (
+				renderCell: (params: GridRenderCellParams<JuteBillPassRow, string | null>) => (
 					<Typography component="span" variant="body2" color="primary" sx={{ fontWeight: 600 }}>
 						{params.value ?? "-"}
 					</Typography>
@@ -147,7 +147,7 @@ export default function JuteBillPassIndexPage() {
 				headerName: "MR No",
 				flex: 0.7,
 				minWidth: 100,
-				renderCell: (params: GridRenderCellParams<JuteBillPassRow, number | null>) => (
+				renderCell: (params: GridRenderCellParams<JuteBillPassRow, string | null>) => (
 					<Typography component="span" variant="body2">
 						{params.value ?? "-"}
 					</Typography>
@@ -254,10 +254,10 @@ export default function JuteBillPassIndexPage() {
 
 				return {
 					id: (r.jute_mr_id ?? `bill-pass-${Math.random().toString(36).slice(2, 8)}`) as string | number,
-					bill_pass_no: (r.bill_pass_no ?? null) as number | null,
+					bill_pass_no: ((r.bill_pass_num ?? r.bill_pass_no ?? null) as string | null),
 					bill_pass_date_raw: typeof rawBillPassDate === "string" ? rawBillPassDate : String(rawBillPassDate || ""),
 					bill_pass_date: formatDate(rawBillPassDate),
-					mr_no: (r.mr_no ?? null) as number | null,
+					mr_no: ((r.mr_num ?? r.mr_no ?? null) as string | null),
 					mr_date: formatDate((r.mr_date ?? "") as string),
 					supplier_name: (r.supplier_name ?? "") as string,
 					party_name: (r.party_name ?? null) as string | null,

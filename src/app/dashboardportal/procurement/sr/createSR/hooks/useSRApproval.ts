@@ -78,6 +78,12 @@ export const useSRApproval = ({
 				discount_value: item.discount_value,
 				discount_amount: item.discount_amount,
 				warehouse_id: item.warehouse_id,
+				// GST fields
+				tax_percentage: item.tax_percentage,
+				igst_amount: item.igst_amount,
+				cgst_amount: item.cgst_amount,
+				sgst_amount: item.sgst_amount,
+				tax_amount: item.tax_amount,
 			}));
 
 			// Prepare additional charges payload

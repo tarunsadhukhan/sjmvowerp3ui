@@ -129,7 +129,7 @@ export function MRHeaderForm({ header, mode, onHeaderChange, partyBranchOptions 
 						<TextField
 							label="MR No"
 							fullWidth
-							value={header.branch_mr_no ?? ""}
+							value={header.mr_num ?? header.branch_mr_no ?? ""}
 							InputProps={{ readOnly: true }}
 						/>
 					</Grid>

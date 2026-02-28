@@ -1,41 +1,8 @@
 import type { SRLineItem, SRTotals } from "../types/srTypes";
 import { isPercentageDiscountMode, isAmountDiscountMode } from "./srConstants";
 
-/**
- * Calculates the GST split for a line item based on supplier/shipping states.
- * Same logic as PO: If same state → CGST+SGST split, else IGST.
- */
-export const calculateLineTax = (
-	amount: number,
-	taxPercentage: number,
-	supplierState: string | undefined,
-	shippingState: string | undefined,
-	indiaGst: boolean,
-): { igst: number; cgst: number; sgst: number; total: number } => {
-	if (!indiaGst || !taxPercentage || taxPercentage === 0) {
-		return { igst: 0, cgst: 0, sgst: 0, total: 0 };
-	}
-
-	const taxAmount = (amount * taxPercentage) / 100;
-
-	// If same state, split into CGST + SGST; otherwise IGST
-	if (supplierState && shippingState && supplierState === shippingState) {
-		const halfTax = taxAmount / 2;
-		return {
-			igst: 0,
-			cgst: Number(halfTax.toFixed(2)),
-			sgst: Number(halfTax.toFixed(2)),
-			total: Number(taxAmount.toFixed(2)),
-		};
-	}
-
-	return {
-		igst: Number(taxAmount.toFixed(2)),
-		cgst: 0,
-		sgst: 0,
-		total: Number(taxAmount.toFixed(2)),
-	};
-};
+// Re-export shared GST calculation so existing imports continue to work.
+export { calculateLineTax } from "@/utils/gstCalculations";
 
 /**
  * Computes discount amount using either percentage or flat modes.

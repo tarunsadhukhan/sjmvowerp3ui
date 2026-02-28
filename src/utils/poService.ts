@@ -22,6 +22,7 @@ export type POLine = {
   igst?: number;
   sgst?: number;
   cgst?: number;
+  taxAmount?: number;
 };
 
 export type POAdditionalCharge = {

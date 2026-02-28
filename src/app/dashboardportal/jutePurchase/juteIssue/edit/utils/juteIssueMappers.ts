@@ -35,6 +35,7 @@ export const mapApiLineItemsToEditable = (
     status_id: item.status_id,
     jute_gate_entry_no: item.jute_gate_entry_no,
     branch_mr_no: item.branch_mr_no,
+    mr_num: item.mr_num,
     item_name: item.item_name,
     jute_group_name: item.jute_group_name,
     balqty: undefined, // Will be populated from stock
@@ -101,6 +102,7 @@ export const createLineFromStock = (
     actual_rate: stock.actual_rate || 0,
     issue_value: issueValue,
     branch_mr_no: stock.branch_mr_no,
+    mr_num: stock.mr_num,
     jute_gate_entry_no: stock.jute_gate_entry_no,
     item_name: stock.item_name,
     jute_group_name: stock.jute_group_name,

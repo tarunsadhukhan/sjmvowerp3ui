@@ -3,7 +3,7 @@
 import React from "react";
 import MuiForm, { type Schema, type MuiFormMode } from "@/components/ui/muiform";
 
-type MuiFormHandle = { submit: () => Promise<void>; isDirty: () => boolean };
+type MuiFormHandle = { submit: () => Promise<void>; isDirty: () => boolean; setValue: (name: string, value: unknown) => void };
 
 type IssueHeaderFormProps = {
 	schema: Schema;

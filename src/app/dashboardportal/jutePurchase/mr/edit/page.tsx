@@ -11,6 +11,7 @@ import useSelectedCompanyCoId from "@/hooks/use-selected-company-coid";
 import { MRHeaderForm } from "../components/MRHeaderForm";
 import { MRApprovalBar } from "../components/MRApprovalBar";
 import { MRApprovalDialog } from "../components/MRApprovalDialog";
+import { MRPreview } from "../components/MRPreview";
 import { useMRLineItems } from "../hooks/useMRLineItems";
 import { useMRApproval } from "../hooks/useMRApproval";
 import { MR_STATUS_IDS } from "../utils/mrConstants";
@@ -340,6 +341,7 @@ function JuteMREditPageContent() {
 					actualQualityId: li.actual_item_id,
 					actualQualityName: li.actual_quality_name || "-",
 					actualQty: li.actual_qty,
+					challanWeight: li.challan_weight,
 					actualWeight: li.actual_weight,
 					allowableMoisture: li.allowable_moisture,
 					actualMoisture: actualMoistureNum,
@@ -542,6 +544,13 @@ function JuteMREditPageContent() {
 				) : null
 			}
 			contentClassName="max-w-full"
+			preview={
+				<MRPreview
+					header={header}
+					lineItems={lineItems}
+					totalAcceptedWeight={totalAcceptedWeight}
+				/>
+			}
 			footer={
 				<MRApprovalBar
 					approvalInfo={approvalInfo}

@@ -14,7 +14,7 @@ type UseSalesOrderFormStateReturn = {
 	setFormValues: React.Dispatch<React.SetStateAction<Record<string, unknown>>>;
 	formKey: number;
 	bumpFormKey: () => void;
-	formRef: React.MutableRefObject<{ submit: () => Promise<void>; isDirty: () => boolean } | null>;
+	formRef: React.MutableRefObject<{ submit: () => Promise<void>; isDirty: () => boolean; setValue: (name: string, value: unknown) => void } | null>;
 	handleFormValuesChange: (values: Record<string, unknown>) => void;
 };
 
@@ -34,7 +34,7 @@ export function useSalesOrderFormState({
 		return base;
 	});
 	const [formKey, setFormKey] = React.useState(0);
-	const formRef = React.useRef<{ submit: () => Promise<void>; isDirty: () => boolean } | null>(null);
+	const formRef = React.useRef<{ submit: () => Promise<void>; isDirty: () => boolean; setValue: (name: string, value: unknown) => void } | null>(null);
 	const createDefaultsSeededRef = React.useRef(false);
 
 	const bumpFormKey = React.useCallback(() => setFormKey((prev) => prev + 1), []);

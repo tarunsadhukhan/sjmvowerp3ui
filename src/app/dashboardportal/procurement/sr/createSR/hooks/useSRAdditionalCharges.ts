@@ -202,6 +202,35 @@ export const useSRAdditionalCharges = ({ mode, header }: UseSRAdditionalChargesP
 		);
 	}, [charges]);
 
+	// Recalculate taxes on all charges when state info changes.
+	// Mirrors PO's usePOAdditionalCharges state-change effect.
+	React.useEffect(() => {
+		if (mode === "view") return;
+		const supplierState = header?.supplier_state_name;
+		const shippingState = header?.shipping_state_name || header?.billing_state_name;
+		const indiaGst = header?.india_gst || false;
+
+		setCharges((prev) =>
+			prev.map((charge) => {
+				if (charge.tax_pct <= 0) return charge;
+				const tax = calculateChargeTax(
+					charge.net_amount,
+					charge.tax_pct,
+					supplierState,
+					shippingState,
+					indiaGst,
+				);
+				return {
+					...charge,
+					igst_amount: tax.igst,
+					cgst_amount: tax.cgst,
+					sgst_amount: tax.sgst,
+					tax_amount: tax.total,
+				};
+			})
+		);
+	}, [header?.supplier_state_name, header?.shipping_state_name, header?.billing_state_name, header?.india_gst, mode]);
+
 	return {
 		charges,
 		setCharges,

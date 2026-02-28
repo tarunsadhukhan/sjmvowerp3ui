@@ -101,6 +101,7 @@ const EditableNumberCell: React.FC<{
  */
 type InspectionLineItem = {
 	id: string;
+	po_no_formatted: string;
 	inward_dtl_id: number;
 	item_group_desc: string;
 	item_desc: string;
@@ -213,6 +214,7 @@ function MaterialInspectionEditPageContent() {
 			// Map line items
 			const items: InspectionLineItem[] = (result.line_items || []).map((item: any, index: number) => ({
 				id: item.inward_dtl_id ? String(item.inward_dtl_id) : `line-${index}`,
+				po_no_formatted: item.po_no_formatted ?? "",
 				inward_dtl_id: item.inward_dtl_id ?? 0,
 				item_group_desc: item.item_grp_name ?? item.item_group_desc ?? "",
 				item_desc: item.item_name ?? item.item_desc ?? "",
@@ -322,6 +324,12 @@ function MaterialInspectionEditPageContent() {
 	 * Individual cells manage their own state via EditableTextCell/EditableNumberCell.
 	 */
 	const columns = React.useMemo<GridColDef<InspectionLineItem>[]>(() => [
+		{
+			field: "po_no_formatted",
+			headerName: "PO No.",
+			flex: 1,
+			minWidth: 120,
+		},
 		{
 			field: "item_group_desc",
 			headerName: "Item Group",

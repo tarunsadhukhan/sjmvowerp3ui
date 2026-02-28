@@ -10,7 +10,7 @@ type InwardHeaderFormProps = {
 	formKey: number;
 	initialValues: Record<string, unknown>;
 	mode: MuiFormMode;
-	formRef: React.RefObject<{ submit: () => Promise<void>; isDirty: () => boolean } | null>;
+	formRef: React.RefObject<{ submit: () => Promise<void>; isDirty: () => boolean; setValue: (name: string, value: unknown) => void } | null>;
 	onSubmit: (values: Record<string, unknown>) => void | Promise<void>;
 	onValuesChange: (values: Record<string, unknown>) => void;
 	showPOButton?: boolean;

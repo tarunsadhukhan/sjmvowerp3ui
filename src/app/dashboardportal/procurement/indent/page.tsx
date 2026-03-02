@@ -75,8 +75,12 @@ export default function ProcurementIndentIndexPage() {
 		[router, getMenuId]
 	);
 
+	/** Non-editable statuses — everything else gets the Edit icon */
 	const isRowEditable = React.useCallback(
-		(row: IndentRow) => row.status?.toLowerCase() !== "approved",
+		(row: IndentRow) => {
+			const s = String(row.status ?? "").toLowerCase().trim();
+			return s !== "approved" && s !== "closed";
+		},
 		[]
 	);
 

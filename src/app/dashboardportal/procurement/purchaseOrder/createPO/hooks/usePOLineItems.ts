@@ -309,7 +309,7 @@ export const usePOLineItems = ({
 						const discountMode = item.discountMode;
 						let discountValue = Number(sanitized) || 0;
 
-						// Validation: % must be < 100, PriceDiscount must be < rate
+						// Validation: % must be < 100; amount discount is not capped
 						if (isPercentageDiscountMode(discountMode) && discountValue >= 100) {
 							toast({
 								variant: "destructive",
@@ -317,13 +317,6 @@ export const usePOLineItems = ({
 								description: "Percentage discount must be less than 100%.",
 							});
 							discountValue = 99.99;
-						} else if (isAmountDiscountMode(discountMode) && discountValue >= rate && rate > 0) {
-							toast({
-								variant: "destructive",
-								title: "Invalid discount",
-								description: "Discount amount must be less than the rate.",
-							});
-							discountValue = rate - 0.01;
 						}
 
 						const updated = { ...item, discountValue: String(discountValue === 0 ? sanitized : discountValue) };

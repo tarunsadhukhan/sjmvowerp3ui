@@ -80,8 +80,8 @@ export const OPEN_INDENT_ALLOWED_EXPENSE_IDS = new Set(["3", "5", "6"]);
  * Maps (indent_type, expense_type_name) → validation logic (1 | 2 | 3).
  *
  * Logic 1: Max/Min Quantity Validation (with stock check)
- * Logic 2: Open Entry (FY duplicate check, no quantity cap)
- * Logic 3: No Validation (free entry)
+ * Logic 2: FY Check + max qty as forced value (requires min/max)
+ * Logic 3: No Validation / Free Entry
  */
 const VALIDATION_LOGIC_MAP: Record<string, Record<string, 1 | 2 | 3>> = {
 	Regular: {
@@ -89,19 +89,19 @@ const VALIDATION_LOGIC_MAP: Record<string, Record<string, 1 | 2 | 3>> = {
 		Maintenance: 1,
 		Production: 1,
 		Overhaul: 1,
-		Capital: 3,
+		Capital: 2,
 	},
 	Open: {
-		General: 2,
-		Maintenance: 2,
-		Production: 2,
+		General: 3,
+		Maintenance: 3,
+		Production: 3,
 	},
 	BOM: {
 		General: 1,
 		Maintenance: 1,
 		Production: 1,
-		Capital: 3,
-		Overhaul: 3,
+		Capital: 2,
+		Overhaul: 2,
 	},
 };
 

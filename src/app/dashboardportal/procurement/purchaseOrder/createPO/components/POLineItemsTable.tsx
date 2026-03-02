@@ -3,7 +3,7 @@ import type { MuiFormMode } from "@/components/ui/muiform";
 import { SearchableSelect } from "@/components/ui/transaction";
 import { Input } from "@/components/ui/input";
 import type { TransactionLineColumn } from "@/components/ui/transaction";
-import type { EditableLineItem, Option } from "../types/poTypes";
+import type { EditableLineItem, ItemLastPurchaseInfo, Option } from "../types/poTypes";
 import { DISCOUNT_MODE } from "../utils/poConstants";
 
 /** Discount mode dropdown options */
@@ -22,6 +22,7 @@ type UsePOLineItemColumnsParams = {
   getUomOptions: (groupId: string, itemId: string) => Option[];
   getUomLabel: (groupId: string, itemId: string, uomId: string) => string;
   onFieldChange: (id: string, field: keyof EditableLineItem, value: string | number) => void;
+  getLastPurchaseInfo: (groupId: string, itemId: string) => ItemLastPurchaseInfo | undefined;
 };
 
 /**
@@ -37,6 +38,7 @@ export const usePOLineItemColumns = ({
   getUomOptions,
   getUomLabel,
   onFieldChange,
+  getLastPurchaseInfo,
 }: UsePOLineItemColumnsParams): TransactionLineColumn<EditableLineItem>[] =>
   React.useMemo(
     () => [
@@ -102,19 +104,44 @@ export const usePOLineItemColumns = ({
         header: "Rate",
         width: "0.8fr",
         minWidth: "80px",
-        renderCell: ({ item }) =>
-          canEdit ? (
-            <Input
-              type="text"
-              value={item.rate}
-              onChange={(e) => onFieldChange(item.id, "rate", e.target.value)}
-              placeholder="0.00"
-              className="h-8 text-sm"
-            />
-          ) : (
-            <span className="block truncate text-sm">{item.rate || "-"}</span>
-          ),
-        getTooltip: ({ item }) => (item.rate ? `Rate: ${item.rate}` : undefined),
+        renderCell: ({ item }) => {
+          const lastPurchase = item.item ? getLastPurchaseInfo(item.itemGroup, item.item) : undefined;
+          if (!canEdit) {
+            return (
+              <div className="flex flex-col gap-0.5 w-full">
+                <span className="block truncate text-sm">{item.rate || "-"}</span>
+                {lastPurchase && (
+                  <p className="text-xs text-muted-foreground leading-tight" title={`Last purchased from ${lastPurchase.supplierName ?? "N/A"} on ${lastPurchase.date ?? "N/A"}`}>
+                    Prev: {lastPurchase.rate.toFixed(2)}
+                  </p>
+                )}
+              </div>
+            );
+          }
+          return (
+            <div className="flex flex-col gap-0.5 w-full">
+              <Input
+                type="text"
+                value={item.rate}
+                onChange={(e) => onFieldChange(item.id, "rate", e.target.value)}
+                placeholder="0.00"
+                className="h-8 text-sm"
+              />
+              {lastPurchase && (
+                <p className="text-xs text-muted-foreground leading-tight" title={`Last purchased from ${lastPurchase.supplierName ?? "N/A"} on ${lastPurchase.date ?? "N/A"}`}>
+                  Prev: {lastPurchase.rate.toFixed(2)}
+                </p>
+              )}
+            </div>
+          );
+        },
+        getTooltip: ({ item }) => {
+          const lastPurchase = item.item ? getLastPurchaseInfo(item.itemGroup, item.item) : undefined;
+          const parts: string[] = [];
+          if (item.rate) parts.push(`Rate: ${item.rate}`);
+          if (lastPurchase) parts.push(`Last: ${lastPurchase.rate.toFixed(2)} from ${lastPurchase.supplierName ?? "N/A"} on ${lastPurchase.date ?? "N/A"}`);
+          return parts.length ? parts.join("\n") : undefined;
+        },
       },
       {
         id: "quantity",
@@ -246,6 +273,19 @@ export const usePOLineItemColumns = ({
         getTooltip: ({ item }) => (item.discountAmount ? `Discount Amount: ${item.discountAmount.toFixed(2)}` : undefined),
       },
       {
+        id: "taxPercentage",
+        header: "Tax%",
+        width: "0.6fr",
+        minWidth: "65px",
+        renderCell: ({ item }) => (
+          <span className="block truncate text-sm">
+            {item.taxPercentage != null ? `${item.taxPercentage}%` : "-"}
+          </span>
+        ),
+        getTooltip: ({ item }) =>
+          item.taxPercentage != null ? `Tax: ${item.taxPercentage}%` : undefined,
+      },
+      {
         id: "amount",
         header: "Amount",
         width: "0.8fr",
@@ -254,7 +294,7 @@ export const usePOLineItemColumns = ({
         getTooltip: ({ item }) => (item.amount ? `Amount: ${item.amount.toFixed(2)}` : undefined),
       },
     ],
-    [canEdit, itemGroupOptions, getItemGroupLabel, getItemOptions, getItemLabel, getUomOptions, getUomLabel, onFieldChange],
+    [canEdit, itemGroupOptions, getItemGroupLabel, getItemOptions, getItemLabel, getUomOptions, getUomLabel, onFieldChange, getLastPurchaseInfo],
   );
 
 /**

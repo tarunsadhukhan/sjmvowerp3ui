@@ -19,22 +19,22 @@ describe("getValidationLogic", () => {
 		expect(getValidationLogic("Regular", "Overhaul")).toBe(1);
 	});
 
-	// ── Logic 3: Regular + Capital ──
-	it("Regular + Capital → 3", () => {
-		expect(getValidationLogic("Regular", "Capital")).toBe(3);
+	// ── Logic 2: Regular + Capital ──
+	it("Regular + Capital → 2", () => {
+		expect(getValidationLogic("Regular", "Capital")).toBe(2);
 	});
 
-	// ── Logic 2: Open type ──
-	it("Open + General → 2", () => {
-		expect(getValidationLogic("Open", "General")).toBe(2);
+	// ── Logic 3: Open type (free entry) ──
+	it("Open + General → 3", () => {
+		expect(getValidationLogic("Open", "General")).toBe(3);
 	});
 
-	it("Open + Maintenance → 2", () => {
-		expect(getValidationLogic("Open", "Maintenance")).toBe(2);
+	it("Open + Maintenance → 3", () => {
+		expect(getValidationLogic("Open", "Maintenance")).toBe(3);
 	});
 
-	it("Open + Production → 2", () => {
-		expect(getValidationLogic("Open", "Production")).toBe(2);
+	it("Open + Production → 3", () => {
+		expect(getValidationLogic("Open", "Production")).toBe(3);
 	});
 
 	// ── Logic 1: BOM + General/Maintenance/Production ──
@@ -50,13 +50,13 @@ describe("getValidationLogic", () => {
 		expect(getValidationLogic("BOM", "Production")).toBe(1);
 	});
 
-	// ── Logic 3: BOM + Capital/Overhaul ──
-	it("BOM + Capital → 3", () => {
-		expect(getValidationLogic("BOM", "Capital")).toBe(3);
+	// ── Logic 2: BOM + Capital/Overhaul ──
+	it("BOM + Capital → 2", () => {
+		expect(getValidationLogic("BOM", "Capital")).toBe(2);
 	});
 
-	it("BOM + Overhaul → 3", () => {
-		expect(getValidationLogic("BOM", "Overhaul")).toBe(3);
+	it("BOM + Overhaul → 2", () => {
+		expect(getValidationLogic("BOM", "Overhaul")).toBe(2);
 	});
 
 	// ── Edge cases ──

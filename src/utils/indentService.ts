@@ -260,6 +260,7 @@ export async function updateIndent(payload: Partial<IndentDetails>): Promise<{ m
 
   // Map frontend payload to backend format
   const items = (payload.lines ?? []).map((line) => ({
+    indent_dtl_id: line.id || undefined,
     item: line.item ?? "",
     quantity: line.quantity ?? 0,
     uom: line.uom ?? "",

@@ -37,10 +37,15 @@ export default function ApprovalLevelsTable({
   data,
   onChange,
 }: ApprovalLevelsTableProps) {
-  // Normalize rows: ensure at least one row exists
+  // Normalize rows: ensure at least one row exists and a blank next-level
+  // row is always available when the last level has users selected
   const rows = useMemo(() => {
     if (data.length === 0) {
       return [createEmptyRow(1)];
+    }
+    const lastRow = data[data.length - 1];
+    if (lastRow.users.length > 0) {
+      return [...data, createEmptyRow(lastRow.level + 1)];
     }
     return data;
   }, [data]);

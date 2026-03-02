@@ -20,6 +20,8 @@ type UseIndentLineItemColumnsParams = {
 	getQuantityError?: (lineId: string, quantity: string) => string | null;
 	/** Returns non-blocking warning strings for a given line */
 	getLineWarnings?: (lineId: string) => string[];
+	/** All line items — used to prevent duplicate item selection */
+	lineItems?: readonly EditableLineItem[];
 };
 
 /** Build a hint string from validation result (Min / Max / Reorder). */
@@ -87,6 +89,7 @@ export const useIndentLineItemColumns = ({
 	validationMap,
 	getQuantityError,
 	getLineWarnings,
+	lineItems,
 }: UseIndentLineItemColumnsParams): TransactionLineColumn<EditableLineItem>[] => {
 	const adjustTextareaHeight = React.useCallback((event: React.FormEvent<HTMLTextAreaElement>) => {
 		const element = event.currentTarget;
@@ -180,9 +183,18 @@ export const useIndentLineItemColumns = ({
 						);
 					}
 
-					const options = getItemOptions(item.itemGroup);
+					const allOptions = getItemOptions(item.itemGroup);
+					// Filter out items already selected in other lines
+					const selectedItemIds = new Set(
+						(lineItems ?? [])
+							.filter((li) => li.id !== item.id && li.item)
+							.map((li) => li.item)
+					);
+					const options = allOptions.filter(
+						(opt) => opt.value === item.item || !selectedItemIds.has(opt.value)
+					);
 					const value = options.find((option) => option.value === item.item) ?? null;
-					const waitingForGroup = Boolean(item.itemGroup) && !options.length && itemGroupLoading[item.itemGroup];
+					const waitingForGroup = Boolean(item.itemGroup) && !allOptions.length && itemGroupLoading[item.itemGroup];
 
 					return (
 						<div className="flex flex-col gap-0.5 w-full">
@@ -382,6 +394,7 @@ export const useIndentLineItemColumns = ({
 			itemGroupOptions,
 			labelResolvers,
 			itemGroupLoading,
+			lineItems,
 			validationMap,
 			getQuantityError,
 			getLineWarnings,

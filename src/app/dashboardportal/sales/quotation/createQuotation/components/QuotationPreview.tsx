@@ -3,6 +3,7 @@
 import React, { useRef } from "react";
 import { Box, Divider, Stack, Typography } from "@mui/material";
 import { Button } from "@/components/ui/button";
+import { openStyledPrintWindow } from "@/utils/printUtils";
 
 export type QuotationPreviewHeader = {
 	quotationNo?: string;
@@ -115,32 +116,10 @@ const QuotationPreview: React.FC<QuotationPreviewProps> = ({ header, items, tota
 
 	const buildPrintableWindow = (titleSuffix: string) => {
 		const printContent = previewRef.current?.innerHTML || "";
-		const printWindow = window.open("", "_blank");
-		if (!printWindow) {
-			alert("Please allow popups to continue.");
-			return null;
-		}
-
-		printWindow.document.open();
-		printWindow.document.write(`<!DOCTYPE html><html><head><title>Sales Quotation - ${titleSuffix}</title></head><body><div id="print-root"></div></body></html>`);
-		printWindow.document.close();
-
-		const styleNodes = document.querySelectorAll("style, link[rel=\"stylesheet\"]");
-		styleNodes.forEach((node) => {
-			printWindow.document.head.appendChild(node.cloneNode(true));
-		});
-
-		const helperStyle = printWindow.document.createElement("style");
-		helperStyle.textContent = `
-			@media print { @page { margin: 12mm; } }
-			body { margin: 0; padding: 20px; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
-			table { width: 100%; border-collapse: collapse; }
-		`;
-		printWindow.document.head.appendChild(helperStyle);
-
-		const root = printWindow.document.getElementById("print-root");
-		if (root) root.innerHTML = printContent;
-		return printWindow;
+		return openStyledPrintWindow(
+			printContent,
+			`Sales Quotation - ${titleSuffix}`
+		);
 	};
 
 	const handlePrint = () => {

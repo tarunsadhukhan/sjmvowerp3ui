@@ -88,17 +88,17 @@ export const useIndentApproval = ({
 
 			// Cancelled (6)
 			if (status === INDENT_STATUS_IDS.CANCELLED) {
-				return { canReopen: true, canClone: true, canViewApprovalLog: true };
+				return { canSave: true, canReopen: true, canClone: true, canViewApprovalLog: true };
 			}
 
-			// Open (1) - Show Approve button (backend handles transition)
+			// Open (1) - Do NOT grant canApprove without backend permission check
 			if (status === INDENT_STATUS_IDS.OPEN) {
-				return { canSave: true, canApprove: true };
+				return { canSave: true, canViewApprovalLog: true };
 			}
 
 			// Pending Approval (20)
 			if (status === INDENT_STATUS_IDS.PENDING_APPROVAL) {
-				return { canViewApprovalLog: true };
+				return { canSave: true, canViewApprovalLog: true };
 			}
 
 			// Approved (3)
@@ -108,7 +108,7 @@ export const useIndentApproval = ({
 
 			// Rejected (4)
 			if (status === INDENT_STATUS_IDS.REJECTED) {
-				return { canReopen: true, canClone: true, canViewApprovalLog: true };
+				return { canSave: true, canReopen: true, canClone: true, canViewApprovalLog: true };
 			}
 
 			// Closed (5)

@@ -1,7 +1,7 @@
 "use client";
 
 import React, { Suspense } from "react";
-import { useRouter, useSearchParams, usePathname } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import TransactionWrapper, { type TransactionAction } from "@/components/ui/TransactionWrapper";
 import IndentPreview from "../components/IndentPreview";
 import {
@@ -21,7 +21,7 @@ import {
 } from "@/utils/indentService";
 import { toast } from "@/hooks/use-toast";
 import useSelectedCompanyCoId from "@/hooks/use-selected-company-coid";
-import { useSidebarContext } from "@/components/dashboard/sidebarContext";
+import { useMenuId } from "@/hooks/useMenuId";
 import type { MuiFormMode } from "@/components/ui/muiform";
 
 // Types
@@ -74,8 +74,6 @@ export default function IndentTransactionPage() {
 function IndentTransactionPageContent() {
 	const router = useRouter();
 	const searchParams = useSearchParams();
-	const pathname = usePathname();
-
 	const modeParam = (searchParams?.get("mode") || "create").toLowerCase();
 	const requestedId = searchParams?.get("id") || "";
 	const menuIdFromUrl = searchParams?.get("menu_id") || "";
@@ -84,64 +82,9 @@ function IndentTransactionPageContent() {
 
 	const branchOptions = useBranchOptions();
 	const { coId } = useSelectedCompanyCoId();
-	const { availableMenus, menuItems: sidebarMenuItems } = useSidebarContext();
 
-	// Get menu_id from URL, or lookup from menuItems based on current path
-	const getMenuId = React.useCallback((): string => {
-		if (menuIdFromUrl) return menuIdFromUrl;
-
-		if (availableMenus && availableMenus.length > 0) {
-			const currentPath = pathname?.toLowerCase() || "";
-
-			// First, try exact path match
-			const matchingMenu = availableMenus.find((item) => {
-				if (!item.menu_path) return false;
-				const menuPath = item.menu_path.toLowerCase();
-				return currentPath === menuPath || currentPath.startsWith(menuPath + "/");
-			});
-			if (matchingMenu?.menu_id) return String(matchingMenu.menu_id);
-
-			// Second, try to find by "indent" in path or name
-			const indentMenu = availableMenus.find((item) => {
-				const path = (item.menu_path || "").toLowerCase();
-				const name = (item.menu_name || "").toLowerCase();
-				return path.includes("indent") || path.includes("/procurement/indent") || name.includes("indent");
-			});
-			if (indentMenu?.menu_id) return String(indentMenu.menu_id);
-		}
-
-		// Fallback to sidebarMenuItems
-		if (sidebarMenuItems && sidebarMenuItems.length > 0) {
-			const indentMenu = sidebarMenuItems.find((item) => {
-				const path = (item.menu_path || "").toLowerCase();
-				const name = (item.menu_name || "").toLowerCase();
-				return path.includes("indent") || path.includes("/procurement/indent") || name.includes("indent");
-			});
-			if (indentMenu?.menu_id) return String(indentMenu.menu_id);
-		}
-
-		// Try localStorage
-		if (typeof window !== "undefined" && pathname) {
-			try {
-				const storedMenuItems = localStorage.getItem("sidebar_menuItems");
-				if (storedMenuItems) {
-					const menuItems = JSON.parse(storedMenuItems) as Array<{ menu_id?: number; menu_path?: string; menu_name?: string }> | null;
-					if (Array.isArray(menuItems)) {
-						const indentMenu = menuItems.find((item) => {
-							const path = (item.menu_path || "").toLowerCase();
-							const name = (item.menu_name || "").toLowerCase();
-							return path.includes("indent") || path.includes("/procurement/indent") || name.includes("indent");
-						});
-						if (indentMenu?.menu_id) return String(indentMenu.menu_id);
-					}
-				}
-			} catch {
-				// Ignore errors
-			}
-		}
-
-		return "";
-	}, [menuIdFromUrl, pathname, availableMenus, sidebarMenuItems]);
+	// Resolve menu_id via centralized hook
+	const { getMenuId } = useMenuId({ transactionType: "indent", menuIdFromUrl });
 
 	// Form state hook
 	const { initialValues, setInitialValues, formValues, setFormValues, formKey, bumpFormKey, formRef } = useIndentFormState({ mode });
@@ -151,6 +94,7 @@ function IndentTransactionPageContent() {
 	const [loading, setLoading] = React.useState<boolean>(mode !== "create");
 	const [saving, setSaving] = React.useState(false);
 	const [pageError, setPageError] = React.useState<string | null>(null);
+	const [saveError, setSaveError] = React.useState<string | null>(null);
 
 	// ── Template reuse state ───────────────────────────────────────────
 	/** Name of the indent title currently used as template source (null if none) */
@@ -359,9 +303,10 @@ function IndentTransactionPageContent() {
 		indentType: String(formValues.indent_type ?? ""),
 		expenseTypeName: resolvedExpenseTypeName,
 		expenseTypeId: String(formValues.expense_type ?? ""),
+		indentId: requestedId || undefined,
 	});
 
-	// Wrap line field changes to trigger validation on item selection
+	// Wrap line field changes to trigger validation on item selection or qty change
 	const handleLineFieldChangeWithValidation = React.useCallback(
 		(id: string, field: keyof EditableLineItem, rawValue: string) => {
 			handleLineFieldChange(id, field, rawValue);
@@ -374,6 +319,14 @@ function IndentTransactionPageContent() {
 			if (field === "itemGroup") {
 				clearLineValidation(id);
 			}
+			// When quantity changes, ensure validation data exists for the line
+			// (handles pre-loaded edit lines that haven't been validated yet)
+			if (field === "quantity") {
+				const lineItem = lineItems.find((li) => li.id === id);
+				if (lineItem?.item && !validationMap[id]) {
+					void validateLine(id, lineItem.item);
+				}
+			}
 
 			// If user modifies a line while a template is active, prompt for rename
 			if (templateSourceName && ["itemGroup", "item", "quantity", "uom", "department", "itemMake"].includes(field)) {
@@ -381,7 +334,7 @@ function IndentTransactionPageContent() {
 				setShowRenameDialog(true);
 			}
 		},
-		[handleLineFieldChange, validateLine, clearLineValidation, templateSourceName]
+		[handleLineFieldChange, validateLine, clearLineValidation, templateSourceName, lineItems, validationMap]
 	);
 
 	// ── Template reuse handlers ────────────────────────────────────────
@@ -564,6 +517,19 @@ function IndentTransactionPageContent() {
 		lineItems,
 	});
 
+	// Auto-validate pre-loaded lines in edit mode so users see qty constraints immediately
+	const editValidationTriggeredRef = React.useRef(false);
+	React.useEffect(() => {
+		if (mode !== "edit" || loading || editValidationTriggeredRef.current) return;
+		if (!lineItems.length || !headerFieldsComplete) return;
+		editValidationTriggeredRef.current = true;
+		for (const li of lineItems) {
+			if (li.item) {
+				void validateLine(li.id, li.item);
+			}
+		}
+	}, [mode, loading, lineItems, headerFieldsComplete, validateLine]);
+
 	// Auto-fill forcedQty from validation result (Logic 2 — Open indent: qty = maxqty)
 	React.useEffect(() => {
 		if (mode === "view") return;
@@ -696,11 +662,7 @@ function IndentTransactionPageContent() {
 					}
 				}
 			} catch (error) {
-				toast({
-					variant: "destructive",
-					title: "Unable to save indent",
-					description: error instanceof Error ? error.message : "Please try again.",
-				});
+				setSaveError(error instanceof Error ? error.message : "An unexpected error occurred. Please try again.");
 			} finally {
 				setSaving(false);
 			}
@@ -1017,6 +979,21 @@ function IndentTransactionPageContent() {
 						disabled={!renameInputValue.trim() || renameInputValue.trim() === templateSourceName}
 					>
 						Save indent name
+					</Button>
+				</DialogFooter>
+			</DialogContent>
+		</Dialog>
+
+		{/* ── Save Error Dialog ──────────────────────────────────────── */}
+		<Dialog open={saveError !== null} onOpenChange={(open) => { if (!open) setSaveError(null); }}>
+			<DialogContent className="sm:max-w-md">
+				<DialogHeader>
+					<DialogTitle>Unable to save indent</DialogTitle>
+					<DialogDescription>{saveError}</DialogDescription>
+				</DialogHeader>
+				<DialogFooter>
+					<Button variant="outline" onClick={() => setSaveError(null)}>
+						Close
 					</Button>
 				</DialogFooter>
 			</DialogContent>

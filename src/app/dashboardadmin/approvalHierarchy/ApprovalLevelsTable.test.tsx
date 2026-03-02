@@ -153,16 +153,20 @@ describe("ApprovalLevelsTable", () => {
     );
 
     // Find and click delete button for first row
+    // (3 rows rendered: Level 1, Level 2, blank Level 3)
     const deleteButtons = screen.getAllByRole("button", { name: /remove level/i });
     fireEvent.click(deleteButtons[0]);
 
     // Check that onChange was called with row removed and levels renumbered
+    // Remaining: Level 1 (former Level 2 with users) + trailing blank Level 2
     expect(onChange).toHaveBeenCalled();
     const lastCall = onChange.mock.calls[onChange.mock.calls.length - 1][0];
-    
-    expect(lastCall).toHaveLength(1);
+
+    expect(lastCall).toHaveLength(2);
     expect(lastCall[0].level).toBe(1);
     expect(lastCall[0].users).toContain("2");
+    expect(lastCall[1].level).toBe(2);
+    expect(lastCall[1].users).toHaveLength(0);
   });
 
   it("should clear row instead of delete when only one row with data exists", () => {
@@ -177,14 +181,15 @@ describe("ApprovalLevelsTable", () => {
       />
     );
 
-    // Find and click delete button
-    const deleteButton = screen.getByRole("button", { name: /remove level/i });
-    fireEvent.click(deleteButton);
+    // 2 rows rendered: Level 1 (with user) + blank Level 2
+    // Delete Level 1 → remaining blank Level 2 gets renumbered to Level 1
+    const deleteButtons = screen.getAllByRole("button", { name: /remove level/i });
+    fireEvent.click(deleteButtons[0]);
 
-    // Check that onChange was called with cleared row
+    // Check that onChange was called with the remaining empty row renumbered
     expect(onChange).toHaveBeenCalled();
     const lastCall = onChange.mock.calls[onChange.mock.calls.length - 1][0];
-    
+
     expect(lastCall).toHaveLength(1);
     expect(lastCall[0].level).toBe(1);
     expect(lastCall[0].users).toHaveLength(0);

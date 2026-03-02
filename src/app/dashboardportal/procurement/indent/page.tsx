@@ -7,7 +7,7 @@ import { fetchWithCookie } from "@/utils/apiClient2";
 import { apiRoutesPortalMasters } from "@/utils/api";
 import IndexWrapper from "@/components/ui/IndexWrapper";
 import { useRouter } from "next/navigation";
-import { createStatusBasedEditCheck } from "@/utils/editability";
+import { useMenuId } from "@/hooks/useMenuId";
 
 type IndentRow = {
 	id: string | number;
@@ -45,6 +45,7 @@ const formatDate = (value?: string) => {
 
 export default function ProcurementIndentIndexPage() {
 	const router = useRouter();
+	const { getMenuId } = useMenuId({ transactionType: "indent" });
 	const [rows, setRows] = React.useState<IndentRow[]>([]);
 	const [totalRows, setTotalRows] = React.useState(0);
 	const [loading, setLoading] = React.useState(false);
@@ -56,26 +57,26 @@ export default function ProcurementIndentIndexPage() {
 		(row: IndentRow) => {
 			const id = row.id ?? row.indent_no;
 			if (!id) return;
-			router.push(`/dashboardportal/procurement/indent/createIndent?mode=view&id=${encodeURIComponent(String(id))}`);
+			const menuId = getMenuId();
+			const menuParam = menuId ? `&menu_id=${encodeURIComponent(menuId)}` : "";
+			router.push(`/dashboardportal/procurement/indent/createIndent?mode=view&id=${encodeURIComponent(String(id))}${menuParam}`);
 		},
-		[router]
+		[router, getMenuId]
 	);
 
 	const handleEdit = React.useCallback(
 		(row: IndentRow) => {
 			const id = row.id ?? row.indent_no;
 			if (!id) return;
-			router.push(`/dashboardportal/procurement/indent/createIndent?mode=edit&id=${encodeURIComponent(String(id))}`);
+			const menuId = getMenuId();
+			const menuParam = menuId ? `&menu_id=${encodeURIComponent(menuId)}` : "";
+			router.push(`/dashboardportal/procurement/indent/createIndent?mode=edit&id=${encodeURIComponent(String(id))}${menuParam}`);
 		},
-		[router]
+		[router, getMenuId]
 	);
 
-	const isRowEditable = React.useMemo(
-		() => createStatusBasedEditCheck<IndentRow>({
-			statusField: "status",
-			editableStatuses: ["Draft", "Open", "Rejected", "Cancelled", "Pending"],
-			caseInsensitive: true,
-		}),
+	const isRowEditable = React.useCallback(
+		(row: IndentRow) => row.status?.toLowerCase() !== "approved",
 		[]
 	);
 
@@ -197,8 +198,10 @@ export default function ProcurementIndentIndexPage() {
 	}, []);
 
 	const handleCreateIndent = React.useCallback(() => {
-		router.push("/dashboardportal/procurement/indent/createIndent");
-	}, [router]);
+		const menuId = getMenuId();
+		const menuParam = menuId ? `?menu_id=${encodeURIComponent(menuId)}` : "";
+		router.push(`/dashboardportal/procurement/indent/createIndent${menuParam}`);
+	}, [router, getMenuId]);
 
 	return (
 		<IndexWrapper

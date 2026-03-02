@@ -10,6 +10,7 @@ type UseIndentItemValidationParams = {
 	indentType: string;
 	expenseTypeName: string | undefined;
 	expenseTypeId: string;
+	indentId?: string;
 };
 
 /**
@@ -24,6 +25,7 @@ export function useIndentItemValidation({
 	indentType,
 	expenseTypeName,
 	expenseTypeId,
+	indentId,
 }: UseIndentItemValidationParams) {
 	const [validationMap, setValidationMap] = React.useState<ValidationMap>({});
 
@@ -74,6 +76,7 @@ export function useIndentItemValidation({
 					itemId,
 					indentType,
 					expenseTypeId,
+					indentId,
 				});
 
 				const mapped: ItemValidationResult = {
@@ -108,7 +111,7 @@ export function useIndentItemValidation({
 				}));
 			}
 		},
-		[currentLogic, branchId, indentType, expenseTypeId, clearLine]
+		[currentLogic, branchId, indentType, expenseTypeId, indentId, clearLine]
 	);
 
 	/**

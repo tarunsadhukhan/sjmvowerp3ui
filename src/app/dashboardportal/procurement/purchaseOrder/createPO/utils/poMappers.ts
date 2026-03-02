@@ -6,6 +6,7 @@ import type {
 	ItemGroupCacheEntry,
 	ItemGroupRecord,
 	ItemGroupRecordRaw,
+	ItemLastPurchaseInfo,
 	ItemOption,
 	ItemOptionRaw,
 	ItemUomOptionRaw,
@@ -239,6 +240,9 @@ export const mapItemGroupDetailResponse = (response: unknown): ItemGroupCacheEnt
 				defaultUomLabel: data?.uom_name ? String(data.uom_name) : undefined,
 				defaultRate: data?.rate != null ? Number(data.rate) : undefined,
 				taxPercentage: data?.tax_percentage != null ? Number(data.tax_percentage) : undefined,
+				lastPurchaseRate: data?.last_purchase_rate != null ? Number(data.last_purchase_rate) : undefined,
+				lastPurchaseDate: data?.last_purchase_date ?? undefined,
+				lastSupplierName: data?.last_supplier_name ?? undefined,
 			};
 		})
 		.filter(Boolean) as ItemOption[];
@@ -256,6 +260,7 @@ export const mapItemGroupDetailResponse = (response: unknown): ItemGroupCacheEnt
 	const uomLabelByItemId: Record<string, Record<string, string>> = {};
 	const itemRateById: Record<string, number> = {};
 	const itemTaxById: Record<string, number> = {};
+	const itemLastPurchaseById: Record<string, ItemLastPurchaseInfo> = {};
 
 	uomsRaw.forEach((row) => {
 		const data = row as ItemUomOptionRaw;
@@ -289,6 +294,13 @@ export const mapItemGroupDetailResponse = (response: unknown): ItemGroupCacheEnt
 		if (item.taxPercentage != null) {
 			itemTaxById[item.value] = item.taxPercentage;
 		}
+		if (item.lastPurchaseRate != null) {
+			itemLastPurchaseById[item.value] = {
+				rate: item.lastPurchaseRate,
+				date: item.lastPurchaseDate ?? null,
+				supplierName: item.lastSupplierName ?? null,
+			};
+		}
 	});
 
 	const itemLabelById: Record<string, string> = {};
@@ -311,6 +323,7 @@ export const mapItemGroupDetailResponse = (response: unknown): ItemGroupCacheEnt
 		uomLabelByItemId,
 		itemRateById,
 		itemTaxById,
+		itemLastPurchaseById,
 	};
 };
 

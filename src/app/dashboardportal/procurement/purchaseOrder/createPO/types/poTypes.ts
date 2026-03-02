@@ -215,11 +215,20 @@ export type ItemOption = Option & {
 	defaultUomLabel?: string;
 	defaultRate?: number;
 	taxPercentage?: number;
+	lastPurchaseRate?: number;
+	lastPurchaseDate?: string;
+	lastSupplierName?: string;
 };
 
 /**
  * Cached metadata for an item group to avoid redundant network calls.
  */
+export type ItemLastPurchaseInfo = {
+	rate: number;
+	date: string | null;
+	supplierName: string | null;
+};
+
 export type ItemGroupCacheEntry = {
 	groupLabel?: string;
 	items: ItemOption[];
@@ -230,6 +239,7 @@ export type ItemGroupCacheEntry = {
 	uomLabelByItemId: Record<string, Record<string, string>>;
 	itemRateById: Record<string, number>;
 	itemTaxById: Record<string, number>;
+	itemLastPurchaseById: Record<string, ItemLastPurchaseInfo>;
 };
 
 /**
@@ -360,6 +370,9 @@ export type ItemOptionRaw = {
 	uom_name?: string | null;
 	rate?: number | string | null;
 	tax_percentage?: number | string | null;
+	last_purchase_rate?: number | string | null;
+	last_purchase_date?: string | null;
+	last_supplier_name?: string | null;
 };
 
 /**

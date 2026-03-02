@@ -14,6 +14,8 @@ import type { BranchAddressRecord, EditableLineItem, POAdditionalCharge } from "
   requestedId: string;
   /** Function to get charges to save (filters incomplete charges) */
   getChargesToSave?: () => POAdditionalCharge[];
+  /** Shared form values from both header and footer forms */
+  formValues: Record<string, unknown>;
 };
 
 /**
@@ -28,6 +30,7 @@ export const usePOFormSubmission = ({
   isLineItemsReady,
   requestedId,
   getChargesToSave,
+  formValues,
 }: UsePOFormSubmissionParams) => {
   const [saving, setSaving] = React.useState(false);
   const router = useRouter();
@@ -36,8 +39,12 @@ export const usePOFormSubmission = ({
     async (values: Record<string, unknown>) => {
       if (mode === "view" || pageError || setupError) return;
 
-      const billingId = String(values.billing_address ?? "");
-      const shippingId = String(values.shipping_address ?? "");
+      // Merge footer form values with header form values.
+      // Header values (from the submitted form) take priority for overlapping fields.
+      const merged = { ...formValues, ...values };
+
+      const billingId = String(merged.billing_address ?? "");
+      const shippingId = String(merged.shipping_address ?? "");
       const billingAddr = branchAddresses.find((a) => a.id === billingId);
       const shippingAddr = branchAddresses.find((a) => a.id === shippingId);
 
@@ -83,24 +90,24 @@ export const usePOFormSubmission = ({
         : undefined;
 
       const createPayload: SavePORequest = {
-        branch: String(values.branch ?? ""),
-        date: String(values.date ?? ""),
-        supplier: String(values.supplier ?? ""),
-        supplier_branch: String(values.supplier_branch ?? ""),
-        billing_address: String(values.billing_address ?? ""),
-        shipping_address: String(values.shipping_address ?? ""),
-        tax_payable: String(values.tax_payable ?? "Yes"),
-        credit_term: values.credit_term ? Number(values.credit_term) : undefined,
-        delivery_timeline: Number(values.delivery_timeline ?? 0),
-        project: String(values.project ?? ""),
-        expense_type: String(values.expense_type ?? ""),
-        po_type: values.po_type ? String(values.po_type) : undefined,
-        contact_person: values.contact_person ? String(values.contact_person) : undefined,
-        contact_no: values.contact_no ? String(values.contact_no) : undefined,
-        footer_note: values.footer_note ? String(values.footer_note) : undefined,
-        internal_note: values.internal_note ? String(values.internal_note) : undefined,
-        terms_conditions: values.terms_conditions ? String(values.terms_conditions) : undefined,
-        advance_percentage: values.advance_percentage ? Number(values.advance_percentage) : undefined,
+        branch: String(merged.branch ?? ""),
+        date: String(merged.date ?? ""),
+        supplier: String(merged.supplier ?? ""),
+        supplier_branch: String(merged.supplier_branch ?? ""),
+        billing_address: String(merged.billing_address ?? ""),
+        shipping_address: String(merged.shipping_address ?? ""),
+        tax_payable: String(merged.tax_payable ?? "Yes"),
+        credit_term: merged.credit_term ? Number(merged.credit_term) : undefined,
+        delivery_timeline: Number(merged.delivery_timeline ?? 0),
+        project: String(merged.project ?? ""),
+        expense_type: String(merged.expense_type ?? ""),
+        po_type: merged.po_type ? String(merged.po_type) : undefined,
+        contact_person: merged.contact_person ? String(merged.contact_person) : undefined,
+        contact_no: merged.contact_no ? String(merged.contact_no) : undefined,
+        footer_note: merged.footer_note ? String(merged.footer_note) : undefined,
+        internal_note: merged.internal_note ? String(merged.internal_note) : undefined,
+        terms_conditions: merged.terms_conditions ? String(merged.terms_conditions) : undefined,
+        advance_percentage: merged.advance_percentage ? Number(merged.advance_percentage) : undefined,
         items: itemsPayload,
         additional_charges: chargesPayload && chargesPayload.length > 0 ? chargesPayload : undefined,
       };
@@ -134,6 +141,7 @@ export const usePOFormSubmission = ({
       requestedId,
       router,
       getChargesToSave,
+      formValues,
     ],
   );
 

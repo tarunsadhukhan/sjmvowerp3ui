@@ -50,6 +50,7 @@ type IndentLineItemsDialogProps = {
   onConfirm: (selectedItems: IndentLineItem[]) => void;
   branchId?: number | string;
   coId?: number | string;
+  poDate?: string;
 };
 
 export function IndentLineItemsDialog({
@@ -58,6 +59,7 @@ export function IndentLineItemsDialog({
   onConfirm,
   branchId,
   coId,
+  poDate,
 }: IndentLineItemsDialogProps) {
   const [selectedIndent, setSelectedIndent] = React.useState<ApprovedIndent | null>(null);
   const [approvedIndents, setApprovedIndents] = React.useState<ApprovedIndent[]>([]);
@@ -75,8 +77,12 @@ export function IndentLineItemsDialog({
       const branchIdNum = typeof branchId === "string" ? Number(branchId) : branchId;
       const coIdNum = coId ? (typeof coId === "string" ? Number(coId) : coId) : undefined;
       const response = await getAllApprovedIndents(branchIdNum, coIdNum);
-      setApprovedIndents(response.data || []);
-      const options: Option[] = (response.data || []).map((indent) => ({
+      const indents = (response.data || []).filter((indent) => {
+        if (!poDate) return true;
+        return indent.indent_date <= poDate;
+      });
+      setApprovedIndents(indents);
+      const options: Option[] = indents.map((indent) => ({
         label: `${indent.indent_no} - ${indent.branch_name} (${indent.indent_date})`,
         value: String(indent.indent_id),
       }));
@@ -86,7 +92,7 @@ export function IndentLineItemsDialog({
     } finally {
       setLoadingIndents(false);
     }
-  }, [branchId, coId]);
+  }, [branchId, coId, poDate]);
 
   // Load approved indents when dialog opens
   React.useEffect(() => {

@@ -88,12 +88,12 @@ export const usePOApproval = ({ mode, requestedId, formValues, poDetails, coId, 
       // Default permissions without backend-provided approval access
       // Note: canApprove/canReject are NOT granted by default - they require backend permission check
       if (status === PO_STATUS_IDS.DRAFT) return { canSave: true, canOpen: true, canCancelDraft: true };
-      if (status === PO_STATUS_IDS.CANCELLED) return { canReopen: true, canClone: true, canViewApprovalLog: true };
+      if (status === PO_STATUS_IDS.CANCELLED) return { canSave: true, canReopen: true, canClone: true, canViewApprovalLog: true };
       // Open status: allow save but NOT approve without backend permission
       if (status === PO_STATUS_IDS.OPEN) return { canSave: true, canViewApprovalLog: true };
-      if (status === PO_STATUS_IDS.PENDING_APPROVAL) return { canViewApprovalLog: true };
+      if (status === PO_STATUS_IDS.PENDING_APPROVAL) return { canSave: true, canViewApprovalLog: true };
       if (status === PO_STATUS_IDS.APPROVED) return { canViewApprovalLog: true, canClone: true };
-      if (status === PO_STATUS_IDS.REJECTED) return { canReopen: true, canClone: true, canViewApprovalLog: true };
+      if (status === PO_STATUS_IDS.REJECTED) return { canSave: true, canReopen: true, canClone: true, canViewApprovalLog: true };
       return {};
     },
     [],

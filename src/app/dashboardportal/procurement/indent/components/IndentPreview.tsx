@@ -3,6 +3,7 @@
 import React, { useRef } from "react";
 import { Box, Stack, Typography, Divider } from "@mui/material";
 import { Button } from "@/components/ui/button";
+import { openStyledPrintWindow } from "@/utils/printUtils";
 
 export type IndentPreviewHeader = {
   indentNo?: string;
@@ -89,41 +90,13 @@ const IndentPreview: React.FC<IndentPreviewProps> = ({ header, items, remarks, o
       return;
     }
 
-    // Default print functionality - open a new window and copy current styles so it matches on-screen preview
     const printContent = previewRef.current?.innerHTML || "";
-    const printWindow = window.open("", "_blank");
-    if (!printWindow) {
-      alert("Please allow popups to print this document");
-      return;
-    }
+    const printWindow = openStyledPrintWindow(
+      printContent,
+      `Purchase Indent - ${header.indentNo || "Print"}`
+    );
+    if (!printWindow) return;
 
-    // Basic HTML skeleton
-    printWindow.document.open();
-    printWindow.document.write(`<!DOCTYPE html><html><head><title>Purchase Indent - ${header.indentNo || "Print"}</title></head><body><div id="print-root"></div></body></html>`);
-    printWindow.document.close();
-
-    // Copy styles from current document (includes MUI/emotion style tags)
-    const styleNodes = document.querySelectorAll('style, link[rel="stylesheet"]');
-    styleNodes.forEach((node) => {
-      printWindow.document.head.appendChild(node.cloneNode(true));
-    });
-
-    // Add minimal print helpers
-    const helperStyle = printWindow.document.createElement("style");
-    helperStyle.textContent = `
-      @media print { @page { margin: 12mm; } }
-      body { margin: 0; padding: 20px; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
-      table { width: 100%; border-collapse: collapse; }
-      /* Ensure left company block wraps and stays within 1/4 width when printing */
-      #preview-left-pane { max-width: 25% !important; flex-basis: 25% !important; word-break: break-word; white-space: normal; }
-    `;
-    printWindow.document.head.appendChild(helperStyle);
-
-    // Inject content
-    const root = printWindow.document.getElementById("print-root");
-    if (root) root.innerHTML = printContent;
-
-    // Wait briefly for styles to apply, then print
     printWindow.focus();
     setTimeout(() => {
       printWindow.print();
@@ -137,41 +110,12 @@ const IndentPreview: React.FC<IndentPreviewProps> = ({ header, items, remarks, o
       return;
     }
 
-    // Default download functionality - open print dialog (Save as PDF) with matching styles
     const printContent = previewRef.current?.innerHTML || "";
-    const printWindow = window.open("", "_blank");
-    if (!printWindow) {
-      alert("Please allow popups to download this document");
-      return;
-    }
-
-    // Basic HTML skeleton
-    printWindow.document.open();
-    printWindow.document.write(`<!DOCTYPE html><html><head><title>Purchase Indent - ${header.indentNo || "Download"}</title></head><body><div id="print-root"></div></body></html>`);
-    printWindow.document.close();
-
-    // Copy styles from current document (includes MUI/emotion style tags)
-    const styleNodes = document.querySelectorAll('style, link[rel="stylesheet"]');
-    styleNodes.forEach((node) => {
-      printWindow.document.head.appendChild(node.cloneNode(true));
-    });
-
-    // Add minimal print helpers
-    const helperStyle = printWindow.document.createElement("style");
-    helperStyle.textContent = `
-      @media print { @page { margin: 12mm; } }
-      body { margin: 0; padding: 20px; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
-      table { width: 100%; border-collapse: collapse; }
-      /* Ensure left company block wraps and stays within 1/4 width when printing */
-      #preview-left-pane { max-width: 25% !important; flex-basis: 25% !important; word-break: break-word; white-space: normal; }
-      /* Ensure left company block wraps and stays within 1/4 width when printing */
-      #preview-left-pane { max-width: 25% !important; flex-basis: 25% !important; word-break: break-word; white-space: normal; }
-    `;
-    printWindow.document.head.appendChild(helperStyle);
-
-    // Inject content
-    const root = printWindow.document.getElementById("print-root");
-    if (root) root.innerHTML = printContent;
+    const printWindow = openStyledPrintWindow(
+      printContent,
+      `Purchase Indent - ${header.indentNo || "Download"}`
+    );
+    if (!printWindow) return;
 
     printWindow.focus();
     setTimeout(() => {

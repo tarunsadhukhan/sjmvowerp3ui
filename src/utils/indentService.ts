@@ -540,6 +540,7 @@ export async function validateItemForIndent(params: {
   itemId: string;
   indentType: string;
   expenseTypeId: string;
+  indentId?: string;
 }): Promise<ItemValidationResponse> {
   const query = new URLSearchParams({
     branch_id: params.branchId,
@@ -547,6 +548,9 @@ export async function validateItemForIndent(params: {
     indent_type: params.indentType,
     expense_type_id: params.expenseTypeId,
   });
+  if (params.indentId) {
+    query.set("indent_id", params.indentId);
+  }
 
   const { data, error } = await fetchWithCookie<ItemValidationResponse>(
     `${apiRoutesPortalMasters.VALIDATE_ITEM_FOR_INDENT}?${query.toString()}`,

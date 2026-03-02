@@ -561,6 +561,7 @@ function IndentTransactionPageContent() {
 		validationMap,
 		getQuantityError,
 		getLineWarnings,
+		lineItems,
 	});
 
 	// Auto-fill forcedQty from validation result (Logic 2 — Open indent: qty = maxqty)

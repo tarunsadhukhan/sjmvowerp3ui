@@ -3,6 +3,7 @@
 import * as React from "react";
 import { Box, Divider, Stack, Typography } from "@mui/material";
 import { Button } from "@/components/ui/button";
+import { openStyledPrintWindow } from "@/utils/printUtils";
 import type { SRHeader, SRLineItem, SRTotals } from "../types/srTypes";
 
 /**
@@ -93,34 +94,19 @@ export const SRPreview: React.FC<SRPreviewProps> = ({
 		}
 
 		const printContent = previewRef.current?.innerHTML || "";
-		const printWindow = window.open("", "_blank");
-		if (!printWindow) {
-			alert("Please allow popups to print.");
-			return;
-		}
-
-		printWindow.document.open();
-		printWindow.document.write(`<!DOCTYPE html><html><head><title>Stores Receipt - ${header?.sr_no || header?.inward_no}</title></head><body><div id="print-root"></div></body></html>`);
-		printWindow.document.close();
-
-		const styleNodes = document.querySelectorAll("style, link[rel=\"stylesheet\"]");
-		styleNodes.forEach((node) => {
-			printWindow.document.head.appendChild(node.cloneNode(true));
-		});
-
-		const helperStyle = printWindow.document.createElement("style");
-		helperStyle.textContent = `
-			@media print { @page { margin: 12mm; } }
-			body { margin: 0; padding: 20px; -webkit-print-color-adjust: exact; print-color-adjust: exact; font-family: Arial, sans-serif; }
-			table { width: 100%; border-collapse: collapse; margin-top: 16px; }
+		const extraCss = `
+			body { font-family: Arial, sans-serif; }
+			table { margin-top: 16px; }
 			th, td { border: 1px solid #ddd; padding: 8px; text-align: left; font-size: 12px; }
 			th { background-color: #f5f5f5; font-weight: 600; }
 			.text-right { text-align: right; }
 		`;
-		printWindow.document.head.appendChild(helperStyle);
-
-		const root = printWindow.document.getElementById("print-root");
-		if (root) root.innerHTML = printContent;
+		const printWindow = openStyledPrintWindow(
+			printContent,
+			`Stores Receipt - ${header?.sr_no || header?.inward_no}`,
+			extraCss
+		);
+		if (!printWindow) return;
 
 		printWindow.focus();
 		setTimeout(() => {

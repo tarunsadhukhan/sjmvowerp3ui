@@ -233,9 +233,9 @@ function POTransactionPageContent() {
     if (!itemGroupId || !/^\d+$/.test(itemGroupId)) {
       throw new Error(`Invalid item group identifier: ${itemGroupId}`);
     }
-    const response = await fetchPOSetup2(itemGroupId);
+    const response = await fetchPOSetup2(itemGroupId, coId ? String(coId) : undefined);
     return mapItemGroupDetailResponse(response);
-  }, []);
+  }, [coId]);
 
   // Sync lockedBranchId when branch becomes available from URL (SSR -> hydration)
   React.useEffect(() => {
@@ -554,6 +554,7 @@ function POTransactionPageContent() {
     getItemLabel,
     getMakeLabel,
     getUomLabel,
+    getLastPurchaseInfo,
     getOptionLabel,
   } = usePOSelectOptions({
     suppliers,
@@ -667,6 +668,7 @@ function POTransactionPageContent() {
     getUomOptions,
     getUomLabel,
     onFieldChange: handleLineFieldChange,
+    getLastPurchaseInfo,
   });
 
   const branchLabel = React.useMemo(() => {
@@ -832,6 +834,7 @@ function POTransactionPageContent() {
     isLineItemsReady,
     requestedId,
     getChargesToSave,
+    formValues,
   });
 
   const primaryActionLabel = mode === "create" ? "Create" : "Save";
@@ -942,6 +945,7 @@ function POTransactionPageContent() {
         onConfirm={handleIndentItemsConfirm}
         branchId={branchValue || undefined}
         coId={coId || undefined}
+        poDate={(formValues.date as string) || undefined}
       />
     </TransactionWrapper>
   );

@@ -5,6 +5,7 @@ import type {
   ExpenseRecord,
   ItemGroupCacheEntry,
   ItemGroupRecord,
+  ItemLastPurchaseInfo,
   Option,
   ProjectRecord,
   SupplierBranchRecord,
@@ -125,6 +126,14 @@ export const usePOSelectOptions = ({
     [itemGroupCache],
   );
 
+  const getLastPurchaseInfo = React.useCallback(
+    (groupId: string, itemId: string): ItemLastPurchaseInfo | undefined => {
+      if (!groupId || !itemId) return undefined;
+      return itemGroupCache[groupId]?.itemLastPurchaseById[itemId];
+    },
+    [itemGroupCache],
+  );
+
   // Generic option label getter
   const getOptionLabel = React.useCallback(
     (options: ReadonlyArray<{ label: string; value: string }>, value?: unknown): string | undefined => {
@@ -150,6 +159,7 @@ export const usePOSelectOptions = ({
     getItemLabel,
     getMakeLabel,
     getUomLabel,
+    getLastPurchaseInfo,
     getOptionLabel,
   };
 };

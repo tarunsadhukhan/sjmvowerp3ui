@@ -196,8 +196,10 @@ export async function fetchPOSetup1(params: { coId: string; branchId?: string })
   return data;
 }
 
-export async function fetchPOSetup2(itemGroupId: string): Promise<POSetup2Response> {
-  const query = new URLSearchParams({ item_group: itemGroupId });
+export async function fetchPOSetup2(itemGroupId: string, coId?: string): Promise<POSetup2Response> {
+  const params: Record<string, string> = { item_group: itemGroupId };
+  if (coId) params.co_id = coId;
+  const query = new URLSearchParams(params);
   const { data, error } = await fetchWithCookie<POSetup2Response>(
     `${apiRoutesPortalMasters.GET_PO_SETUP_2}?${query.toString()}`,
     "GET"

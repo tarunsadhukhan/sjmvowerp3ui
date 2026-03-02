@@ -72,8 +72,78 @@ export const usePOHeaderSchema = ({
       { name: "billing_address", label: "Billing Address", type: "select", options: branchAddressOptions, required: true, disabled: headerFieldsDisabled, grid: { xs: 12, md: 4 } },
       { name: "shipping_address", label: "Shipping Address", type: "select", options: branchAddressOptions, required: true, disabled: headerFieldsDisabled, grid: { xs: 12, md: 4 } },
       { name: "tax_payable", label: "Tax Payable", type: "select", options: [{ label: "Yes", value: "Yes" }, { label: "No", value: "No" }], required: true, disabled: headerFieldsDisabled, grid: { xs: 12, md: 4 } },
-      { name: "credit_term", label: "Credit Term (days)", type: "text", placeholder: "days", disabled: headerFieldsDisabled, grid: { xs: 12, md: 4 } },
-      { name: "delivery_timeline", label: "Delivery Timeline (days)", type: "text", placeholder: "days", required: true, disabled: headerFieldsDisabled, grid: { xs: 12, md: 4 } },
+      {
+        name: "credit_term",
+        label: "Credit Term (days)",
+        type: "custom",
+        disabled: headerFieldsDisabled,
+        render: ({ value, onChange, disabled: fieldDisabled }) => (
+          <TextField
+            label="Credit Term (days)"
+            value={value ?? ""}
+            onChange={(e) => {
+              const raw = e.target.value;
+              if (raw === "") { onChange(""); return; }
+              // Allow only digits (no decimals, no signs)
+              if (/^\d+$/.test(raw)) { onChange(raw); }
+            }}
+            onKeyDown={(e) => {
+              if ([".", ",", "e", "E", "+", "-"].includes(e.key)) {
+                e.preventDefault();
+              }
+            }}
+            onPaste={(e) => {
+              const pasted = e.clipboardData.getData("text");
+              if (!/^\d+$/.test(pasted)) { e.preventDefault(); }
+            }}
+            type="number"
+            inputProps={{ step: 1, min: 0 }}
+            placeholder="days"
+            disabled={fieldDisabled}
+            fullWidth
+            size="small"
+            InputLabelProps={{ shrink: true }}
+          />
+        ),
+        grid: { xs: 12, md: 4 },
+      },
+      {
+        name: "delivery_timeline",
+        label: "Delivery Timeline (days)",
+        type: "custom",
+        required: true,
+        disabled: headerFieldsDisabled,
+        isEmpty: (value) => value === null || value === undefined || String(value).trim() === "",
+        render: ({ value, onChange, disabled: fieldDisabled }) => (
+          <TextField
+            label="Delivery Timeline (days) *"
+            value={value ?? ""}
+            onChange={(e) => {
+              const raw = e.target.value;
+              if (raw === "") { onChange(""); return; }
+              // Allow only digits (no decimals, no signs)
+              if (/^\d+$/.test(raw)) { onChange(raw); }
+            }}
+            onKeyDown={(e) => {
+              if ([".", ",", "e", "E", "+", "-"].includes(e.key)) {
+                e.preventDefault();
+              }
+            }}
+            onPaste={(e) => {
+              const pasted = e.clipboardData.getData("text");
+              if (!/^\d+$/.test(pasted)) { e.preventDefault(); }
+            }}
+            type="number"
+            inputProps={{ step: 1, min: 0 }}
+            placeholder="days"
+            disabled={fieldDisabled}
+            fullWidth
+            size="small"
+            InputLabelProps={{ shrink: true }}
+          />
+        ),
+        grid: { xs: 12, md: 4 },
+      },
       {
         name: "expected_date",
         label: "",

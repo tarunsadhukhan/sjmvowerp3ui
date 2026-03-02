@@ -6,7 +6,6 @@ import type { GridColDef, GridPaginationModel, GridRenderCellParams } from "@mui
 import { fetchWithCookie } from "@/utils/apiClient2";
 import { apiRoutesPortalMasters } from "@/utils/api";
 import IndexWrapper from "@/components/ui/IndexWrapper";
-import { createStatusBasedEditCheck } from "@/utils/editability";
 import { useRouter } from "next/navigation";
 
 type PORow = {
@@ -65,12 +64,12 @@ export default function PurchaseOrderIndexPage() {
 	const [searchValue, setSearchValue] = React.useState("");
 	const [errorMessage, setErrorMessage] = React.useState<string | null>(null);
 
-	const isRowEditable = React.useMemo(
-		() => createStatusBasedEditCheck<PORow>({
-			statusField: "status",
-			editableStatuses: ["Draft", "Open", "Rejected", "Cancelled", "Pending"],
-			caseInsensitive: true,
-		}),
+	/** Non-editable statuses — everything else gets the Edit icon */
+	const isRowEditable = React.useCallback(
+		(row: PORow) => {
+			const s = String(row.status ?? "").toLowerCase().trim();
+			return s !== "approved" && s !== "closed";
+		},
 		[]
 	);
 

@@ -83,6 +83,7 @@ export const usePOFormSubmission = ({
             rate: charge.rate,
             net_amount: charge.net_amount,
             remarks: charge.remarks || undefined,
+            apply_tax: charge.apply_tax,
             tax_pct: charge.tax_pct,
             igst_amount: charge.igst_amount,
             cgst_amount: charge.cgst_amount,

@@ -37,6 +37,9 @@ export type POAdditionalCharge = {
   igst?: number;
   sgst?: number;
   cgst?: number;
+  tax_pct?: number;
+  tax_amount?: number;
+  apply_tax?: boolean;
 };
 
 export type ApprovalActionPermissions = {
@@ -58,6 +61,7 @@ export type PODetails = {
   branch: string;
   supplier: string;
   supplierBranch: string;
+  supplierState?: string;
   billingAddress: string;
   billingState?: string;
   shippingAddress: string;

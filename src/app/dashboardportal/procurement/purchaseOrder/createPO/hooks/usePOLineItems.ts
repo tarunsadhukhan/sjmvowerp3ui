@@ -226,17 +226,19 @@ export const usePOLineItems = ({
 						updated.discountAmount = discountAmount;
 						updated.amount = amount;
 
-						const tax = calculateLineTax(
-							amount,
-							updated.taxPercentage || 0,
-							supplierBranchState,
-							shippingState,
-							!!coConfig?.india_gst,
-						);
-						updated.igstAmount = tax.igst;
-						updated.cgstAmount = tax.cgst;
-						updated.sgstAmount = tax.sgst;
-						updated.taxAmount = tax.total;
+						if (supplierBranchState && shippingState && coConfig?.india_gst) {
+							const tax = calculateLineTax(
+								amount,
+								updated.taxPercentage || 0,
+								supplierBranchState,
+								shippingState,
+								true,
+							);
+							updated.igstAmount = tax.igst;
+							updated.cgstAmount = tax.cgst;
+							updated.sgstAmount = tax.sgst;
+							updated.taxAmount = tax.total;
+						}
 
 						// Live quantity bounds validation
 						if (field === "quantity" && qty > 0) {
@@ -290,17 +292,19 @@ export const usePOLineItems = ({
 						updated.discountAmount = discountAmount;
 						updated.amount = amount;
 
-						const tax = calculateLineTax(
-							amount,
-							updated.taxPercentage || 0,
-							supplierBranchState,
-							shippingState,
-							!!coConfig?.india_gst,
-						);
-						updated.igstAmount = tax.igst;
-						updated.cgstAmount = tax.cgst;
-						updated.sgstAmount = tax.sgst;
-						updated.taxAmount = tax.total;
+						if (supplierBranchState && shippingState && coConfig?.india_gst) {
+							const tax = calculateLineTax(
+								amount,
+								updated.taxPercentage || 0,
+								supplierBranchState,
+								shippingState,
+								true,
+							);
+							updated.igstAmount = tax.igst;
+							updated.cgstAmount = tax.cgst;
+							updated.sgstAmount = tax.sgst;
+							updated.taxAmount = tax.total;
+						}
 
 						return updated;
 					}),
@@ -333,17 +337,19 @@ export const usePOLineItems = ({
 						updated.discountAmount = discountAmount;
 						updated.amount = amount;
 
-						const tax = calculateLineTax(
-							amount,
-							updated.taxPercentage || 0,
-							supplierBranchState,
-							shippingState,
-							!!coConfig?.india_gst,
-						);
-						updated.igstAmount = tax.igst;
-						updated.cgstAmount = tax.cgst;
-						updated.sgstAmount = tax.sgst;
-						updated.taxAmount = tax.total;
+						if (supplierBranchState && shippingState && coConfig?.india_gst) {
+							const tax = calculateLineTax(
+								amount,
+								updated.taxPercentage || 0,
+								supplierBranchState,
+								shippingState,
+								true,
+							);
+							updated.igstAmount = tax.igst;
+							updated.cgstAmount = tax.cgst;
+							updated.sgstAmount = tax.sgst;
+							updated.taxAmount = tax.total;
+						}
 
 						return updated;
 					}),
@@ -355,7 +361,7 @@ export const usePOLineItems = ({
 				prev.map((item) => {
 					if (item.id === id) {
 						const updated = { ...item, [field]: value } as EditableLineItem;
-						if (field === "taxPercentage") {
+						if (field === "taxPercentage" && supplierBranchState && shippingState && coConfig?.india_gst) {
 							const qty = Number(updated.quantity) || 0;
 							const rate = Number(updated.rate) || 0;
 							const discountMode = updated.discountMode;
@@ -367,7 +373,7 @@ export const usePOLineItems = ({
 								Number(value) || 0,
 								supplierBranchState,
 								shippingState,
-								!!coConfig?.india_gst,
+								true,
 							);
 							updated.igstAmount = tax.igst;
 							updated.cgstAmount = tax.cgst;

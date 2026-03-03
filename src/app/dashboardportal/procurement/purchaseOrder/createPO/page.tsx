@@ -268,6 +268,9 @@ function POTransactionPageContent() {
     branchAddresses,
     formValues,
     setFormValues,
+    fallbackBillingState: poDetails?.billingState,
+    fallbackShippingState: poDetails?.shippingState,
+    fallbackSupplierBranchState: poDetails?.supplierState,
   });
 
   const {

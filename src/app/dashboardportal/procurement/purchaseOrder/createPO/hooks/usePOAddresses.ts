@@ -9,6 +9,10 @@ type UsePOAddressesParams = {
 	branchAddresses: ReadonlyArray<BranchAddressRecord>;
 	formValues: Record<string, unknown>;
 	setFormValues: React.Dispatch<React.SetStateAction<Record<string, unknown>>>;
+	/** Fallback states from PO API response, used when lookup can't resolve */
+	fallbackBillingState?: string;
+	fallbackShippingState?: string;
+	fallbackSupplierBranchState?: string;
 };
 
 /**
@@ -20,6 +24,9 @@ export const usePOAddresses = ({
 	branchAddresses,
 	formValues,
 	setFormValues,
+	fallbackBillingState,
+	fallbackShippingState,
+	fallbackSupplierBranchState,
 }: UsePOAddressesParams) => {
 	const supplierBranches = React.useMemo<ReadonlyArray<SupplierBranchRecord>>(() => {
 		const supplierId = String(formValues.supplier ?? "");
@@ -89,20 +96,20 @@ export const usePOAddresses = ({
 	const billingState = React.useMemo(() => {
 		const billingId = String(formValues.billing_address ?? "");
 		const address = branchAddresses.find((a) => a.id === billingId);
-		return address?.stateName;
-	}, [formValues.billing_address, branchAddresses]);
+		return address?.stateName || fallbackBillingState;
+	}, [formValues.billing_address, branchAddresses, fallbackBillingState]);
 
 	const shippingState = React.useMemo(() => {
 		const shippingId = String(formValues.shipping_address ?? "");
 		const address = branchAddresses.find((a) => a.id === shippingId);
-		return address?.stateName;
-	}, [formValues.shipping_address, branchAddresses]);
+		return address?.stateName || fallbackShippingState;
+	}, [formValues.shipping_address, branchAddresses, fallbackShippingState]);
 
 	const supplierBranchState = React.useMemo(() => {
 		const branchId = String(formValues.supplier_branch ?? "");
 		const branch = supplierBranches.find((b) => b.id === branchId);
-		return branch?.stateName;
-	}, [formValues.supplier_branch, supplierBranches]);
+		return branch?.stateName || fallbackSupplierBranchState;
+	}, [formValues.supplier_branch, supplierBranches, fallbackSupplierBranchState]);
 
 	return {
 		supplierBranches,

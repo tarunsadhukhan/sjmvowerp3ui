@@ -14,6 +14,7 @@ export type TransactionAction = {
   hidden?: boolean;
   variant?: "default" | "secondary" | "outline" | "ghost" | "destructive";
   startIcon?: React.ReactNode;
+  className?: string;
 };
 
 export type TransactionMetadataItem = {
@@ -48,7 +49,7 @@ const renderActionButton = (action: TransactionAction, key: string, defaultVaria
       variant={variant}
       onClick={action.onClick}
       disabled={action.disabled || action.loading}
-      className="min-w-30"
+      className={`min-w-30 ${action.className ?? ""}`.trim()}
     >
       <Stack direction="row" spacing={0.75} alignItems="center" justifyContent="center">
         {action.startIcon ? <span className="inline-flex items-center justify-center">{action.startIcon}</span> : null}

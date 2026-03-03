@@ -113,7 +113,7 @@ export default function ApprovalDropdowns({ fields, onSelectionChange }: Approva
   return (
     <div className="flex flex-wrap gap-4">
       {fields.map((field) => (
-        <div key={field.id} className="min-w-[200px] flex-grow">
+        <div key={field.id} className="min-w-50 grow">
           <label className="block text-sm font-medium mb-1">{field.label}</label>
           <DropdownMenu>
             <DropdownMenuTrigger asChild disabled={isDisabled(field)}>
@@ -129,7 +129,7 @@ export default function ApprovalDropdowns({ fields, onSelectionChange }: Approva
               </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent 
-              className="w-[200px] max-h-[300px] overflow-auto" 
+              className="w-50 max-h-75 overflow-auto" 
               align="start"
             >
               {getItemsForField(field).map((item) => (

@@ -134,6 +134,7 @@ export type CreatePORequest = {
   terms_conditions?: string;
   advance_percentage?: number;
   items: Array<{
+    po_dtl_id?: string;
     indent_dtl_id?: string;
     item?: string;
     quantity?: string;
@@ -639,6 +640,7 @@ export type ValidateItemForPOParams = {
   itemId: string;
   poType: string;
   expenseTypeId: string;
+  poId?: string; // Optional — for edit-mode validation adjustment
 };
 
 export async function validateItemForPO(params: ValidateItemForPOParams): Promise<POItemValidationResult> {
@@ -649,6 +651,9 @@ export async function validateItemForPO(params: ValidateItemForPOParams): Promis
     po_type: params.poType,
     expense_type_id: params.expenseTypeId,
   });
+  if (params.poId) {
+    query.set("po_id", params.poId);
+  }
 
   const { data, error } = await fetchWithCookie<POItemValidationResult>(
     `${apiRoutesPortalMasters.PO_VALIDATE_ITEM}?${query.toString()}`,

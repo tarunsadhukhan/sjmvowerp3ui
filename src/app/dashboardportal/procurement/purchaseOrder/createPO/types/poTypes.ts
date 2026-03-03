@@ -76,6 +76,8 @@ export type POAdditionalChargeRaw = {
 export type EditableLineItem = {
 	id: string;
 	indentDtlId?: string;
+	/** Database PO detail line ID — present for existing rows loaded during edit, undefined for new rows */
+	poDtlId?: string;
 	indentNo?: string;
 	department?: string;
 	itemGroup: string;

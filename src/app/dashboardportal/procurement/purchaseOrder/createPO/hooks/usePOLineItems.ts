@@ -37,6 +37,8 @@ type UsePOLineItemsParams = {
 	branchId?: string;
 	/** Company ID for the PO — used to call the validation API. */
 	coId?: string;
+	/** PO ID when editing — passed to validation API for qty adjustment in edit mode */
+	poId?: string;
 };
 
 /**
@@ -56,6 +58,7 @@ export const usePOLineItems = ({
 	expenseTypeId,
 	branchId,
 	coId,
+	poId,
 }: UsePOLineItemsParams) => {
 	const {
 		items: lineItems,
@@ -72,7 +75,8 @@ export const usePOLineItems = ({
 	const indentItemGroupInfoRef = React.useRef<Map<string, { code?: string; name?: string }>>(new Map());
 
 	const mapLineToEditable = React.useCallback((line: POLine): EditableLineItem => ({
-		id: line.id ? String(line.id) : generateLineId(),
+		id: generateLineId(),
+		poDtlId: line.id ? String(line.id) : undefined,
 		indentDtlId: line.indentDtlId,
 		indentNo: line.indentNo,
 		itemGroup: line.itemGroup ? String(line.itemGroup) : "",
@@ -173,6 +177,7 @@ export const usePOLineItems = ({
 								itemId: value,
 								poType: poType ?? "Regular",
 								expenseTypeId,
+								poId,
 							});
 							if (!result) return;
 							setLineItems((prev) =>
@@ -372,7 +377,7 @@ export const usePOLineItems = ({
 				}),
 			);
 		},
-		[allowManualEntry, branchId, coConfig, coId, ensureItemGroupData, expenseTypeId, itemGroupCache, itemGroupLoading, mode, poType, setLineItems, shippingState, supplierBranchState],
+		[allowManualEntry, branchId, coConfig, coId, ensureItemGroupData, expenseTypeId, itemGroupCache, itemGroupLoading, mode, poId, poType, setLineItems, shippingState, supplierBranchState],
 	);
 
 	const handleIndentItemsConfirm = React.useCallback(
@@ -530,6 +535,7 @@ export const usePOLineItems = ({
 									itemId: line.item!,
 									poType: resolvedPoType,
 									expenseTypeId: resolvedExpenseTypeId,
+									poId,
 								});
 								if (!result) return;
 								setLineItems((prev) =>
@@ -555,6 +561,7 @@ export const usePOLineItems = ({
 								itemId: line.item!,
 								poType: resolvedPoType,
 								expenseTypeId: resolvedExpenseTypeId,
+								poId,
 							});
 							if (!result) return;
 							setLineItems((prev) =>
@@ -581,7 +588,7 @@ export const usePOLineItems = ({
 				}
 			});
 		},
-		[allowManualEntry, branchId, coId, expenseTypeId, mode, poType, setLineItems],
+		[allowManualEntry, branchId, coId, expenseTypeId, mode, poId, poType, setLineItems],
 	);
 
 	return {

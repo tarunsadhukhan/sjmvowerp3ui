@@ -58,6 +58,7 @@ export const usePOFormSubmission = ({
       }
 
       const itemsPayload = filledLineItems.map((item) => ({
+        po_dtl_id: item.poDtlId ?? undefined,
         indent_dtl_id: item.indentDtlId,
         item: item.item || undefined,
         quantity: item.quantity || undefined,

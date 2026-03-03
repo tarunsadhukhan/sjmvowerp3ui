@@ -100,6 +100,27 @@ export const usePOLineItemColumns = ({
         getTooltip: ({ item }) => getItemLabel(item.itemGroup, item.item, item.itemCode) || undefined,
       },
       {
+        id: "hsnCode",
+        header: "HSN",
+        width: "0.7fr",
+        minWidth: "90px",
+        renderCell: ({ item }) => {
+          if (!canEdit) {
+            return <span className="block truncate text-sm">{item.hsnCode || "-"}</span>;
+          }
+          return (
+            <Input
+              type="text"
+              value={item.hsnCode ?? ""}
+              onChange={(e) => onFieldChange(item.id, "hsnCode", e.target.value)}
+              placeholder="HSN"
+              className="h-8 text-sm"
+            />
+          );
+        },
+        getTooltip: ({ item }) => (item.hsnCode ? `HSN: ${item.hsnCode}` : undefined),
+      },
+      {
         id: "rate",
         header: "Rate",
         width: "0.8fr",

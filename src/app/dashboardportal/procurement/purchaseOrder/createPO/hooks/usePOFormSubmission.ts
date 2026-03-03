@@ -61,6 +61,7 @@ export const usePOFormSubmission = ({
         po_dtl_id: item.poDtlId ?? undefined,
         indent_dtl_id: item.indentDtlId,
         item: item.item || undefined,
+        hsn_code: item.hsnCode || undefined,
         quantity: item.quantity || undefined,
         rate: item.rate || undefined,
         uom: item.uom || undefined,

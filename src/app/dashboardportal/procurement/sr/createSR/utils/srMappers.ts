@@ -162,6 +162,7 @@ export const mapSRLineItem = (
 		warehouse_id: raw.warehouse_id ?? null,
 		warehouse_name: raw.warehouse_name ?? "",
 		warehouse_path: raw.warehouse_path ?? raw.warehouse_name ?? "",
+		hsn_code: raw.hsn_code ?? "",
 	};
 };
 

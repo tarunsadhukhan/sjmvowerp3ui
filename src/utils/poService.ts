@@ -10,6 +10,7 @@ export type POLine = {
   item?: string;
   itemCode?: string;
   itemMake?: string;
+  hsnCode?: string;
   quantity?: number | string;
   rate?: number | string;
   uom?: string;
@@ -137,6 +138,7 @@ export type CreatePORequest = {
     po_dtl_id?: string;
     indent_dtl_id?: string;
     item?: string;
+    hsn_code?: string;
     quantity?: string;
     rate?: string;
     uom?: string;

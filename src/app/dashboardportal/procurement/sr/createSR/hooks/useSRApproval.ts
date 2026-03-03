@@ -78,6 +78,7 @@ export const useSRApproval = ({
 				discount_value: item.discount_value,
 				discount_amount: item.discount_amount,
 				warehouse_id: item.warehouse_id,
+				hsn_code: item.hsn_code,
 				// GST fields
 				tax_percentage: item.tax_percentage,
 				igst_amount: item.igst_amount,

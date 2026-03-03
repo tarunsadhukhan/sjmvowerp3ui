@@ -99,6 +99,29 @@ export const useInwardLineItemColumns = ({
 				getTooltip: ({ item }) =>
 					labelResolvers.item(item.itemGroup, item.item) || item.itemCode || undefined,
 			},
+			// HSN Code column
+			{
+				id: "hsnCode",
+				header: "HSN",
+				width: "1fr",
+				minWidth: "100px",
+				renderCell: ({ item }) => {
+					if (!canEdit) {
+						return <span className="text-sm">{item.hsnCode || "-"}</span>;
+					}
+					return (
+						<TextField
+							size="small"
+							value={item.hsnCode || ""}
+							onChange={(e) => handleLineFieldChange(item.id, "hsnCode", e.target.value)}
+							placeholder="HSN Code"
+							sx={{ "& .MuiInputBase-input": { padding: "4px 8px", fontSize: "0.875rem" } }}
+							fullWidth
+						/>
+					);
+				},
+				getTooltip: ({ item }) => item.hsnCode || undefined,
+			},
 			// Quantity column
 			{
 				id: "quantity",

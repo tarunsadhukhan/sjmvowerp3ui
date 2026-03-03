@@ -94,7 +94,7 @@ function DrcrInlineRows({ lines }: { lines: DrcrLineWithNote[] }) {
             }}
           >
             {/* Item — indented with type label */}
-            <Box component="td" colSpan={4} sx={{ p: 0.75, pl: 4, fontSize: "0.7rem" }}>
+            <Box component="td" colSpan={5} sx={{ p: 0.75, pl: 4, fontSize: "0.7rem" }}>
               <Chip
                 label={isDebit ? "DEBIT" : "CREDIT"}
                 size="small"
@@ -424,7 +424,7 @@ function BillPassEditPageContent() {
                 {/* Header */}
                 <Box component="thead" sx={{ bgcolor: "primary.main" }}>
                   <Box component="tr">
-                    {["PO No.", "Item", "Make", "UOM", "Qty", "PO Rate", "Accepted Rate", "Amount", "Tax", "Total"].map(
+                    {["PO No.", "Item", "HSN", "Make", "UOM", "Qty", "PO Rate", "Accepted Rate", "Amount", "Tax", "Total"].map(
                       (h) => (
                         <Box
                           key={h}
@@ -434,7 +434,7 @@ function BillPassEditPageContent() {
                             color: "white",
                             fontSize: "0.75rem",
                             fontWeight: 600,
-                            textAlign: ["PO No.", "Item", "Make", "UOM"].includes(h) ? "left" : "right",
+                            textAlign: ["PO No.", "Item", "HSN", "Make", "UOM"].includes(h) ? "left" : "right",
                             whiteSpace: "nowrap",
                           }}
                         >
@@ -482,6 +482,9 @@ function BillPassEditPageContent() {
                             </Typography>
                           </Box>
                           <Box component="td" sx={{ p: 1, fontSize: "0.75rem" }}>
+                            {line.hsn_code || "-"}
+                          </Box>
+                          <Box component="td" sx={{ p: 1, fontSize: "0.75rem" }}>
                             {line.accepted_make_name || "-"}
                           </Box>
                           <Box component="td" sx={{ p: 1, fontSize: "0.75rem" }}>
@@ -522,7 +525,7 @@ function BillPassEditPageContent() {
                           >
                             <Box
                               component="td"
-                              colSpan={9}
+                              colSpan={10}
                               sx={{ p: 0.75, pl: 4, fontSize: "0.7rem", textAlign: "right", fontWeight: 600 }}
                             >
                               Line Net Payable:

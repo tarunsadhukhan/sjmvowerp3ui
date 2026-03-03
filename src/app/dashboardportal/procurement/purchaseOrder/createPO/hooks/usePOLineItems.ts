@@ -83,6 +83,7 @@ export const usePOLineItems = ({
 		item: line.item ?? "",
 		itemCode: line.itemCode,
 		itemMake: line.itemMake ?? "",
+		hsnCode: line.hsnCode ?? "",
 		quantity: line.quantity != null ? String(line.quantity) : "",
 		rate: line.rate != null ? String(line.rate) : "",
 		uom: line.uom ?? "",
@@ -137,6 +138,7 @@ export const usePOLineItems = ({
 						const cache = itemGroupCache[groupId ?? ""];
 						const defaultRate = cache?.itemRateById[value];
 						const defaultTax = cache?.itemTaxById[value];
+						const defaultHsn = cache?.itemHsnById[value];
 						const defaultUom = cache?.items.find((opt) => opt.value === value)?.defaultUomId;
 						const uomOptions = cache?.uomsByItemId[value] ?? [];
 						let nextUom = item.uom;
@@ -152,6 +154,7 @@ export const usePOLineItems = ({
 							item: value,
 							uom: nextUom,
 							rate: defaultRate != null ? String(defaultRate) : item.rate,
+							hsnCode: defaultHsn ?? item.hsnCode,
 							taxPercentage: defaultTax,
 							igstAmount: tax.igst,
 							cgstAmount: tax.cgst,

@@ -304,15 +304,15 @@ export function IndentLineItemsDialog({
                         className="mt-1"
                       />
                       <div className="flex-1 grid grid-cols-12 gap-2 text-sm">
-                        <div className="col-span-2">
-                          <div className="font-medium">{item.item_code || "-"}</div>
-                          <div className="text-muted-foreground text-xs">{item.item_name || "-"}</div>
+                        <div className="col-span-2 min-w-0">
+                          <div className="font-medium truncate">{item.item_code || "-"}</div>
+                          <div className="text-muted-foreground text-xs truncate">{item.item_name || "-"}</div>
                         </div>
-                        <div className="col-span-2">
+                        <div className="col-span-3 min-w-0">
                           <div className="text-muted-foreground text-xs">Item Group</div>
-                          <div>{item.item_grp_code || "-"} {item.item_grp_name ? `- ${item.item_grp_name}` : ""}</div>
+                          <div className="break-words">{item.item_grp_code || "-"} {item.item_grp_name ? `- ${item.item_grp_name}` : ""}</div>
                         </div>
-                        <div className="col-span-2">
+                        <div className="col-span-2 min-w-0">
                           <div className="text-muted-foreground text-xs">Quantity</div>
                           <div>{item.qty || 0} {item.uom_name || ""}</div>
                           {item.outstanding_qty !== undefined && item.outstanding_qty !== null && (
@@ -321,15 +321,15 @@ export function IndentLineItemsDialog({
                             </div>
                           )}
                         </div>
-                        <div className="col-span-2">
+                        <div className="col-span-1 min-w-0">
                           <div className="text-muted-foreground text-xs">Make</div>
-                          <div>{item.item_make_name || "-"}</div>
+                          <div className="truncate">{item.item_make_name || "-"}</div>
                         </div>
-                        <div className="col-span-2">
+                        <div className="col-span-2 min-w-0">
                           <div className="text-muted-foreground text-xs">Department</div>
-                          <div>{item.dept_name || "-"}</div>
+                          <div className="truncate">{item.dept_name || "-"}</div>
                         </div>
-                        <div className="col-span-2">
+                        <div className="col-span-2 min-w-0">
                           <div className="text-muted-foreground text-xs">Tax %</div>
                           <div>{item.tax_percentage ? `${item.tax_percentage}%` : "-"}</div>
                         </div>

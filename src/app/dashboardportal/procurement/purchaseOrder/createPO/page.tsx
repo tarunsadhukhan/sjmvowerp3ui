@@ -268,6 +268,9 @@ function POTransactionPageContent() {
     branchAddresses,
     formValues,
     setFormValues,
+    fallbackBillingState: poDetails?.billingState,
+    fallbackShippingState: poDetails?.shippingState,
+    fallbackSupplierBranchState: poDetails?.supplierState,
   });
 
   const {
@@ -296,6 +299,7 @@ function POTransactionPageContent() {
     expenseTypeId: formValues.expense_type ? String(formValues.expense_type) : undefined,
     branchId: branchIdForSetup ?? undefined,
     coId: coId ?? undefined,
+    poId: mode === "edit" ? requestedId || undefined : undefined,
   });
 
   // Additional charges hook
@@ -462,6 +466,7 @@ function POTransactionPageContent() {
     bumpFormKey,
     replaceItems,
     mapLineToEditable,
+    revalidateLoadedLines,
     mapRawToCharges,
     replaceCharges,
     setupEnabled,

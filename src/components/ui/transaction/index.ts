@@ -12,3 +12,6 @@ export { useBranchFilteredOptions, type BranchFilterableRecord } from "./useBran
 export { useConditionalOptions, type ConditionalFilter } from "./useConditionalOptions";
 export * from "./transactionFormHelpers";
 export * from "./ApprovalActionsBar";
+export * from "./buildApprovalTransactionActions";
+export * from "./useRejectDialog";
+export * from "./useUnsavedChanges";

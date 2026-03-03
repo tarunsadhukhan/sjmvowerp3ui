@@ -1,3 +1,9 @@
+/**
+ * @deprecated Use `buildApprovalTransactionActions` + `useRejectDialog` from
+ * `@/components/ui/transaction` instead. Approval buttons are now rendered
+ * via TransactionWrapper.primaryActions for unified save/approval display.
+ * See .github/patterns/unified-action-bar.md for the recommended pattern.
+ */
 import React from "react";
 import { ApprovalActionsBar, type ApprovalInfo, type ApprovalActionPermissions } from "@/components/ui/transaction";
 

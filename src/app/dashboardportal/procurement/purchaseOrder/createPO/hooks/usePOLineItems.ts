@@ -37,6 +37,8 @@ type UsePOLineItemsParams = {
 	branchId?: string;
 	/** Company ID for the PO — used to call the validation API. */
 	coId?: string;
+	/** PO ID when editing — passed to validation API for qty adjustment in edit mode */
+	poId?: string;
 };
 
 /**
@@ -56,6 +58,7 @@ export const usePOLineItems = ({
 	expenseTypeId,
 	branchId,
 	coId,
+	poId,
 }: UsePOLineItemsParams) => {
 	const {
 		items: lineItems,
@@ -72,13 +75,15 @@ export const usePOLineItems = ({
 	const indentItemGroupInfoRef = React.useRef<Map<string, { code?: string; name?: string }>>(new Map());
 
 	const mapLineToEditable = React.useCallback((line: POLine): EditableLineItem => ({
-		id: line.id ? String(line.id) : generateLineId(),
+		id: generateLineId(),
+		poDtlId: line.id ? String(line.id) : undefined,
 		indentDtlId: line.indentDtlId,
 		indentNo: line.indentNo,
 		itemGroup: line.itemGroup ? String(line.itemGroup) : "",
 		item: line.item ?? "",
 		itemCode: line.itemCode,
 		itemMake: line.itemMake ?? "",
+		hsnCode: line.hsnCode ?? "",
 		quantity: line.quantity != null ? String(line.quantity) : "",
 		rate: line.rate != null ? String(line.rate) : "",
 		uom: line.uom ?? "",
@@ -133,6 +138,7 @@ export const usePOLineItems = ({
 						const cache = itemGroupCache[groupId ?? ""];
 						const defaultRate = cache?.itemRateById[value];
 						const defaultTax = cache?.itemTaxById[value];
+						const defaultHsn = cache?.itemHsnById[value];
 						const defaultUom = cache?.items.find((opt) => opt.value === value)?.defaultUomId;
 						const uomOptions = cache?.uomsByItemId[value] ?? [];
 						let nextUom = item.uom;
@@ -148,6 +154,7 @@ export const usePOLineItems = ({
 							item: value,
 							uom: nextUom,
 							rate: defaultRate != null ? String(defaultRate) : item.rate,
+							hsnCode: defaultHsn ?? item.hsnCode,
 							taxPercentage: defaultTax,
 							igstAmount: tax.igst,
 							cgstAmount: tax.cgst,
@@ -173,6 +180,7 @@ export const usePOLineItems = ({
 								itemId: value,
 								poType: poType ?? "Regular",
 								expenseTypeId,
+								poId,
 							});
 							if (!result) return;
 							setLineItems((prev) =>
@@ -218,17 +226,19 @@ export const usePOLineItems = ({
 						updated.discountAmount = discountAmount;
 						updated.amount = amount;
 
-						const tax = calculateLineTax(
-							amount,
-							updated.taxPercentage || 0,
-							supplierBranchState,
-							shippingState,
-							!!coConfig?.india_gst,
-						);
-						updated.igstAmount = tax.igst;
-						updated.cgstAmount = tax.cgst;
-						updated.sgstAmount = tax.sgst;
-						updated.taxAmount = tax.total;
+						if (supplierBranchState && shippingState && coConfig?.india_gst) {
+							const tax = calculateLineTax(
+								amount,
+								updated.taxPercentage || 0,
+								supplierBranchState,
+								shippingState,
+								true,
+							);
+							updated.igstAmount = tax.igst;
+							updated.cgstAmount = tax.cgst;
+							updated.sgstAmount = tax.sgst;
+							updated.taxAmount = tax.total;
+						}
 
 						// Live quantity bounds validation
 						if (field === "quantity" && qty > 0) {
@@ -282,17 +292,19 @@ export const usePOLineItems = ({
 						updated.discountAmount = discountAmount;
 						updated.amount = amount;
 
-						const tax = calculateLineTax(
-							amount,
-							updated.taxPercentage || 0,
-							supplierBranchState,
-							shippingState,
-							!!coConfig?.india_gst,
-						);
-						updated.igstAmount = tax.igst;
-						updated.cgstAmount = tax.cgst;
-						updated.sgstAmount = tax.sgst;
-						updated.taxAmount = tax.total;
+						if (supplierBranchState && shippingState && coConfig?.india_gst) {
+							const tax = calculateLineTax(
+								amount,
+								updated.taxPercentage || 0,
+								supplierBranchState,
+								shippingState,
+								true,
+							);
+							updated.igstAmount = tax.igst;
+							updated.cgstAmount = tax.cgst;
+							updated.sgstAmount = tax.sgst;
+							updated.taxAmount = tax.total;
+						}
 
 						return updated;
 					}),
@@ -325,17 +337,19 @@ export const usePOLineItems = ({
 						updated.discountAmount = discountAmount;
 						updated.amount = amount;
 
-						const tax = calculateLineTax(
-							amount,
-							updated.taxPercentage || 0,
-							supplierBranchState,
-							shippingState,
-							!!coConfig?.india_gst,
-						);
-						updated.igstAmount = tax.igst;
-						updated.cgstAmount = tax.cgst;
-						updated.sgstAmount = tax.sgst;
-						updated.taxAmount = tax.total;
+						if (supplierBranchState && shippingState && coConfig?.india_gst) {
+							const tax = calculateLineTax(
+								amount,
+								updated.taxPercentage || 0,
+								supplierBranchState,
+								shippingState,
+								true,
+							);
+							updated.igstAmount = tax.igst;
+							updated.cgstAmount = tax.cgst;
+							updated.sgstAmount = tax.sgst;
+							updated.taxAmount = tax.total;
+						}
 
 						return updated;
 					}),
@@ -347,7 +361,7 @@ export const usePOLineItems = ({
 				prev.map((item) => {
 					if (item.id === id) {
 						const updated = { ...item, [field]: value } as EditableLineItem;
-						if (field === "taxPercentage") {
+						if (field === "taxPercentage" && supplierBranchState && shippingState && coConfig?.india_gst) {
 							const qty = Number(updated.quantity) || 0;
 							const rate = Number(updated.rate) || 0;
 							const discountMode = updated.discountMode;
@@ -359,7 +373,7 @@ export const usePOLineItems = ({
 								Number(value) || 0,
 								supplierBranchState,
 								shippingState,
-								!!coConfig?.india_gst,
+								true,
 							);
 							updated.igstAmount = tax.igst;
 							updated.cgstAmount = tax.cgst;
@@ -372,7 +386,7 @@ export const usePOLineItems = ({
 				}),
 			);
 		},
-		[allowManualEntry, branchId, coConfig, coId, ensureItemGroupData, expenseTypeId, itemGroupCache, itemGroupLoading, mode, poType, setLineItems, shippingState, supplierBranchState],
+		[allowManualEntry, branchId, coConfig, coId, ensureItemGroupData, expenseTypeId, itemGroupCache, itemGroupLoading, mode, poId, poType, setLineItems, shippingState, supplierBranchState],
 	);
 
 	const handleIndentItemsConfirm = React.useCallback(
@@ -530,6 +544,7 @@ export const usePOLineItems = ({
 									itemId: line.item!,
 									poType: resolvedPoType,
 									expenseTypeId: resolvedExpenseTypeId,
+									poId,
 								});
 								if (!result) return;
 								setLineItems((prev) =>
@@ -555,6 +570,7 @@ export const usePOLineItems = ({
 								itemId: line.item!,
 								poType: resolvedPoType,
 								expenseTypeId: resolvedExpenseTypeId,
+								poId,
 							});
 							if (!result) return;
 							setLineItems((prev) =>
@@ -581,7 +597,7 @@ export const usePOLineItems = ({
 				}
 			});
 		},
-		[allowManualEntry, branchId, coId, expenseTypeId, mode, poType, setLineItems],
+		[allowManualEntry, branchId, coId, expenseTypeId, mode, poId, poType, setLineItems],
 	);
 
 	return {

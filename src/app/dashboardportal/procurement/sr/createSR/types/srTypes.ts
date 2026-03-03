@@ -106,6 +106,7 @@ export type SRLineItem = {
 	warehouse_id: number | null;
 	warehouse_name: string;
 	warehouse_path: string;
+	hsn_code: string;
 };
 
 /**
@@ -197,6 +198,7 @@ export type SRLineItemRaw = {
 	warehouse_id?: number | null;
 	warehouse_name?: string;
 	warehouse_path?: string;
+	hsn_code?: string;
 };
 
 /**

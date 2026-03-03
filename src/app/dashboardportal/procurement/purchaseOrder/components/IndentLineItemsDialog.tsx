@@ -310,7 +310,7 @@ export function IndentLineItemsDialog({
                         </div>
                         <div className="col-span-3 min-w-0">
                           <div className="text-muted-foreground text-xs">Item Group</div>
-                          <div className="break-words">{item.item_grp_code || "-"} {item.item_grp_name ? `- ${item.item_grp_name}` : ""}</div>
+                          <div className="wrap-break-word">{item.item_grp_code || "-"} {item.item_grp_name ? `- ${item.item_grp_name}` : ""}</div>
                         </div>
                         <div className="col-span-2 min-w-0">
                           <div className="text-muted-foreground text-xs">Quantity</div>

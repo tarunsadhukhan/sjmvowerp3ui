@@ -99,7 +99,7 @@ export const useIndentFormSchema = ({
 				},
 				{
 					name: "requester",
-					label: "Indent Name",
+					label: "",
 					type: "custom" as const,
 					grid: { xs: 12, md: 6 },
 					render: ({ value, onChange, disabled }: CustomFieldRenderProps) => {
@@ -128,8 +128,10 @@ export const useIndentFormSchema = ({
 								renderInput={(params) => (
 									<TextField
 										{...params}
+										label="Indent Name"
 										placeholder={isBOM ? "Type a new name or select an existing one" : "Available for BOM indent type only"}
 										fullWidth
+										size="small"
 									/>
 								)}
 							/>

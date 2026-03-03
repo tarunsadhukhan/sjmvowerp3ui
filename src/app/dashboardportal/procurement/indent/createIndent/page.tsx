@@ -8,6 +8,10 @@ import {
 	useDeferredOptionCache,
 	useTransactionSetup,
 	useTransactionPreview,
+	buildApprovalTransactionActions,
+	useRejectDialog,
+	useUnsavedChanges,
+	AutoResizeTextarea,
 } from "@/components/ui/transaction";
 import { useBranchOptions } from "@/utils/branchUtils";
 import {
@@ -29,7 +33,7 @@ import type { EditableLineItem, IndentSetupData, ItemGroupCacheEntry } from "./t
 
 // Utils
 import { EMPTY_DEPARTMENTS, EMPTY_EXPENSES, EMPTY_ITEM_GROUPS, EMPTY_PROJECTS, EMPTY_INDENT_TITLES, EMPTY_SETUP_PARAMS } from "./utils/indentConstants";
-import { buildDefaultFormValues, createBlankLine } from "./utils/indentFactories";
+import { buildDefaultFormValues, createBlankLine, lineHasAnyData } from "./utils/indentFactories";
 import { mapIndentSetupResponse, mapItemGroupDetailResponse } from "./utils/indentMappers";
 
 // Hooks
@@ -42,7 +46,6 @@ import { useIndentItemValidation } from "./hooks/useIndentItemValidation";
 
 // Components
 import { IndentHeaderForm } from "./components/IndentHeaderForm";
-import { IndentApprovalBar } from "./components/IndentApprovalBar";
 import { useIndentLineItemColumns } from "./components/IndentLineItemsTable";
 import {
 	Dialog,
@@ -147,6 +150,36 @@ function IndentTransactionPageContent() {
 		ensureItemGroupData,
 	});
 
+	// Unsaved changes tracking for unified save/approval button display
+	const getComparableLineData = React.useCallback(
+		(item: EditableLineItem) => ({
+			department: item.department,
+			itemGroup: item.itemGroup,
+			item: item.item,
+			itemMake: item.itemMake,
+			quantity: item.quantity,
+			uom: item.uom,
+			remarks: item.remarks,
+		}),
+		[],
+	);
+
+	const comparableLineItems = React.useMemo(
+		() => lineItems.filter(lineHasAnyData),
+		[lineItems],
+	);
+
+	const {
+		hasUnsavedChanges,
+		resetBaseline,
+		setBaseline,
+	} = useUnsavedChanges({
+		formValues,
+		lineItems: comparableLineItems,
+		getComparableLineData,
+		enabled: mode !== "create",
+	});
+
 	// Branch options prefill for create mode
 	React.useEffect(() => {
 		if (mode !== "create") return;
@@ -221,6 +254,8 @@ function IndentTransactionPageContent() {
 				const mappedLines = (detail.lines ?? []).map(mapLineToEditable);
 				replaceItems(mappedLines.length ? mappedLines : [createBlankLine()]);
 				setPageError(null);
+				// Set baseline for unsaved changes tracking
+				setBaseline(base, mappedLines.filter(lineHasAnyData));
 			})
 			.catch((error) => {
 				if (cancelled) return;
@@ -235,7 +270,7 @@ function IndentTransactionPageContent() {
 		return () => {
 			cancelled = true;
 		};
-	}, [mode, requestedId, mapLineToEditable, coId, getMenuId, setInitialValues, setFormValues, bumpFormKey, replaceItems]);
+	}, [mode, requestedId, mapLineToEditable, coId, getMenuId, setInitialValues, setFormValues, bumpFormKey, replaceItems, setBaseline]);
 
 	// Setup data
 	const branchValue = React.useMemo(() => String(formValues.branch ?? ""), [formValues.branch]);
@@ -498,6 +533,23 @@ function IndentTransactionPageContent() {
 		setFormValues,
 	});
 
+	// Reject dialog hook (extracted from ApprovalActionsBar)
+	const {
+		rejectDialogOpen,
+		rejectReason,
+		setRejectReason,
+		openRejectDialog,
+		handleRejectConfirm,
+		handleRejectCancel,
+	} = useRejectDialog(handleReject);
+
+	// Reset baseline when indentDetails changes (initial load or post-approval refresh)
+	React.useEffect(() => {
+		if (!indentDetails || mode === "create") return;
+		const timer = setTimeout(() => resetBaseline(), 0);
+		return () => clearTimeout(timer);
+	}, [indentDetails, mode, resetBaseline]);
+
 	// Line item columns - only allow editing if header fields are complete
 	// Only allow editing lines if header is complete AND status permits saving
 	const canEdit = mode !== "view" && headerFieldsComplete && approvalPermissions.canSave !== false;
@@ -670,12 +722,6 @@ function IndentTransactionPageContent() {
 		[filledLineItems, lineItemsValid, mode, pageError, setupError, requestedId, router, approvalPermissions.canSave, allLinesValidFn]
 	);
 
-	// Save handler for approval bar
-	const handleSave = React.useCallback(async () => {
-		if (!formRef.current?.submit) return;
-		await formRef.current.submit();
-	}, [formRef]);
-
 	// Page metadata
 	const pageTitle = mode === "create" ? "Create Indent" : mode === "edit" ? "Edit Indent" : "Indent Details";
 	const subtitle =
@@ -798,20 +844,63 @@ function IndentTransactionPageContent() {
 		return statusChipProps;
 	}, [indentDetails?.status, statusChipProps]);
 
-	// Primary actions — hide save when mode is view or status doesn't allow it
+	// Unified primary actions — shows Create, Save, or Approval buttons in the same location
 	const primaryActions = React.useMemo<TransactionAction[] | undefined>(() => {
-		if (mode === "view" || pageError || setupError) return undefined;
-		// In edit mode, only show Save if the approval status allows saving
-		if (mode === "edit" && !approvalPermissions.canSave) return undefined;
-		return [
-			{
-				label: mode === "create" ? "Create Indent" : "Save Changes",
-				onClick: () => formRef.current?.submit(),
-				disabled: saving || !lineItemsValid || setupLoading,
-				loading: saving,
+		if (pageError || setupError) return undefined;
+
+		// Create mode → Create button
+		if (mode === "create") {
+			return [
+				{
+					label: "Create Indent",
+					onClick: () => formRef.current?.submit(),
+					disabled: saving || !lineItemsValid || setupLoading,
+					loading: saving,
+				},
+			];
+		}
+
+		// No indent details yet (still loading)
+		if (!indentDetails) return undefined;
+
+		// Edit mode with unsaved changes → Save button
+		if (mode === "edit" && approvalPermissions.canSave && hasUnsavedChanges) {
+			return [
+				{
+					label: "Save Changes",
+					onClick: () => formRef.current?.submit(),
+					disabled: saving || !lineItemsValid || setupLoading,
+					loading: saving,
+				},
+			];
+		}
+
+		// View mode, or edit mode without unsaved changes → Approval buttons
+		const approvalActions = buildApprovalTransactionActions({
+			approvalInfo,
+			permissions: approvalPermissions,
+			handlers: {
+				onOpen: handleOpen,
+				onCancelDraft: handleCancelDraft,
+				onReopen: handleReopen,
+				onSendForApproval: handleSendForApproval,
+				onApprove: handleApprove,
+				onReject: openRejectDialog,
+				onViewApprovalLog: handleViewApprovalLog,
+				onClone: handleClone,
 			},
-		];
-	}, [mode, pageError, setupError, saving, lineItemsValid, setupLoading, formRef, approvalPermissions.canSave]);
+			loading: approvalLoading,
+			disabled: saving || loading || setupLoading,
+		});
+
+		return approvalActions.length ? approvalActions : undefined;
+	}, [
+		mode, pageError, setupError, saving, lineItemsValid, setupLoading,
+		formRef, indentDetails, approvalPermissions, hasUnsavedChanges,
+		approvalInfo, approvalLoading, loading,
+		handleOpen, handleCancelDraft, handleReopen, handleSendForApproval,
+		handleApprove, openRejectDialog, handleViewApprovalLog, handleClone,
+	]);
 
 	// Secondary actions
 	const secondaryActions = React.useMemo<TransactionAction[] | undefined>(() => {
@@ -870,31 +959,11 @@ function IndentTransactionPageContent() {
 			loading={loading || setupLoading}
 			alerts={alerts}
 			preview={
-				<div className="space-y-4">
-					{/* Approval Actions Bar */}
-					{mode !== "create" && indentDetails ? (
-						<IndentApprovalBar
-							approvalInfo={approvalInfo}
-							permissions={approvalPermissions}
-							loading={approvalLoading}
-							disabled={saving || loading || setupLoading}
-							onSave={handleSave}
-							onOpen={handleOpen}
-							onCancelDraft={handleCancelDraft}
-							onReopen={handleReopen}
-							onSendForApproval={handleSendForApproval}
-							onApprove={handleApprove}
-							onReject={handleReject}
-							onViewApprovalLog={handleViewApprovalLog}
-							onClone={handleClone}
-						/>
-					) : null}
-					<IndentPreview
-						header={previewHeader}
-						items={previewItems}
-						remarks={(formValues.remarks as string) || indentDetails?.remarks}
-					/>
-				</div>
+				<IndentPreview
+					header={previewHeader}
+					items={previewItems}
+					remarks={(formValues.remarks as string) || indentDetails?.remarks}
+				/>
 			}
 			lineItems={{
 				title: "Line Items",
@@ -994,6 +1063,40 @@ function IndentTransactionPageContent() {
 				<DialogFooter>
 					<Button variant="outline" onClick={() => setSaveError(null)}>
 						Close
+					</Button>
+				</DialogFooter>
+			</DialogContent>
+		</Dialog>
+
+		{/* ── Reject Confirmation Dialog ────────────────────────────────── */}
+		<Dialog open={rejectDialogOpen} onOpenChange={(open) => { if (!open) handleRejectCancel(); }}>
+			<DialogContent className="sm:max-w-125">
+				<DialogHeader>
+					<DialogTitle>Reject Document</DialogTitle>
+					<DialogDescription>Please provide a reason for rejecting this document.</DialogDescription>
+				</DialogHeader>
+				<div className="space-y-4 py-4">
+					<div className="space-y-2">
+						<label htmlFor="reject-reason" className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70">
+							Rejection Reason *
+						</label>
+						<AutoResizeTextarea
+							id="reject-reason"
+							placeholder="Enter rejection reason..."
+							value={rejectReason}
+							onChange={(e) => setRejectReason(e.target.value)}
+							className="min-h-20 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+							minHeight={80}
+							maxHeight={200}
+						/>
+					</div>
+				</div>
+				<DialogFooter>
+					<Button variant="outline" onClick={handleRejectCancel}>
+						Cancel
+					</Button>
+					<Button variant="destructive" onClick={handleRejectConfirm} disabled={!rejectReason.trim()}>
+						Reject
 					</Button>
 				</DialogFooter>
 			</DialogContent>

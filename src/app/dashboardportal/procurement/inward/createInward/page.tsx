@@ -371,6 +371,7 @@ function InwardTransactionPageContent() {
 				quantity: item.quantity || undefined,
 				uom: item.uom || undefined,
 				remarks: item.remarks || undefined,
+				hsn_code: item.hsnCode || undefined,
 			}));
 
 			const createPayload = {
@@ -423,6 +424,7 @@ function InwardTransactionPageContent() {
 							quantity: item.quantity ? Number(item.quantity) : undefined,
 							uom: item.uom || undefined,
 							remarks: item.remarks || undefined,
+							hsnCode: item.hsnCode || undefined,
 						})),
 					};
 

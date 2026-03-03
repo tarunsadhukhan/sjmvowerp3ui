@@ -58,8 +58,10 @@ export const usePOFormSubmission = ({
       }
 
       const itemsPayload = filledLineItems.map((item) => ({
+        po_dtl_id: item.poDtlId ?? undefined,
         indent_dtl_id: item.indentDtlId,
         item: item.item || undefined,
+        hsn_code: item.hsnCode || undefined,
         quantity: item.quantity || undefined,
         rate: item.rate || undefined,
         uom: item.uom || undefined,
@@ -81,6 +83,7 @@ export const usePOFormSubmission = ({
             rate: charge.rate,
             net_amount: charge.net_amount,
             remarks: charge.remarks || undefined,
+            apply_tax: charge.apply_tax,
             tax_pct: charge.tax_pct,
             igst_amount: charge.igst_amount,
             cgst_amount: charge.cgst_amount,

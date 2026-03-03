@@ -142,6 +142,34 @@ export const useSRLineItemColumns = ({
 				getTooltip: ({ item }) => item.accepted_item_make_name || undefined,
 			},
 			{
+				id: "hsn_code",
+				header: "HSN",
+				width: "0.7fr",
+				minWidth: "100px",
+				renderCell: ({ item }) => {
+					if (!canEdit) {
+						return (
+							<Typography variant="body2" noWrap title={item.hsn_code || undefined}>
+								{item.hsn_code || "-"}
+							</Typography>
+						);
+					}
+					return (
+						<TextField
+							size="small"
+							variant="outlined"
+							value={item.hsn_code ?? ""}
+							onChange={(e) => {
+								onLineItemChange(item.id, "hsn_code", e.target.value);
+							}}
+							placeholder="HSN Code"
+							sx={{ width: "100%" }}
+						/>
+					);
+				},
+				getTooltip: ({ item }) => item.hsn_code || undefined,
+			},
+			{
 				id: "uom_name",
 				header: "UOM",
 				width: "0.5fr",

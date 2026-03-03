@@ -118,6 +118,7 @@ export function POLineItemsDialog({
 					tax_percentage: item.tax_percentage ? Number(item.tax_percentage) : undefined,
 					amount: item.amount ? Number(item.amount) : undefined,
 					remarks: item.remarks ? String(item.remarks) : undefined,
+					hsn_code: item.hsn_code ? String(item.hsn_code) : undefined,
 				}));
 				// Only show items with pending quantity > 0
 				const pendingItems = mappedItems.filter((item) => item.pending_qty > 0);

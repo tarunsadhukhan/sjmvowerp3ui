@@ -56,6 +56,7 @@ export const useInwardLineItems = ({
 				uom: String(line.uom_id ?? line.uom ?? ""),
 				remarks: String(line.remarks ?? ""),
 				taxPercentage: typeof line.tax_percentage === "number" ? line.tax_percentage : undefined,
+				hsnCode: line.hsn_code ? String(line.hsn_code) : undefined,
 			};
 		},
 		[itemGroupCache, itemGroupLoading, ensureItemGroupData]
@@ -136,6 +137,7 @@ export const useInwardLineItems = ({
 					uom: String(poItem.uom_id ?? ""),
 					remarks: poItem.remarks ?? "",
 					taxPercentage: poItem.tax_percentage,
+					hsnCode: poItem.hsn_code ?? undefined,
 				};
 			});
 

@@ -15,6 +15,7 @@ export type InwardLine = {
 	uom?: string;
 	remarks?: string;
 	taxPercentage?: number;
+	hsnCode?: string;
 };
 
 export type InwardDetails = {
@@ -96,6 +97,7 @@ export type CreateInwardRequest = {
 		quantity?: string | number;
 		uom?: string;
 		remarks?: string;
+		hsn_code?: string;
 	}>;
 };
 
@@ -262,6 +264,7 @@ export async function updateInward(payload: Partial<InwardDetails>): Promise<{ m
 		quantity: line.quantity ?? 0,
 		uom: line.uom ?? "",
 		remarks: line.remarks ?? undefined,
+		hsn_code: line.hsnCode || undefined,
 	}));
 
 	const updatePayload = {

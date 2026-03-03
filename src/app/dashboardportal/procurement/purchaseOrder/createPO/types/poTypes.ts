@@ -76,6 +76,8 @@ export type POAdditionalChargeRaw = {
 export type EditableLineItem = {
 	id: string;
 	indentDtlId?: string;
+	/** Database PO detail line ID — present for existing rows loaded during edit, undefined for new rows */
+	poDtlId?: string;
 	indentNo?: string;
 	department?: string;
 	itemGroup: string;
@@ -94,6 +96,7 @@ export type EditableLineItem = {
 	igstAmount?: number;
 	cgstAmount?: number;
 	sgstAmount?: number;
+	hsnCode?: string;
 	taxAmount?: number;
 	// Validation fields (direct PO and indent-based)
 	rowError?: string;
@@ -215,6 +218,7 @@ export type ItemOption = Option & {
 	defaultUomLabel?: string;
 	defaultRate?: number;
 	taxPercentage?: number;
+	hsnCode?: string;
 	lastPurchaseRate?: number;
 	lastPurchaseDate?: string;
 	lastSupplierName?: string;
@@ -239,6 +243,7 @@ export type ItemGroupCacheEntry = {
 	uomLabelByItemId: Record<string, Record<string, string>>;
 	itemRateById: Record<string, number>;
 	itemTaxById: Record<string, number>;
+	itemHsnById: Record<string, string>;
 	itemLastPurchaseById: Record<string, ItemLastPurchaseInfo>;
 };
 
@@ -370,6 +375,7 @@ export type ItemOptionRaw = {
 	uom_name?: string | null;
 	rate?: number | string | null;
 	tax_percentage?: number | string | null;
+	hsn_code?: string | null;
 	last_purchase_rate?: number | string | null;
 	last_purchase_date?: string | null;
 	last_supplier_name?: string | null;

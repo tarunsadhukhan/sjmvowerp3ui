@@ -32,6 +32,7 @@ export type EditableLineItem = {
 	amount?: number;
 	remarks: string;
 	taxPercentage?: number;
+	hsnCode?: string;
 };
 
 /**
@@ -128,4 +129,5 @@ export type POLineItem = {
 	tax_percentage?: number;
 	amount?: number;
 	remarks?: string;
+	hsn_code?: string;
 };

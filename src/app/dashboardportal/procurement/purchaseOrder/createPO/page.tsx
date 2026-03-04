@@ -2,13 +2,17 @@
 
 import React, { Suspense } from "react";
 import { useRouter, useSearchParams, usePathname } from "next/navigation";
-import TransactionWrapper from "@/components/ui/TransactionWrapper";
+import TransactionWrapper, { type TransactionAction } from "@/components/ui/TransactionWrapper";
 import { Button } from "@/components/ui/button";
 import type { MuiFormMode } from "@/components/ui/muiform";
 import {
   useDeferredOptionCache,
   useTransactionSetup,
   useTransactionPreview,
+  buildApprovalTransactionActions,
+  useRejectDialog,
+  useUnsavedChanges,
+  AutoResizeTextarea,
 } from "@/components/ui/transaction";
 import { useBranchOptions } from "@/utils/branchUtils";
 import {
@@ -26,7 +30,14 @@ import { IndentLineItemsDialog, type IndentLineItem } from "../components/Indent
 import { POHeaderForm } from "./components/POHeaderForm";
 import { POFooterForm } from "./components/POFooterForm";
 import { POTotalsDisplay } from "./components/POTotalsDisplay";
-import { POApprovalBar } from "./components/POApprovalBar";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogFooter,
+  DialogTitle,
+  DialogDescription,
+} from "@/components/ui/dialog";
 import { POAdditionalCharges } from "./components/POAdditionalCharges";
 import POPreview from "./components/POPreview";
 import { usePOLineItemColumns, shouldAllowManualLineEntry } from "./components/POLineItemsTable";
@@ -37,9 +48,9 @@ import { usePOSelectOptions } from "./hooks/usePOSelectOptions";
 import { usePOHeaderSchema, usePOFooterSchema } from "./hooks/usePOFormSchemas";
 import { usePOFormSubmission } from "./hooks/usePOFormSubmission";
 import { usePOApproval } from "./hooks/usePOApproval";
-import { usePOLineItems } from "./hooks/usePOLineItems";
+import { usePOLineItems, lineHasAnyData } from "./hooks/usePOLineItems";
 import { usePOAdditionalCharges } from "./hooks/usePOAdditionalCharges";
-import type { ItemGroupCacheEntry, POAdditionalChargeRaw, POSetupData } from "./types/poTypes";
+import type { EditableLineItem, ItemGroupCacheEntry, POAdditionalChargeRaw, POSetupData } from "./types/poTypes";
 
 import { mapItemGroupDetailResponse, mapPOSetupResponse, mapPODetailsToFormValues } from "./utils/poMappers";
 import { calculateExpectedDate, calculateTotals } from "./utils/poCalculations";
@@ -122,19 +133,6 @@ function POTransactionPageContent() {
   const [loading, setLoading] = React.useState<boolean>(mode !== "create");
   const [pageError, setPageError] = React.useState<string | null>(null);
   const [indentDialogOpen, setIndentDialogOpen] = React.useState(false);
-
-  // DEBUG: Log branch state on each render
-  React.useEffect(() => {
-    console.log('[PO Page Debug]', {
-      mode,
-      branchIdFromUrl,
-      lockedBranchId,
-      'formValues.branch': formValues.branch,
-      'initialValues.branch': initialValues.branch,
-      formKey,
-      branchOptionsCount: branchOptions.length,
-    });
-  });
 
   // Memoize branch value to prevent unnecessary recalculations.
   // In edit/view mode, we prefer the branch id passed from the index page
@@ -346,6 +344,35 @@ function POTransactionPageContent() {
     return calculateTotals(filledLineItems, advancePercentage);
   }, [filledLineItems, formValues.advance_percentage]);
 
+  // ── Unsaved changes tracking ──────────────────────────────────
+  const getComparableLineData = React.useCallback(
+    (item: EditableLineItem) => ({
+      itemGroup: item.itemGroup,
+      item: item.item,
+      itemMake: item.itemMake,
+      quantity: item.quantity,
+      rate: item.rate,
+      uom: item.uom,
+      discountMode: item.discountMode,
+      discountValue: item.discountValue,
+      remarks: item.remarks,
+      taxPercentage: item.taxPercentage,
+      hsnCode: item.hsnCode,
+    }),
+    [],
+  );
+
+  const comparableLineItems = React.useMemo(
+    () => lineItems.filter(lineHasAnyData),
+    [lineItems],
+  );
+
+  const { hasUnsavedChanges, resetBaseline, setBaseline } = useUnsavedChanges({
+    formValues,
+    lineItems: comparableLineItems,
+    getComparableLineData,
+    enabled: mode !== "create",
+  });
 
   const detailsFetchKey = React.useMemo(
     () => [mode, requestedId || "", branchIdForSetup || branchIdFromUrl || "", coId || ""].join("|"),
@@ -426,6 +453,9 @@ function POTransactionPageContent() {
           poType: nextValues.po_type ? String(nextValues.po_type) : "Regular",
         });
 
+        // Set baseline for unsaved changes tracking
+        setBaseline(nextValues, normalizedLines.filter(lineHasAnyData));
+
         // Map additional charges if present
         const rawAdditionalCharges = (details as unknown as { additionalCharges?: POAdditionalChargeRaw[] })?.additionalCharges ?? [];
         if (rawAdditionalCharges.length > 0) {
@@ -469,6 +499,7 @@ function POTransactionPageContent() {
     revalidateLoadedLines,
     mapRawToCharges,
     replaceCharges,
+    setBaseline,
     setupEnabled,
     setupLoading,
     setupData,
@@ -614,6 +645,23 @@ function POTransactionPageContent() {
     getMenuId,
     setPODetails,
   });
+
+  // ── Reject dialog ─────────────────────────────────────────────
+  const {
+    rejectDialogOpen,
+    rejectReason,
+    setRejectReason,
+    openRejectDialog,
+    handleRejectConfirm,
+    handleRejectCancel,
+  } = useRejectDialog(handleReject);
+
+  // Reset baseline when poDetails changes (initial load or post-approval refresh)
+  React.useEffect(() => {
+    if (!poDetails || mode === "create") return;
+    const timer = setTimeout(() => resetBaseline(), 0);
+    return () => clearTimeout(timer);
+  }, [poDetails, mode, resetBaseline]);
 
   // Editing is allowed only when not in view mode AND the status permits saving
   // (e.g. Approved POs have canSave = false, so they become view-only even in edit mode)
@@ -842,11 +890,83 @@ function POTransactionPageContent() {
     formValues,
   });
 
-  const primaryActionLabel = mode === "create" ? "Create" : "Save";
-  const handleSaveClick = React.useCallback(() => {
-    if (!formRef.current?.submit) return;
-    void formRef.current.submit();
-  }, [formRef]);
+  // ── Unified primary actions ──────────────────────────────────
+  const primaryActions = React.useMemo<TransactionAction[] | undefined>(() => {
+    if (pageError || setupError) return undefined;
+
+    // Create mode
+    if (mode === "create") {
+      return [{
+        label: "Create Purchase Order",
+        onClick: () => formRef.current?.submit(),
+        disabled: saving || !lineItemsValid || setupLoading,
+        loading: saving,
+      }];
+    }
+
+    if (!poDetails) return undefined;
+
+    // Edit mode with unsaved changes
+    if (mode === "edit" && approvalPermissions.canSave && hasUnsavedChanges) {
+      return [{
+        label: "Save Changes",
+        onClick: () => formRef.current?.submit(),
+        disabled: saving || !lineItemsValid || setupLoading,
+        loading: saving,
+      }];
+    }
+
+    // View mode, or edit without changes -> approval buttons
+    const approvalActions = buildApprovalTransactionActions({
+      approvalInfo,
+      permissions: approvalPermissions,
+      handlers: {
+        onOpen: handleOpen,
+        onCancelDraft: handleCancelDraft,
+        onReopen: handleReopen,
+        onSendForApproval: handleSendForApproval,
+        onApprove: handleApprove,
+        onReject: openRejectDialog,
+        onViewApprovalLog: handleViewApprovalLog,
+        onClone: handleClone,
+      },
+      loading: approvalLoading,
+      disabled: saving || loading || setupLoading,
+    });
+
+    return approvalActions.length ? approvalActions : undefined;
+  }, [
+    mode, pageError, setupError, saving, lineItemsValid, setupLoading,
+    formRef, poDetails, approvalPermissions, hasUnsavedChanges,
+    approvalInfo, approvalLoading, loading,
+    handleOpen, handleCancelDraft, handleReopen, handleSendForApproval,
+    handleApprove, openRejectDialog, handleViewApprovalLog, handleClone,
+  ]);
+
+  // ── Secondary actions (Edit / Cancel in top-right) ─────────
+  const secondaryActions = React.useMemo<TransactionAction[] | undefined>(() => {
+    if (!requestedId || pageError) return undefined;
+    const actions: TransactionAction[] = [];
+    if (mode === "view" && approvalPermissions.canSave) {
+      actions.push({
+        label: "Edit",
+        variant: "secondary",
+        onClick: () => router.replace(
+          `/dashboardportal/procurement/purchaseOrder/createPO?mode=edit&id=${encodeURIComponent(requestedId)}&branch_id=${encodeURIComponent(branchValue)}&menu_id=${encodeURIComponent(menuIdFromUrl)}`,
+        ),
+      });
+    }
+    if (mode === "edit") {
+      actions.push({
+        label: "Cancel",
+        variant: "ghost",
+        onClick: () => router.replace(
+          `/dashboardportal/procurement/purchaseOrder/createPO?mode=view&id=${encodeURIComponent(requestedId)}&branch_id=${encodeURIComponent(branchValue)}&menu_id=${encodeURIComponent(menuIdFromUrl)}`,
+        ),
+      });
+    }
+    return actions.length ? actions : undefined;
+  }, [mode, requestedId, router, pageError, approvalPermissions.canSave, branchValue, menuIdFromUrl]);
 
   const pageTitle = React.useMemo(() => {
     if (mode === "create") return "Create Purchase Order";
@@ -857,12 +977,15 @@ function POTransactionPageContent() {
   }, [mode, poDetails?.poNo]);
 
   return (
+    <>
     <TransactionWrapper
       title={pageTitle}
       subtitle={mode === "create" ? "Create a new purchase order" : mode === "edit" ? "Edit purchase order" : "View purchase order details"}
       metadata={metadata}
       statusChip={statusChipProps}
       backAction={{ onClick: () => router.push("/dashboardportal/procurement/purchaseOrder") }}
+      primaryActions={primaryActions}
+      secondaryActions={secondaryActions}
       loading={loading || setupLoading}
       alerts={pageError ? <div role="alert" aria-live="assertive" className="text-red-600">{pageError}</div> : undefined}
       preview={
@@ -908,26 +1031,6 @@ function POTransactionPageContent() {
             onChargeChange={updateCharge}
           />
           <POTotalsDisplay totals={totals} showGSTBreakdown={Boolean(coConfig?.india_gst)} chargesTotals={chargesTotals} />
-          <POApprovalBar
-            approvalInfo={approvalInfo}
-            permissions={approvalPermissions}
-            loading={approvalLoading}
-            onApprove={handleApprove}
-            onReject={handleReject}
-            onOpen={handleOpen}
-            onCancelDraft={handleCancelDraft}
-            onReopen={handleReopen}
-            onSendForApproval={handleSendForApproval}
-            onViewApprovalLog={handleViewApprovalLog}
-            onClone={handleClone}
-          />
-          {canSave ? (
-            <div className="flex justify-end pt-2">
-              <Button type="button" onClick={handleSaveClick} disabled={saving || setupLoading || !isLineItemsReady}>
-                {saving ? "Processing..." : primaryActionLabel}
-              </Button>
-            </div>
-          ) : null}
         </div>
       }
     >
@@ -953,6 +1056,37 @@ function POTransactionPageContent() {
         poDate={(formValues.date as string) || undefined}
       />
     </TransactionWrapper>
+
+    {/* ── Reject Confirmation Dialog ────────────────────────────────── */}
+    <Dialog open={rejectDialogOpen} onOpenChange={(open) => { if (!open) handleRejectCancel(); }}>
+      <DialogContent className="sm:max-w-125">
+        <DialogHeader>
+          <DialogTitle>Reject Document</DialogTitle>
+          <DialogDescription>Please provide a reason for rejecting this document.</DialogDescription>
+        </DialogHeader>
+        <div className="space-y-4 py-4">
+          <div className="space-y-2">
+            <label htmlFor="reject-reason" className="text-sm font-medium leading-none">
+              Rejection Reason *
+            </label>
+            <AutoResizeTextarea
+              id="reject-reason"
+              placeholder="Enter rejection reason..."
+              value={rejectReason}
+              onChange={(e) => setRejectReason(e.target.value)}
+              className="min-h-20 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
+              minHeight={80}
+              maxHeight={200}
+            />
+          </div>
+        </div>
+        <DialogFooter>
+          <Button variant="outline" onClick={handleRejectCancel}>Cancel</Button>
+          <Button variant="destructive" onClick={handleRejectConfirm} disabled={!rejectReason.trim()}>Reject</Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+    </>
   );
 }
 

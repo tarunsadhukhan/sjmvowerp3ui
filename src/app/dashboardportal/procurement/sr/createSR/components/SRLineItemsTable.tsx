@@ -300,7 +300,7 @@ export const useSRLineItemColumns = ({
 					if (!canEdit) {
 						const warehouseLabel = item.warehouse_id ? warehouseLabelMap[String(item.warehouse_id)] || item.warehouse_path || item.warehouse_name : "-";
 						return (
-							<Typography variant="body2" noWrap>
+							<Typography variant="body2" noWrap sx={{ textAlign: "center", width: "100%" }}>
 								{warehouseLabel}
 							</Typography>
 						);

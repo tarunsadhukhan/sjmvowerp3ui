@@ -147,15 +147,15 @@ export const useSRAdditionalCharges = ({ mode, header }: UseSRAdditionalChargesP
 	const mapRawToCharges = React.useCallback((raw: SRAdditionalChargeRaw[]): SRAdditionalCharge[] => {
 		return raw.map((r) => ({
 			id: generateChargeId(),
-			inward_additional_id: r.inward_additional_id ?? null,
+			inward_additional_id: r.proc_inward_additional_id ?? r.inward_additional_id ?? null,
 			additional_charges_id: r.additional_charges_id ?? 0,
 			additional_charges_name: r.additional_charges_name || "",
 			qty: r.qty || 1,
 			rate: r.rate || 0,
 			net_amount: r.net_amount || 0,
 			remarks: r.remarks || "",
-			apply_tax: r.apply_tax ?? false,
-			tax_pct: r.tax_pct || 0,
+			apply_tax: r.apply_tax ?? (r.tax_pct ? r.tax_pct > 0 : false),
+			tax_pct: r.tax_pct ?? r.default_tax_pct ?? 0,
 			igst_amount: r.igst_amount || 0,
 			sgst_amount: r.sgst_amount || 0,
 			cgst_amount: r.cgst_amount || 0,

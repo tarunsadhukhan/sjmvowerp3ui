@@ -71,7 +71,7 @@ export default function InwardIndexPage() {
 		[router]
 	);
 
-	// Row is editable when inspection_check is false (not yet inspected)
+	// Row is editable until material inspection is completed
 	const isRowEditable = React.useMemo(
 		() => createBooleanFieldEditCheck<InwardRow>("inspection_check", false),
 		[]

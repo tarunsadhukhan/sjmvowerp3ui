@@ -211,11 +211,7 @@ export const SRAdditionalCharges: React.FC<SRAdditionalChargesProps> = ({
 												size="small"
 												variant="outlined"
 												value={charge.qty}
-												onChange={(e) => {
-													const qty = Number(e.target.value) || 1;
-													onChargeChange(charge.id, "qty", qty);
-													onChargeChange(charge.id, "net_amount", qty * charge.rate);
-												}}
+												onChange={(e) => onChargeChange(charge.id, "qty", Number(e.target.value) || 1)}
 												inputProps={{ min: 1, style: { textAlign: "right" } }}
 												sx={{ width: "100%" }}
 											/>
@@ -232,11 +228,7 @@ export const SRAdditionalCharges: React.FC<SRAdditionalChargesProps> = ({
 												size="small"
 												variant="outlined"
 												value={charge.rate}
-												onChange={(e) => {
-													const rate = Number(e.target.value) || 0;
-													onChargeChange(charge.id, "rate", rate);
-													onChargeChange(charge.id, "net_amount", charge.qty * rate);
-												}}
+												onChange={(e) => onChargeChange(charge.id, "rate", Number(e.target.value) || 0)}
 												inputProps={{ min: 0, step: 0.01, style: { textAlign: "right" } }}
 												sx={{ width: "100%" }}
 											/>

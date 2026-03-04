@@ -55,7 +55,8 @@ export type SRAdditionalCharge = {
  * Raw additional charge from API.
  */
 export type SRAdditionalChargeRaw = {
-	inward_additional_id?: number;
+	proc_inward_additional_id?: number;
+	inward_additional_id?: number; // Legacy alias
 	inward_id?: number;
 	additional_charges_id?: number;
 	additional_charges_name?: string;

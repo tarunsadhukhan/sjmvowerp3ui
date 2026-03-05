@@ -155,6 +155,7 @@ function BillPassEditPageContent() {
 
   // Form state for editable fields
   const [formData, setFormData] = React.useState({
+    invoice_no: "",
     invoice_date: "",
     invoice_amount: "",
     invoice_recvd_date: "",
@@ -182,6 +183,7 @@ function BillPassEditPageContent() {
 
       // Initialize form with existing data
       setFormData({
+        invoice_no: data.invoice_no ?? "",
         invoice_date: toDateInput(data.invoice_date),
         invoice_amount: data.invoice_amount ? String(data.invoice_amount) : "",
         invoice_recvd_date: toDateInput(data.invoice_recvd_date),
@@ -212,6 +214,7 @@ function BillPassEditPageContent() {
     setSaving(true);
     try {
       const { error } = await updateBillPass(detail.inward_id, {
+        invoice_no: formData.invoice_no || null,
         invoice_date: formData.invoice_date || null,
         invoice_amount: formData.invoice_amount ? parseFloat(formData.invoice_amount) : null,
         invoice_recvd_date: formData.invoice_recvd_date || null,
@@ -254,6 +257,7 @@ function BillPassEditPageContent() {
     setSaving(true);
     try {
       const { error } = await updateBillPass(detail.inward_id, {
+        invoice_no: formData.invoice_no || null,
         invoice_date: formData.invoice_date,
         invoice_amount: parseFloat(formData.invoice_amount),
         invoice_recvd_date: formData.invoice_recvd_date || null,
@@ -400,6 +404,9 @@ function BillPassEditPageContent() {
             </Grid>
             <Grid size={{ xs: 6, md: 3 }}>
               <InfoField label="Challan Date" value={formatBillPassDate(detail.challan_date)} />
+            </Grid>
+            <Grid size={{ xs: 6, md: 3 }}>
+              <InfoField label="Invoice No." value={detail.invoice_no || "-"} />
             </Grid>
           </Grid>
         </CardContent>
@@ -564,6 +571,17 @@ function BillPassEditPageContent() {
                 Invoice Details
               </Typography>
               <Grid container spacing={2}>
+                <Grid size={{ xs: 12, sm: 6 }}>
+                  <TextField
+                    label="Invoice No."
+                    type="text"
+                    value={formData.invoice_no}
+                    onChange={(e) => handleFieldChange("invoice_no", e.target.value)}
+                    fullWidth
+                    size="small"
+                    disabled={isComplete}
+                  />
+                </Grid>
                 <Grid size={{ xs: 12, sm: 6 }}>
                   <TextField
                     label="Invoice Date *"

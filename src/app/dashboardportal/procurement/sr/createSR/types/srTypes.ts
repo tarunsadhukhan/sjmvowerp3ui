@@ -142,6 +142,7 @@ export type SRHeader = {
 	invoice_date: string;
 	invoice_amount: number;
 	invoice_recvd_date: string;
+	invoice_no: string;
 	vehicle_number: string;
 	driver_name: string;
 	driver_contact_no: string;
@@ -234,6 +235,7 @@ export type SRHeaderRaw = {
 	invoice_date?: string;
 	invoice_amount?: number;
 	invoice_recvd_date?: string;
+	invoice_no?: string;
 	vehicle_number?: string;
 	driver_name?: string;
 	driver_contact_no?: string;

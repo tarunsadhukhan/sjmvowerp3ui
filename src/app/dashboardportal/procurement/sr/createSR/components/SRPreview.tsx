@@ -146,15 +146,17 @@ export const SRPreview: React.FC<SRPreviewProps> = ({
 					<FieldRow label="Supplier" value={header?.supplier_name} />
 					<FieldRow label="Challan No" value={header?.challan_no} />
 					<FieldRow label="Inspection Date" value={formatDate(header?.inspection_date)} />
-				</Box>
+				<FieldRow label="Invoice No" value={header?.invoice_no} />
+				<FieldRow label="Invoice Date" value={formatDate(header?.invoice_date)} />
+			</Box>
 
-				<Divider sx={{ my: 2 }} />
+			<Divider sx={{ my: 2 }} />
 
-				{/* Line Items Table */}
-				<Typography variant="subtitle1" fontWeight={600} sx={{ mb: 1 }}>
-					Line Items
-				</Typography>
-				<Box
+			{/* Line Items Table */}
+			<Typography variant="subtitle1" fontWeight={600} sx={{ mb: 1 }}>
+				Line Items
+			</Typography>
+			<Box
 					component="table"
 					sx={{ width: "100%", borderCollapse: "collapse", fontSize: "12px" }}
 				>

@@ -16,7 +16,7 @@ export const lineHasAnyData = (line: EditableLineItem) =>
 export const lineIsComplete = (line: EditableLineItem) => {
 	const qty = Number(line.quantity);
 	const rate = Number(line.rate);
-	return Boolean(line.itemGroup && line.item && line.uom && Number.isFinite(qty) && qty > 0 && Number.isFinite(rate) && rate >= 0);
+	return Boolean(line.itemGroup && line.item && line.uom && Number.isFinite(qty) && qty > 0 && Number.isFinite(rate) && rate > 0);
 };
 
 type UsePOLineItemsParams = {
@@ -97,6 +97,7 @@ export const usePOLineItems = ({
 		cgstAmount: line.cgst,
 		sgstAmount: line.sgst,
 		taxAmount: line.taxAmount,
+		availableIndentQty: line.availableIndentQty,
 	}), []);
 
 	const handleLineFieldChange = React.useCallback(

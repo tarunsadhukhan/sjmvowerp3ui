@@ -94,6 +94,7 @@ export const IssuePreview: React.FC<IssuePreviewProps> = ({
 								<th className="border-b px-2 py-1 text-left">UOM</th>
 								<th className="border-b px-2 py-1 text-right">Rate</th>
 								<th className="border-b px-2 py-1 text-left">Expense</th>
+								<th className="border-b px-2 py-1 text-left">Cost Factor</th>
 							</tr>
 						</thead>
 						<tbody>
@@ -108,6 +109,7 @@ export const IssuePreview: React.FC<IssuePreviewProps> = ({
 										{line.rate ? parseFloat(String(line.rate)).toFixed(2) : "-"}
 									</td>
 									<td className="px-2 py-1">{line.expenseTypeName || "-"}</td>
+									<td className="px-2 py-1">{line.costFactorName || "-"}</td>
 								</tr>
 							))}
 						</tbody>

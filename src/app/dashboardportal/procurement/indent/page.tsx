@@ -43,6 +43,18 @@ const formatDate = (value?: string) => {
 	}).format(date);
 };
 
+/** Get selected branch IDs from localStorage */
+const getSelectedBranchId = (): string => {
+	try {
+		const raw = localStorage.getItem("sidebar_selectedBranches");
+		if (!raw) return "";
+		const branches = JSON.parse(raw) as number[];
+		return branches.length > 0 ? String(branches[0]) : "";
+	} catch {
+		return "";
+	}
+};
+
 export default function ProcurementIndentIndexPage() {
 	const router = useRouter();
 	const { getMenuId } = useMenuId({ transactionType: "indent" });
@@ -52,6 +64,28 @@ export default function ProcurementIndentIndexPage() {
 	const [paginationModel, setPaginationModel] = React.useState<GridPaginationModel>({ page: 0, pageSize: 10 });
 	const [searchValue, setSearchValue] = React.useState("");
 	const [errorMessage, setErrorMessage] = React.useState<string | null>(null);
+	const [selectedBranchId, setSelectedBranchId] = React.useState<string>("");
+	const [isMounted, setIsMounted] = React.useState(false);
+
+	// Initialize branch ID and setup listeners - only on client
+	React.useEffect(() => {
+		// Set initial branch ID from localStorage
+		const initialBranchId = getSelectedBranchId();
+		setSelectedBranchId(initialBranchId);
+		setIsMounted(true);
+
+		// Listen to branch selection changes
+		const handleStorageChange = (e: StorageEvent) => {
+			if (e.key === "sidebar_selectedBranches") {
+				const newBranchId = getSelectedBranchId();
+				setSelectedBranchId(newBranchId);
+				setPaginationModel(prev => ({ ...prev, page: 0 })); // Reset to first page
+			}
+		};
+
+		window.addEventListener("storage", handleStorageChange);
+		return () => window.removeEventListener("storage", handleStorageChange);
+	}, []);
 
 	const handleView = React.useCallback(
 		(row: IndentRow) => {
@@ -132,6 +166,14 @@ export default function ProcurementIndentIndexPage() {
 		setLoading(true);
 		setErrorMessage(null);
 
+		// If no branch is selected, clear data and return early
+		if (!selectedBranchId) {
+			setRows([]);
+			setTotalRows(0);
+			setLoading(false);
+			return;
+		}
+
 		try {
 			let co_id = "";
 			try {
@@ -149,6 +191,7 @@ export default function ProcurementIndentIndexPage() {
 				limit: String(paginationModel.pageSize),
 			});
 			if (co_id) query.set("co_id", co_id);
+			if (selectedBranchId) query.set("branch_id", selectedBranchId);
 			const trimmedSearch = searchValue.trim();
 			if (trimmedSearch) query.set("search", trimmedSearch);
 
@@ -185,7 +228,7 @@ export default function ProcurementIndentIndexPage() {
 		} finally {
 			setLoading(false);
 		}
-	}, [paginationModel.page, paginationModel.pageSize, searchValue]);
+	}, [paginationModel.page, paginationModel.pageSize, searchValue, selectedBranchId]);
 
 	React.useEffect(() => {
 		fetchIndents();
@@ -224,10 +267,16 @@ export default function ProcurementIndentIndexPage() {
 			onEdit={handleEdit}
 			isRowEditable={isRowEditable}
 		>
-			{errorMessage ? (
-				<Alert severity="error" sx={{ mt: 2 }}>
-					{errorMessage}
-				</Alert>
+			{isMounted ? (
+				!selectedBranchId ? (
+					<Alert severity="info" sx={{ mt: 2 }}>
+						Please select a branch from the sidebar to view indents.
+					</Alert>
+				) : errorMessage ? (
+					<Alert severity="error" sx={{ mt: 2 }}>
+						{errorMessage}
+					</Alert>
+				) : null
 			) : null}
 		</IndexWrapper>
 	);

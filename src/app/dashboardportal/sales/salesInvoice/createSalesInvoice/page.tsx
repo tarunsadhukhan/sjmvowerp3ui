@@ -32,12 +32,12 @@ import { DeliveryOrderLinesDialog } from "./components/DeliveryOrderLinesDialog"
 import { useSalesInvoiceFormState } from "./hooks/useSalesInvoiceFormState";
 import { useSalesInvoiceLineItems } from "./hooks/useSalesInvoiceLineItems";
 import { useSalesInvoiceSelectOptions } from "./hooks/useSalesInvoiceSelectOptions";
-import { useSalesInvoiceHeaderSchema, useSalesInvoiceFooterSchema } from "./hooks/useSalesInvoiceFormSchemas";
+import { useSalesInvoiceHeaderSchema, useSalesInvoiceJuteHeaderSchema, useSalesInvoiceFooterSchema } from "./hooks/useSalesInvoiceFormSchemas";
 import { useSalesInvoiceFormSubmission } from "./hooks/useSalesInvoiceFormSubmission";
 import { useSalesInvoiceApproval } from "./hooks/useSalesInvoiceApproval";
 
 import type { ItemGroupCacheEntry, InvoiceSetupData } from "./types/salesInvoiceTypes";
-import { mapItemGroupDetailResponse, mapInvoiceSetupResponse, mapInvoiceDetailsToFormValues } from "./utils/salesInvoiceMappers";
+import { mapItemGroupDetailResponse, mapInvoiceSetupResponse, mapInvoiceDetailsToFormValues, buildMukamOptions } from "./utils/salesInvoiceMappers";
 import { calculateInvoiceTotals } from "./utils/salesInvoiceCalculations";
 import { buildDefaultFormValues, createBlankLine } from "./utils/salesInvoiceFactories";
 import {
@@ -382,6 +382,8 @@ function InvoiceTransactionPageContent() {
 		headerFieldsDisabled,
 	});
 
+	const mukamOptions = React.useMemo(() => buildMukamOptions(setupData?.mukamList ?? []), [setupData?.mukamList]);
+	const juteHeaderSchema = useSalesInvoiceJuteHeaderSchema({ mode, headerFieldsDisabled, mukamOptions });
 	const footerSchema = useSalesInvoiceFooterSchema({ mode });
 
 	const canEdit = mode !== "view";
@@ -647,6 +649,8 @@ function InvoiceTransactionPageContent() {
 				showDeliveryOrderButton={showDOButton}
 				onDeliveryOrderSelect={handleDOSelect}
 				deliveryOrderButtonDisabled={!formValues.delivery_order}
+				juteSchema={juteHeaderSchema}
+				invoiceTypeId={String(formValues.invoice_type ?? "")}
 			/>
 
 			<DeliveryOrderLinesDialog

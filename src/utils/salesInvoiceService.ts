@@ -31,7 +31,16 @@ export type InvoiceLine = {
     sgstAmount?: number;
     sgstPercent?: number;
     gstTotal?: number;
+    taxPercentage?: number;
+    taxAmount?: number;
   };
+  juteDtl?: {
+    claimAmountDtl?: number;
+    claimDesc?: string;
+    claimRate?: number;
+    unitConversion?: string;
+    qtyUnitConversion?: number;
+  } | null;
 };
 
 export type InvoiceDetails = {
@@ -71,6 +80,16 @@ export type InvoiceDetails = {
   updatedBy?: string;
   updatedAt?: string;
   permissions?: import("@/utils/poService").ApprovalActionPermissions;
+  jute?: {
+    mrNo?: string;
+    mrId?: number;
+    claimAmount?: number;
+    otherReference?: string;
+    unitConversion?: string;
+    claimDescription?: string;
+    mukamId?: number;
+    mukamName?: string;
+  } | null;
   lines: InvoiceLine[];
 };
 
@@ -136,6 +155,15 @@ export type CreateInvoiceRequest = {
   round_off?: number;
   tcs_percentage?: number;
   tcs_amount?: number;
+  jute?: {
+    mr_no?: string;
+    mr_id?: number;
+    claim_amount?: number;
+    other_reference?: string;
+    unit_conversion?: string;
+    claim_description?: string;
+    mukam_id?: number;
+  };
   items: Array<{
     item: string;
     item_make?: string;
@@ -158,6 +186,15 @@ export type CreateInvoiceRequest = {
       sgst_amount?: number;
       sgst_percent?: number;
       gst_total?: number;
+      tax_percentage?: number;
+      tax_amount?: number;
+    };
+    jute_dtl?: {
+      claim_amount_dtl?: number;
+      claim_desc?: string;
+      claim_rate?: number;
+      unit_conversion?: string;
+      qty_untit_conversion?: number;
     };
   }>;
 };

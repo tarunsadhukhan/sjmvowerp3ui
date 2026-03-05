@@ -1,6 +1,7 @@
 import React from "react";
 import MuiForm, { type Schema, type MuiFormMode } from "@/components/ui/muiform";
 import { Button } from "@/components/ui/button";
+import { isJuteInvoice } from "../utils/salesInvoiceConstants";
 
 type FormRef = React.MutableRefObject<{ submit: () => Promise<void>; isDirty: () => boolean; setValue: (name: string, value: unknown) => void } | null>;
 
@@ -15,6 +16,8 @@ type SalesInvoiceHeaderFormProps = {
 	showDeliveryOrderButton: boolean;
 	onDeliveryOrderSelect: () => void;
 	deliveryOrderButtonDisabled: boolean;
+	juteSchema?: Schema;
+	invoiceTypeId?: string;
 };
 
 export function SalesInvoiceHeaderForm({
@@ -28,6 +31,8 @@ export function SalesInvoiceHeaderForm({
 	showDeliveryOrderButton,
 	onDeliveryOrderSelect,
 	deliveryOrderButtonDisabled,
+	juteSchema,
+	invoiceTypeId,
 }: SalesInvoiceHeaderFormProps) {
 	return (
 		<div className="space-y-6">
@@ -42,6 +47,21 @@ export function SalesInvoiceHeaderForm({
 				onSubmit={onSubmit}
 				onValuesChange={onValuesChange}
 			/>
+
+			{juteSchema && isJuteInvoice(invoiceTypeId) && (
+				<div className="space-y-3 pt-4 border-t border-dashed">
+					<h3 className="text-sm font-medium text-muted-foreground">Jute Details</h3>
+					<MuiForm
+						key={`jute-${formKey}`}
+						schema={juteSchema}
+						initialValues={initialValues}
+						mode={mode}
+						hideModeToggle
+						hideSubmit
+						onValuesChange={onValuesChange}
+					/>
+				</div>
+			)}
 
 			{showDeliveryOrderButton && (
 				<div className="space-y-2">

@@ -4,6 +4,7 @@ import { Button } from "@/components/ui/button";
 import { isJuteInvoice } from "../utils/salesInvoiceConstants";
 
 type FormRef = React.MutableRefObject<{ submit: () => Promise<void>; isDirty: () => boolean; setValue: (name: string, value: unknown) => void } | null>;
+type JuteFormRef = React.MutableRefObject<{ setValue: (name: string, value: unknown) => void } | null>;
 
 type SalesInvoiceHeaderFormProps = {
 	schema: Schema;
@@ -18,6 +19,7 @@ type SalesInvoiceHeaderFormProps = {
 	deliveryOrderButtonDisabled: boolean;
 	juteSchema?: Schema;
 	invoiceTypeId?: string;
+	juteFormRef?: JuteFormRef;
 };
 
 export function SalesInvoiceHeaderForm({
@@ -33,6 +35,7 @@ export function SalesInvoiceHeaderForm({
 	deliveryOrderButtonDisabled,
 	juteSchema,
 	invoiceTypeId,
+	juteFormRef,
 }: SalesInvoiceHeaderFormProps) {
 	return (
 		<div className="space-y-6">
@@ -53,6 +56,7 @@ export function SalesInvoiceHeaderForm({
 					<h3 className="text-sm font-medium text-muted-foreground">Jute Details</h3>
 					<MuiForm
 						key={`jute-${formKey}`}
+						ref={juteFormRef}
 						schema={juteSchema}
 						initialValues={initialValues}
 						mode={mode}

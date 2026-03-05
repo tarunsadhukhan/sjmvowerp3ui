@@ -48,6 +48,7 @@ import {
 	EMPTY_ITEM_GROUPS,
 	EMPTY_INVOICE_TYPES,
 	EMPTY_SETUP_PARAMS,
+	isRawJuteInvoice,
 } from "./utils/salesInvoiceConstants";
 
 function InvoicePageLoading() {
@@ -226,6 +227,29 @@ function InvoiceTransactionPageContent() {
 		});
 	}, [mode, setLineItems]);
 
+	const juteFormRef = React.useRef<{ setValue: (name: string, value: unknown) => void } | null>(null);
+
+	// Auto-sum header claim amount from line item claim amounts for Raw Jute invoices
+	React.useEffect(() => {
+		const invoiceTypeId = String(formValues.invoice_type ?? "");
+		if (!isRawJuteInvoice(invoiceTypeId)) return;
+		if (mode === "view") return;
+
+		const sum = filledLineItems.reduce(
+			(acc, line) => acc + (Number(line.juteClaimAmountDtl) || 0),
+			0,
+		);
+		const rounded = Number(sum.toFixed(2));
+
+		setFormValues((prev) => {
+			const current = Number(prev.jute_claim_amount) || 0;
+			if (current === rounded) return prev;
+			return { ...prev, jute_claim_amount: rounded };
+		});
+
+		juteFormRef.current?.setValue("jute_claim_amount", rounded);
+	}, [filledLineItems, formValues.invoice_type, mode, setFormValues]);
+
 	const freightCharges = Number(formValues.freight_charges) || 0;
 	const roundOff = Number(formValues.round_off) || 0;
 	const tcsAmount = Number(formValues.tcs_amount) || 0;
@@ -383,7 +407,7 @@ function InvoiceTransactionPageContent() {
 	});
 
 	const mukamOptions = React.useMemo(() => buildMukamOptions(setupData?.mukamList ?? []), [setupData?.mukamList]);
-	const juteHeaderSchema = useSalesInvoiceJuteHeaderSchema({ mode, headerFieldsDisabled, mukamOptions });
+	const juteHeaderSchema = useSalesInvoiceJuteHeaderSchema({ mode, headerFieldsDisabled, mukamOptions, invoiceTypeId: String(formValues.invoice_type ?? "") });
 	const footerSchema = useSalesInvoiceFooterSchema({ mode });
 
 	const canEdit = mode !== "view";
@@ -651,6 +675,7 @@ function InvoiceTransactionPageContent() {
 				deliveryOrderButtonDisabled={!formValues.delivery_order}
 				juteSchema={juteHeaderSchema}
 				invoiceTypeId={String(formValues.invoice_type ?? "")}
+				juteFormRef={juteFormRef}
 			/>
 
 			<DeliveryOrderLinesDialog

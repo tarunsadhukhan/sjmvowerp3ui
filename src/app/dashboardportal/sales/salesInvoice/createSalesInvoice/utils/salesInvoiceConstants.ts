@@ -49,10 +49,16 @@ export const EMPTY_LINE_ITEMS: ReadonlyArray<EditableLineItem> = Object.freeze([
 export const EMPTY_SETUP_PARAMS: Readonly<{ branchId?: string }> = Object.freeze({});
 
 export const REGULAR_INVOICE_TYPE_ID = "1";
+export const RAW_JUTE_INVOICE_TYPE_ID = "5";
 
 export const isJuteInvoice = (invoiceTypeId?: string | number | null): boolean => {
 	if (invoiceTypeId == null || invoiceTypeId === "") return false;
 	return String(invoiceTypeId) !== REGULAR_INVOICE_TYPE_ID;
+};
+
+export const isRawJuteInvoice = (invoiceTypeId?: string | number | null): boolean => {
+	if (invoiceTypeId == null || invoiceTypeId === "") return false;
+	return String(invoiceTypeId) === RAW_JUTE_INVOICE_TYPE_ID;
 };
 
 export const isPercentageDiscountType = (type?: number | null): type is typeof DISCOUNT_TYPE.PERCENTAGE =>

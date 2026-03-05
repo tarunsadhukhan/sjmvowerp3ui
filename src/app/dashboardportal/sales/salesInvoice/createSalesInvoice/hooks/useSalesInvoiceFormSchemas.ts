@@ -1,6 +1,7 @@
 import React from "react";
 import type { Schema, Field } from "@/components/ui/muiform";
 import type { Option } from "../types/salesInvoiceTypes";
+import { isRawJuteInvoice } from "../utils/salesInvoiceConstants";
 
 export type UseHeaderSchemaParams = {
 	branchOptions: Option[];
@@ -46,21 +47,23 @@ export type UseJuteHeaderSchemaParams = {
 	mode: "create" | "edit" | "view";
 	headerFieldsDisabled: boolean;
 	mukamOptions?: Option[];
+	invoiceTypeId?: string;
 };
 
 export const useSalesInvoiceJuteHeaderSchema = ({
-	mode, headerFieldsDisabled, mukamOptions,
+	mode, headerFieldsDisabled, mukamOptions, invoiceTypeId,
 }: UseJuteHeaderSchemaParams): Schema =>
 	React.useMemo(() => {
 		const disabled = headerFieldsDisabled || mode === "view";
+		const claimDisabled = disabled || isRawJuteInvoice(invoiceTypeId);
 		const fields: Field[] = [
 			{ name: "jute_mr_no", label: "MR No.", type: "text", disabled, grid: { xs: 12, md: 3 } },
 			{ name: "jute_mukam_id", label: "Mukam", type: "select", options: mukamOptions ?? [], disabled, grid: { xs: 12, md: 3 } },
-			{ name: "jute_claim_amount", label: "Claim Amount", type: "text", disabled, grid: { xs: 12, md: 3 } },
+			{ name: "jute_claim_amount", label: "Claim Amount", type: "text", disabled: claimDisabled, grid: { xs: 12, md: 3 } },
 			{ name: "jute_claim_description", label: "Claim Description", type: "textarea", disabled, grid: { xs: 12, md: 3 } },
 		];
 		return { fields } satisfies Schema;
-	}, [mode, headerFieldsDisabled, mukamOptions]);
+	}, [mode, headerFieldsDisabled, mukamOptions, invoiceTypeId]);
 
 export const useSalesInvoiceFooterSchema = ({ mode }: UseFooterSchemaParams): Schema =>
 	React.useMemo(() => {

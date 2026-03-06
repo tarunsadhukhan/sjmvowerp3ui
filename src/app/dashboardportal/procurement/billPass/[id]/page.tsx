@@ -357,6 +357,9 @@ export default function BillPassViewPage() {
             <Grid size={{ xs: 6, md: 3 }}>
               <InfoField label="Challan Date" value={formatBillPassDate(detail.challan_date)} />
             </Grid>
+            <Grid size={{ xs: 6, md: 3 }}>
+              <InfoField label="Invoice No." value={detail.invoice_no || "-"} />
+            </Grid>
           </Grid>
         </CardContent>
       </Card>

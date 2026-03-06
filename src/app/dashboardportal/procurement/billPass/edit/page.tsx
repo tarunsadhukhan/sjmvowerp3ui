@@ -13,12 +13,13 @@ import {
   Divider,
   Grid,
   Paper,
+  Stack,
   TextField,
   Typography,
   CircularProgress,
   Snackbar,
 } from "@mui/material";
-import { ArrowLeft, Save, CheckCircle } from "lucide-react";
+import { ArrowLeft, Save, CheckCircle, Receipt, MinusCircle, PlusCircle, FileText } from "lucide-react";
 
 import {
   fetchBillPassById,
@@ -75,6 +76,45 @@ function InfoField({ label, value }: { label: string; value: React.ReactNode }) 
   );
 }
 
+type SummaryCardProps = {
+  title: string;
+  value: string;
+  subtitle?: string;
+  color?: "primary" | "error" | "success" | "info";
+  icon?: React.ReactNode;
+};
+
+function SummaryCard({ title, value, subtitle, color = "primary", icon }: SummaryCardProps) {
+  const colorMap = {
+    primary: { bg: "primary.50", border: "primary.200", text: "primary.700" },
+    error: { bg: "error.50", border: "error.200", text: "error.700" },
+    success: { bg: "success.50", border: "success.200", text: "success.700" },
+    info: { bg: "info.50", border: "info.200", text: "info.700" },
+  };
+  const colors = colorMap[color];
+
+  return (
+    <Card variant="outlined" sx={{ bgcolor: colors.bg, borderColor: colors.border, height: "100%" }}>
+      <CardContent sx={{ py: 2, "&:last-child": { pb: 2 } }}>
+        <Stack direction="row" alignItems="center" spacing={1} mb={1}>
+          {icon && <Box sx={{ color: colors.text }}>{icon}</Box>}
+          <Typography variant="body2" color="text.secondary" fontWeight={500}>
+            {title}
+          </Typography>
+        </Stack>
+        <Typography variant="h5" fontWeight={700} sx={{ color: colors.text, fontFamily: "monospace" }}>
+          {value}
+        </Typography>
+        {subtitle && (
+          <Typography variant="caption" color="text.secondary">
+            {subtitle}
+          </Typography>
+        )}
+      </CardContent>
+    </Card>
+  );
+}
+
 /** Inline DR/CR adjustment rows beneath an SR line item */
 function DrcrInlineRows({ lines }: { lines: DrcrLineWithNote[] }) {
   if (lines.length === 0) return null;
@@ -94,7 +134,7 @@ function DrcrInlineRows({ lines }: { lines: DrcrLineWithNote[] }) {
             }}
           >
             {/* Item — indented with type label */}
-            <Box component="td" colSpan={5} sx={{ p: 0.75, pl: 4, fontSize: "0.7rem" }}>
+            <Box component="td" colSpan={4} sx={{ p: 0.75, pl: 4, fontSize: "0.7rem" }}>
               <Chip
                 label={isDebit ? "DEBIT" : "CREDIT"}
                 size="small"
@@ -377,6 +417,46 @@ function BillPassEditPageContent() {
         )}
       </Box>
 
+      {/* ── Summary Cards ────────────────────────────────────────────────── */}
+      <Grid container spacing={2} mb={2}>
+        <Grid size={{ xs: 12, sm: 6, md: 3 }}>
+          <SummaryCard
+            title="SR TOTAL"
+            value={formatCurrency(summary.sr_total)}
+            subtitle={`${summary.sr_line_count} item(s)`}
+            color="info"
+            icon={<Receipt size={18} />}
+          />
+        </Grid>
+        <Grid size={{ xs: 12, sm: 6, md: 3 }}>
+          <SummaryCard
+            title="DEBIT NOTES"
+            value={summary.dr_count > 0 ? `-${formatCurrency(summary.dr_total)}` : "-"}
+            subtitle={summary.dr_count > 0 ? `${summary.dr_count} note(s)` : "No debit notes"}
+            color="error"
+            icon={<MinusCircle size={18} />}
+          />
+        </Grid>
+        <Grid size={{ xs: 12, sm: 6, md: 3 }}>
+          <SummaryCard
+            title="CREDIT NOTES"
+            value={summary.cr_count > 0 ? `+${formatCurrency(summary.cr_total)}` : "-"}
+            subtitle={summary.cr_count > 0 ? `${summary.cr_count} note(s)` : "No credit notes"}
+            color="success"
+            icon={<PlusCircle size={18} />}
+          />
+        </Grid>
+        <Grid size={{ xs: 12, sm: 6, md: 3 }}>
+          <SummaryCard
+            title="NET PAYABLE"
+            value={formatCurrency(netPayable)}
+            subtitle="Final amount to pay"
+            color="primary"
+            icon={<FileText size={18} />}
+          />
+        </Grid>
+      </Grid>
+
       {/* ── Header Info (read-only) ──────────────────────────────────────── */}
       <Card sx={{ mb: 2 }}>
         <CardContent>
@@ -431,7 +511,7 @@ function BillPassEditPageContent() {
                 {/* Header */}
                 <Box component="thead" sx={{ bgcolor: "primary.main" }}>
                   <Box component="tr">
-                    {["PO No.", "Item", "HSN", "Make", "UOM", "Qty", "PO Rate", "Accepted Rate", "Amount", "Tax", "Total"].map(
+                    {["PO No.", "Item", "Make", "UOM", "Qty", "PO Rate", "Accepted Rate", "Amount", "Tax", "Total"].map(
                       (h) => (
                         <Box
                           key={h}
@@ -441,7 +521,7 @@ function BillPassEditPageContent() {
                             color: "white",
                             fontSize: "0.75rem",
                             fontWeight: 600,
-                            textAlign: ["PO No.", "Item", "HSN", "Make", "UOM"].includes(h) ? "left" : "right",
+                            textAlign: ["PO No.", "Item", "Make", "UOM"].includes(h) ? "left" : "right",
                             whiteSpace: "nowrap",
                           }}
                         >
@@ -489,9 +569,6 @@ function BillPassEditPageContent() {
                             </Typography>
                           </Box>
                           <Box component="td" sx={{ p: 1, fontSize: "0.75rem" }}>
-                            {line.hsn_code || "-"}
-                          </Box>
-                          <Box component="td" sx={{ p: 1, fontSize: "0.75rem" }}>
                             {line.accepted_make_name || "-"}
                           </Box>
                           <Box component="td" sx={{ p: 1, fontSize: "0.75rem" }}>
@@ -532,7 +609,7 @@ function BillPassEditPageContent() {
                           >
                             <Box
                               component="td"
-                              colSpan={10}
+                              colSpan={9}
                               sx={{ p: 0.75, pl: 4, fontSize: "0.7rem", textAlign: "right", fontWeight: 600 }}
                             >
                               Line Net Payable:

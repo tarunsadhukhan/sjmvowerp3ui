@@ -126,7 +126,10 @@ export const usePOFormSubmission = ({
         toast({ title: result?.message ?? (mode === "edit" ? "PO updated" : "PO created") });
 
         if (poId) {
-          router.replace(`/dashboardportal/procurement/purchaseOrder/createPO?mode=view&id=${encodeURIComponent(String(poId))}`);
+          const branchParam = createPayload.branch
+            ? `&branch_id=${encodeURIComponent(createPayload.branch)}`
+            : "";
+          router.replace(`/dashboardportal/procurement/purchaseOrder/createPO?mode=view&id=${encodeURIComponent(String(poId))}${branchParam}`);
         }
       } catch (error) {
         toast({ variant: "destructive", title: "Unable to save PO", description: error instanceof Error ? error.message : "Please try again." });

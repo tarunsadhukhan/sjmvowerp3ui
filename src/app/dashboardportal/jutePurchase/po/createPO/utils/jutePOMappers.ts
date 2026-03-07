@@ -236,6 +236,9 @@ export const mapLineItemDetailsToLineItem = (
   const quantity = details.quantity ?? 0;
   const rate = details.rate ?? 0;
   
+  // Use per-line-item jute_uom, falling back to calcParams or "LOOSE"
+  const lineUnit = details.jute_uom || calcParams?.juteUnit || "LOOSE";
+
   // Calculate weight if params provided, otherwise use 0
   let weight = 0;
   if (calcParams) {
@@ -243,10 +246,10 @@ export const mapLineItemDetailsToLineItem = (
       quantity,
       calcParams.vehicleCapacity,
       calcParams.vehicleQty,
-      calcParams.juteUnit
+      lineUnit
     );
   }
-  
+
   return {
     id: generateLineId(),
     itemId: String(details.item_grp_id ?? details.item_id),
@@ -256,7 +259,7 @@ export const mapLineItemDetailsToLineItem = (
     cropYear: details.crop_year ? `${details.crop_year}-${(details.crop_year % 100) + 1}` : "",
     marka: details.marka || "",
     quantity: String(quantity),
-    uom: details.uom || "",
+    uom: lineUnit,
     rate: String(rate),
     allowableMoisture: details.allowable_moisture
       ? String(details.allowable_moisture)
@@ -301,6 +304,7 @@ export const mapFormValuesToCreatePayload = (
       allowable_moisture: li.allowableMoisture
         ? Number(li.allowableMoisture)
         : null,
+      jute_unit: li.uom || "LOOSE",
     })),
 });
 
@@ -317,7 +321,6 @@ export const mapFormToUpdatePayload = (
   branch_id: Number(formValues.branch),
   po_date: formValues.poDate,
   mukam_id: Number(formValues.mukam),
-  jute_unit: formValues.juteUnit,
   supplier_id: Number(formValues.supplier),
   party_id: formValues.partyName ? Number(formValues.partyName) : null,
   vehicle_type_id: Number(formValues.vehicleType),
@@ -339,6 +342,7 @@ export const mapFormToUpdatePayload = (
       allowable_moisture: li.allowableMoisture
         ? Number(li.allowableMoisture)
         : null,
+      jute_unit: li.uom || "LOOSE",
     })),
 });
 

@@ -114,10 +114,6 @@ export function JutePOPreview({
               <span>{labelResolvers.mukam(formValues.mukam)}</span>
             </div>
             <div className="flex gap-2">
-              <span className="font-semibold">Unit:</span>
-              <span>{formValues.juteUnit}</span>
-            </div>
-            <div className="flex gap-2">
               <span className="font-semibold">Supplier:</span>
               <span>{labelResolvers.supplier(formValues.supplier)}</span>
             </div>
@@ -162,6 +158,7 @@ export function JutePOPreview({
                 <th className="border p-2 text-left">Crop Year</th>
                 <th className="border p-2 text-left">Marka</th>
                 <th className="border p-2 text-right">Qty</th>
+                <th className="border p-2 text-left">Unit</th>
                 <th className="border p-2 text-right">Rate</th>
                 <th className="border p-2 text-right">Moisture %</th>
                 <th className="border p-2 text-right">Weight (Kg)</th>
@@ -176,6 +173,7 @@ export function JutePOPreview({
                   <td className="border p-2">{line.cropYear}</td>
                   <td className="border p-2">{line.marka || "-"}</td>
                   <td className="border p-2 text-right">{line.quantity}</td>
+                  <td className="border p-2">{line.uom || "-"}</td>
                   <td className="border p-2 text-right">{formatAmount(parseFloat(line.rate) || 0)}</td>
                   <td className="border p-2 text-right">{line.allowableMoisture || "-"}</td>
                   <td className="border p-2 text-right">{formatWeight(parseFloat(line.weight) || 0)}</td>

@@ -333,6 +333,11 @@ const apiRoutesPortalMasters = {
     JUTE_REPORT_STOCK: `${API_URL}/juteReports/stock`,
     JUTE_REPORT_BATCH_COST: `${API_URL}/juteReports/batch-cost`,
 
+    // Procurement Reports
+    PROCUREMENT_REPORT_INDENT_ITEMWISE: `${API_URL}/procurementReports/indent-itemwise`,
+    PROCUREMENT_REPORT_PO_ITEMWISE: `${API_URL}/procurementReports/po-itemwise`,
+    PROCUREMENT_REPORT_SR_ITEMWISE: `${API_URL}/procurementReports/sr-itemwise`,
+
     // Jute SQC - Morrah Weight QC
     MORRAH_WT_TABLE: `${API_URL}/juteSQC/get_morrah_wt_table`,
     MORRAH_WT_BY_ID: `${API_URL}/juteSQC/get_morrah_wt_by_id`,
@@ -410,6 +415,10 @@ const apiRoutesPortalMasters = {
     BILL_PASS_LIST: `${API_URL}/billPass/get_bill_pass_list`,
     BILL_PASS_GET_BY_ID: `${API_URL}/billPass/get_bill_pass_by_id`,
     BILL_PASS_UPDATE: `${API_URL}/billPass/update_bill_pass`,
+
+    // Inventory Reports
+    INVENTORY_REPORT_STOCK: `${API_URL}/inventoryReports/inventory-stock`,
+    INVENTORY_REPORT_ISSUE_ITEMWISE: `${API_URL}/inventoryReports/issue-itemwise`,
 
     // Inventory Issue endpoints
     ISSUE_TABLE: `${API_URL}/inventoryIssue/get_issue_table`,

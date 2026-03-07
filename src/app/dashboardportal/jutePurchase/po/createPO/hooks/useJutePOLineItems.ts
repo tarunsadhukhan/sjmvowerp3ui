@@ -34,13 +34,18 @@ export function useJutePOLineItems({
   vehicleCapacity,
   vehicleQty,
 }: UseJutePOLineItemsParams): UseJutePOLineItemsReturn {
+  const createBlankLineWithUnit = React.useCallback(
+    () => createBlankLine(juteUnit || "LOOSE"),
+    [juteUnit]
+  );
+
   const {
     items: lineItems,
     setItems: setLineItems,
     replaceItems,
     removeItems: removeLineItems,
   } = useLineItems<JutePOLineItem>({
-    createBlankItem: createBlankLine,
+    createBlankItem: createBlankLineWithUnit,
     hasData: lineHasAnyData,
     getItemId: (item) => item.id,
     maintainTrailingBlank: mode !== "view",
@@ -58,7 +63,7 @@ export function useJutePOLineItems({
         return { ...line, weight: "", amount: "" };
       }
 
-      const weight = calculateWeight(qty, vehicleCapacity, vehicleQty, juteUnit);
+      const weight = calculateWeight(qty, vehicleCapacity, vehicleQty, line.uom || "LOOSE");
       const amount = calculateAmount(weight, rate);
 
       return {
@@ -67,7 +72,7 @@ export function useJutePOLineItems({
         amount: Number.isFinite(amount) && amount > 0 ? formatNumber(amount, 2) : "",
       };
     },
-    [juteUnit, vehicleCapacity, vehicleQty]
+    [vehicleCapacity, vehicleQty]
   );
 
   /**
@@ -96,8 +101,8 @@ export function useJutePOLineItems({
         return;
       }
 
-      // Quantity or rate change: recalculate weight and amount
-      if (field === "quantity" || field === "rate") {
+      // Quantity, rate, or uom change: recalculate weight and amount
+      if (field === "quantity" || field === "rate" || field === "uom") {
         setLineItems((prev) =>
           prev.map((item) => {
             if (item.id !== id) return item;

@@ -10,7 +10,7 @@ import * as React from "react";
 import { TransactionLineColumn, SearchableSelect } from "@/components/ui/transaction";
 import { Input } from "@/components/ui/input";
 import type { JutePOLineItem, Option, JutePOLabelResolvers } from "../types/jutePOTypes";
-import { CROP_YEAR_OPTIONS } from "../utils/jutePOConstants";
+import { CROP_YEAR_OPTIONS, UNIT_OPTIONS } from "../utils/jutePOConstants";
 import { formatWeight, formatAmount } from "../utils/jutePOCalculations";
 
 type UseJutePOLineItemColumnsParams = {
@@ -141,6 +141,30 @@ export function useJutePOLineItemColumns({
               placeholder="0"
               disabled={!canEdit}
               className="h-8 text-xs text-right"
+            />
+          );
+        },
+      },
+      {
+        id: "uom",
+        header: "Unit",
+        width: "0.8fr",
+        renderCell: ({ item }: { item: JutePOLineItem }) => {
+          if (!canEdit) {
+            const label = UNIT_OPTIONS.find((opt) => opt.value === item.uom)?.label || item.uom || "-";
+            return <span className="text-xs">{label}</span>;
+          }
+          const value = UNIT_OPTIONS.find((opt) => opt.value === item.uom) ?? null;
+          return (
+            <SearchableSelect<Option>
+              options={UNIT_OPTIONS as unknown as Option[]}
+              value={value as Option | null}
+              onChange={(next: Option | null) => handleLineFieldChange(item.id, "uom", next?.value ?? "")}
+              getOptionLabel={(opt: Option) => opt.label}
+              getOptionKey={(opt: Option) => opt.value}
+              isOptionEqualToValue={(a: Option, b: Option) => a.value === b.value}
+              placeholder="Unit"
+              disabled={!canEdit}
             />
           );
         },

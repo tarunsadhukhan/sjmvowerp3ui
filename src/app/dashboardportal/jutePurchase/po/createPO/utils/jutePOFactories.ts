@@ -29,14 +29,14 @@ export const resetLineIdSeed = (): void => {
 /**
  * Create a blank Jute PO line item.
  */
-export const createBlankLine = (): JutePOLineItem => ({
+export const createBlankLine = (defaultUnit: string = "LOOSE"): JutePOLineItem => ({
   id: generateLineId(),
   itemId: "",
   quality: "",
   cropYear: "",
   marka: "",
   quantity: "",
-  uom: "",
+  uom: defaultUnit,
   rate: "",
   allowableMoisture: "",
   weight: "",

@@ -335,6 +335,7 @@ const apiRoutesPortalMasters = {
 
     // Procurement Reports
     PROCUREMENT_REPORT_INDENT_ITEMWISE: `${API_URL}/procurementReports/indent-itemwise`,
+    PROCUREMENT_REPORT_PO_ITEMWISE: `${API_URL}/procurementReports/po-itemwise`,
 
     // Jute SQC - Morrah Weight QC
     MORRAH_WT_TABLE: `${API_URL}/juteSQC/get_morrah_wt_table`,

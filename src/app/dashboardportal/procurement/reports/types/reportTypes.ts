@@ -31,3 +31,39 @@ export interface IndentReportApiResponse {
   data: IndentReportRow[];
   total: number;
 }
+
+export interface PoReportRow {
+  po_dtl_id: number;
+  po_id: number;
+  po_no: string;
+  po_date: string;
+  branch_name: string;
+  supplier_name: string;
+  item_name: string;
+  item_grp_name: string;
+  uom_name: string;
+  po_qty: number;
+  rate: number;
+  inward_consumed_qty: number;
+  outstanding_qty: number;
+  po_type: string;
+  expense_type_name: string;
+  status_name: string;
+}
+
+export interface PoReportParams {
+  page: number;
+  limit: number;
+  co_id: string;
+  branch_id?: string;
+  date_from?: string;
+  date_to?: string;
+  po_type?: string;
+  outstanding_filter?: string;
+  search?: string;
+}
+
+export interface PoReportApiResponse {
+  data: PoReportRow[];
+  total: number;
+}

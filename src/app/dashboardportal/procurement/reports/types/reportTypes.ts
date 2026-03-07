@@ -67,3 +67,35 @@ export interface PoReportApiResponse {
   data: PoReportRow[];
   total: number;
 }
+
+export interface SrReportRow {
+  inward_dtl_id: number;
+  inward_id: number;
+  inward_no: string;
+  inward_date: string;
+  branch_name: string;
+  supplier_name: string;
+  item_name: string;
+  item_grp_name: string;
+  uom_name: string;
+  approved_qty: number;
+  rejected_qty: number;
+  rate: number;
+  amount: number;
+  status_name: string;
+}
+
+export interface SrReportParams {
+  page: number;
+  limit: number;
+  co_id: string;
+  branch_id?: string;
+  date_from?: string;
+  date_to?: string;
+  search?: string;
+}
+
+export interface SrReportApiResponse {
+  data: SrReportRow[];
+  total: number;
+}

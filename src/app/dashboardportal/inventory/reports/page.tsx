@@ -3,26 +3,24 @@
 import React, { useState } from "react";
 import { Box, Typography, TextField, MenuItem } from "@mui/material";
 import { useSidebarContext } from "@/components/dashboard/sidebarContext";
-import IndentItemwiseSection from "./IndentItemwiseSection";
-import PoItemwiseSection from "./PoItemwiseSection";
-import SrItemwiseSection from "./SrItemwiseSection";
+import InventoryStockSection from "./InventoryStockSection";
+import IssueItemwiseSection from "./IssueItemwiseSection";
 
 const REPORT_OPTIONS = [
-  { value: "indent_itemwise", label: "Item-wise Indent Report" },
-  { value: "po_itemwise", label: "Item-wise PO Report" },
-  { value: "sr_itemwise", label: "Item-wise SR Report" },
+  { value: "inventory_stock", label: "Current Inventory Report" },
+  { value: "issue_itemwise", label: "Item-wise Issue Report" },
 ] as const;
 
 type ReportType = (typeof REPORT_OPTIONS)[number]["value"];
 
-export default function ProcurementReportsPage() {
+export default function InventoryReportsPage() {
   const { selectedCompany } = useSidebarContext();
-  const [selectedReport, setSelectedReport] = useState<ReportType>("indent_itemwise");
+  const [selectedReport, setSelectedReport] = useState<ReportType>("inventory_stock");
 
   return (
     <Box sx={{ p: 3 }}>
       <Typography variant="h5" sx={{ color: "#0C3C60", fontWeight: "bold", mb: 2 }}>
-        Procurement Reports
+        Inventory Reports
       </Typography>
 
       <TextField
@@ -40,16 +38,12 @@ export default function ProcurementReportsPage() {
         ))}
       </TextField>
 
-      {selectedReport === "indent_itemwise" && (
-        <IndentItemwiseSection selectedCompany={selectedCompany} />
+      {selectedReport === "inventory_stock" && (
+        <InventoryStockSection selectedCompany={selectedCompany} />
       )}
 
-      {selectedReport === "po_itemwise" && (
-        <PoItemwiseSection selectedCompany={selectedCompany} />
-      )}
-
-      {selectedReport === "sr_itemwise" && (
-        <SrItemwiseSection selectedCompany={selectedCompany} />
+      {selectedReport === "issue_itemwise" && (
+        <IssueItemwiseSection selectedCompany={selectedCompany} />
       )}
     </Box>
   );

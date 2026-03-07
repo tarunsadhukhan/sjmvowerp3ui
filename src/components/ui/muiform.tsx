@@ -430,11 +430,6 @@ export const MuiForm = React.forwardRef(function MuiForm(
 					/>
 				) : field.type === "custom" && typeof field.render === "function" ? (
 					<Box>
-						{field.label && (
-							<Typography variant="subtitle2" sx={{ mb: 1 }} color="text.secondary">
-								{field.label}
-							</Typography>
-						)}
 						{field.render({
 							value,
 							values,

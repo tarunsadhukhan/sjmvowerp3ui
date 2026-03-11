@@ -240,6 +240,16 @@ const apiRoutesPortalMasters = {
     YARN_CREATE: `${API_URL}/yarnMaster/yarn_create`,
     YARN_EDIT: `${API_URL}/yarnMaster/yarn_edit`,
 
+    // Item BOM Master endpoints
+    BOM_LIST: `${API_URL}/itemBomMaster/get_bom_list`,
+    BOM_TREE: `${API_URL}/itemBomMaster/get_bom_tree`,
+    BOM_CHILDREN: `${API_URL}/itemBomMaster/get_bom_children`,
+    BOM_PARENTS: `${API_URL}/itemBomMaster/get_bom_parents`,
+    BOM_CREATE_SETUP: `${API_URL}/itemBomMaster/bom_create_setup`,
+    BOM_ADD_COMPONENT: `${API_URL}/itemBomMaster/bom_add_component`,
+    BOM_EDIT_COMPONENT: `${API_URL}/itemBomMaster/bom_edit_component`,
+    BOM_REMOVE_COMPONENT: `${API_URL}/itemBomMaster/bom_remove_component`,
+
     // Batch Plan Master endpoints (jute_batch_plan)
     BATCH_PLAN_TABLE: `${API_URL}/batchPlanMaster/get_batch_plan_table`,
     BATCH_PLAN_BY_ID: `${API_URL}/batchPlanMaster/get_batch_plan_by_id`,

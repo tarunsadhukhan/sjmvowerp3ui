@@ -3,21 +3,7 @@
 import React from "react";
 import { Box, IconButton, Typography, Tooltip, Chip } from "@mui/material";
 import { ChevronRight, ChevronDown, Plus, Pencil, Trash2, Package, Box as BoxIcon } from "lucide-react";
-
-type BomTreeItem = {
-  bom_id: number;
-  parent_item_id: number;
-  child_item_id: number;
-  child_item_code: string;
-  child_item_name: string;
-  qty: number;
-  uom_id: number;
-  uom_name: string;
-  sequence_no: number;
-  has_children: boolean;
-  is_leaf: boolean;
-  children: BomTreeItem[];
-};
+import { BomTreeItem } from "./types";
 
 type BomTreeNodeProps = {
   node: BomTreeItem;

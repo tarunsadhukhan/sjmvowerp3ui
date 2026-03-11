@@ -10,7 +10,6 @@ import {
   CircularProgress,
   Typography,
   Box,
-  IconButton,
   Autocomplete,
   TextField,
 } from "@mui/material";
@@ -18,21 +17,8 @@ import { fetchWithCookie } from "@/utils/apiClient2";
 import { apiRoutesPortalMasters } from "@/utils/api";
 import BomTreeNode from "./BomTreeNode";
 import AddComponentDialog from "./AddComponentDialog";
-
-type BomTreeItem = {
-  bom_id: number;
-  parent_item_id: number;
-  child_item_id: number;
-  child_item_code: string;
-  child_item_name: string;
-  qty: number;
-  uom_id: number;
-  uom_name: string;
-  sequence_no: number;
-  has_children: boolean;
-  is_leaf: boolean;
-  children: BomTreeItem[];
-};
+import ConfirmDialog from "./ConfirmDialog";
+import { BomTreeItem, ItemOption, getCoId } from "./types";
 
 type BomTreeEditorProps = {
   open: boolean;
@@ -41,23 +27,45 @@ type BomTreeEditorProps = {
   onSnackbar: (message: string, severity: "success" | "error") => void;
 };
 
+const initialState = {
+  tree: [] as BomTreeItem[],
+  loading: false,
+  expanded: {} as Record<number, boolean>,
+  addDialogOpen: false,
+  addParentItemId: null as number | null,
+  editingNode: null as BomTreeItem | null,
+  itemPickerMode: false,
+  itemOptions: [] as ItemOption[],
+  selectedRootItem: null as ItemOption | null,
+  itemSearchValue: "",
+  confirmRemoveNode: null as BomTreeItem | null,
+};
+
 export default function BomTreeEditor({ open, onClose, item, onSnackbar }: BomTreeEditorProps) {
-  const [tree, setTree] = useState<BomTreeItem[]>([]);
-  const [loading, setLoading] = useState(false);
-  const [expanded, setExpanded] = useState<Record<number, boolean>>({});
-  const [addDialogOpen, setAddDialogOpen] = useState(false);
-  const [addParentItemId, setAddParentItemId] = useState<number | null>(null);
-  const [editingNode, setEditingNode] = useState<BomTreeItem | null>(null);
+  const [tree, setTree] = useState(initialState.tree);
+  const [loading, setLoading] = useState(initialState.loading);
+  const [expanded, setExpanded] = useState(initialState.expanded);
+  const [addDialogOpen, setAddDialogOpen] = useState(initialState.addDialogOpen);
+  const [addParentItemId, setAddParentItemId] = useState(initialState.addParentItemId);
+  const [editingNode, setEditingNode] = useState(initialState.editingNode);
+  const [itemPickerMode, setItemPickerMode] = useState(initialState.itemPickerMode);
+  const [itemOptions, setItemOptions] = useState(initialState.itemOptions);
+  const [selectedRootItem, setSelectedRootItem] = useState(initialState.selectedRootItem);
+  const [itemSearchValue, setItemSearchValue] = useState(initialState.itemSearchValue);
+  const [confirmRemoveNode, setConfirmRemoveNode] = useState(initialState.confirmRemoveNode);
 
-  // For "Define BOM" mode: pick an item first
-  const [itemPickerMode, setItemPickerMode] = useState(false);
-  const [itemOptions, setItemOptions] = useState<any[]>([]);
-  const [selectedRootItem, setSelectedRootItem] = useState<any | null>(null);
-  const [itemSearchValue, setItemSearchValue] = useState("");
-
-  const getCoId = () => {
-    const selectedCompany = localStorage.getItem("sidebar_selectedCompany");
-    return selectedCompany ? JSON.parse(selectedCompany).co_id : "";
+  const resetState = () => {
+    setTree(initialState.tree);
+    setLoading(initialState.loading);
+    setExpanded(initialState.expanded);
+    setAddDialogOpen(initialState.addDialogOpen);
+    setAddParentItemId(initialState.addParentItemId);
+    setEditingNode(initialState.editingNode);
+    setItemPickerMode(initialState.itemPickerMode);
+    setItemOptions(initialState.itemOptions);
+    setSelectedRootItem(initialState.selectedRootItem);
+    setItemSearchValue(initialState.itemSearchValue);
+    setConfirmRemoveNode(initialState.confirmRemoveNode);
   };
 
   const fetchTree = useCallback(async (itemId: number) => {
@@ -84,21 +92,25 @@ export default function BomTreeEditor({ open, onClose, item, onSnackbar }: BomTr
     }
   }, [onSnackbar]);
 
+  // Reset and initialize when dialog opens/closes
   useEffect(() => {
     if (open && item) {
+      resetState();
       setItemPickerMode(false);
-      setSelectedRootItem(item);
+      setSelectedRootItem(item as ItemOption);
       fetchTree(item.item_id);
     } else if (open && !item) {
+      resetState();
       setItemPickerMode(true);
-      setTree([]);
-      setSelectedRootItem(null);
+    } else if (!open) {
+      resetState();
     }
-  }, [open, item, fetchTree]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [open, item]);
 
-  // Search items for the item picker
+  // Search items for the item picker (debounced)
   useEffect(() => {
-    if (!itemPickerMode) return;
+    if (!itemPickerMode || !open) return;
     const searchItems = async () => {
       const co_id = getCoId();
       const params = new URLSearchParams({ co_id });
@@ -111,7 +123,7 @@ export default function BomTreeEditor({ open, onClose, item, onSnackbar }: BomTr
     };
     const timeout = setTimeout(searchItems, 300);
     return () => clearTimeout(timeout);
-  }, [itemPickerMode, itemSearchValue]);
+  }, [itemPickerMode, itemSearchValue, open]);
 
   const handleToggle = (itemId: number) => {
     setExpanded(prev => ({ ...prev, [itemId]: !prev[itemId] }));
@@ -129,7 +141,9 @@ export default function BomTreeEditor({ open, onClose, item, onSnackbar }: BomTr
     setAddDialogOpen(true);
   };
 
-  const handleRemove = async (node: BomTreeItem) => {
+  const handleRemoveConfirm = async () => {
+    const node = confirmRemoveNode;
+    if (!node) return;
     try {
       const co_id = getCoId();
       const { error } = await fetchWithCookie(
@@ -142,6 +156,8 @@ export default function BomTreeEditor({ open, onClose, item, onSnackbar }: BomTr
       if (selectedRootItem) fetchTree(selectedRootItem.item_id);
     } catch (err: any) {
       onSnackbar(err.message || "Failed to remove component", "error");
+    } finally {
+      setConfirmRemoveNode(null);
     }
   };
 
@@ -150,10 +166,12 @@ export default function BomTreeEditor({ open, onClose, item, onSnackbar }: BomTr
     if (selectedRootItem) fetchTree(selectedRootItem.item_id);
   };
 
-  const handleSelectRootItem = (newValue: any) => {
+  const handleSelectRootItem = (newValue: ItemOption | null) => {
     if (newValue) {
       setSelectedRootItem(newValue);
       setItemPickerMode(false);
+      setItemSearchValue("");
+      setItemOptions([]);
       fetchTree(newValue.item_id);
     }
   };
@@ -179,9 +197,13 @@ export default function BomTreeEditor({ open, onClose, item, onSnackbar }: BomTr
               </Typography>
               <Autocomplete
                 options={itemOptions}
-                getOptionLabel={(opt: any) => `${opt.item_code} — ${opt.item_name}`}
+                getOptionLabel={(opt: ItemOption) => `${opt.item_code} — ${opt.item_name}`}
+                value={null}
+                inputValue={itemSearchValue}
                 onChange={(_, newValue) => handleSelectRootItem(newValue)}
-                onInputChange={(_, value) => setItemSearchValue(value)}
+                onInputChange={(_, value, reason) => {
+                  if (reason !== "reset") setItemSearchValue(value);
+                }}
                 renderInput={(params) => (
                   <TextField {...params} label="Search Item" placeholder="Type to search..." size="small" autoFocus />
                 )}
@@ -208,7 +230,7 @@ export default function BomTreeEditor({ open, onClose, item, onSnackbar }: BomTr
                     onToggle={handleToggle}
                     onAddChild={handleAddChild}
                     onEdit={handleEdit}
-                    onRemove={handleRemove}
+                    onRemove={(node) => setConfirmRemoveNode(node)}
                   />
                 ))
               )}
@@ -237,6 +259,18 @@ export default function BomTreeEditor({ open, onClose, item, onSnackbar }: BomTr
         parentItemId={addParentItemId}
         editNode={editingNode}
         onSnackbar={onSnackbar}
+      />
+
+      <ConfirmDialog
+        open={!!confirmRemoveNode}
+        title="Remove Component"
+        message={
+          confirmRemoveNode
+            ? `Remove "${confirmRemoveNode.child_item_code} — ${confirmRemoveNode.child_item_name}" from the BOM?`
+            : ""
+        }
+        onConfirm={handleRemoveConfirm}
+        onCancel={() => setConfirmRemoveNode(null)}
       />
     </>
   );

@@ -13,6 +13,7 @@ import {
 } from "@mui/material";
 import { fetchWithCookie } from "@/utils/apiClient2";
 import { apiRoutesPortalMasters } from "@/utils/api";
+import { ItemOption, UomOption, getCoId } from "./types";
 
 type EditNode = {
   bom_id: number;
@@ -42,23 +43,18 @@ export default function AddComponentDialog({
   editNode,
   onSnackbar,
 }: AddComponentDialogProps) {
-  const [itemOptions, setItemOptions] = useState<any[]>([]);
-  const [uomOptions, setUomOptions] = useState<any[]>([]);
-  const [selectedItem, setSelectedItem] = useState<any | null>(null);
+  const [itemOptions, setItemOptions] = useState<ItemOption[]>([]);
+  const [uomOptions, setUomOptions] = useState<UomOption[]>([]);
+  const [selectedItem, setSelectedItem] = useState<ItemOption | null>(null);
   const [qty, setQty] = useState<string>("1");
-  const [selectedUom, setSelectedUom] = useState<any | null>(null);
+  const [selectedUom, setSelectedUom] = useState<UomOption | null>(null);
   const [sequenceNo, setSequenceNo] = useState<string>("0");
   const [itemSearchValue, setItemSearchValue] = useState("");
   const [submitting, setSubmitting] = useState(false);
 
   const isEditMode = !!editNode;
 
-  const getCoId = () => {
-    const selectedCompany = localStorage.getItem("sidebar_selectedCompany");
-    return selectedCompany ? JSON.parse(selectedCompany).co_id : "";
-  };
-
-  // Fetch items and UOMs for dropdowns
+  // Fetch items and UOMs for dropdowns (debounced)
   useEffect(() => {
     if (!open) return;
     const fetchSetup = async () => {
@@ -78,7 +74,7 @@ export default function AddComponentDialog({
     return () => clearTimeout(timeout);
   }, [open, itemSearchValue]);
 
-  // Pre-fill form in edit mode
+  // Pre-fill form in edit mode, reset form in add mode
   useEffect(() => {
     if (open && editNode) {
       setQty(String(editNode.qty));
@@ -89,11 +85,13 @@ export default function AddComponentDialog({
         item_name: editNode.child_item_name,
       });
       setSelectedUom({ uom_id: editNode.uom_id, uom_name: editNode.uom_name });
+      setItemSearchValue("");
     } else if (open && !editNode) {
       setQty("1");
       setSequenceNo("0");
       setSelectedItem(null);
       setSelectedUom(null);
+      setItemSearchValue("");
     }
   }, [open, editNode]);
 
@@ -116,7 +114,6 @@ export default function AddComponentDialog({
       const co_id = getCoId();
 
       if (isEditMode && editNode) {
-        // Edit existing component
         const { error } = await fetchWithCookie(
           apiRoutesPortalMasters.BOM_EDIT_COMPONENT,
           "POST",
@@ -131,13 +128,12 @@ export default function AddComponentDialog({
         if (error) throw new Error(error);
         onSnackbar("Component updated", "success");
       } else {
-        // Add new component
         const { data, error } = await fetchWithCookie(
           apiRoutesPortalMasters.BOM_ADD_COMPONENT,
           "POST",
           {
             parent_item_id: parentItemId,
-            child_item_id: selectedItem.item_id,
+            child_item_id: selectedItem!.item_id,
             qty: parseFloat(qty),
             uom_id: selectedUom.uom_id,
             co_id: parseInt(co_id),
@@ -163,16 +159,18 @@ export default function AddComponentDialog({
           {!isEditMode ? (
             <Autocomplete
               options={itemOptions}
-              getOptionLabel={(opt: any) => `${opt.item_code} — ${opt.item_name}`}
+              getOptionLabel={(opt: ItemOption) => `${opt.item_code} — ${opt.item_name}`}
               value={selectedItem}
+              inputValue={itemSearchValue}
               onChange={(_, newValue) => {
                 setSelectedItem(newValue);
-                // Auto-set UOM from item's default UOM
                 if (newValue?.uom_id && newValue?.uom_name) {
                   setSelectedUom({ uom_id: newValue.uom_id, uom_name: newValue.uom_name });
                 }
               }}
-              onInputChange={(_, value) => setItemSearchValue(value)}
+              onInputChange={(_, value, reason) => {
+                if (reason !== "reset") setItemSearchValue(value);
+              }}
               renderInput={(params) => (
                 <TextField {...params} label="Item *" placeholder="Search item..." size="small" autoFocus />
               )}
@@ -198,11 +196,11 @@ export default function AddComponentDialog({
 
           <Autocomplete
             options={uomOptions}
-            getOptionLabel={(opt: any) => opt.uom_name || ""}
+            getOptionLabel={(opt: UomOption) => opt.uom_name || ""}
             value={selectedUom}
             onChange={(_, newValue) => setSelectedUom(newValue)}
             renderInput={(params) => (
-              <TextField {...params} label="UOM *" size="small" />
+              <TextField {...params} label="UOM *" placeholder="Search UOM..." size="small" />
             )}
             isOptionEqualToValue={(opt, val) => opt.uom_id === val.uom_id}
           />

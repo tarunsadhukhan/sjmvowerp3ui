@@ -9,15 +9,11 @@ import {
   GridColDef,
   GridToolbar
 } from '@mui/x-data-grid';
-import { 
-  Box, 
-  TextField, 
-  InputAdornment, 
-  FormControl, 
-  InputLabel, 
-  Select, 
-  MenuItem, 
-  SelectChangeEvent 
+import {
+  Box,
+  TextField,
+  InputAdornment,
+  Autocomplete
 } from '@mui/material';
 import { useState, useEffect, useMemo } from 'react';
 
@@ -37,7 +33,7 @@ type Company = {
 export default function BranchManagement() {
   const [allBranches, setAllBranches] = useState<Branch[]>([]);
   const [companies, setCompanies] = useState<Company[]>([]);
-  const [selectedCompanyId, setSelectedCompanyId] = useState<string>('');
+  const [selectedCompany, setSelectedCompany] = useState<Company | null>(null);
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
   const [searchTimeout, setSearchTimeout] = useState<number | null>(null);
@@ -79,7 +75,9 @@ export default function BranchManagement() {
       ) as Company[];
       
       setCompanies(uniqueCompanies);
-    } catch (error) {
+      if (uniqueCompanies.length > 0) {
+        setSelectedCompany(uniqueCompanies[0]);
+      }    } catch (error) {
       console.error("Error fetching branches:", error);
     } finally {
       setLoading(false);
@@ -90,18 +88,6 @@ export default function BranchManagement() {
   useEffect(() => {
     fetchAllBranches();
   }, []);
-
-  // Effect to set the first company as default when companies are loaded
-  useEffect(() => {
-    if (companies.length > 0 && selectedCompanyId === '') {
-      setSelectedCompanyId(companies[0].co_id.toString());
-    }
-  }, [companies, selectedCompanyId]);
-
-  // Handle company selection change
-  const handleCompanyChange = (event: SelectChangeEvent<string>) => {
-    setSelectedCompanyId(event.target.value);
-  };
 
   // Handle search with debounce
   const handleSearchChange = (event: React.ChangeEvent<HTMLInputElement>) => {
@@ -124,15 +110,15 @@ export default function BranchManagement() {
   const filteredBranches = useMemo(() => {
     return allBranches.filter(branch => {
       // Filter by company if one is selected
-      const companyMatch = selectedCompanyId === '' || 
-                          branch.co_id.toString() === selectedCompanyId;
-      
+      const companyMatch = !selectedCompany ||
+                          branch.co_id === selectedCompany.co_id;
+
       // Filter by search query
       const searchMatch = branch.branch_name.toLowerCase().includes(searchQuery.toLowerCase());
-      
+
       return companyMatch && searchMatch;
     });
-  }, [allBranches, selectedCompanyId, searchQuery]);
+  }, [allBranches, selectedCompany, searchQuery]);
   
   // Column definitions for the DataGrid
   const columns: GridColDef[] = [
@@ -203,22 +189,18 @@ export default function BranchManagement() {
           }}
         >
           {/* Company dropdown */}
-          <FormControl fullWidth sx={{ maxWidth: 350 }} size="small">
-            <InputLabel id="company-select-label">Select Company</InputLabel>
-            <Select
-              labelId="company-select-label"
-              id="company-select"
-              value={selectedCompanyId}
-              label="Select Company"
-              onChange={handleCompanyChange}
-            >
-              {companies.map((company) => (
-          <MenuItem key={company.co_id} value={company.co_id.toString()}>
-            {company.co_name}
-          </MenuItem>
-              ))}
-            </Select>
-          </FormControl>
+          <Autocomplete
+            options={companies}
+            getOptionLabel={(option) => option.co_name}
+            value={selectedCompany}
+            onChange={(_, newValue) => setSelectedCompany(newValue)}
+            isOptionEqualToValue={(option, value) => option.co_id === value.co_id}
+            size="small"
+            sx={{ maxWidth: 350 }}
+            renderInput={(params) => (
+              <TextField {...params} label="Select Company" />
+            )}
+          />
 
           {/* Search input */}
           <TextField

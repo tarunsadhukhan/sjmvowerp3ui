@@ -228,10 +228,9 @@ function InvoiceTransactionPageContent() {
 
 	const freightCharges = Number(formValues.freight_charges) || 0;
 	const roundOff = Number(formValues.round_off) || 0;
-	const tcsAmount = Number(formValues.tcs_amount) || 0;
 	const totals = React.useMemo(
-		() => calculateInvoiceTotals(filledLineItems, freightCharges, roundOff, tcsAmount),
-		[filledLineItems, freightCharges, roundOff, tcsAmount],
+		() => calculateInvoiceTotals(filledLineItems, freightCharges, roundOff),
+		[filledLineItems, freightCharges, roundOff],
 	);
 
 	const detailsFetchKey = React.useMemo(
@@ -519,7 +518,6 @@ function InvoiceTransactionPageContent() {
 			totalSGST: totals.totalSGST,
 			freightCharges: totals.freightCharges,
 			roundOff: totals.roundOff,
-			tcsAmount: totals.tcsAmount,
 			netAmount: totals.netAmount,
 		}),
 		[totals],

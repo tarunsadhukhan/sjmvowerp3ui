@@ -98,6 +98,17 @@ export type EditableLineItem = {
 	sgstAmount?: number;
 	sgstPercent?: number;
 	gstTotal?: number;
+	// Jute detail fields (only used when invoice_type is 2-6)
+	juteClaimAmountDtl?: number;
+	juteClaimDesc?: string;
+	juteClaimRate?: number;
+	juteUnitConversion?: string;
+	juteQtyUnitConversion?: number;
+};
+
+export type MukamRecord = {
+	mukam_id: number;
+	mukam_name: string;
 };
 
 export type InvoiceSetupData = {
@@ -107,6 +118,7 @@ export type InvoiceSetupData = {
 	approvedDeliveryOrders: ApprovedDeliveryOrderRecord[];
 	itemGroups: ItemGroupRecord[];
 	invoiceTypes: InvoiceTypeRecord[];
+	mukamList: MukamRecord[];
 };
 
 export type CustomerBranchRecordRaw = {
@@ -211,6 +223,7 @@ export type InvoiceSetup1ResponseRaw = {
 	approved_delivery_orders?: ApprovedDeliveryOrderRecordRaw[];
 	item_groups?: ItemGroupRecordRaw[];
 	invoice_types?: InvoiceTypeRecordRaw[];
+	mukam_list?: Array<{ mukam_id?: number; mukam_name?: string }>;
 	branches?: unknown[];
 };
 

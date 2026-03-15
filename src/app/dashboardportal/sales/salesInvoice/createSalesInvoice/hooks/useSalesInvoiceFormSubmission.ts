@@ -3,6 +3,7 @@ import { useRouter } from "next/navigation";
 import { toast } from "@/hooks/use-toast";
 import { createInvoice, updateInvoice, type SaveInvoiceRequest } from "@/utils/salesInvoiceService";
 import type { EditableLineItem } from "../types/salesInvoiceTypes";
+import { isJuteInvoice } from "../utils/salesInvoiceConstants";
 
 type Params = {
 	mode: "create" | "edit" | "view";
@@ -29,6 +30,9 @@ export const useSalesInvoiceFormSubmission = ({
 				return;
 			}
 
+			const invoiceTypeId = String(values.invoice_type ?? formValues.invoice_type ?? "");
+			const juteType = isJuteInvoice(invoiceTypeId);
+
 			const itemsPayload = filledLineItems.map((item) => ({
 				item: item.item || "",
 				item_make: item.itemMake || undefined,
@@ -51,7 +55,18 @@ export const useSalesInvoiceFormSubmission = ({
 					sgst_amount: item.sgstAmount || 0,
 					sgst_percent: item.sgstPercent || 0,
 					gst_total: item.gstTotal || 0,
+					tax_percentage: item.taxPercentage || 0,
+					tax_amount: item.gstTotal || 0,
 				},
+				...(juteType ? {
+					jute_dtl: {
+						claim_amount_dtl: Number(item.juteClaimAmountDtl) || undefined,
+						claim_desc: item.juteClaimDesc || undefined,
+						claim_rate: Number(item.juteClaimRate) || undefined,
+						unit_conversion: item.juteUnitConversion || undefined,
+						qty_untit_conversion: Number(item.juteQtyUnitConversion) || undefined,
+					},
+				} : {}),
 			}));
 
 			const freightCharges = Number(values.freight_charges ?? formValues.freight_charges) || 0;
@@ -103,6 +118,15 @@ export const useSalesInvoiceFormSubmission = ({
 				consignment_date: String(values.consignment_date ?? formValues.consignment_date ?? "") || undefined,
 				items: itemsPayload,
 			};
+
+			if (juteType) {
+				payload.jute = {
+					mr_no: String(values.jute_mr_no ?? formValues.jute_mr_no ?? "") || undefined,
+					mukam_id: Number(values.jute_mukam_id ?? formValues.jute_mukam_id) || undefined,
+					claim_amount: Number(values.jute_claim_amount ?? formValues.jute_claim_amount) || undefined,
+					claim_description: String(values.jute_claim_description ?? formValues.jute_claim_description ?? "") || undefined,
+				};
+			}
 
 			setSaving(true);
 			try {

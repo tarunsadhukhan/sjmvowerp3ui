@@ -32,12 +32,12 @@ import { DeliveryOrderLinesDialog } from "./components/DeliveryOrderLinesDialog"
 import { useSalesInvoiceFormState } from "./hooks/useSalesInvoiceFormState";
 import { useSalesInvoiceLineItems } from "./hooks/useSalesInvoiceLineItems";
 import { useSalesInvoiceSelectOptions } from "./hooks/useSalesInvoiceSelectOptions";
-import { useSalesInvoiceHeaderSchema, useSalesInvoiceFooterSchema } from "./hooks/useSalesInvoiceFormSchemas";
+import { useSalesInvoiceHeaderSchema, useSalesInvoiceJuteHeaderSchema, useSalesInvoiceFooterSchema } from "./hooks/useSalesInvoiceFormSchemas";
 import { useSalesInvoiceFormSubmission } from "./hooks/useSalesInvoiceFormSubmission";
 import { useSalesInvoiceApproval } from "./hooks/useSalesInvoiceApproval";
 
 import type { ItemGroupCacheEntry, InvoiceSetupData } from "./types/salesInvoiceTypes";
-import { mapItemGroupDetailResponse, mapInvoiceSetupResponse, mapInvoiceDetailsToFormValues } from "./utils/salesInvoiceMappers";
+import { mapItemGroupDetailResponse, mapInvoiceSetupResponse, mapInvoiceDetailsToFormValues, buildMukamOptions } from "./utils/salesInvoiceMappers";
 import { calculateInvoiceTotals } from "./utils/salesInvoiceCalculations";
 import { buildDefaultFormValues, createBlankLine } from "./utils/salesInvoiceFactories";
 import {
@@ -48,6 +48,7 @@ import {
 	EMPTY_ITEM_GROUPS,
 	EMPTY_INVOICE_TYPES,
 	EMPTY_SETUP_PARAMS,
+	isRawJuteInvoice,
 } from "./utils/salesInvoiceConstants";
 
 function InvoicePageLoading() {
@@ -226,6 +227,29 @@ function InvoiceTransactionPageContent() {
 		});
 	}, [mode, setLineItems]);
 
+	const juteFormRef = React.useRef<{ setValue: (name: string, value: unknown) => void } | null>(null);
+
+	// Auto-sum header claim amount from line item claim amounts for Raw Jute invoices
+	React.useEffect(() => {
+		const invoiceTypeId = String(formValues.invoice_type ?? "");
+		if (!isRawJuteInvoice(invoiceTypeId)) return;
+		if (mode === "view") return;
+
+		const sum = filledLineItems.reduce(
+			(acc, line) => acc + (Number(line.juteClaimAmountDtl) || 0),
+			0,
+		);
+		const rounded = Number(sum.toFixed(2));
+
+		setFormValues((prev) => {
+			const current = Number(prev.jute_claim_amount) || 0;
+			if (current === rounded) return prev;
+			return { ...prev, jute_claim_amount: rounded };
+		});
+
+		juteFormRef.current?.setValue("jute_claim_amount", rounded);
+	}, [filledLineItems, formValues.invoice_type, mode, setFormValues]);
+
 	const freightCharges = Number(formValues.freight_charges) || 0;
 	const roundOff = Number(formValues.round_off) || 0;
 	const totals = React.useMemo(
@@ -381,6 +405,8 @@ function InvoiceTransactionPageContent() {
 		headerFieldsDisabled,
 	});
 
+	const mukamOptions = React.useMemo(() => buildMukamOptions(setupData?.mukamList ?? []), [setupData?.mukamList]);
+	const juteHeaderSchema = useSalesInvoiceJuteHeaderSchema({ mode, headerFieldsDisabled, mukamOptions, invoiceTypeId: String(formValues.invoice_type ?? "") });
 	const footerSchema = useSalesInvoiceFooterSchema({ mode });
 
 	const canEdit = mode !== "view";
@@ -645,6 +671,9 @@ function InvoiceTransactionPageContent() {
 				showDeliveryOrderButton={showDOButton}
 				onDeliveryOrderSelect={handleDOSelect}
 				deliveryOrderButtonDisabled={!formValues.delivery_order}
+				juteSchema={juteHeaderSchema}
+				invoiceTypeId={String(formValues.invoice_type ?? "")}
+				juteFormRef={juteFormRef}
 			/>
 
 			<DeliveryOrderLinesDialog

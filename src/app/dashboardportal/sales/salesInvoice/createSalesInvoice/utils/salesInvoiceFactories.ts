@@ -16,6 +16,11 @@ export const createBlankLine = (): EditableLineItem => ({
 	rate: "",
 	uom: "",
 	remarks: "",
+	juteClaimAmountDtl: undefined,
+	juteClaimDesc: "",
+	juteClaimRate: undefined,
+	juteUnitConversion: "",
+	juteQtyUnitConversion: undefined,
 });
 
 export const buildDefaultFormValues = () => ({
@@ -51,4 +56,10 @@ export const buildDefaultFormValues = () => ({
 	contract_date: "",
 	consignment_no: "",
 	consignment_date: "",
+	tcs_percentage: "",
+	tcs_amount: "",
+	jute_mr_no: "",
+	jute_claim_amount: "",
+	jute_claim_description: "",
+	jute_mukam_id: "",
 });

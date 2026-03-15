@@ -21,6 +21,7 @@ import type {
 	InvoiceSetup1ResponseRaw,
 	InvoiceSetup2ResponseRaw,
 	InvoiceSetupData,
+	MukamRecord,
 	Option,
 	UomConversionEntry,
 } from "../types/salesInvoiceTypes";
@@ -137,6 +138,18 @@ export const mapInvoiceTypeRecords = (records: unknown[]): InvoiceTypeRecord[] =
 		})
 		.filter(Boolean) as InvoiceTypeRecord[];
 
+export const mapMukamRecords = (records: unknown[]): MukamRecord[] =>
+	records
+		.map((row) => {
+			const data = row as { mukam_id?: number; mukam_name?: string };
+			if (!data?.mukam_id) return null;
+			return { mukam_id: Number(data.mukam_id), mukam_name: String(data.mukam_name ?? "") } satisfies MukamRecord;
+		})
+		.filter(Boolean) as MukamRecord[];
+
+export const buildMukamOptions = (mukams: MukamRecord[]): Option[] =>
+	mukams.map((m) => ({ label: m.mukam_name, value: String(m.mukam_id) }));
+
 export const mapInvoiceSetupResponse = (response: unknown): InvoiceSetupData => {
 	try {
 		const result = response as InvoiceSetup1ResponseRaw;
@@ -147,6 +160,7 @@ export const mapInvoiceSetupResponse = (response: unknown): InvoiceSetupData => 
 			approvedDeliveryOrders: mapApprovedDeliveryOrders(result?.approved_delivery_orders ?? []),
 			itemGroups: mapItemGroupRecords(result?.item_groups ?? []),
 			invoiceTypes: mapInvoiceTypeRecords(result?.invoice_types ?? []),
+			mukamList: mapMukamRecords((result?.mukam_list as unknown[]) ?? []),
 		} satisfies InvoiceSetupData;
 	} catch (error) {
 		console.error("Failed to map invoice setup response", error);
@@ -323,6 +337,18 @@ export const mapInvoiceDetailsToFormValues = (
 		contractDate?: string;
 		consignmentNo?: string;
 		consignmentDate?: string;
+		tcsPercentage?: number;
+		tcsAmount?: number;
+		jute?: {
+			mrNo?: string;
+			mrId?: number;
+			claimAmount?: number;
+			otherReference?: string;
+			unitConversion?: string;
+			claimDescription?: string;
+			mukamId?: number;
+			mukamName?: string;
+		} | null;
 	},
 	defaultValues: Record<string, unknown>,
 ): Record<string, unknown> => ({
@@ -359,4 +385,10 @@ export const mapInvoiceDetailsToFormValues = (
 	contract_date: normalizeDate(details.contractDate) || toStringValue(defaultValues.contract_date),
 	consignment_no: toStringValue(details.consignmentNo ?? defaultValues.consignment_no),
 	consignment_date: normalizeDate(details.consignmentDate) || toStringValue(defaultValues.consignment_date),
+	tcs_percentage: details.tcsPercentage != null ? String(details.tcsPercentage) : toStringValue(defaultValues.tcs_percentage),
+	tcs_amount: details.tcsAmount != null ? String(details.tcsAmount) : toStringValue(defaultValues.tcs_amount),
+	jute_mr_no: toStringValue(details.jute?.mrNo ?? defaultValues.jute_mr_no),
+	jute_claim_amount: details.jute?.claimAmount != null ? String(details.jute.claimAmount) : toStringValue(defaultValues.jute_claim_amount),
+	jute_claim_description: toStringValue(details.jute?.claimDescription ?? defaultValues.jute_claim_description),
+	jute_mukam_id: details.jute?.mukamId != null ? String(details.jute.mukamId) : toStringValue(defaultValues.jute_mukam_id),
 });

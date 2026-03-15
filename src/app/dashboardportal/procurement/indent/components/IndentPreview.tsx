@@ -39,6 +39,7 @@ type IndentPreviewProps = {
   items: IndentPreviewItem[];
   remarks?: string;
   onPrint?: () => void;
+  onDownload?: () => void;
 };
 
 const FieldRow = ({ label, value }: { label: string; value?: React.ReactNode }) => (
@@ -52,7 +53,7 @@ const FieldRow = ({ label, value }: { label: string; value?: React.ReactNode }) 
   </Stack>
 );
 
-const IndentPreview: React.FC<IndentPreviewProps> = ({ header, items, remarks, onPrint }) => {
+const IndentPreview: React.FC<IndentPreviewProps> = ({ header, items, remarks, onPrint, onDownload }) => {
   const previewRef = useRef<HTMLDivElement>(null);
 
   const formatDate = (dateStr?: string) => {
@@ -103,7 +104,24 @@ const IndentPreview: React.FC<IndentPreviewProps> = ({ header, items, remarks, o
     }, 300);
   };
 
+  const handleDownload = () => {
+    if (onDownload) {
+      onDownload();
+      return;
+    }
 
+    const printContent = previewRef.current?.innerHTML || "";
+    const printWindow = openStyledPrintWindow(
+      printContent,
+      `Purchase Indent - ${header.indentNo || "Download"}`
+    );
+    if (!printWindow) return;
+
+    printWindow.focus();
+    setTimeout(() => {
+      printWindow.print(); // user can choose "Save as PDF"
+    }, 300);
+  };
 
   return (
     <Box sx={{ display: "flex", flexDirection: "column", gap: 2 }}>
@@ -344,10 +362,13 @@ const IndentPreview: React.FC<IndentPreviewProps> = ({ header, items, remarks, o
         </Stack>
       </Box>
 
-      {/* Print button after the preview */}
+      {/* Print and Download buttons after the preview */}
       <Stack direction="row" spacing={1} flexWrap="wrap" justifyContent="flex-end">
         <Button variant="outline" size="sm" onClick={handlePrint}>
           Print
+        </Button>
+        <Button variant="outline" size="sm" onClick={handleDownload}>
+          Download
         </Button>
       </Stack>
     </Box>

@@ -38,7 +38,7 @@ export const calculateLineTax = (
 /**
  * Computes discount amount using either percentage or flat modes.
  * - Percentage: discount_amount = (discountValue / 100) * rate * qty
- * - Amount: discount_amount = discountValue (direct amount, no calculation)
+ * - Amount (PriceDiscount): discount_amount = discountValue * qty (per-item reduction)
  */
 export const calculateDiscountAmount = (
 	qty: number,
@@ -56,8 +56,8 @@ export const calculateDiscountAmount = (
 	}
 
 	if (isAmountDiscountMode(discountMode)) {
-		// Amount discount: direct amount (no calculation)
-		return discountValue;
+		// PriceDiscount: per-item reduction * qty
+		return discountValue * qty;
 	}
 
 	return 0;

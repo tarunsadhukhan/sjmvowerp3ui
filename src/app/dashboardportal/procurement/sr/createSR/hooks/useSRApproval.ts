@@ -3,9 +3,8 @@ import { useRouter } from "next/navigation";
 import { fetchWithCookie } from "@/utils/apiClient2";
 import { apiRoutesPortalMasters } from "@/utils/api";
 import { toast } from "@/hooks/use-toast";
-import type { ApprovalInfo, ApprovalActionPermissions, ApprovalStatusId } from "@/components/ui/transaction";
 import type { SRHeader, SRLineItem, SRAdditionalCharge } from "../types/srTypes";
-import { SR_STATUS_IDS, SR_STATUS_LABELS } from "../utils/srConstants";
+import { SR_STATUS_IDS } from "../utils/srConstants";
 
 type UseSRApprovalParams = {
 	inwardId: string;
@@ -21,12 +20,12 @@ type UseSRApprovalParams = {
 type UseSRApprovalReturn = {
 	saving: boolean;
 	canEdit: boolean;
-	approvalInfo: ApprovalInfo;
-	approvalPermissions: ApprovalActionPermissions;
+	isDraft: boolean;
+	isOpen: boolean;
 	handleSave: () => Promise<void>;
 	handleOpen: () => Promise<void>;
 	handleApprove: () => Promise<void>;
-	handleReject: (reason: string) => Promise<void>;
+	handleReject: () => Promise<void>;
 };
 
 /**
@@ -45,36 +44,12 @@ export const useSRApproval = ({
 	const router = useRouter();
 	const [saving, setSaving] = React.useState(false);
 
-	const rawStatusId = header?.sr_status ?? 0;
-	// Map status 0 (no SR yet) to Draft (21) for approval logic
-	const statusId: ApprovalStatusId = (rawStatusId === 0 ? SR_STATUS_IDS.DRAFT : rawStatusId) as ApprovalStatusId;
-
+	const statusId = header?.sr_status ?? 0;
+	const isDraft = statusId === SR_STATUS_IDS.DRAFT || statusId === 0;
+	const isOpen = statusId === SR_STATUS_IDS.OPEN;
 	const isApproved = statusId === SR_STATUS_IDS.APPROVED;
 	const isRejected = statusId === SR_STATUS_IDS.REJECTED;
 	const canEdit = !isApproved && !isRejected;
-
-	const approvalInfo: ApprovalInfo = React.useMemo(
-		() => ({
-			statusId,
-			statusLabel: SR_STATUS_LABELS[statusId] ?? header?.sr_status_name ?? "Draft",
-			approvalLevel: null,
-			maxApprovalLevel: null,
-			isFinalLevel: false,
-		}),
-		[statusId, header?.sr_status_name],
-	);
-
-	const approvalPermissions: ApprovalActionPermissions = React.useMemo(() => {
-		if (!canEdit) return {};
-		switch (statusId) {
-			case SR_STATUS_IDS.DRAFT:
-				return { canSave: true, canOpen: true };
-			case SR_STATUS_IDS.OPEN:
-				return { canSave: true, canApprove: true, canReject: true };
-			default:
-				return {};
-		}
-	}, [statusId, canEdit]);
 
 	/**
 	 * Save SR as draft.
@@ -129,8 +104,16 @@ export const useSRApproval = ({
 				tax_amount: charge.tax_amount,
 			}));
 
+			// Debug: Log payload being sent to API
+			console.log("SR Save Payload:", { 
+				inward_id: Number(inwardId), 
+				sr_date: srDate, 
+				line_items: lineItemsPayload,
+				additional_charges: additionalChargesPayload,
+			});
+
 			const url = apiRoutesPortalMasters.SR_SAVE;
-			const result = await fetchWithCookie(url, "POST", {
+			const { error } = await fetchWithCookie(url, "POST", {
 				inward_id: Number(inwardId),
 				sr_date: srDate,
 				sr_remarks: srRemarks,
@@ -138,8 +121,8 @@ export const useSRApproval = ({
 				additional_charges: additionalChargesPayload,
 			});
 
-			if (result.error) {
-				throw new Error(result.error);
+			if (error) {
+				throw new Error(error);
 			}
 
 			toast({
@@ -240,9 +223,9 @@ export const useSRApproval = ({
 	}, [inwardId, router]);
 
 	/**
-	 * Reject SR with reason.
+	 * Reject SR.
 	 */
-	const handleReject = React.useCallback(async (reason: string) => {
+	const handleReject = React.useCallback(async () => {
 		if (!inwardId) return;
 
 		setSaving(true);
@@ -250,7 +233,6 @@ export const useSRApproval = ({
 			const url = apiRoutesPortalMasters.SR_REJECT;
 			const { error } = await fetchWithCookie(url, "POST", {
 				inward_id: Number(inwardId),
-				reason,
 			});
 
 			if (error) {
@@ -279,8 +261,8 @@ export const useSRApproval = ({
 	return {
 		saving,
 		canEdit,
-		approvalInfo,
-		approvalPermissions,
+		isDraft,
+		isOpen,
 		handleSave,
 		handleOpen,
 		handleApprove,

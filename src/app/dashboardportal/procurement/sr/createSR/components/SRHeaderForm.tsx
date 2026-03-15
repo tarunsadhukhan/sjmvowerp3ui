@@ -145,12 +145,6 @@ export const SRHeaderForm: React.FC<SRHeaderFormProps> = ({
 					</Typography>
 					<Typography variant="body1">{formatDate(header?.invoice_recvd_date)}</Typography>
 				</Box>
-				<Box>
-					<Typography variant="caption" color="text.secondary">
-						Invoice No
-					</Typography>
-					<Typography variant="body1">{header?.invoice_no || "-"}</Typography>
-				</Box>
 			</Box>
 
 			{/* Read-only Inward Info - Row 3: Vehicle/Driver */}

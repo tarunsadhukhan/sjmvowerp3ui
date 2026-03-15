@@ -184,7 +184,6 @@ export type JutePOLineItemDetails = {
   marka?: string;
   quantity: number;
   uom?: string;
-  jute_uom?: string; // Per line item unit (LOOSE/BALE)
   rate: number;
   allowable_moisture?: number;
   weight: number;

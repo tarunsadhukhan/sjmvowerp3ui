@@ -72,6 +72,7 @@ export const calculateInvoiceTotals = (
 	lineItems: Array<{ netAmount?: number; gstTotal?: number }>,
 	freightCharges: number = 0,
 	roundOff: number = 0,
+	tcsAmount: number = 0,
 ) => {
 	const grossAmount = lineItems.reduce((sum, line) => sum + (line.netAmount || 0), 0);
 	const totalGST = lineItems.reduce((sum, line) => sum + (line.gstTotal || 0), 0);
@@ -87,6 +88,6 @@ export const calculateInvoiceTotals = (
 		const l = line as { sgstAmount?: number };
 		return sum + (l.sgstAmount || 0);
 	}, 0);
-	const netAmount = grossAmount + totalGST + freightCharges + roundOff;
-	return { grossAmount, totalGST, totalIGST, totalCGST, totalSGST, netAmount, freightCharges, roundOff };
+	const netAmount = grossAmount + totalGST + freightCharges + roundOff + tcsAmount;
+	return { grossAmount, totalGST, totalIGST, totalCGST, totalSGST, netAmount, freightCharges, roundOff, tcsAmount };
 };

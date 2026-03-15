@@ -43,7 +43,6 @@ type InvoiceTotals = {
 	netAmount: number;
 	freightCharges: number;
 	roundOff: number;
-	tcsAmount: number;
 };
 
 type SalesInvoiceTotalsDisplayProps = {
@@ -94,13 +93,6 @@ export function SalesInvoiceTotalsDisplay({ totals, showGSTBreakdown }: SalesInv
 					<div className="flex justify-between text-sm">
 						<span className="text-slate-600">Round Off:</span>
 						<span>{formatCurrency(totals.roundOff)}</span>
-					</div>
-				)}
-
-				{totals.tcsAmount > 0 && (
-					<div className="flex justify-between text-sm">
-						<span className="text-slate-600">TCS Amount:</span>
-						<span>{formatCurrency(totals.tcsAmount)}</span>
 					</div>
 				)}
 

@@ -240,6 +240,16 @@ const apiRoutesPortalMasters = {
     YARN_CREATE: `${API_URL}/yarnMaster/yarn_create`,
     YARN_EDIT: `${API_URL}/yarnMaster/yarn_edit`,
 
+    // Item BOM Master endpoints
+    BOM_LIST: `${API_URL}/itemBomMaster/get_bom_list`,
+    BOM_TREE: `${API_URL}/itemBomMaster/get_bom_tree`,
+    BOM_CHILDREN: `${API_URL}/itemBomMaster/get_bom_children`,
+    BOM_PARENTS: `${API_URL}/itemBomMaster/get_bom_parents`,
+    BOM_CREATE_SETUP: `${API_URL}/itemBomMaster/bom_create_setup`,
+    BOM_ADD_COMPONENT: `${API_URL}/itemBomMaster/bom_add_component`,
+    BOM_EDIT_COMPONENT: `${API_URL}/itemBomMaster/bom_edit_component`,
+    BOM_REMOVE_COMPONENT: `${API_URL}/itemBomMaster/bom_remove_component`,
+
     // Batch Plan Master endpoints (jute_batch_plan)
     BATCH_PLAN_TABLE: `${API_URL}/batchPlanMaster/get_batch_plan_table`,
     BATCH_PLAN_BY_ID: `${API_URL}/batchPlanMaster/get_batch_plan_by_id`,
@@ -333,6 +343,11 @@ const apiRoutesPortalMasters = {
     JUTE_REPORT_STOCK: `${API_URL}/juteReports/stock`,
     JUTE_REPORT_BATCH_COST: `${API_URL}/juteReports/batch-cost`,
 
+    // Procurement Reports
+    PROCUREMENT_REPORT_INDENT_ITEMWISE: `${API_URL}/procurementReports/indent-itemwise`,
+    PROCUREMENT_REPORT_PO_ITEMWISE: `${API_URL}/procurementReports/po-itemwise`,
+    PROCUREMENT_REPORT_SR_ITEMWISE: `${API_URL}/procurementReports/sr-itemwise`,
+
     // Jute SQC - Morrah Weight QC
     MORRAH_WT_TABLE: `${API_URL}/juteSQC/get_morrah_wt_table`,
     MORRAH_WT_BY_ID: `${API_URL}/juteSQC/get_morrah_wt_by_id`,
@@ -410,6 +425,10 @@ const apiRoutesPortalMasters = {
     BILL_PASS_LIST: `${API_URL}/billPass/get_bill_pass_list`,
     BILL_PASS_GET_BY_ID: `${API_URL}/billPass/get_bill_pass_by_id`,
     BILL_PASS_UPDATE: `${API_URL}/billPass/update_bill_pass`,
+
+    // Inventory Reports
+    INVENTORY_REPORT_STOCK: `${API_URL}/inventoryReports/inventory-stock`,
+    INVENTORY_REPORT_ISSUE_ITEMWISE: `${API_URL}/inventoryReports/issue-itemwise`,
 
     // Inventory Issue endpoints
     ISSUE_TABLE: `${API_URL}/inventoryIssue/get_issue_table`,

@@ -71,11 +71,10 @@ export const useSalesInvoiceFormSubmission = ({
 
 			const freightCharges = Number(values.freight_charges ?? formValues.freight_charges) || 0;
 			const roundOff = Number(values.round_off ?? formValues.round_off) || 0;
-			const tcsPercentage = Number(values.tcs_percentage ?? formValues.tcs_percentage) || 0;
-			const tcsAmount = Number(values.tcs_amount ?? formValues.tcs_amount) || 0;
 			const grossAmount = filledLineItems.reduce((sum, l) => sum + (l.netAmount || 0), 0);
 			const totalGST = filledLineItems.reduce((sum, l) => sum + (l.gstTotal || 0), 0);
-			const netAmount = grossAmount + totalGST + freightCharges + roundOff + tcsAmount;
+			const taxPayable = totalGST;
+			const netAmount = grossAmount + totalGST + freightCharges + roundOff;
 
 			const payload: SaveInvoiceRequest = {
 				branch: String(values.branch ?? formValues.branch ?? ""),
@@ -83,9 +82,17 @@ export const useSalesInvoiceFormSubmission = ({
 				party: String(values.party ?? formValues.party ?? ""),
 				party_branch: String(values.party_branch ?? formValues.party_branch ?? "") || undefined,
 				delivery_order: String(values.delivery_order ?? formValues.delivery_order ?? "") || undefined,
+				sales_delivery_order_id: String(values.delivery_order ?? formValues.delivery_order ?? "") || undefined,
+				broker_id: String(values.broker ?? formValues.broker ?? "") || undefined,
 				billing_to: String(values.billing_to ?? formValues.billing_to ?? "") || undefined,
+				billing_to_id: String(values.billing_to ?? formValues.billing_to ?? "") || undefined,
 				shipping_to: String(values.shipping_to ?? formValues.shipping_to ?? "") || undefined,
+				shipping_to_id: String(values.shipping_to ?? formValues.shipping_to ?? "") || undefined,
 				transporter: String(values.transporter ?? formValues.transporter ?? "") || undefined,
+				transporter_name: String(values.transporter_name ?? formValues.transporter_name ?? "") || undefined,
+				transporter_address: String(values.transporter_address ?? formValues.transporter_address ?? "") || undefined,
+				transporter_state_code: String(values.transporter_state_code ?? formValues.transporter_state_code ?? "") || undefined,
+				transporter_state_name: String(values.transporter_state_name ?? formValues.transporter_state_name ?? "") || undefined,
 				vehicle_no: String(values.vehicle_no ?? formValues.vehicle_no ?? "") || undefined,
 				eway_bill_no: String(values.eway_bill_no ?? formValues.eway_bill_no ?? "") || undefined,
 				eway_bill_date: String(values.eway_bill_date ?? formValues.eway_bill_date ?? "") || undefined,
@@ -96,11 +103,19 @@ export const useSalesInvoiceFormSubmission = ({
 				internal_note: String(values.internal_note ?? formValues.internal_note ?? "") || undefined,
 				terms_conditions: String(values.terms_conditions ?? formValues.terms_conditions ?? "") || undefined,
 				gross_amount: grossAmount,
+				tax_amount: totalGST,
+				tax_payable: taxPayable,
 				net_amount: netAmount,
 				freight_charges: freightCharges || undefined,
 				round_off: roundOff || undefined,
-				tcs_percentage: tcsPercentage || undefined,
-				tcs_amount: tcsAmount || undefined,
+				due_date: String(values.due_date ?? formValues.due_date ?? "") || undefined,
+				type_of_sale: String(values.type_of_sale ?? formValues.type_of_sale ?? "") || undefined,
+				tax_id: Number(values.tax_id ?? formValues.tax_id) || undefined,
+				container_no: String(values.container_no ?? formValues.container_no ?? "") || undefined,
+				contract_no: Number(values.contract_no ?? formValues.contract_no) || undefined,
+				contract_date: String(values.contract_date ?? formValues.contract_date ?? "") || undefined,
+				consignment_no: String(values.consignment_no ?? formValues.consignment_no ?? "") || undefined,
+				consignment_date: String(values.consignment_date ?? formValues.consignment_date ?? "") || undefined,
 				items: itemsPayload,
 			};
 

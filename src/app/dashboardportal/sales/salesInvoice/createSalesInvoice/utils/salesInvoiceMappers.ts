@@ -317,8 +317,17 @@ export const mapInvoiceDetailsToFormValues = (
 		netAmount?: number;
 		freightCharges?: number;
 		roundOff?: number;
-		tcsPercentage?: number;
-		tcsAmount?: number;
+		dueDate?: string;
+		typeOfSale?: string;
+		taxId?: string;
+		transporterAddress?: string;
+		transporterStateCode?: string;
+		transporterStateName?: string;
+		containerNo?: string;
+		contractNo?: string;
+		contractDate?: string;
+		consignmentNo?: string;
+		consignmentDate?: string;
 		jute?: {
 			mrNo?: string;
 			mrId?: number;
@@ -352,8 +361,17 @@ export const mapInvoiceDetailsToFormValues = (
 	terms_conditions: toStringValue(details.termsConditions ?? defaultValues.terms_conditions),
 	freight_charges: details.freightCharges != null ? String(details.freightCharges) : toStringValue(defaultValues.freight_charges),
 	round_off: details.roundOff != null ? String(details.roundOff) : toStringValue(defaultValues.round_off),
-	tcs_percentage: details.tcsPercentage != null ? String(details.tcsPercentage) : toStringValue(defaultValues.tcs_percentage),
-	tcs_amount: details.tcsAmount != null ? String(details.tcsAmount) : toStringValue(defaultValues.tcs_amount),
+	due_date: normalizeDate(details.dueDate) || toStringValue(defaultValues.due_date),
+	type_of_sale: toStringValue(details.typeOfSale ?? defaultValues.type_of_sale),
+	tax_id: toStringValue(details.taxId ?? defaultValues.tax_id),
+	transporter_address: toStringValue(details.transporterAddress ?? defaultValues.transporter_address),
+	transporter_state_code: toStringValue(details.transporterStateCode ?? defaultValues.transporter_state_code),
+	transporter_state_name: toStringValue(details.transporterStateName ?? defaultValues.transporter_state_name),
+	container_no: toStringValue(details.containerNo ?? defaultValues.container_no),
+	contract_no: toStringValue(details.contractNo ?? defaultValues.contract_no),
+	contract_date: normalizeDate(details.contractDate) || toStringValue(defaultValues.contract_date),
+	consignment_no: toStringValue(details.consignmentNo ?? defaultValues.consignment_no),
+	consignment_date: normalizeDate(details.consignmentDate) || toStringValue(defaultValues.consignment_date),
 	jute_mr_no: toStringValue(details.jute?.mrNo ?? defaultValues.jute_mr_no),
 	jute_claim_amount: details.jute?.claimAmount != null ? String(details.jute.claimAmount) : toStringValue(defaultValues.jute_claim_amount),
 	jute_claim_description: toStringValue(details.jute?.claimDescription ?? defaultValues.jute_claim_description),

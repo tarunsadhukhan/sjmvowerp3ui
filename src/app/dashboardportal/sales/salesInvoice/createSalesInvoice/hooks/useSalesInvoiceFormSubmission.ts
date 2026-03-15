@@ -71,11 +71,9 @@ export const useSalesInvoiceFormSubmission = ({
 
 			const freightCharges = Number(values.freight_charges ?? formValues.freight_charges) || 0;
 			const roundOff = Number(values.round_off ?? formValues.round_off) || 0;
-			const tcsPercentage = Number(values.tcs_percentage ?? formValues.tcs_percentage) || 0;
-			const tcsAmount = Number(values.tcs_amount ?? formValues.tcs_amount) || 0;
 			const grossAmount = filledLineItems.reduce((sum, l) => sum + (l.netAmount || 0), 0);
 			const totalGST = filledLineItems.reduce((sum, l) => sum + (l.gstTotal || 0), 0);
-			const netAmount = grossAmount + totalGST + freightCharges + roundOff + tcsAmount;
+			const netAmount = grossAmount + totalGST + freightCharges + roundOff;
 
 			const payload: SaveInvoiceRequest = {
 				branch: String(values.branch ?? formValues.branch ?? ""),
@@ -99,8 +97,17 @@ export const useSalesInvoiceFormSubmission = ({
 				net_amount: netAmount,
 				freight_charges: freightCharges || undefined,
 				round_off: roundOff || undefined,
-				tcs_percentage: tcsPercentage || undefined,
-				tcs_amount: tcsAmount || undefined,
+				due_date: String(values.due_date ?? formValues.due_date ?? "") || undefined,
+				type_of_sale: String(values.type_of_sale ?? formValues.type_of_sale ?? "") || undefined,
+				tax_id: String(values.tax_id ?? formValues.tax_id ?? "") || undefined,
+				transporter_address: String(values.transporter_address ?? formValues.transporter_address ?? "") || undefined,
+				transporter_state_code: String(values.transporter_state_code ?? formValues.transporter_state_code ?? "") || undefined,
+				transporter_state_name: String(values.transporter_state_name ?? formValues.transporter_state_name ?? "") || undefined,
+				container_no: String(values.container_no ?? formValues.container_no ?? "") || undefined,
+				contract_no: String(values.contract_no ?? formValues.contract_no ?? "") || undefined,
+				contract_date: String(values.contract_date ?? formValues.contract_date ?? "") || undefined,
+				consignment_no: String(values.consignment_no ?? formValues.consignment_no ?? "") || undefined,
+				consignment_date: String(values.consignment_date ?? formValues.consignment_date ?? "") || undefined,
 				items: itemsPayload,
 			};
 

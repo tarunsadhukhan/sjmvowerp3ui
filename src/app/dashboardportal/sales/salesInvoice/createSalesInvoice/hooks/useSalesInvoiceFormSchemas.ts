@@ -69,10 +69,8 @@ export const useSalesInvoiceFooterSchema = ({ mode }: UseFooterSchemaParams): Sc
 	React.useMemo(() => {
 		const disabled = mode === "view";
 		const fields: Field[] = [
-			{ name: "freight_charges", label: "Freight Charges", type: "text", disabled, grid: { xs: 12, md: 3 } },
-			{ name: "round_off", label: "Round Off", type: "text", disabled, grid: { xs: 12, md: 3 } },
-			{ name: "tcs_percentage", label: "TCS %", type: "text", disabled, grid: { xs: 12, md: 3 } },
-			{ name: "tcs_amount", label: "TCS Amount", type: "text", disabled, grid: { xs: 12, md: 3 } },
+			{ name: "freight_charges", label: "Freight Charges", type: "text", disabled, grid: { xs: 12, md: 4 } },
+			{ name: "round_off", label: "Round Off", type: "text", disabled, grid: { xs: 12, md: 4 } },
 			{ name: "footer_note", label: "Footer Note", type: "textarea", disabled, grid: { xs: 12 } },
 			{ name: "internal_note", label: "Internal Note", type: "textarea", disabled, grid: { xs: 12 } },
 			{ name: "terms_conditions", label: "Terms & Conditions", type: "textarea", disabled, grid: { xs: 12 } },

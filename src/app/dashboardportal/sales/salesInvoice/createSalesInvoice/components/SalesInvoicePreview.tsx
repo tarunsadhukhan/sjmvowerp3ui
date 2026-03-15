@@ -46,6 +46,7 @@ export type InvoicePreviewTotals = {
 	totalSGST?: number;
 	freightCharges?: number;
 	roundOff?: number;
+	tcsAmount?: number;
 	netAmount?: number;
 };
 
@@ -261,6 +262,7 @@ const SalesInvoicePreview: React.FC<InvoicePreviewProps> = ({ header, items, tot
 									<TotalsRow label="SGST" value={formatAmount(totals.totalSGST)} />
 									{totals.freightCharges ? <TotalsRow label="Freight Charges" value={formatAmount(totals.freightCharges)} /> : null}
 									{totals.roundOff ? <TotalsRow label="Round Off" value={formatAmount(totals.roundOff)} /> : null}
+									{totals.tcsAmount ? <TotalsRow label="TCS Amount" value={formatAmount(totals.tcsAmount)} /> : null}
 									<Divider sx={{ my: 0.5 }} />
 									<TotalsRow label="Net Amount" value={formatAmount(totals.netAmount)} isBold />
 								</Stack>

@@ -301,18 +301,9 @@ export const mapInvoiceDetailsToFormValues = (
 		party?: unknown;
 		partyBranch?: unknown;
 		deliveryOrder?: unknown;
-		salesDeliveryOrderId?: unknown;
-		brokerId?: unknown;
 		billingTo?: unknown;
-		billingToId?: unknown;
 		shippingTo?: unknown;
-		shippingToId?: unknown;
-		shippingStateCode?: unknown;
 		transporter?: unknown;
-		transporterNameStored?: string;
-		transporterAddress?: string;
-		transporterStateCode?: string;
-		transporterStateName?: string;
 		vehicleNo?: string;
 		ewayBillNo?: string;
 		ewayBillDate?: string;
@@ -323,20 +314,9 @@ export const mapInvoiceDetailsToFormValues = (
 		internalNote?: string;
 		termsConditions?: string;
 		grossAmount?: number;
-		taxAmount?: number;
-		taxPayable?: number;
 		netAmount?: number;
 		freightCharges?: number;
 		roundOff?: number;
-		intraInterState?: string;
-		dueDate?: string;
-		typeOfSale?: string;
-		taxId?: unknown;
-		containerNo?: string;
-		contractNo?: unknown;
-		contractDate?: string;
-		consignmentNo?: string;
-		consignmentDate?: string;
 		tcsPercentage?: number;
 		tcsAmount?: number;
 		jute?: {
@@ -357,15 +337,10 @@ export const mapInvoiceDetailsToFormValues = (
 	date: normalizeDate(details.invoiceDate) || toStringValue(defaultValues.date),
 	party: toStringValue(details.party ?? defaultValues.party),
 	party_branch: toStringValue(details.partyBranch ?? defaultValues.party_branch),
-	delivery_order: toStringValue(details.deliveryOrder ?? details.salesDeliveryOrderId ?? defaultValues.delivery_order),
-	broker: toStringValue(details.brokerId ?? defaultValues.broker),
-	billing_to: toStringValue(details.billingTo ?? details.billingToId ?? defaultValues.billing_to),
-	shipping_to: toStringValue(details.shippingTo ?? details.shippingToId ?? defaultValues.shipping_to),
+	delivery_order: toStringValue(details.deliveryOrder ?? defaultValues.delivery_order),
+	billing_to: toStringValue(details.billingTo ?? defaultValues.billing_to),
+	shipping_to: toStringValue(details.shippingTo ?? defaultValues.shipping_to),
 	transporter: toStringValue(details.transporter ?? defaultValues.transporter),
-	transporter_name: toStringValue(details.transporterNameStored ?? defaultValues.transporter_name),
-	transporter_address: toStringValue(details.transporterAddress ?? defaultValues.transporter_address),
-	transporter_state_code: toStringValue(details.transporterStateCode ?? defaultValues.transporter_state_code),
-	transporter_state_name: toStringValue(details.transporterStateName ?? defaultValues.transporter_state_name),
 	vehicle_no: toStringValue(details.vehicleNo ?? defaultValues.vehicle_no),
 	eway_bill_no: toStringValue(details.ewayBillNo ?? defaultValues.eway_bill_no),
 	eway_bill_date: normalizeDate(details.ewayBillDate) || toStringValue(defaultValues.eway_bill_date),
@@ -377,14 +352,6 @@ export const mapInvoiceDetailsToFormValues = (
 	terms_conditions: toStringValue(details.termsConditions ?? defaultValues.terms_conditions),
 	freight_charges: details.freightCharges != null ? String(details.freightCharges) : toStringValue(defaultValues.freight_charges),
 	round_off: details.roundOff != null ? String(details.roundOff) : toStringValue(defaultValues.round_off),
-	due_date: normalizeDate(details.dueDate) || toStringValue(defaultValues.due_date),
-	type_of_sale: toStringValue(details.typeOfSale ?? defaultValues.type_of_sale),
-	tax_id: toStringValue(details.taxId ?? defaultValues.tax_id),
-	container_no: toStringValue(details.containerNo ?? defaultValues.container_no),
-	contract_no: toStringValue(details.contractNo ?? defaultValues.contract_no),
-	contract_date: normalizeDate(details.contractDate) || toStringValue(defaultValues.contract_date),
-	consignment_no: toStringValue(details.consignmentNo ?? defaultValues.consignment_no),
-	consignment_date: normalizeDate(details.consignmentDate) || toStringValue(defaultValues.consignment_date),
 	tcs_percentage: details.tcsPercentage != null ? String(details.tcsPercentage) : toStringValue(defaultValues.tcs_percentage),
 	tcs_amount: details.tcsAmount != null ? String(details.tcsAmount) : toStringValue(defaultValues.tcs_amount),
 	jute_mr_no: toStringValue(details.jute?.mrNo ?? defaultValues.jute_mr_no),

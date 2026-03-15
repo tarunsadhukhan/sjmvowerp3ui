@@ -17,8 +17,6 @@ export type IssueLineResponse = {
 	rate?: number;
 	expense_id?: number;
 	expense_name?: string;
-	expense_type_id?: number;
-	expense_type_name?: string;
 	cost_factor_id?: number;
 	cost_factor_name?: string;
 	machine_id?: number;
@@ -237,7 +235,6 @@ export const getIssueById = async (
 			// Handle both expense_type_id and expense_id variants
 			expenseId: line.expense_type_id ?? line.expense_id,
 			expense_type_id: line.expense_type_id ?? line.expense_id,
-			expenseTypeName: line.expense_type_name ?? line.expense_name,
 			expenseName: line.expense_type_name ?? line.expense_name,
 			costFactorId: line.cost_factor_id,
 			cost_factor_id: line.cost_factor_id,

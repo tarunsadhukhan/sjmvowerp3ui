@@ -13,6 +13,7 @@ export type CustomerBranchRecord = {
 	fullAddress?: string;
 	stateName?: string;
 	stateId?: number;
+	stateCode?: string;
 	gstNo?: string;
 };
 
@@ -41,6 +42,18 @@ export type ApprovedDeliveryOrderRecord = {
 	deliveryOrderDate?: string;
 	partyName?: string;
 	netAmount?: number;
+	salesOrderId?: number;
+	salesOrderDate?: string;
+	salesOrderNo?: string;
+};
+
+export type ApprovedSalesOrderRecord = {
+	id: string;
+	salesOrderNo: string;
+	salesOrderDate?: string;
+	partyId?: number;
+	partyName?: string;
+	paymentTerms?: number;
 };
 
 export type InvoiceTypeRecord = {
@@ -116,9 +129,11 @@ export type InvoiceSetupData = {
 	transporters: TransporterRecord[];
 	brokers: BrokerRecord[];
 	approvedDeliveryOrders: ApprovedDeliveryOrderRecord[];
+	approvedSalesOrders: ApprovedSalesOrderRecord[];
 	itemGroups: ItemGroupRecord[];
 	invoiceTypes: InvoiceTypeRecord[];
 	mukamList: MukamRecord[];
+	branches?: Array<{ branch_id: number; branch_name: string; state_id?: number; state_code?: string }>;
 };
 
 export type CustomerBranchRecordRaw = {
@@ -129,6 +144,7 @@ export type CustomerBranchRecordRaw = {
 	fatory_address?: string;
 	state_name?: string;
 	state_id?: number;
+	state_code?: string;
 	gst_no?: string;
 };
 
@@ -169,6 +185,19 @@ export type ApprovedDeliveryOrderRecordRaw = {
 	delivery_order_date?: string;
 	party_name?: string;
 	net_amount?: number;
+	sales_order_id?: number;
+	sales_order_date?: string;
+	sales_order_no?: string;
+};
+
+export type ApprovedSalesOrderRecordRaw = {
+	id?: string | number;
+	sales_order_id?: string | number;
+	sales_order_no?: string;
+	sales_order_date?: string;
+	party_id?: number;
+	party_name?: string;
+	payment_terms?: number;
 };
 
 export type InvoiceTypeRecordRaw = {
@@ -221,6 +250,7 @@ export type InvoiceSetup1ResponseRaw = {
 	transporters?: TransporterRecordRaw[];
 	brokers?: BrokerRecordRaw[];
 	approved_delivery_orders?: ApprovedDeliveryOrderRecordRaw[];
+	approved_sales_orders?: ApprovedSalesOrderRecordRaw[];
 	item_groups?: ItemGroupRecordRaw[];
 	invoice_types?: InvoiceTypeRecordRaw[];
 	mukam_list?: Array<{ mukam_id?: number; mukam_name?: string }>;

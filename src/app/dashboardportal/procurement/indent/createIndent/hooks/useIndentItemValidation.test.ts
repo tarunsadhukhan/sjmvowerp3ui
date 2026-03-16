@@ -304,7 +304,7 @@ describe("useIndentItemValidation", () => {
 	});
 
 	describe("allLinesValid — blocks submission when errors exist", () => {
-		it("should return false when a line has backend errors (Logic 2 no min/max)", async () => {
+		it("should return true when Open/General skips validation (Logic 3)", () => {
 			const openParams = {
 				branchId: "1",
 				indentType: "Open",
@@ -312,40 +312,11 @@ describe("useIndentItemValidation", () => {
 				expenseTypeId: "3",
 			};
 
-			mockValidate.mockResolvedValueOnce({
-				validation_logic: 2,
-				item_id: 10,
-				branch_id: 1,
-				indent_type: "Open",
-				expense_type_name: "General",
-				errors: ["No max/min quantity defined for this item. Cannot create open indent."],
-				branch_stock: 0,
-				minqty: null,
-				maxqty: null,
-				min_order_qty: null,
-				lead_time: null,
-				outstanding_indent_qty: 0,
-				has_open_indent: false,
-				stock_exceeds_max: false,
-				max_indent_qty: null,
-				min_indent_qty: null,
-				has_minmax: false,
-				fy_indent_exists: false,
-				fy_indent_no: null,
-				fy_duplicate_indent_no: null,
-				regular_bom_outstanding: 0,
-				forced_qty: null,
-				warnings: [],
-			});
-
 			const { result } = renderHook(() => useIndentItemValidation(openParams));
 
-			await act(async () => {
-				await result.current.validateLine("line-1", "10");
-			});
-
+			// Open/General is now Logic 3 — no validation, allLinesValid should be true
 			const valid = result.current.allLinesValid(["line-1"], { "line-1": "5" });
-			expect(valid).toBe(false);
+			expect(valid).toBe(true);
 		});
 
 		it("should return false when a line has stock_exceeds_max error (Logic 1)", async () => {
@@ -423,92 +394,6 @@ describe("useIndentItemValidation", () => {
 
 			const valid = result.current.allLinesValid(["line-1"], { "line-1": "50" });
 			expect(valid).toBe(true);
-		});
-	});
-
-	describe("Logic 2 (Open indent) — FY duplicate check", () => {
-		it("should return FY duplicate error from backend errors array", async () => {
-			const fyError =
-				"An open indent (#IND-2025-001) already exists for this item in the current financial year.";
-
-			mockValidate.mockResolvedValueOnce({
-				validation_logic: 2,
-				item_id: 10,
-				branch_id: 1,
-				indent_type: "Open",
-				expense_type_name: "General",
-				errors: [fyError],
-				branch_stock: 0,
-				minqty: null,
-				maxqty: null,
-				min_order_qty: null,
-				lead_time: null,
-				outstanding_indent_qty: 0,
-				has_open_indent: false,
-				stock_exceeds_max: false,
-				max_indent_qty: null,
-				min_indent_qty: null,
-				has_minmax: false,
-				fy_indent_exists: true,
-				fy_indent_no: "IND-2025-001",
-				fy_duplicate_indent_no: 1,
-				regular_bom_outstanding: 0,
-				forced_qty: null,
-				warnings: [],
-			});
-
-			const openParams = { ...defaultParams, indentType: "Open", expenseTypeName: "General" };
-			const { result } = renderHook(() => useIndentItemValidation(openParams));
-
-			await act(async () => {
-				await result.current.validateLine("line-1", "10");
-			});
-
-			const err = result.current.getQuantityError("line-1", "5");
-			expect(err).toBe(fyError);
-		});
-
-		it("should block when has_minmax is false for Open indent", async () => {
-			const noMinMaxError = "No max/min quantity defined for this item. Cannot create open indent.";
-
-			mockValidate.mockResolvedValueOnce({
-				validation_logic: 2,
-				item_id: 10,
-				branch_id: 1,
-				indent_type: "Open",
-				expense_type_name: "General",
-				errors: [noMinMaxError],
-				branch_stock: 0,
-				minqty: null,
-				maxqty: null,
-				min_order_qty: null,
-				lead_time: null,
-				outstanding_indent_qty: 0,
-				has_open_indent: false,
-				stock_exceeds_max: false,
-				max_indent_qty: null,
-				min_indent_qty: null,
-				has_minmax: false,
-				fy_indent_exists: false,
-				fy_indent_no: null,
-				fy_duplicate_indent_no: null,
-				regular_bom_outstanding: 0,
-				forced_qty: null,
-				warnings: [],
-			});
-
-			const openParams = { ...defaultParams, indentType: "Open", expenseTypeName: "General" };
-			const { result } = renderHook(() => useIndentItemValidation(openParams));
-
-			await act(async () => {
-				await result.current.validateLine("line-1", "10");
-			});
-
-			const err = result.current.getQuantityError("line-1", "5");
-			expect(err).toBe(noMinMaxError);
-
-			const valid = result.current.allLinesValid(["line-1"], { "line-1": "5" });
-			expect(valid).toBe(false);
 		});
 	});
 

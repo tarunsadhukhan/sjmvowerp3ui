@@ -23,9 +23,9 @@ export const createBlankLine = (): EditableLineItem => ({
 	juteQtyUnitConversion: undefined,
 });
 
-export const buildDefaultFormValues = () => ({
+export const buildDefaultFormValues = (skipDate = false) => ({
 	branch: "",
-	date: new Date().toISOString().slice(0, 10),
+	date: skipDate ? "" : new Date().toISOString().slice(0, 10),
 	party: "",
 	party_branch: "",
 	delivery_order: "",
@@ -54,6 +54,12 @@ export const buildDefaultFormValues = () => ({
 	contract_date: "",
 	consignment_no: "",
 	consignment_date: "",
+	shipping_state_code: "",
+	intra_inter_state: "",
+	payment_terms: "",
+	sales_order_id: "",
+	sales_order_date: "",
+	billing_state_code: "",
 	jute_mr_no: "",
 	jute_claim_amount: "",
 	jute_claim_description: "",

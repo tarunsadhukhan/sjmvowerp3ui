@@ -108,6 +108,11 @@ export const useSalesInvoiceFormSubmission = ({
 				contract_date: String(values.contract_date ?? formValues.contract_date ?? "") || undefined,
 				consignment_no: String(values.consignment_no ?? formValues.consignment_no ?? "") || undefined,
 				consignment_date: String(values.consignment_date ?? formValues.consignment_date ?? "") || undefined,
+				shipping_state_code: String(values.shipping_state_code ?? formValues.shipping_state_code ?? "") || undefined,
+				intra_inter_state: String(values.intra_inter_state ?? formValues.intra_inter_state ?? "") || undefined,
+				payment_terms: Number(values.payment_terms ?? formValues.payment_terms) || undefined,
+				sales_order_id: Number(values.sales_order_id ?? formValues.sales_order_id) || undefined,
+				billing_state_code: Number(values.billing_state_code ?? formValues.billing_state_code) || undefined,
 				items: itemsPayload,
 			};
 

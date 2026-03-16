@@ -445,7 +445,6 @@ function JuteMREditPageContent() {
 				mr_weight: Math.round(header.mr_weight ?? 0),
 				party_branch_id: header.party_branch_id,
 				remarks: header.remarks,
-				src_com_id: header.src_com_id,
 				line_items: lineItems.map((li) => ({
 					jute_mr_li_id: li.juteMrLiId,
 					actual_item_grp_id: li.actualItemId,

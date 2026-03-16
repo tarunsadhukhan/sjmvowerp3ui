@@ -8,13 +8,14 @@ type Params = {
 };
 
 export function useSalesInvoiceFormState({ mode, buildDefaultFormValues, branchIdFromUrl }: Params) {
+	// Use skipDate=true for SSR-safe initial state; the useEffect below seeds the real date on mount
 	const [initialValues, setInitialValues] = React.useState<Record<string, unknown>>(() => {
-		const base = buildDefaultFormValues();
+		const base = buildDefaultFormValues(true);
 		if (mode !== "create" && branchIdFromUrl) base.branch = branchIdFromUrl;
 		return base;
 	});
 	const [formValues, setFormValues] = React.useState<Record<string, unknown>>(() => {
-		const base = buildDefaultFormValues();
+		const base = buildDefaultFormValues(true);
 		if (mode !== "create" && branchIdFromUrl) base.branch = branchIdFromUrl;
 		return base;
 	});

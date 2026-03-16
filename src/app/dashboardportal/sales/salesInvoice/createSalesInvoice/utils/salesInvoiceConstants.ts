@@ -4,6 +4,7 @@ import type {
 	TransporterRecord,
 	BrokerRecord,
 	ApprovedDeliveryOrderRecord,
+	ApprovedSalesOrderRecord,
 	InvoiceTypeRecord,
 	ItemGroupRecord,
 	Option,
@@ -41,6 +42,7 @@ export const EMPTY_CUSTOMERS: ReadonlyArray<CustomerRecord> = Object.freeze([]);
 export const EMPTY_TRANSPORTERS: ReadonlyArray<TransporterRecord> = Object.freeze([]);
 export const EMPTY_BROKERS: ReadonlyArray<BrokerRecord> = Object.freeze([]);
 export const EMPTY_APPROVED_DELIVERY_ORDERS: ReadonlyArray<ApprovedDeliveryOrderRecord> = Object.freeze([]);
+export const EMPTY_APPROVED_SALES_ORDERS: ReadonlyArray<ApprovedSalesOrderRecord> = Object.freeze([]);
 export const EMPTY_ITEM_GROUPS: ReadonlyArray<ItemGroupRecord> = Object.freeze([]);
 export const EMPTY_INVOICE_TYPES: ReadonlyArray<InvoiceTypeRecord> = Object.freeze([]);
 export const EMPTY_OPTIONS: ReadonlyArray<Option> = Object.freeze([]);

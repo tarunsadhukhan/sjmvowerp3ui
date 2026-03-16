@@ -82,6 +82,13 @@ export type InvoiceDetails = {
   contractDate?: string;
   consignmentNo?: string;
   consignmentDate?: string;
+  shippingStateCode?: string;
+  intraInterState?: number;
+  paymentTerms?: number;
+  salesOrderId?: number;
+  salesOrderDate?: string;
+  salesOrderNo?: string;
+  billingStateCode?: number;
   status?: string;
   statusId?: 1 | 3 | 4 | 5 | 6 | 20 | 21;
   approvalLevel?: number | null;
@@ -173,6 +180,11 @@ export type CreateInvoiceRequest = {
   contract_date?: string;
   consignment_no?: string;
   consignment_date?: string;
+  shipping_state_code?: string;
+  intra_inter_state?: string;
+  payment_terms?: number;
+  sales_order_id?: number;
+  billing_state_code?: number;
   jute?: {
     mr_no?: string;
     mr_id?: number;

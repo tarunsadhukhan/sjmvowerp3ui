@@ -2,11 +2,12 @@ import React from "react";
 
 /**
  * Hook to retrieve the company name from localStorage.
- * Returns undefined during SSR to prevent hydration mismatches.
+ * Returns undefined during SSR and initial hydration to prevent mismatches.
  */
 export const useCompanyName = (): string | undefined => {
-	const companyName = React.useMemo(() => {
-		if (typeof window === "undefined") return undefined;
+	const [companyName, setCompanyName] = React.useState<string | undefined>(undefined);
+
+	React.useEffect(() => {
 		try {
 			const storedCompany = localStorage.getItem("sidebar_selectedCompany");
 			if (storedCompany) {
@@ -15,12 +16,11 @@ export const useCompanyName = (): string | undefined => {
 					name?: string;
 					company_name?: string;
 				} | null;
-				return parsed?.co_name || parsed?.name || parsed?.company_name || undefined;
+				setCompanyName(parsed?.co_name || parsed?.name || parsed?.company_name || undefined);
 			}
 		} catch {
 			// Ignore errors
 		}
-		return undefined;
 	}, []);
 
 	return companyName;

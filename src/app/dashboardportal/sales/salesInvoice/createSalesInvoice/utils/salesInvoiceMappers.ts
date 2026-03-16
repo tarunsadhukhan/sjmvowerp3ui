@@ -9,6 +9,8 @@ import type {
 	BrokerRecordRaw,
 	ApprovedDeliveryOrderRecord,
 	ApprovedDeliveryOrderRecordRaw,
+	ApprovedSalesOrderRecord,
+	ApprovedSalesOrderRecordRaw,
 	InvoiceTypeRecord,
 	InvoiceTypeRecordRaw,
 	ItemGroupRecord,
@@ -43,6 +45,7 @@ export const mapCustomerBranchRecords = (records: unknown[]): CustomerBranchReco
 				fullAddress,
 				stateName: data?.state_name,
 				stateId: data?.state_id,
+				stateCode: data?.state_code,
 				gstNo: data?.gst_no,
 			} satisfies CustomerBranchRecord;
 		})
@@ -105,6 +108,9 @@ export const mapApprovedDeliveryOrders = (records: unknown[]): ApprovedDeliveryO
 				deliveryOrderDate: data?.delivery_order_date,
 				partyName: data?.party_name,
 				netAmount: data?.net_amount,
+				salesOrderId: data?.sales_order_id,
+				salesOrderDate: data?.sales_order_date,
+				salesOrderNo: data?.sales_order_no,
 			} satisfies ApprovedDeliveryOrderRecord;
 		})
 		.filter(Boolean) as ApprovedDeliveryOrderRecord[];
@@ -147,6 +153,23 @@ export const mapMukamRecords = (records: unknown[]): MukamRecord[] =>
 		})
 		.filter(Boolean) as MukamRecord[];
 
+export const mapApprovedSalesOrders = (records: unknown[]): ApprovedSalesOrderRecord[] =>
+	records
+		.map((row) => {
+			const data = row as ApprovedSalesOrderRecordRaw;
+			const id = data?.sales_order_id ?? data?.id;
+			if (!id) return null;
+			return {
+				id: String(id),
+				salesOrderNo: data?.sales_order_no ?? String(id),
+				salesOrderDate: data?.sales_order_date,
+				partyId: data?.party_id,
+				partyName: data?.party_name,
+				paymentTerms: data?.payment_terms,
+			} satisfies ApprovedSalesOrderRecord;
+		})
+		.filter(Boolean) as ApprovedSalesOrderRecord[];
+
 export const buildMukamOptions = (mukams: MukamRecord[]): Option[] =>
 	mukams.map((m) => ({ label: m.mukam_name, value: String(m.mukam_id) }));
 
@@ -158,9 +181,11 @@ export const mapInvoiceSetupResponse = (response: unknown): InvoiceSetupData => 
 			transporters: mapTransporterRecords(result?.transporters ?? []),
 			brokers: mapBrokerRecords(result?.brokers ?? []),
 			approvedDeliveryOrders: mapApprovedDeliveryOrders(result?.approved_delivery_orders ?? []),
+			approvedSalesOrders: mapApprovedSalesOrders(result?.approved_sales_orders ?? []),
 			itemGroups: mapItemGroupRecords(result?.item_groups ?? []),
 			invoiceTypes: mapInvoiceTypeRecords(result?.invoice_types ?? []),
 			mukamList: mapMukamRecords((result?.mukam_list as unknown[]) ?? []),
+			branches: (result?.branches as InvoiceSetupData["branches"]) ?? [],
 		} satisfies InvoiceSetupData;
 	} catch (error) {
 		console.error("Failed to map invoice setup response", error);
@@ -328,6 +353,10 @@ export const mapInvoiceDetailsToFormValues = (
 		contractDate?: string;
 		consignmentNo?: string;
 		consignmentDate?: string;
+		paymentTerms?: number;
+		salesOrderId?: number;
+		salesOrderDate?: string;
+		billingStateCode?: number;
 		jute?: {
 			mrNo?: string;
 			mrId?: number;
@@ -372,6 +401,12 @@ export const mapInvoiceDetailsToFormValues = (
 	contract_date: normalizeDate(details.contractDate) || toStringValue(defaultValues.contract_date),
 	consignment_no: toStringValue(details.consignmentNo ?? defaultValues.consignment_no),
 	consignment_date: normalizeDate(details.consignmentDate) || toStringValue(defaultValues.consignment_date),
+	payment_terms: details.paymentTerms != null ? String(details.paymentTerms) : toStringValue(defaultValues.payment_terms),
+	sales_order_id: details.salesOrderId != null ? String(details.salesOrderId) : toStringValue(defaultValues.sales_order_id),
+	sales_order_date: normalizeDate(details.salesOrderDate) || toStringValue(defaultValues.sales_order_date),
+	billing_state_code: details.billingStateCode != null ? String(details.billingStateCode) : toStringValue(defaultValues.billing_state_code),
+	shipping_state_code: details.shippingStateCode != null ? String(details.shippingStateCode) : toStringValue(defaultValues.shipping_state_code),
+	intra_inter_state: details.intraInterState != null ? String(details.intraInterState) : toStringValue(defaultValues.intra_inter_state),
 	jute_mr_no: toStringValue(details.jute?.mrNo ?? defaultValues.jute_mr_no),
 	jute_claim_amount: details.jute?.claimAmount != null ? String(details.jute.claimAmount) : toStringValue(defaultValues.jute_claim_amount),
 	jute_claim_description: toStringValue(details.jute?.claimDescription ?? defaultValues.jute_claim_description),

@@ -481,6 +481,51 @@ const apiRoutesPortalMasters = {
     SALES_INVOICE_APPROVE: `${API_URL}/salesInvoice/approve_sales_invoice`,
     SALES_INVOICE_REJECT: `${API_URL}/salesInvoice/reject_sales_invoice`,
     SALES_INVOICE_REOPEN: `${API_URL}/salesInvoice/reopen_sales_invoice`,
+
+    // HRMS Employee endpoints
+    HRMS_EMPLOYEE_LIST: `${API_URL}/hrms/employee_list`,
+    HRMS_EMPLOYEE_BY_ID: `${API_URL}/hrms/employee_by_id`,
+    HRMS_EMPLOYEE_CREATE_SETUP: `${API_URL}/hrms/employee_create_setup`,
+    HRMS_DESIGNATIONS_BY_BRANCH: `${API_URL}/hrms/get_designations_by_branch`,
+    HRMS_EMPLOYEE_CREATE: `${API_URL}/hrms/employee_create`,
+    HRMS_EMPLOYEE_SECTION_SAVE: `${API_URL}/hrms/employee_section_save`,
+    HRMS_EMPLOYEE_PROGRESS: `${API_URL}/hrms/employee_progress`,
+    HRMS_EMPLOYEE_PHOTO_UPLOAD: `${API_URL}/hrms/employee_photo_upload`,
+    HRMS_EMPLOYEE_PHOTO: `${API_URL}/hrms/employee_photo`,
+
+    // HRMS Pay Scheme endpoints
+    HRMS_PAY_SCHEME_LIST: `${API_URL}/hrms/pay_scheme_list`,
+    HRMS_PAY_SCHEME_BY_ID: `${API_URL}/hrms/pay_scheme_by_id`,
+    HRMS_PAY_SCHEME_CREATE_SETUP: `${API_URL}/hrms/pay_scheme_create_setup`,
+    HRMS_PAY_SCHEME_CREATE: `${API_URL}/hrms/pay_scheme_create`,
+    HRMS_PAY_SCHEME_UPDATE: `${API_URL}/hrms/pay_scheme_update`,
+
+    // HRMS Pay Param / Period endpoints
+    HRMS_PAY_PARAM_LIST: `${API_URL}/hrms/pay_param_list`,
+    HRMS_PAY_PARAM_CREATE_SETUP: `${API_URL}/hrms/pay_param_create_setup`,
+    HRMS_PAY_PARAM_CREATE: `${API_URL}/hrms/pay_param_create`,
+    HRMS_PAY_PARAM_UPDATE: `${API_URL}/hrms/pay_param_update`,
+
+    // Designation Master endpoints
+    DESIGNATION_TABLE: `${API_URL}/designationMaster/get_designation_table`,
+    DESIGNATION_BY_ID: `${API_URL}/designationMaster/get_designation_by_id`,
+    DESIGNATION_CREATE_SETUP: `${API_URL}/designationMaster/designation_create_setup`,
+    DESIGNATION_CREATE: `${API_URL}/designationMaster/designation_create`,
+    DESIGNATION_EDIT: `${API_URL}/designationMaster/designation_edit`,
+
+    // Worker Category Master endpoints
+    CATEGORY_TABLE: `${API_URL}/categoryMaster/get_category_table`,
+    CATEGORY_BY_ID: `${API_URL}/categoryMaster/get_category_by_id`,
+    CATEGORY_CREATE_SETUP: `${API_URL}/categoryMaster/category_create_setup`,
+    CATEGORY_CREATE: `${API_URL}/categoryMaster/category_create`,
+    CATEGORY_EDIT: `${API_URL}/categoryMaster/category_edit`,
+
+    // Contractor Master endpoints
+    CONTRACTOR_TABLE: `${API_URL}/contractorMaster/get_contractor_table`,
+    CONTRACTOR_BY_ID: `${API_URL}/contractorMaster/get_contractor_by_id`,
+    CONTRACTOR_CREATE_SETUP: `${API_URL}/contractorMaster/contractor_create_setup`,
+    CONTRACTOR_CREATE: `${API_URL}/contractorMaster/contractor_create`,
+    CONTRACTOR_EDIT: `${API_URL}/contractorMaster/contractor_edit`,
 };
 
 export { apiRoutes, apiRoutesconsole, apiRoutesPortalMasters };

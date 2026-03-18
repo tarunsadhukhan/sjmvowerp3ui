@@ -329,7 +329,7 @@ function InvoiceTransactionPageContent() {
 		});
 	}, [mode, setLineItems]);
 
-	const juteFormRef = React.useRef<{ setValue: (name: string, value: unknown) => void } | null>(null);
+	const juteFormRef = React.useRef<{ submit: () => Promise<void>; isDirty: () => boolean; setValue: (name: string, value: unknown) => void } | null>(null);
 
 	// Auto-sum header claim amount from line item claim amounts for Raw Jute invoices
 	React.useEffect(() => {

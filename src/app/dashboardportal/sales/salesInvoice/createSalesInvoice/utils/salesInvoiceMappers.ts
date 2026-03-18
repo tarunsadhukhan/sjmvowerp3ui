@@ -357,6 +357,8 @@ export const mapInvoiceDetailsToFormValues = (
 		salesOrderId?: number;
 		salesOrderDate?: string;
 		billingStateCode?: number;
+		shippingStateCode?: string | number;
+		intraInterState?: string | number;
 		jute?: {
 			mrNo?: string;
 			mrId?: number;

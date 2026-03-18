@@ -3,7 +3,7 @@ import type { MuiFormMode } from "@/components/ui/muiform";
 
 type Params = {
 	mode: MuiFormMode;
-	buildDefaultFormValues: () => Record<string, unknown>;
+	buildDefaultFormValues: (skipDate?: boolean) => Record<string, unknown>;
 	branchIdFromUrl?: string;
 };
 

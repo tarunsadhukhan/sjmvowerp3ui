@@ -4,7 +4,7 @@ import { Button } from "@/components/ui/button";
 import { isJuteInvoice } from "../utils/salesInvoiceConstants";
 
 type FormRef = React.MutableRefObject<{ submit: () => Promise<void>; isDirty: () => boolean; setValue: (name: string, value: unknown) => void } | null>;
-type JuteFormRef = React.MutableRefObject<{ setValue: (name: string, value: unknown) => void } | null>;
+type JuteFormRef = React.MutableRefObject<{ submit: () => Promise<void>; isDirty: () => boolean; setValue: (name: string, value: unknown) => void } | null>;
 
 type SalesInvoiceHeaderFormProps = {
 	schema: Schema;

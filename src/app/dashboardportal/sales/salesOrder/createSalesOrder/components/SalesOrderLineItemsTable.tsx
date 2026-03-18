@@ -114,9 +114,14 @@ export const useSalesOrderLineItemColumns = ({
 					// Hessian: qty input is bales, show MT annotation
 					const displayValue = isHessian ? (item.qtyBales ?? "") : item.quantity;
 					const fieldKey: keyof EditableLineItem = isHessian ? "qtyBales" : "quantity";
+					const qtyRounding = item.qtyRounding;
 					const mtAnnotation = isHessian && item.quantity && Number(item.quantity)
-						? `\u2248 ${Number(item.quantity).toFixed(4)} MT`
+						? `\u2248 ${Number(item.quantity).toFixed(qtyRounding ?? 4)} MT`
 						: null;
+					// Show rounded display for non-hessian when rounding is set
+					const formattedQty = !isHessian && displayValue && qtyRounding != null && Number(displayValue)
+						? Number(displayValue).toFixed(qtyRounding)
+						: displayValue;
 
 					if (canEdit) {
 						return (
@@ -139,7 +144,7 @@ export const useSalesOrderLineItemColumns = ({
 
 					return (
 						<div className="flex flex-col gap-0.5">
-							<span className="block truncate text-sm">{displayValue || "-"}</span>
+							<span className="block truncate text-sm">{formattedQty || "-"}</span>
 							{mtAnnotation ? (
 								<span className="text-[11px] text-muted-foreground leading-tight truncate">
 									{mtAnnotation}
@@ -258,9 +263,12 @@ export const useSalesOrderLineItemColumns = ({
 						);
 					}
 
+					const rateRounding = item.rateRounding ?? 2;
+					const formattedRate = item.rate && Number(item.rate) ? Number(item.rate).toFixed(rateRounding) : item.rate;
+
 					return (
 						<div className="flex flex-col gap-0.5">
-							<span className="block truncate text-sm">{item.rate || "-"}</span>
+							<span className="block truncate text-sm">{formattedRate || "-"}</span>
 							{conversion ? (
 								<span className="text-[11px] text-muted-foreground leading-tight truncate">
 									{"\u2248"} {conversion.convertedRate} / {conversion.otherUomName}

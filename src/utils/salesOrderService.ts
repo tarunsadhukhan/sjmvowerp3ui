@@ -32,7 +32,9 @@ export type SalesOrderLine = {
   itemMake?: string;
   quantity?: number | string;
   uom?: string;
+  qtyUom?: string;
   uomName?: string;
+  qtyUomName?: string;
   rate?: number | string;
   discountType?: number | null;
   discountedRate?: number | null;

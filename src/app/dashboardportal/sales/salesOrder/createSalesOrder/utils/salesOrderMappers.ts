@@ -242,6 +242,8 @@ export const mapItemGroupDetailResponse = (response: unknown): ItemGroupCacheEnt
 				defaultUomLabel: data?.uom_name ? String(data.uom_name) : undefined,
 				defaultRate: data?.rate != null ? Number(data.rate) : undefined,
 				taxPercentage: data?.tax_percentage != null ? Number(data.tax_percentage) : undefined,
+				uomRounding: data?.uom_rounding != null ? Number(data.uom_rounding) : undefined,
+				rateRounding: data?.rate_rounding != null ? Number(data.rate_rounding) : undefined,
 			};
 		})
 		.filter(Boolean) as ItemOption[];
@@ -311,6 +313,9 @@ export const mapItemGroupDetailResponse = (response: unknown): ItemGroupCacheEnt
 		});
 	});
 
+	const itemUomRoundingById: Record<string, number> = {};
+	const itemRateRoundingById: Record<string, number> = {};
+
 	items.forEach((item) => {
 		if (item.defaultUomId) {
 			const bucket = uomsByItemId[item.value] ?? [];
@@ -323,6 +328,9 @@ export const mapItemGroupDetailResponse = (response: unknown): ItemGroupCacheEnt
 		}
 		if (item.defaultRate != null) itemRateById[item.value] = item.defaultRate;
 		if (item.taxPercentage != null) itemTaxById[item.value] = item.taxPercentage;
+		if (item.uomRounding != null) itemUomRoundingById[item.value] = item.uomRounding;
+		// Default rate rounding to 2 if not specified
+		itemRateRoundingById[item.value] = item.rateRounding ?? 2;
 	});
 
 	const itemLabelById: Record<string, string> = {};
@@ -331,7 +339,7 @@ export const mapItemGroupDetailResponse = (response: unknown): ItemGroupCacheEnt
 	const makeLabelById: Record<string, string> = {};
 	makes.forEach((make) => { makeLabelById[make.value] = make.label; });
 
-	return { groupLabel, items, makes, uomsByItemId, itemLabelById, makeLabelById, uomLabelByItemId, itemRateById, itemTaxById, uomConversionsByItemId };
+	return { groupLabel, items, makes, uomsByItemId, itemLabelById, makeLabelById, uomLabelByItemId, itemRateById, itemTaxById, uomConversionsByItemId, itemUomRoundingById, itemRateRoundingById };
 };
 
 // ---------------------------------------------------------------------------

@@ -73,6 +73,8 @@ export type ItemOption = Option & {
 	defaultUomLabel?: string;
 	defaultRate?: number;
 	taxPercentage?: number;
+	uomRounding?: number;
+	rateRounding?: number;
 };
 
 export type ItemGroupCacheEntry = {
@@ -86,6 +88,10 @@ export type ItemGroupCacheEntry = {
 	itemRateById: Record<string, number>;
 	itemTaxById: Record<string, number>;
 	uomConversionsByItemId: Record<string, import("@/utils/uomConversion").UomConversionEntry[]>;
+	/** Item-level UOM/quantity rounding (decimal places) */
+	itemUomRoundingById: Record<string, number>;
+	/** Item-level rate rounding (decimal places); default 2 */
+	itemRateRoundingById: Record<string, number>;
 };
 
 export type SalesOrderSetupData = {
@@ -126,6 +132,11 @@ export type EditableLineItem = {
 	cgstAmount?: number;
 	sgstAmount?: number;
 	taxAmount?: number;
+	// --- Rounding ---
+	/** Decimal places for quantity (from item_mst.uom_rounding or uom_item_map_mst.rounding) */
+	qtyRounding?: number;
+	/** Decimal places for rate (from item_mst.rate_rounding, default 2) */
+	rateRounding?: number;
 	// --- Hessian (invoice_type_id = 2) ---
 	/** Qty entered in bales (user-entered); quantity field stores the MT equivalent */
 	qtyBales?: string;
@@ -228,6 +239,8 @@ export type ItemOptionRaw = {
 	uom_name?: string | null;
 	rate?: number | string | null;
 	tax_percentage?: number | string | null;
+	uom_rounding?: number | null;
+	rate_rounding?: number | null;
 };
 
 export type ItemMakeOptionRaw = {

@@ -285,12 +285,14 @@ function SalesOrderTransactionPageContent() {
 		});
 	}, [mode, setLineItems]);
 
+	const suppressTaxRecalcRef = React.useRef(false);
 	const { taxType } = useSalesOrderTaxCalculations({
 		mode,
 		coConfig,
 		billingToState,
 		shippingToState,
 		setLineItems,
+		suppressRef: suppressTaxRecalcRef,
 	});
 
 	// Calculate totals
@@ -302,27 +304,21 @@ function SalesOrderTransactionPageContent() {
 		return { grossAmount, totalTax, freightCharges, netAmount };
 	}, [filledLineItems, formValues.freight_charges]);
 
-	// Fetch details for edit/view
-	const detailsFetchKey = React.useMemo(
-		() => [mode, requestedId || "", branchIdForSetup || branchIdFromUrl || "", coId || ""].join("|"),
-		[mode, requestedId, branchIdForSetup, branchIdFromUrl, coId],
-	);
-
-	const lastDetailsKeyRef = React.useRef<string | null>(null);
+	// Phase A: Fetch details immediately in edit/view mode (no setup dependency)
+	// This breaks the circular dependency: details contain branch_id which is needed to load setup
 	const detailsFetchedRef = React.useRef(false);
-
-	React.useEffect(() => {
-		if (lastDetailsKeyRef.current !== detailsFetchKey) {
-			lastDetailsKeyRef.current = detailsFetchKey;
-			detailsFetchedRef.current = false;
-		}
-	}, [detailsFetchKey]);
+	// Use refs for values that may change reference across renders but shouldn't cancel in-flight fetches
+	const getMenuIdRef = React.useRef(getMenuId);
+	getMenuIdRef.current = getMenuId;
+	const coIdRef = React.useRef(coId);
+	coIdRef.current = coId;
 
 	React.useEffect(() => {
 		if (mode === "create") {
 			setSODetails(null);
 			setPageError(null);
 			setLoading(false);
+			detailsFetchedRef.current = false;
 			return;
 		}
 
@@ -333,46 +329,24 @@ function SalesOrderTransactionPageContent() {
 			return;
 		}
 
-		if (!setupEnabled) return;
-		if (setupLoading) return;
-		if (!setupData) return;
 		if (detailsFetchedRef.current) return;
-
 		detailsFetchedRef.current = true;
 
 		let cancelled = false;
-		const fetchDetails = async () => {
+		(async () => {
 			setLoading(true);
 			try {
-				const details = await getSalesOrderById(requestedId, coId || undefined, getMenuId() || undefined);
+				const details = await getSalesOrderById(
+					requestedId,
+					coIdRef.current || undefined,
+					getMenuIdRef.current() || undefined,
+				);
 				if (cancelled) return;
-
 				setSODetails(details);
-				const defaultFormValues = buildDefaultFormValues();
-				const nextValues = mapSalesOrderDetailsToFormValues(details, defaultFormValues);
-
-				const detailsBranch = details as unknown as { branch_id?: unknown; branchId?: unknown };
-				const branchIdFromDetails = detailsBranch?.branch_id ?? detailsBranch?.branchId ?? details?.branch;
-				const resolvedBranchValue = (() => {
-					if (branchIdFromDetails != null && branchIdFromDetails !== "") return String(branchIdFromDetails);
-					if (branchIdFromUrl) return String(branchIdFromUrl);
-					if (branchValue && /^\d+$/.test(branchValue)) return branchValue;
-					const mappedValue = nextValues.branch != null ? String(nextValues.branch) : "";
-					return /^\d+$/.test(mappedValue) ? mappedValue : "";
-				})();
-
-				if (resolvedBranchValue) {
-					nextValues.branch = resolvedBranchValue;
-					setLockedBranchId(resolvedBranchValue);
+				// Extract branch_id to unblock setup loading
+				if (details.branch && /^\d+$/.test(details.branch)) {
+					setLockedBranchId(details.branch);
 				}
-
-				setInitialValues(nextValues);
-				setFormValues(nextValues);
-				bumpFormKey();
-
-				const normalizedLines = (details.lines ?? []).map((line) => mapLineToEditable(line));
-				replaceItems(normalizedLines);
-
 				setPageError(null);
 			} catch (error) {
 				if (cancelled) return;
@@ -383,18 +357,51 @@ function SalesOrderTransactionPageContent() {
 			} finally {
 				if (!cancelled) setLoading(false);
 			}
-		};
+		})();
+		return () => { cancelled = true; detailsFetchedRef.current = false; };
+	// Only re-run when the actual identity of the SO changes, not when callback refs change
+	}, [mode, requestedId]);
 
-		void fetchDetails();
+	// Phase B: Populate form once both details AND setup are ready
+	const formPopulatedRef = React.useRef(false);
 
-		return () => {
-			cancelled = true;
-		};
+	React.useEffect(() => {
+		if (mode === "create") {
+			formPopulatedRef.current = false;
+			return;
+		}
+		if (!soDetails) {
+				return;
+		}
+		if (!setupEnabled || setupLoading || !setupData) {
+				return;
+		}
+		if (formPopulatedRef.current) return;
+		formPopulatedRef.current = true;
+
+		const nextValues = mapSalesOrderDetailsToFormValues(soDetails, buildDefaultFormValues());
+
+		const resolvedBranchValue = soDetails.branch || branchIdFromUrl || branchValue;
+		if (resolvedBranchValue && /^\d+$/.test(resolvedBranchValue)) {
+			nextValues.branch = resolvedBranchValue;
+			setLockedBranchId(resolvedBranchValue);
+		}
+
+		const normalizedLines = (soDetails.lines ?? []).map((line) => mapLineToEditable(line));
+
+		// Suppress the tax recalculation effect that would fire from billing/shipping state change
+		suppressTaxRecalcRef.current = true;
+
+		setInitialValues(nextValues);
+		setFormValues(nextValues);
+		bumpFormKey();
+		replaceItems(normalizedLines);
+
+		return () => { formPopulatedRef.current = false; };
 	}, [
-		mode, requestedId, coId, getMenuId,
+		mode, soDetails, setupEnabled, setupLoading, setupData,
 		setInitialValues, setFormValues, bumpFormKey,
 		replaceItems, mapLineToEditable,
-		setupEnabled, setupLoading, setupData,
 		branchIdFromUrl, branchValue,
 	]);
 

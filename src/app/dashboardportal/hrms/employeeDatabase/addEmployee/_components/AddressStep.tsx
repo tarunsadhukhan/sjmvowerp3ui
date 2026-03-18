@@ -66,7 +66,7 @@ export default function AddressStep({ addresses, onAdd, onUpdate, onRemove, disa
           </Box>
           <MuiForm
             schema={addressSchema}
-            values={{
+            initialValues={{
               address_type: String(addr.address_type),
               address_line_1: addr.address_line_1,
               address_line_2: addr.address_line_2 ?? "",
@@ -75,7 +75,7 @@ export default function AddressStep({ addresses, onAdd, onUpdate, onRemove, disa
               is_correspondent_address: addr.is_correspondent_address,
             }}
             mode={disabled ? "view" : "edit"}
-            onChange={(vals) => onUpdate(idx, vals as Partial<AddressDetails>)}
+            onValuesChange={(vals) => onUpdate(idx, vals as Partial<AddressDetails>)}
           />
         </Box>
       ))}

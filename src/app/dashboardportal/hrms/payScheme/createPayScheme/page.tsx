@@ -174,9 +174,9 @@ function CreatePaySchemeContent() {
         <MuiForm
           ref={formRef}
           schema={headerSchema}
-          values={headerValues}
+          initialValues={headerValues}
           mode={isDisabled ? "view" : "edit"}
-          onChange={handleHeaderChange}
+          onValuesChange={handleHeaderChange}
         />
       </Paper>
 
@@ -216,7 +216,7 @@ function CreatePaySchemeContent() {
               </Box>
               <MuiForm
                 schema={componentSchema}
-                values={{
+                initialValues={{
                   component_id: comp.component_id ? String(comp.component_id) : "",
                   amount: comp.amount ?? "",
                   effective_from: comp.effective_from ?? "",
@@ -224,7 +224,7 @@ function CreatePaySchemeContent() {
                   remarks: comp.remarks ?? "",
                 }}
                 mode={isDisabled ? "view" : "edit"}
-                onChange={(vals) => updateComponent(idx, vals as Partial<PaySchemeStructureEntry>)}
+                onValuesChange={(vals) => updateComponent(idx, vals as Partial<PaySchemeStructureEntry>)}
               />
             </Box>
           ))}

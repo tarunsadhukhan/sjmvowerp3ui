@@ -807,13 +807,25 @@ function POTransactionPageContent() {
   );
 
   const previewItems = React.useMemo(() => {
+    /** Split a "code — name" label into its two parts. */
+    const splitLabel = (label: string): { code: string; name: string } => {
+      const idx = label.indexOf(" — ");
+      if (idx < 0) return { code: label, name: "" };
+      return { code: label.substring(0, idx), name: label.substring(idx + 3) };
+    };
+
     return filledLineItems.map((line, index) => {
       const groupLabel = itemGroups.find((grp) => grp.id === line.itemGroup)?.label ?? line.itemGroup ?? "";
       const itemLabel = getItemLabel(line.itemGroup, line.item, line.itemCode);
       const uomOptions = getUomOptions(line.itemGroup, line.item);
       const uomLabel = uomOptions.find((opt) => opt.value === line.uom)?.label ?? line.uom ?? "-";
       const displayItem = (() => {
-        const parts = [groupLabel, itemLabel].filter(Boolean);
+        const grp = splitLabel(groupLabel);
+        const itm = splitLabel(itemLabel);
+        // Build "grpCode-itemCode — grpName-itemName"
+        const codePart = [grp.code, itm.code].filter(Boolean).join("-");
+        const namePart = [grp.name, itm.name].filter(Boolean).join("-");
+        const parts = [codePart, namePart].filter(Boolean);
         if (parts.length > 0) return parts.join(" — ");
         return line.item || "-";
       })();
@@ -854,6 +866,20 @@ function POTransactionPageContent() {
     }),
     [totals, formValues.advance_percentage, poDetails?.advancePercentage],
   );
+
+  const previewAdditionalCharges = React.useMemo(() => {
+    return additionalCharges
+      .filter((c) => c.additional_charges_id > 0 && c.net_amount > 0)
+      .map((c) => ({
+        name: c.additional_charges_name,
+        qty: c.qty,
+        rate: c.rate,
+        amount: c.net_amount,
+        taxPct: c.tax_pct,
+        taxAmount: c.tax_amount,
+        remarks: c.remarks || undefined,
+      }));
+  }, [additionalCharges]);
 
   const previewRemarks = React.useMemo(() => {
     return (
@@ -993,6 +1019,7 @@ function POTransactionPageContent() {
           header={previewHeader}
           items={previewItems}
           totals={previewTotals}
+          additionalCharges={previewAdditionalCharges}
           remarks={previewRemarks}
         />
       }

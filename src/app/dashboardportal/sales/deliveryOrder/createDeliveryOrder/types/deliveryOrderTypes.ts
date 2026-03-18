@@ -45,6 +45,7 @@ export type ApprovedSalesOrderRecord = {
 	salesOrderDate?: string;
 	partyName?: string;
 	netAmount?: number;
+	invoiceType?: string;
 };
 
 export type InvoiceTypeRecord = {
@@ -163,6 +164,7 @@ export type ApprovedSalesOrderRecordRaw = {
 	sales_order_date?: string;
 	party_name?: string;
 	net_amount?: number;
+	invoice_type?: string | number;
 };
 
 export type InvoiceTypeRecordRaw = {

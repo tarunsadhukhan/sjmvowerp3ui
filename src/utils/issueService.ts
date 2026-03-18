@@ -45,6 +45,9 @@ export type IssueDetails = {
 	internalNote?: string;
 	status?: string;
 	statusId?: number;
+	approvalLevel?: number | null;
+	maxApprovalLevel?: number | null;
+	permissions?: Record<string, boolean>;
 	createdBy?: string;
 	createdAt?: string;
 	updatedBy?: string;
@@ -206,6 +209,9 @@ export const getIssueById = async (
 		internalNote: data.internal_note,
 		status: data.status ?? data.status_name,
 		statusId: data.status_id,
+		approvalLevel: data.approval_level ?? null,
+		maxApprovalLevel: data.max_approval_level ?? null,
+		permissions: data.permissions ?? undefined,
 		createdBy: data.created_by ?? data.updated_by_name,
 		createdAt: data.created_at ?? data.updated_date_time,
 		updatedBy: data.updated_by,

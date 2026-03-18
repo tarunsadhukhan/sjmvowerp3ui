@@ -30,6 +30,7 @@ import { SalesOrderTotalsDisplay } from "./components/SalesOrderTotalsDisplay";
 import { SalesOrderApprovalBar } from "./components/SalesOrderApprovalBar";
 import SalesOrderPreview from "./components/SalesOrderPreview";
 import { useSalesOrderLineItemColumns } from "./components/SalesOrderLineItemsTable";
+import { AdditionalChargesSection, type AdditionalChargeRow } from "./components/AdditionalChargesSection";
 
 import { useSalesOrderFormState } from "./hooks/useSalesOrderFormState";
 import { useSalesOrderTaxCalculations } from "./hooks/useSalesOrderTaxCalculations";
@@ -112,6 +113,7 @@ function SalesOrderTransactionPageContent() {
 	const [soDetails, setSODetails] = React.useState<SalesOrderDetails | null>(null);
 	const [loading, setLoading] = React.useState<boolean>(mode !== "create");
 	const [pageError, setPageError] = React.useState<string | null>(null);
+	const [additionalCharges, setAdditionalCharges] = React.useState<AdditionalChargeRow[]>([]);
 
 	// Branch value resolution
 	const branchValue = React.useMemo(() => {
@@ -178,6 +180,16 @@ function SalesOrderTransactionPageContent() {
 	const coConfig = setupData?.coConfig;
 	const invoiceTypes = setupData?.invoiceTypes ?? EMPTY_INVOICE_TYPES;
 	const branchAddresses = setupData?.branchAddresses ?? EMPTY_BRANCH_ADDRESSES;
+
+	const chargeOptions = React.useMemo(() => {
+		const raw = (setupData as Record<string, unknown> | undefined)?.additionalChargesMaster;
+		if (!Array.isArray(raw)) return [];
+		return raw.map((c: Record<string, unknown>) => ({
+			value: String(c.additional_charges_id ?? ""),
+			label: String(c.additional_charges_name ?? ""),
+			defaultValue: c.default_value != null ? Number(c.default_value) : undefined,
+		}));
+	}, [setupData]);
 
 	const quotationRequired = React.useMemo(
 		() => Boolean(coConfig?.quotation_required),
@@ -296,13 +308,18 @@ function SalesOrderTransactionPageContent() {
 	});
 
 	// Calculate totals
+	const additionalChargesTotal = React.useMemo(
+		() => additionalCharges.reduce((sum, c) => sum + (parseFloat(c.netAmount) || 0), 0),
+		[additionalCharges],
+	);
+
 	const totals = React.useMemo(() => {
 		const grossAmount = filledLineItems.reduce((sum, li) => sum + (li.amount ?? 0), 0);
 		const totalTax = filledLineItems.reduce((sum, li) => sum + (li.taxAmount ?? 0), 0);
 		const freightCharges = Number(formValues.freight_charges) || 0;
-		const netAmount = grossAmount + totalTax + freightCharges;
-		return { grossAmount, totalTax, freightCharges, netAmount };
-	}, [filledLineItems, formValues.freight_charges]);
+		const netAmount = grossAmount + totalTax + freightCharges + additionalChargesTotal;
+		return { grossAmount, totalTax, freightCharges, netAmount, additionalChargesTotal };
+	}, [filledLineItems, formValues.freight_charges, additionalChargesTotal]);
 
 	// Phase A: Fetch details immediately in edit/view mode (no setup dependency)
 	// This breaks the circular dependency: details contain branch_id which is needed to load setup
@@ -396,6 +413,25 @@ function SalesOrderTransactionPageContent() {
 		setFormValues(nextValues);
 		bumpFormKey();
 		replaceItems(normalizedLines);
+
+		// Map additional charges from SO details
+		const rawCharges = (soDetails as Record<string, unknown>).additionalCharges;
+		if (Array.isArray(rawCharges) && rawCharges.length > 0) {
+			setAdditionalCharges(
+				rawCharges.map((ch: Record<string, unknown>, idx: number) => ({
+					id: `charge_loaded_${idx}`,
+					additionalChargesId: String(ch.additional_charges_id ?? ch.additionalChargesId ?? ""),
+					chargeName: String(ch.additional_charges_name ?? ch.chargeName ?? ""),
+					qty: String(ch.qty ?? "1"),
+					rate: String(ch.rate ?? ""),
+					netAmount: String(ch.net_amount ?? ch.netAmount ?? ""),
+					remarks: String(ch.remarks ?? ""),
+					gst: ch.gst != null ? (ch.gst as AdditionalChargeRow["gst"]) : undefined,
+				})),
+			);
+		} else {
+			setAdditionalCharges([]);
+		}
 
 		return () => { formPopulatedRef.current = false; };
 	}, [
@@ -581,6 +617,7 @@ function SalesOrderTransactionPageContent() {
 		filledLineItems,
 		isLineItemsReady,
 		requestedId,
+		formValues,
 	});
 
 	const primaryActionLabel = mode === "create" ? "Create" : "Save";
@@ -589,7 +626,7 @@ function SalesOrderTransactionPageContent() {
 		void formRef.current.submit();
 	}, [formRef]);
 
-	// Wrap submit to inject notes fields (rendered outside MuiForm) into the submitted values
+	// Wrap submit to inject notes fields and additional charges (rendered outside MuiForm) into the submitted values
 	const handleFormSubmitWithNotes = React.useCallback(
 		async (values: Record<string, unknown>) => {
 			const merged = {
@@ -597,10 +634,21 @@ function SalesOrderTransactionPageContent() {
 				footer_note: formValues.footer_note ?? "",
 				internal_note: formValues.internal_note ?? "",
 				terms_conditions: formValues.terms_conditions ?? "",
+				additional_charges: additionalCharges
+					.filter((c) => c.additionalChargesId)
+					.map((c) => ({
+						additional_charges_id: c.additionalChargesId,
+						charge_name: c.chargeName,
+						qty: parseFloat(c.qty) || 1,
+						rate: parseFloat(c.rate) || 0,
+						net_amount: parseFloat(c.netAmount) || 0,
+						remarks: c.remarks || "",
+						gst: c.gst,
+					})),
 			};
 			await handleFormSubmit(merged);
 		},
-		[handleFormSubmit, formValues.footer_note, formValues.internal_note, formValues.terms_conditions],
+		[handleFormSubmit, formValues.footer_note, formValues.internal_note, formValues.terms_conditions, additionalCharges],
 	);
 
 	const pageTitle = React.useMemo(() => {
@@ -637,10 +685,17 @@ function SalesOrderTransactionPageContent() {
 			}}
 				footer={
 					<div className="space-y-6 pt-4 border-t">
+						<AdditionalChargesSection
+							charges={additionalCharges}
+							chargeOptions={chargeOptions}
+							onChange={setAdditionalCharges}
+							disabled={mode === "view"}
+						/>
 						<SalesOrderTotalsDisplay
 							grossAmount={totals.grossAmount}
 							totalTax={totals.totalTax}
 							freightCharges={totals.freightCharges}
+							additionalChargesTotal={totals.additionalChargesTotal}
 							netAmount={totals.netAmount}
 							taxType={taxType || undefined}
 						/>

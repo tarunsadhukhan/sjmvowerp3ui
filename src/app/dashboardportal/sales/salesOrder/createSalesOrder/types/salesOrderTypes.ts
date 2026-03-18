@@ -150,6 +150,16 @@ export type EditableLineItem = {
 	billingRateBale?: number;
 	/** Bales-to-MT conversion factor from uom_item_map_mst */
 	conversionFactor?: number;
+	// --- Jute (invoice_type_id = 4) ---
+	juteClaimRate?: string;
+	juteClaimAmountDtl?: string;
+	juteClaimDesc?: string;
+	juteUnitConversion?: string;
+	juteQtyUnitConversion?: string;
+	// --- Govt SKG (invoice_type_id = 5) ---
+	govtskgPackSheet?: string;
+	govtskgNetWeight?: string;
+	govtskgTotalWeight?: string;
 };
 
 // ---------------------------------------------------------------------------

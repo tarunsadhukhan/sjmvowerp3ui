@@ -377,6 +377,24 @@ export const mapSalesOrderDetailsToFormValues = (
 		footerNote?: string | null;
 		internalNote?: string | null;
 		termsConditions?: string | null;
+		jute?: {
+			mr_no?: string | null;
+			mukam_id?: string | number | null;
+			claim_amount?: number | null;
+			claim_description?: string | null;
+		} | null;
+		govtskg?: {
+			pcso_no?: string | null;
+			pcso_date?: string | null;
+			administrative_office_address?: string | null;
+			destination_rail_head?: string | null;
+			loading_point?: string | null;
+		} | null;
+		juteyarn?: {
+			pcso_no?: string | null;
+			container_no?: string | null;
+			customer_ref_no?: string | null;
+		} | null;
 	},
 	defaultValues: Record<string, unknown>,
 ): Record<string, unknown> => ({
@@ -406,6 +424,21 @@ export const mapSalesOrderDetailsToFormValues = (
 	footer_note: toStringValue(details.footerNote ?? defaultValues.footer_note),
 	internal_note: toStringValue(details.internalNote ?? defaultValues.internal_note),
 	terms_conditions: toStringValue(details.termsConditions ?? defaultValues.terms_conditions),
+	// Jute header
+	jute_mr_no: details.jute?.mr_no ?? "",
+	jute_mukam_id: details.jute?.mukam_id ? String(details.jute.mukam_id) : "",
+	jute_claim_amount: details.jute?.claim_amount != null ? String(details.jute.claim_amount) : "",
+	jute_claim_description: details.jute?.claim_description ?? "",
+	// Govt SKG header
+	govtskg_pcso_no: details.govtskg?.pcso_no ?? "",
+	govtskg_pcso_date: details.govtskg?.pcso_date ?? "",
+	govtskg_admin_office: details.govtskg?.administrative_office_address ?? "",
+	govtskg_rail_head: details.govtskg?.destination_rail_head ?? "",
+	govtskg_loading_point: details.govtskg?.loading_point ?? "",
+	// Jute Yarn header
+	juteyarn_pcso_no: details.juteyarn?.pcso_no ?? "",
+	juteyarn_container_no: details.juteyarn?.container_no ?? "",
+	juteyarn_customer_ref_no: details.juteyarn?.customer_ref_no ?? "",
 });
 
 export const getOptionLabelFromList = (

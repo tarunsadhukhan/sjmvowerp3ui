@@ -69,6 +69,9 @@ export default function InvoiceTransactionPage() {
 }
 
 function InvoiceTransactionPageContent() {
+	const [mounted, setMounted] = React.useState(false);
+	React.useEffect(() => { setMounted(true); }, []);
+
 	const router = useRouter();
 	const searchParams = useSearchParams();
 
@@ -684,6 +687,8 @@ function InvoiceTransactionPageContent() {
 		requestedId,
 		formValues,
 	});
+
+	if (!mounted) return <InvoicePageLoading />;
 
 	const primaryActionLabel = mode === "create" ? "Create" : "Save";
 	const handleSaveClick = React.useCallback(() => {

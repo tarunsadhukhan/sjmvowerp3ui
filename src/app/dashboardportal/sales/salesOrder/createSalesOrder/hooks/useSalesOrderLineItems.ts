@@ -247,6 +247,24 @@ export const useSalesOrderLineItems = ({
 			base.conversionFactor = convFactor || undefined;
 		}
 
+		// Restore jute detail fields when present (invoice_type = 4)
+		const jd = line.juteDtl;
+		if (jd) {
+			base.juteClaimRate = jd.claimRate != null ? String(jd.claimRate) : "";
+			base.juteClaimAmountDtl = jd.claimAmountDtl != null ? String(jd.claimAmountDtl) : "";
+			base.juteClaimDesc = jd.claimDesc ?? "";
+			base.juteUnitConversion = jd.unitConversion ?? "";
+			base.juteQtyUnitConversion = jd.qtyUnitConversion != null ? String(jd.qtyUnitConversion) : "";
+		}
+
+		// Restore govt SKG detail fields when present (invoice_type = 5)
+		const gd = line.govtskgDtl;
+		if (gd) {
+			base.govtskgPackSheet = gd.packSheet != null ? String(gd.packSheet) : "";
+			base.govtskgNetWeight = gd.netWeight != null ? String(gd.netWeight) : "";
+			base.govtskgTotalWeight = gd.totalWeight != null ? String(gd.totalWeight) : "";
+		}
+
 		return base;
 	}, [resolveQtyRounding, resolveRateRounding]);
 

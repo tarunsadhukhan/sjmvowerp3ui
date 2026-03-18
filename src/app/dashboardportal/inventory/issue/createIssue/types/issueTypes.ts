@@ -155,6 +155,9 @@ export type IssueDetails = {
 	internalNote?: string;
 	status?: string;
 	statusId?: number;
+	approvalLevel?: number | null;
+	maxApprovalLevel?: number | null;
+	permissions?: import("@/components/ui/transaction").ApprovalActionPermissions;
 	createdBy?: string;
 	createdAt?: string;
 	updatedBy?: string;

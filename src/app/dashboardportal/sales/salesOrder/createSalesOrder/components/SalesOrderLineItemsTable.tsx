@@ -4,6 +4,7 @@ import { Input } from "@/components/ui/input";
 import type { TransactionLineColumn } from "@/components/ui/transaction";
 import type { EditableLineItem, Option, UomConversionEntry } from "../types/salesOrderTypes";
 import { computeConvertedRate } from "@/utils/uomConversion";
+import { isJuteOrder, isGovtSkgOrder } from "../utils/salesOrderConstants";
 
 type UseSalesOrderLineItemColumnsParams = {
 	canEdit: boolean;
@@ -332,6 +333,154 @@ export const useSalesOrderLineItemColumns = ({
 						<span className="block truncate text-sm">{item.remarks || "-"}</span>
 					),
 			},
+			...(isJuteOrder(invoiceTypeId) ? [
+				{
+					id: "juteClaimRate" as const,
+					header: "Claim Rate",
+					width: "0.7fr",
+					minWidth: "80px",
+					renderCell: ({ item }: { item: EditableLineItem }) =>
+						canEdit ? (
+							<Input
+								type="text"
+								value={item.juteClaimRate ?? ""}
+								onChange={(e) => handleLineFieldChange(item.id, "juteClaimRate", e.target.value)}
+								placeholder="0"
+								className="h-8 text-sm"
+							/>
+						) : (
+							<span className="block truncate text-sm">{item.juteClaimRate ?? "-"}</span>
+						),
+				},
+				{
+					id: "juteClaimAmountDtl" as const,
+					header: "Claim Amt",
+					width: "0.7fr",
+					minWidth: "80px",
+					renderCell: ({ item }: { item: EditableLineItem }) =>
+						canEdit ? (
+							<Input
+								type="text"
+								value={item.juteClaimAmountDtl ?? ""}
+								onChange={(e) => handleLineFieldChange(item.id, "juteClaimAmountDtl", e.target.value)}
+								placeholder="0"
+								className="h-8 text-sm"
+							/>
+						) : (
+							<span className="block truncate text-sm">{item.juteClaimAmountDtl ?? "-"}</span>
+						),
+				},
+				{
+					id: "juteClaimDesc" as const,
+					header: "Claim Desc",
+					width: "1fr",
+					minWidth: "100px",
+					renderCell: ({ item }: { item: EditableLineItem }) =>
+						canEdit ? (
+							<Input
+								type="text"
+								value={item.juteClaimDesc ?? ""}
+								onChange={(e) => handleLineFieldChange(item.id, "juteClaimDesc", e.target.value)}
+								placeholder=""
+								className="h-8 text-sm"
+							/>
+						) : (
+							<span className="block truncate text-sm">{item.juteClaimDesc || "-"}</span>
+						),
+				},
+				{
+					id: "juteUnitConversion" as const,
+					header: "Unit Conv.",
+					width: "0.7fr",
+					minWidth: "80px",
+					renderCell: ({ item }: { item: EditableLineItem }) =>
+						canEdit ? (
+							<Input
+								type="text"
+								value={item.juteUnitConversion ?? ""}
+								onChange={(e) => handleLineFieldChange(item.id, "juteUnitConversion", e.target.value)}
+								placeholder=""
+								className="h-8 text-sm"
+							/>
+						) : (
+							<span className="block truncate text-sm">{item.juteUnitConversion || "-"}</span>
+						),
+				},
+				{
+					id: "juteQtyUnitConversion" as const,
+					header: "Qty (Conv.)",
+					width: "0.7fr",
+					minWidth: "80px",
+					renderCell: ({ item }: { item: EditableLineItem }) =>
+						canEdit ? (
+							<Input
+								type="text"
+								value={item.juteQtyUnitConversion ?? ""}
+								onChange={(e) => handleLineFieldChange(item.id, "juteQtyUnitConversion", e.target.value)}
+								placeholder="0"
+								className="h-8 text-sm"
+							/>
+						) : (
+							<span className="block truncate text-sm">{item.juteQtyUnitConversion ?? "-"}</span>
+						),
+				},
+			] as TransactionLineColumn<EditableLineItem>[] : []),
+			...(isGovtSkgOrder(invoiceTypeId) ? [
+				{
+					id: "govtskgPackSheet" as const,
+					header: "Pack Sheet",
+					width: "0.7fr",
+					minWidth: "80px",
+					renderCell: ({ item }: { item: EditableLineItem }) =>
+						canEdit ? (
+							<Input
+								type="text"
+								value={item.govtskgPackSheet ?? ""}
+								onChange={(e) => handleLineFieldChange(item.id, "govtskgPackSheet", e.target.value)}
+								placeholder="0"
+								className="h-8 text-sm"
+							/>
+						) : (
+							<span className="block truncate text-sm">{item.govtskgPackSheet ?? "-"}</span>
+						),
+				},
+				{
+					id: "govtskgNetWeight" as const,
+					header: "Net Weight",
+					width: "0.7fr",
+					minWidth: "80px",
+					renderCell: ({ item }: { item: EditableLineItem }) =>
+						canEdit ? (
+							<Input
+								type="text"
+								value={item.govtskgNetWeight ?? ""}
+								onChange={(e) => handleLineFieldChange(item.id, "govtskgNetWeight", e.target.value)}
+								placeholder="0"
+								className="h-8 text-sm"
+							/>
+						) : (
+							<span className="block truncate text-sm">{item.govtskgNetWeight ?? "-"}</span>
+						),
+				},
+				{
+					id: "govtskgTotalWeight" as const,
+					header: "Total Weight",
+					width: "0.7fr",
+					minWidth: "80px",
+					renderCell: ({ item }: { item: EditableLineItem }) =>
+						canEdit ? (
+							<Input
+								type="text"
+								value={item.govtskgTotalWeight ?? ""}
+								onChange={(e) => handleLineFieldChange(item.id, "govtskgTotalWeight", e.target.value)}
+								placeholder="0"
+								className="h-8 text-sm"
+							/>
+						) : (
+							<span className="block truncate text-sm">{item.govtskgTotalWeight ?? "-"}</span>
+						),
+				},
+			] as TransactionLineColumn<EditableLineItem>[] : []),
 		],
 		[canEdit, invoiceTypeId, itemGroupOptions, itemGroupLoading, getItemOptions, getMakeOptions, getUomOptions, getUomConversions, getItemGroupLabel, handleLineFieldChange],
 	);

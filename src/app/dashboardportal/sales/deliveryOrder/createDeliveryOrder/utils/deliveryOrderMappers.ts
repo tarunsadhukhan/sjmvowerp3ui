@@ -104,6 +104,7 @@ export const mapApprovedSalesOrders = (records: unknown[]): ApprovedSalesOrderRe
 				salesOrderDate: data?.sales_order_date,
 				partyName: data?.party_name,
 				netAmount: data?.net_amount,
+				invoiceType: data?.invoice_type ? String(data.invoice_type) : undefined,
 			} satisfies ApprovedSalesOrderRecord;
 		})
 		.filter(Boolean) as ApprovedSalesOrderRecord[];
@@ -292,6 +293,7 @@ export const mapDODetailsToFormValues = (
 		party?: unknown;
 		partyBranch?: unknown;
 		salesOrder?: unknown;
+		invoiceType?: unknown;
 		billingTo?: unknown;
 		shippingTo?: unknown;
 		transporter?: unknown;
@@ -316,6 +318,7 @@ export const mapDODetailsToFormValues = (
 	party: toStringValue(details.party ?? defaultValues.party),
 	party_branch: toStringValue(details.partyBranch ?? defaultValues.party_branch),
 	sales_order: toStringValue(details.salesOrder ?? defaultValues.sales_order),
+	invoice_type: toStringValue(details.invoiceType ?? defaultValues.invoice_type),
 	billing_to: toStringValue(details.billingTo ?? defaultValues.billing_to),
 	shipping_to: toStringValue(details.shippingTo ?? defaultValues.shipping_to),
 	transporter: toStringValue(details.transporter ?? defaultValues.transporter),

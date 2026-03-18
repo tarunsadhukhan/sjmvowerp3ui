@@ -33,4 +33,33 @@ export const EMPTY_ITEM_GROUPS: never[] = [];
 export const EMPTY_QUOTATIONS: never[] = [];
 export const EMPTY_BRANCH_ADDRESSES: never[] = [];
 export const EMPTY_INVOICE_TYPES: never[] = [];
+export const EMPTY_MUKAM_OPTIONS: never[] = [];
 export const EMPTY_SETUP_PARAMS: { branchId?: string } = {};
+
+// Invoice type IDs
+export const REGULAR_TYPE_ID = "1";
+export const HESSIAN_TYPE_ID = "2";
+export const JUTE_YARN_TYPE_ID = "3";
+export const JUTE_TYPE_ID = "4";
+export const GOVT_SKG_TYPE_ID = "5";
+
+// Type-checking helpers
+export const isHessianOrder = (id?: string | number | null): boolean => {
+	if (id == null || id === "") return false;
+	return String(id) === HESSIAN_TYPE_ID;
+};
+
+export const isJuteYarnOrder = (id?: string | number | null): boolean => {
+	if (id == null || id === "") return false;
+	return String(id) === JUTE_YARN_TYPE_ID;
+};
+
+export const isJuteOrder = (id?: string | number | null): boolean => {
+	if (id == null || id === "") return false;
+	return String(id) === JUTE_TYPE_ID;
+};
+
+export const isGovtSkgOrder = (id?: string | number | null): boolean => {
+	if (id == null || id === "") return false;
+	return String(id) === GOVT_SKG_TYPE_ID;
+};

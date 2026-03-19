@@ -22,6 +22,20 @@ export type SalesOrderLineHessian = {
   billingRateBale?: number | null;
 };
 
+export type SalesOrderLineJuteDtl = {
+  claimAmountDtl?: number | null;
+  claimDesc?: string | null;
+  claimRate?: number | null;
+  unitConversion?: string | null;
+  qtyUnitConversion?: number | null;
+};
+
+export type SalesOrderLineGovtSkgDtl = {
+  packSheet?: number | null;
+  netWeight?: number | null;
+  totalWeight?: number | null;
+};
+
 export type SalesOrderLine = {
   id: string;
   quotationLineitemId?: number | null;
@@ -32,7 +46,9 @@ export type SalesOrderLine = {
   itemMake?: string;
   quantity?: number | string;
   uom?: string;
+  qtyUom?: string;
   uomName?: string;
+  qtyUomName?: string;
   rate?: number | string;
   discountType?: number | null;
   discountedRate?: number | null;
@@ -42,6 +58,8 @@ export type SalesOrderLine = {
   remarks?: string;
   gst?: SalesOrderLineGst | null;
   hessian?: SalesOrderLineHessian | null;
+  juteDtl?: SalesOrderLineJuteDtl | null;
+  govtskgDtl?: SalesOrderLineGovtSkgDtl | null;
 };
 
 export type ApprovalActionPermissions = {
@@ -92,6 +110,24 @@ export type SalesOrderDetails = {
   updatedAt?: string | null;
   permissions?: ApprovalActionPermissions;
   lines: SalesOrderLine[];
+  jute?: {
+    mr_no?: string | null;
+    mukam_id?: string | number | null;
+    claim_amount?: number | null;
+    claim_description?: string | null;
+  } | null;
+  govtskg?: {
+    pcso_no?: string | null;
+    pcso_date?: string | null;
+    administrative_office_address?: string | null;
+    destination_rail_head?: string | null;
+    loading_point?: string | null;
+  } | null;
+  juteyarn?: {
+    pcso_no?: string | null;
+    container_no?: string | null;
+    customer_ref_no?: string | null;
+  } | null;
 };
 
 export type SalesOrderSetup1Response = {
@@ -165,7 +201,37 @@ export type CreateSalesOrderRequest = {
       billing_rate_mt?: number | null;
       billing_rate_bale?: number | null;
     } | null;
+    jute_dtl?: {
+      claim_amount_dtl?: number | null;
+      claim_desc?: string | null;
+      claim_rate?: number | null;
+      unit_conversion?: string | null;
+      qty_untit_conversion?: number | null;
+    } | null;
+    govtskg_dtl?: {
+      pack_sheet?: number | null;
+      net_weight?: number | null;
+      total_weight?: number | null;
+    } | null;
   }>;
+  jute?: {
+    mr_no?: string;
+    mukam_id?: string;
+    claim_amount?: number;
+    claim_description?: string;
+  };
+  govtskg?: {
+    pcso_no?: string;
+    pcso_date?: string;
+    administrative_office_address?: string;
+    destination_rail_head?: string;
+    loading_point?: string;
+  };
+  juteyarn?: {
+    pcso_no?: string;
+    container_no?: string;
+    customer_ref_no?: string;
+  };
 };
 
 export type CreateSalesOrderResponse = {

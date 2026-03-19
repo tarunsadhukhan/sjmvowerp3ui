@@ -49,10 +49,21 @@ export type POPreviewTotals = {
   advancePercentage?: number;
 };
 
+export type POPreviewAdditionalCharge = {
+  name: string;
+  qty: number;
+  rate: number;
+  amount: number;
+  taxPct: number;
+  taxAmount: number;
+  remarks?: string;
+};
+
 type POPreviewProps = {
   header: POPreviewHeader;
   items: POPreviewItem[];
   totals?: POPreviewTotals;
+  additionalCharges?: POPreviewAdditionalCharge[];
   remarks?: string;
   onPrint?: () => void;
   onDownload?: () => void;
@@ -130,7 +141,7 @@ const formatAmount = (value?: number | string) => {
   return num.toLocaleString("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 };
 
-const POPreview: React.FC<POPreviewProps> = ({ header, items, totals, remarks, onPrint, onDownload }) => {
+const POPreview: React.FC<POPreviewProps> = ({ header, items, totals, additionalCharges, remarks, onPrint, onDownload }) => {
   const previewRef = useRef<HTMLDivElement>(null);
 
   const buildPrintableWindow = (titleSuffix: string) => {
@@ -304,6 +315,44 @@ const POPreview: React.FC<POPreviewProps> = ({ header, items, totals, remarks, o
             </Box>
           </Box>
         </Box>
+
+        {additionalCharges && additionalCharges.length > 0 ? (
+          <>
+            <Divider sx={{ my: 2 }} />
+            <Typography variant="subtitle2" sx={{ mb: 1 }}>Additional Charges</Typography>
+            <Box sx={{ overflowX: "auto" }}>
+              <Box component="table" sx={{ width: "100%", borderCollapse: "collapse" }}>
+                <Box component="thead" sx={{ backgroundColor: "rgba(12,60,96,0.08)" }}>
+                  <Box component="tr">
+                    {["#", "Charge", "Qty", "Rate", "Amount", "Tax %", "Tax Amt", "Remarks"].map((col) => (
+                      <Box
+                        key={col}
+                        component="th"
+                        sx={{ border: "1px solid", borderColor: "divider", p: 1, fontSize: 12, textAlign: col === "Charge" || col === "Remarks" ? "left" : "center" }}
+                      >
+                        {col}
+                      </Box>
+                    ))}
+                  </Box>
+                </Box>
+                <Box component="tbody">
+                  {additionalCharges.map((charge, idx) => (
+                    <Box component="tr" key={`po-preview-charge-${idx}`}>
+                      <Box component="td" sx={{ border: "1px solid", borderColor: "divider", p: 1, fontSize: 12, textAlign: "center" }}>{idx + 1}</Box>
+                      <Box component="td" sx={{ border: "1px solid", borderColor: "divider", p: 1, fontSize: 12 }}>{charge.name || "-"}</Box>
+                      <Box component="td" sx={{ border: "1px solid", borderColor: "divider", p: 1, fontSize: 12, textAlign: "right" }}>{charge.qty}</Box>
+                      <Box component="td" sx={{ border: "1px solid", borderColor: "divider", p: 1, fontSize: 12, textAlign: "right" }}>{formatAmount(charge.rate)}</Box>
+                      <Box component="td" sx={{ border: "1px solid", borderColor: "divider", p: 1, fontSize: 12, textAlign: "right" }}>{formatAmount(charge.amount)}</Box>
+                      <Box component="td" sx={{ border: "1px solid", borderColor: "divider", p: 1, fontSize: 12, textAlign: "center" }}>{charge.taxPct ? `${charge.taxPct}%` : "-"}</Box>
+                      <Box component="td" sx={{ border: "1px solid", borderColor: "divider", p: 1, fontSize: 12, textAlign: "right" }}>{formatAmount(charge.taxAmount)}</Box>
+                      <Box component="td" sx={{ border: "1px solid", borderColor: "divider", p: 1, fontSize: 12 }}>{charge.remarks || "-"}</Box>
+                    </Box>
+                  ))}
+                </Box>
+              </Box>
+            </Box>
+          </>
+        ) : null}
 
         {totals ? (
           <>

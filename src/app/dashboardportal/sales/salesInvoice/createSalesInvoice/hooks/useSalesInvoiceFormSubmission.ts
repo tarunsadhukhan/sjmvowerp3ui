@@ -3,6 +3,7 @@ import { useRouter } from "next/navigation";
 import { toast } from "@/hooks/use-toast";
 import { createInvoice, updateInvoice, type SaveInvoiceRequest } from "@/utils/salesInvoiceService";
 import type { EditableLineItem } from "../types/salesInvoiceTypes";
+import { isJuteInvoice } from "../utils/salesInvoiceConstants";
 
 type Params = {
 	mode: "create" | "edit" | "view";
@@ -29,6 +30,9 @@ export const useSalesInvoiceFormSubmission = ({
 				return;
 			}
 
+			const invoiceTypeId = String(values.invoice_type ?? formValues.invoice_type ?? "");
+			const juteType = isJuteInvoice(invoiceTypeId);
+
 			const itemsPayload = filledLineItems.map((item) => ({
 				item: item.item || "",
 				item_make: item.itemMake || undefined,
@@ -51,14 +55,24 @@ export const useSalesInvoiceFormSubmission = ({
 					sgst_amount: item.sgstAmount || 0,
 					sgst_percent: item.sgstPercent || 0,
 					gst_total: item.gstTotal || 0,
+					tax_percentage: item.taxPercentage || 0,
+					tax_amount: item.gstTotal || 0,
 				},
+				...(juteType ? {
+					jute_dtl: {
+						claim_amount_dtl: Number(item.juteClaimAmountDtl) || undefined,
+						claim_desc: item.juteClaimDesc || undefined,
+						claim_rate: Number(item.juteClaimRate) || undefined,
+						unit_conversion: item.juteUnitConversion || undefined,
+						qty_untit_conversion: Number(item.juteQtyUnitConversion) || undefined,
+					},
+				} : {}),
 			}));
 
 			const freightCharges = Number(values.freight_charges ?? formValues.freight_charges) || 0;
 			const roundOff = Number(values.round_off ?? formValues.round_off) || 0;
 			const grossAmount = filledLineItems.reduce((sum, l) => sum + (l.netAmount || 0), 0);
 			const totalGST = filledLineItems.reduce((sum, l) => sum + (l.gstTotal || 0), 0);
-			const taxPayable = totalGST;
 			const netAmount = grossAmount + totalGST + freightCharges + roundOff;
 
 			const payload: SaveInvoiceRequest = {
@@ -67,17 +81,9 @@ export const useSalesInvoiceFormSubmission = ({
 				party: String(values.party ?? formValues.party ?? ""),
 				party_branch: String(values.party_branch ?? formValues.party_branch ?? "") || undefined,
 				delivery_order: String(values.delivery_order ?? formValues.delivery_order ?? "") || undefined,
-				sales_delivery_order_id: String(values.delivery_order ?? formValues.delivery_order ?? "") || undefined,
-				broker_id: String(values.broker ?? formValues.broker ?? "") || undefined,
 				billing_to: String(values.billing_to ?? formValues.billing_to ?? "") || undefined,
-				billing_to_id: String(values.billing_to ?? formValues.billing_to ?? "") || undefined,
 				shipping_to: String(values.shipping_to ?? formValues.shipping_to ?? "") || undefined,
-				shipping_to_id: String(values.shipping_to ?? formValues.shipping_to ?? "") || undefined,
 				transporter: String(values.transporter ?? formValues.transporter ?? "") || undefined,
-				transporter_name: String(values.transporter_name ?? formValues.transporter_name ?? "") || undefined,
-				transporter_address: String(values.transporter_address ?? formValues.transporter_address ?? "") || undefined,
-				transporter_state_code: String(values.transporter_state_code ?? formValues.transporter_state_code ?? "") || undefined,
-				transporter_state_name: String(values.transporter_state_name ?? formValues.transporter_state_name ?? "") || undefined,
 				vehicle_no: String(values.vehicle_no ?? formValues.vehicle_no ?? "") || undefined,
 				eway_bill_no: String(values.eway_bill_no ?? formValues.eway_bill_no ?? "") || undefined,
 				eway_bill_date: String(values.eway_bill_date ?? formValues.eway_bill_date ?? "") || undefined,
@@ -88,21 +94,36 @@ export const useSalesInvoiceFormSubmission = ({
 				internal_note: String(values.internal_note ?? formValues.internal_note ?? "") || undefined,
 				terms_conditions: String(values.terms_conditions ?? formValues.terms_conditions ?? "") || undefined,
 				gross_amount: grossAmount,
-				tax_amount: totalGST,
-				tax_payable: taxPayable,
 				net_amount: netAmount,
 				freight_charges: freightCharges || undefined,
 				round_off: roundOff || undefined,
 				due_date: String(values.due_date ?? formValues.due_date ?? "") || undefined,
 				type_of_sale: String(values.type_of_sale ?? formValues.type_of_sale ?? "") || undefined,
-				tax_id: Number(values.tax_id ?? formValues.tax_id) || undefined,
+				tax_id: String(values.tax_id ?? formValues.tax_id ?? "") || undefined,
+				transporter_address: String(values.transporter_address ?? formValues.transporter_address ?? "") || undefined,
+				transporter_state_code: String(values.transporter_state_code ?? formValues.transporter_state_code ?? "") || undefined,
+				transporter_state_name: String(values.transporter_state_name ?? formValues.transporter_state_name ?? "") || undefined,
 				container_no: String(values.container_no ?? formValues.container_no ?? "") || undefined,
-				contract_no: Number(values.contract_no ?? formValues.contract_no) || undefined,
+				contract_no: String(values.contract_no ?? formValues.contract_no ?? "") || undefined,
 				contract_date: String(values.contract_date ?? formValues.contract_date ?? "") || undefined,
 				consignment_no: String(values.consignment_no ?? formValues.consignment_no ?? "") || undefined,
 				consignment_date: String(values.consignment_date ?? formValues.consignment_date ?? "") || undefined,
+				shipping_state_code: String(values.shipping_state_code ?? formValues.shipping_state_code ?? "") || undefined,
+				intra_inter_state: String(values.intra_inter_state ?? formValues.intra_inter_state ?? "") || undefined,
+				payment_terms: Number(values.payment_terms ?? formValues.payment_terms) || undefined,
+				sales_order_id: Number(values.sales_order_id ?? formValues.sales_order_id) || undefined,
+				billing_state_code: Number(values.billing_state_code ?? formValues.billing_state_code) || undefined,
 				items: itemsPayload,
 			};
+
+			if (juteType) {
+				payload.jute = {
+					mr_no: String(values.jute_mr_no ?? formValues.jute_mr_no ?? "") || undefined,
+					mukam_id: Number(values.jute_mukam_id ?? formValues.jute_mukam_id) || undefined,
+					claim_amount: Number(values.jute_claim_amount ?? formValues.jute_claim_amount) || undefined,
+					claim_description: String(values.jute_claim_description ?? formValues.jute_claim_description ?? "") || undefined,
+				};
+			}
 
 			setSaving(true);
 			try {

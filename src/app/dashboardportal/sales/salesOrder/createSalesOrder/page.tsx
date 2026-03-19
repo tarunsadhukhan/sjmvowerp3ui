@@ -30,11 +30,15 @@ import { SalesOrderTotalsDisplay } from "./components/SalesOrderTotalsDisplay";
 import { SalesOrderApprovalBar } from "./components/SalesOrderApprovalBar";
 import SalesOrderPreview from "./components/SalesOrderPreview";
 import { useSalesOrderLineItemColumns } from "./components/SalesOrderLineItemsTable";
+import { AdditionalChargesSection, type AdditionalChargeRow } from "./components/AdditionalChargesSection";
 
 import { useSalesOrderFormState } from "./hooks/useSalesOrderFormState";
 import { useSalesOrderTaxCalculations } from "./hooks/useSalesOrderTaxCalculations";
 import { useSalesOrderSelectOptions } from "./hooks/useSalesOrderSelectOptions";
 import { useSalesOrderHeaderSchema } from "./hooks/useSalesOrderFormSchemas";
+import { useSalesOrderGovtskgSchema } from "./hooks/useSalesOrderGovtskgSchema";
+import { useSalesOrderJuteSchema } from "./hooks/useSalesOrderJuteSchema";
+import { useSalesOrderJuteYarnSchema } from "./hooks/useSalesOrderJuteYarnSchema";
 import { useSalesOrderFormSubmission } from "./hooks/useSalesOrderFormSubmission";
 import { useSalesOrderApproval } from "./hooks/useSalesOrderApproval";
 import { useSalesOrderLineItems } from "./hooks/useSalesOrderLineItems";
@@ -112,6 +116,7 @@ function SalesOrderTransactionPageContent() {
 	const [soDetails, setSODetails] = React.useState<SalesOrderDetails | null>(null);
 	const [loading, setLoading] = React.useState<boolean>(mode !== "create");
 	const [pageError, setPageError] = React.useState<string | null>(null);
+	const [additionalCharges, setAdditionalCharges] = React.useState<AdditionalChargeRow[]>([]);
 
 	// Branch value resolution
 	const branchValue = React.useMemo(() => {
@@ -179,6 +184,16 @@ function SalesOrderTransactionPageContent() {
 	const invoiceTypes = setupData?.invoiceTypes ?? EMPTY_INVOICE_TYPES;
 	const branchAddresses = setupData?.branchAddresses ?? EMPTY_BRANCH_ADDRESSES;
 
+	const chargeOptions = React.useMemo(() => {
+		const raw = (setupData as Record<string, unknown> | undefined)?.additionalChargesMaster;
+		if (!Array.isArray(raw)) return [];
+		return raw.map((c: Record<string, unknown>) => ({
+			value: String(c.additional_charges_id ?? ""),
+			label: String(c.additional_charges_name ?? ""),
+			defaultValue: c.default_value != null ? Number(c.default_value) : undefined,
+		}));
+	}, [setupData]);
+
 	const quotationRequired = React.useMemo(
 		() => Boolean(coConfig?.quotation_required),
 		[coConfig?.quotation_required],
@@ -234,6 +249,45 @@ function SalesOrderTransactionPageContent() {
 		return customerBranches.find((b) => b.id === shippingId)?.stateName;
 	}, [formValues.shipping_to, customerBranches]);
 
+	// Resolve invoice type code from selected ID + invoiceTypes list (name-based, not hardcoded ID)
+	const invoiceTypeCode = React.useMemo(() => {
+		const selectedId = String(formValues.invoice_type ?? "");
+		if (!selectedId) return "";
+		const found = invoiceTypes.find((t) => t.id === selectedId);
+		return found?.typeCode ?? "";
+	}, [formValues.invoice_type, invoiceTypes]);
+
+	// Lock invoice type dropdown when type-specific header fields have data
+	const hasTypeSpecificHeaderData = React.useMemo(() => {
+		const v = formValues;
+		const hasGovtskg = !!(v.govtskg_pcso_no || v.govtskg_pcso_date || v.govtskg_admin_office || v.govtskg_rail_head || v.govtskg_loading_point);
+		const hasJute = !!(v.jute_mr_no || v.jute_mukam_id || v.jute_claim_amount || v.jute_claim_description);
+		const hasJuteYarn = !!(v.juteyarn_pcso_no || v.juteyarn_container_no || v.juteyarn_customer_ref_no);
+		return hasGovtskg || hasJute || hasJuteYarn;
+	}, [formValues]);
+
+	// Clear previous type's header fields when invoice type changes
+	const prevInvoiceTypeCodeRef = React.useRef<string>("");
+	React.useEffect(() => {
+		if (mode === "view") return;
+		const currentCode = invoiceTypeCode;
+		const prevCode = prevInvoiceTypeCodeRef.current;
+		prevInvoiceTypeCodeRef.current = currentCode;
+		if (!prevCode || prevCode === currentCode) return;
+
+		const clearFields: Record<string, string> = {};
+		if (prevCode === "govt_skg") {
+			Object.assign(clearFields, { govtskg_pcso_no: "", govtskg_pcso_date: "", govtskg_admin_office: "", govtskg_rail_head: "", govtskg_loading_point: "" });
+		} else if (prevCode === "jute") {
+			Object.assign(clearFields, { jute_mr_no: "", jute_mukam_id: "", jute_claim_amount: "", jute_claim_description: "" });
+		} else if (prevCode === "jute_yarn") {
+			Object.assign(clearFields, { juteyarn_pcso_no: "", juteyarn_container_no: "", juteyarn_customer_ref_no: "" });
+		}
+		if (Object.keys(clearFields).length) {
+			setFormValues((prev) => ({ ...prev, ...clearFields }));
+		}
+	}, [invoiceTypeCode, mode, setFormValues]);
+
 	// Clear party-dependent fields when customer changes
 	const prevPartyRef = React.useRef<string>("");
 	React.useEffect(() => {
@@ -266,7 +320,7 @@ function SalesOrderTransactionPageContent() {
 		itemGroupLoading,
 		ensureItemGroupData,
 		itemGroups,
-		invoiceTypeId: String(formValues.invoice_type ?? ""),
+		invoiceTypeCode,
 		brokeragePercent: formValues.broker_commission_percent ? Number(formValues.broker_commission_percent) : undefined,
 	});
 
@@ -285,44 +339,45 @@ function SalesOrderTransactionPageContent() {
 		});
 	}, [mode, setLineItems]);
 
+	const suppressTaxRecalcRef = React.useRef(false);
 	const { taxType } = useSalesOrderTaxCalculations({
 		mode,
 		coConfig,
 		billingToState,
 		shippingToState,
 		setLineItems,
+		suppressRef: suppressTaxRecalcRef,
 	});
 
 	// Calculate totals
+	const additionalChargesTotal = React.useMemo(
+		() => additionalCharges.reduce((sum, c) => sum + (parseFloat(c.netAmount) || 0), 0),
+		[additionalCharges],
+	);
+
 	const totals = React.useMemo(() => {
 		const grossAmount = filledLineItems.reduce((sum, li) => sum + (li.amount ?? 0), 0);
 		const totalTax = filledLineItems.reduce((sum, li) => sum + (li.taxAmount ?? 0), 0);
 		const freightCharges = Number(formValues.freight_charges) || 0;
-		const netAmount = grossAmount + totalTax + freightCharges;
-		return { grossAmount, totalTax, freightCharges, netAmount };
-	}, [filledLineItems, formValues.freight_charges]);
+		const netAmount = grossAmount + totalTax + freightCharges + additionalChargesTotal;
+		return { grossAmount, totalTax, freightCharges, netAmount, additionalChargesTotal };
+	}, [filledLineItems, formValues.freight_charges, additionalChargesTotal]);
 
-	// Fetch details for edit/view
-	const detailsFetchKey = React.useMemo(
-		() => [mode, requestedId || "", branchIdForSetup || branchIdFromUrl || "", coId || ""].join("|"),
-		[mode, requestedId, branchIdForSetup, branchIdFromUrl, coId],
-	);
-
-	const lastDetailsKeyRef = React.useRef<string | null>(null);
+	// Phase A: Fetch details immediately in edit/view mode (no setup dependency)
+	// This breaks the circular dependency: details contain branch_id which is needed to load setup
 	const detailsFetchedRef = React.useRef(false);
-
-	React.useEffect(() => {
-		if (lastDetailsKeyRef.current !== detailsFetchKey) {
-			lastDetailsKeyRef.current = detailsFetchKey;
-			detailsFetchedRef.current = false;
-		}
-	}, [detailsFetchKey]);
+	// Use refs for values that may change reference across renders but shouldn't cancel in-flight fetches
+	const getMenuIdRef = React.useRef(getMenuId);
+	getMenuIdRef.current = getMenuId;
+	const coIdRef = React.useRef(coId);
+	coIdRef.current = coId;
 
 	React.useEffect(() => {
 		if (mode === "create") {
 			setSODetails(null);
 			setPageError(null);
 			setLoading(false);
+			detailsFetchedRef.current = false;
 			return;
 		}
 
@@ -333,46 +388,24 @@ function SalesOrderTransactionPageContent() {
 			return;
 		}
 
-		if (!setupEnabled) return;
-		if (setupLoading) return;
-		if (!setupData) return;
 		if (detailsFetchedRef.current) return;
-
 		detailsFetchedRef.current = true;
 
 		let cancelled = false;
-		const fetchDetails = async () => {
+		(async () => {
 			setLoading(true);
 			try {
-				const details = await getSalesOrderById(requestedId, coId || undefined, getMenuId() || undefined);
+				const details = await getSalesOrderById(
+					requestedId,
+					coIdRef.current || undefined,
+					getMenuIdRef.current() || undefined,
+				);
 				if (cancelled) return;
-
 				setSODetails(details);
-				const defaultFormValues = buildDefaultFormValues();
-				const nextValues = mapSalesOrderDetailsToFormValues(details, defaultFormValues);
-
-				const detailsBranch = details as unknown as { branch_id?: unknown; branchId?: unknown };
-				const branchIdFromDetails = detailsBranch?.branch_id ?? detailsBranch?.branchId ?? details?.branch;
-				const resolvedBranchValue = (() => {
-					if (branchIdFromDetails != null && branchIdFromDetails !== "") return String(branchIdFromDetails);
-					if (branchIdFromUrl) return String(branchIdFromUrl);
-					if (branchValue && /^\d+$/.test(branchValue)) return branchValue;
-					const mappedValue = nextValues.branch != null ? String(nextValues.branch) : "";
-					return /^\d+$/.test(mappedValue) ? mappedValue : "";
-				})();
-
-				if (resolvedBranchValue) {
-					nextValues.branch = resolvedBranchValue;
-					setLockedBranchId(resolvedBranchValue);
+				// Extract branch_id to unblock setup loading
+				if (details.branch && /^\d+$/.test(details.branch)) {
+					setLockedBranchId(details.branch);
 				}
-
-				setInitialValues(nextValues);
-				setFormValues(nextValues);
-				bumpFormKey();
-
-				const normalizedLines = (details.lines ?? []).map((line) => mapLineToEditable(line));
-				replaceItems(normalizedLines);
-
 				setPageError(null);
 			} catch (error) {
 				if (cancelled) return;
@@ -383,18 +416,70 @@ function SalesOrderTransactionPageContent() {
 			} finally {
 				if (!cancelled) setLoading(false);
 			}
-		};
+		})();
+		return () => { cancelled = true; detailsFetchedRef.current = false; };
+	// Only re-run when the actual identity of the SO changes, not when callback refs change
+	}, [mode, requestedId]);
 
-		void fetchDetails();
+	// Phase B: Populate form once both details AND setup are ready
+	const formPopulatedRef = React.useRef(false);
 
-		return () => {
-			cancelled = true;
-		};
+	React.useEffect(() => {
+		if (mode === "create") {
+			formPopulatedRef.current = false;
+			return;
+		}
+		if (!soDetails) {
+				return;
+		}
+		if (!setupEnabled || setupLoading || !setupData) {
+				return;
+		}
+		if (formPopulatedRef.current) return;
+		formPopulatedRef.current = true;
+
+		const nextValues = mapSalesOrderDetailsToFormValues(soDetails, buildDefaultFormValues());
+
+		const resolvedBranchValue = soDetails.branch || branchIdFromUrl || branchValue;
+		if (resolvedBranchValue && /^\d+$/.test(resolvedBranchValue)) {
+			nextValues.branch = resolvedBranchValue;
+			setLockedBranchId(resolvedBranchValue);
+		}
+
+		const normalizedLines = (soDetails.lines ?? []).map((line) => mapLineToEditable(line));
+
+		// Suppress the tax recalculation effect that would fire from billing/shipping state change
+		suppressTaxRecalcRef.current = true;
+
+		setInitialValues(nextValues);
+		setFormValues(nextValues);
+		bumpFormKey();
+		replaceItems(normalizedLines);
+
+		// Map additional charges from SO details
+		const rawCharges = (soDetails as Record<string, unknown>).additionalCharges;
+		if (Array.isArray(rawCharges) && rawCharges.length > 0) {
+			setAdditionalCharges(
+				rawCharges.map((ch: Record<string, unknown>, idx: number) => ({
+					id: `charge_loaded_${idx}`,
+					additionalChargesId: String(ch.additional_charges_id ?? ch.additionalChargesId ?? ""),
+					chargeName: String(ch.additional_charges_name ?? ch.chargeName ?? ""),
+					qty: String(ch.qty ?? "1"),
+					rate: String(ch.rate ?? ""),
+					netAmount: String(ch.net_amount ?? ch.netAmount ?? ""),
+					remarks: String(ch.remarks ?? ""),
+					gst: ch.gst != null ? (ch.gst as AdditionalChargeRow["gst"]) : undefined,
+				})),
+			);
+		} else {
+			setAdditionalCharges([]);
+		}
+
+		return () => { formPopulatedRef.current = false; };
 	}, [
-		mode, requestedId, coId, getMenuId,
+		mode, soDetails, setupEnabled, setupLoading, setupData,
 		setInitialValues, setFormValues, bumpFormKey,
 		replaceItems, mapLineToEditable,
-		setupEnabled, setupLoading, setupData,
 		branchIdFromUrl, branchValue,
 	]);
 
@@ -474,13 +559,18 @@ function SalesOrderTransactionPageContent() {
 		quotationRequired,
 		mode,
 		headerFieldsDisabled,
+		invoiceTypeLocked: hasTypeSpecificHeaderData,
 	});
+
+	const govtskgSchema = useSalesOrderGovtskgSchema({ mode, headerFieldsDisabled });
+	const juteYarnSchema = useSalesOrderJuteYarnSchema({ mode, headerFieldsDisabled });
+	const juteSchema = useSalesOrderJuteSchema({ mukamOptions: [], mode, headerFieldsDisabled });
 
 	const canEdit = mode !== "view";
 
 	const lineItemColumns = useSalesOrderLineItemColumns({
 		canEdit,
-		invoiceTypeId: String(formValues.invoice_type ?? ""),
+		invoiceTypeCode,
 		itemGroupOptions,
 		itemGroupLoading,
 		getItemOptions,
@@ -574,6 +664,8 @@ function SalesOrderTransactionPageContent() {
 		filledLineItems,
 		isLineItemsReady,
 		requestedId,
+		formValues,
+		invoiceTypeCode,
 	});
 
 	const primaryActionLabel = mode === "create" ? "Create" : "Save";
@@ -582,7 +674,7 @@ function SalesOrderTransactionPageContent() {
 		void formRef.current.submit();
 	}, [formRef]);
 
-	// Wrap submit to inject notes fields (rendered outside MuiForm) into the submitted values
+	// Wrap submit to inject notes fields and additional charges (rendered outside MuiForm) into the submitted values
 	const handleFormSubmitWithNotes = React.useCallback(
 		async (values: Record<string, unknown>) => {
 			const merged = {
@@ -590,10 +682,21 @@ function SalesOrderTransactionPageContent() {
 				footer_note: formValues.footer_note ?? "",
 				internal_note: formValues.internal_note ?? "",
 				terms_conditions: formValues.terms_conditions ?? "",
+				additional_charges: additionalCharges
+					.filter((c) => c.additionalChargesId)
+					.map((c) => ({
+						additional_charges_id: c.additionalChargesId,
+						charge_name: c.chargeName,
+						qty: parseFloat(c.qty) || 1,
+						rate: parseFloat(c.rate) || 0,
+						net_amount: parseFloat(c.netAmount) || 0,
+						remarks: c.remarks || "",
+						gst: c.gst,
+					})),
 			};
 			await handleFormSubmit(merged);
 		},
-		[handleFormSubmit, formValues.footer_note, formValues.internal_note, formValues.terms_conditions],
+		[handleFormSubmit, formValues.footer_note, formValues.internal_note, formValues.terms_conditions, additionalCharges],
 	);
 
 	const pageTitle = React.useMemo(() => {
@@ -630,10 +733,17 @@ function SalesOrderTransactionPageContent() {
 			}}
 				footer={
 					<div className="space-y-6 pt-4 border-t">
+						<AdditionalChargesSection
+							charges={additionalCharges}
+							chargeOptions={chargeOptions}
+							onChange={setAdditionalCharges}
+							disabled={mode === "view"}
+						/>
 						<SalesOrderTotalsDisplay
 							grossAmount={totals.grossAmount}
 							totalTax={totals.totalTax}
 							freightCharges={totals.freightCharges}
+							additionalChargesTotal={totals.additionalChargesTotal}
 							netAmount={totals.netAmount}
 							taxType={taxType || undefined}
 						/>
@@ -702,6 +812,10 @@ function SalesOrderTransactionPageContent() {
 				showQuotationButton={quotationRequired && mode !== "view"}
 				onQuotationSelect={handleQuotationSelect}
 				quotationButtonDisabled={!isMounted || !formValues.quotation}
+				govtskgSchema={govtskgSchema}
+				juteSchema={juteSchema}
+				juteYarnSchema={juteYarnSchema}
+				invoiceTypeCode={invoiceTypeCode}
 			/>
 		</TransactionWrapper>
 	);

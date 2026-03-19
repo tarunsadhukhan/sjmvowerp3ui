@@ -6,8 +6,10 @@
 import * as React from "react";
 import { SearchableSelect } from "@/components/ui/transaction";
 import { TextField } from "@mui/material";
+import { MenuItem, Select } from "@mui/material";
 import type { TransactionLineColumn } from "@/components/ui/transaction";
 import type { GateEntryLineItem, Option, JuteItemRecord, JuteQualityRecord } from "../types/MaterialInspectionTypes";
+import { UOM_OPTIONS } from "../utils/MaterialInspectionConstants";
 import { MoistureButton } from "../components/MoistureReadingDialog";
 
 type UseGateEntryLineItemColumnsParams = {
@@ -224,6 +226,38 @@ export function useGateEntryLineItemColumns({
 						{item.actualWeight ? Math.round(parseFloat(item.actualWeight)) : "-"}
 					</span>
 				),
+			},
+			// UOM column
+			{
+				id: "juteUom",
+				header: "UOM",
+				width: "0.7fr",
+				renderCell: ({ item }) => {
+					if (!canEdit) {
+						return <span className="text-xs">{item.juteUom || "-"}</span>;
+					}
+					return (
+						<Select
+							size="small"
+							value={item.juteUom || ""}
+							onChange={(e) =>
+								handleLineFieldChange(item.id, "juteUom", e.target.value)
+							}
+							displayEmpty
+							sx={{ "& .MuiSelect-select": { fontSize: "0.75rem", py: 0.5 } }}
+							fullWidth
+						>
+							<MenuItem value="" sx={{ fontSize: "0.75rem" }}>
+								<em>-</em>
+							</MenuItem>
+							{UOM_OPTIONS.map((opt) => (
+								<MenuItem key={opt.value} value={opt.value} sx={{ fontSize: "0.75rem" }}>
+									{opt.label}
+								</MenuItem>
+							))}
+						</Select>
+					);
+				},
 			},
 			// Allowable Moisture column
 			{

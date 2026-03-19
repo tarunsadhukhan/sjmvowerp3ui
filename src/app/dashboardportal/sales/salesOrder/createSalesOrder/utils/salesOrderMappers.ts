@@ -26,6 +26,7 @@ import type {
 	TransporterRecordRaw,
 	UomConversionEntry,
 } from "../types/salesOrderTypes";
+import { resolveInvoiceTypeCode } from "./salesOrderConstants";
 
 // ---------------------------------------------------------------------------
 // Customer mapping
@@ -180,9 +181,11 @@ export const mapInvoiceTypeRecords = (records: unknown[]): InvoiceTypeRecord[] =
 			const data = row as InvoiceTypeRecordRaw;
 			const id = data?.invoice_type_id;
 			if (!id) return null;
+			const name = data?.invoice_type_name ?? String(id);
 			return {
 				id: String(id),
-				name: data?.invoice_type_name ?? String(id),
+				name,
+				typeCode: resolveInvoiceTypeCode(name),
 			} satisfies InvoiceTypeRecord;
 		})
 		.filter(Boolean) as InvoiceTypeRecord[];
@@ -242,6 +245,8 @@ export const mapItemGroupDetailResponse = (response: unknown): ItemGroupCacheEnt
 				defaultUomLabel: data?.uom_name ? String(data.uom_name) : undefined,
 				defaultRate: data?.rate != null ? Number(data.rate) : undefined,
 				taxPercentage: data?.tax_percentage != null ? Number(data.tax_percentage) : undefined,
+				uomRounding: data?.uom_rounding != null ? Number(data.uom_rounding) : undefined,
+				rateRounding: data?.rate_rounding != null ? Number(data.rate_rounding) : undefined,
 			};
 		})
 		.filter(Boolean) as ItemOption[];
@@ -311,6 +316,9 @@ export const mapItemGroupDetailResponse = (response: unknown): ItemGroupCacheEnt
 		});
 	});
 
+	const itemUomRoundingById: Record<string, number> = {};
+	const itemRateRoundingById: Record<string, number> = {};
+
 	items.forEach((item) => {
 		if (item.defaultUomId) {
 			const bucket = uomsByItemId[item.value] ?? [];
@@ -323,6 +331,9 @@ export const mapItemGroupDetailResponse = (response: unknown): ItemGroupCacheEnt
 		}
 		if (item.defaultRate != null) itemRateById[item.value] = item.defaultRate;
 		if (item.taxPercentage != null) itemTaxById[item.value] = item.taxPercentage;
+		if (item.uomRounding != null) itemUomRoundingById[item.value] = item.uomRounding;
+		// Default rate rounding to 2 if not specified
+		itemRateRoundingById[item.value] = item.rateRounding ?? 2;
 	});
 
 	const itemLabelById: Record<string, string> = {};
@@ -331,7 +342,7 @@ export const mapItemGroupDetailResponse = (response: unknown): ItemGroupCacheEnt
 	const makeLabelById: Record<string, string> = {};
 	makes.forEach((make) => { makeLabelById[make.value] = make.label; });
 
-	return { groupLabel, items, makes, uomsByItemId, itemLabelById, makeLabelById, uomLabelByItemId, itemRateById, itemTaxById, uomConversionsByItemId };
+	return { groupLabel, items, makes, uomsByItemId, itemLabelById, makeLabelById, uomLabelByItemId, itemRateById, itemTaxById, uomConversionsByItemId, itemUomRoundingById, itemRateRoundingById };
 };
 
 // ---------------------------------------------------------------------------
@@ -369,6 +380,24 @@ export const mapSalesOrderDetailsToFormValues = (
 		footerNote?: string | null;
 		internalNote?: string | null;
 		termsConditions?: string | null;
+		jute?: {
+			mr_no?: string | null;
+			mukam_id?: string | number | null;
+			claim_amount?: number | null;
+			claim_description?: string | null;
+		} | null;
+		govtskg?: {
+			pcso_no?: string | null;
+			pcso_date?: string | null;
+			administrative_office_address?: string | null;
+			destination_rail_head?: string | null;
+			loading_point?: string | null;
+		} | null;
+		juteyarn?: {
+			pcso_no?: string | null;
+			container_no?: string | null;
+			customer_ref_no?: string | null;
+		} | null;
 	},
 	defaultValues: Record<string, unknown>,
 ): Record<string, unknown> => ({
@@ -398,6 +427,21 @@ export const mapSalesOrderDetailsToFormValues = (
 	footer_note: toStringValue(details.footerNote ?? defaultValues.footer_note),
 	internal_note: toStringValue(details.internalNote ?? defaultValues.internal_note),
 	terms_conditions: toStringValue(details.termsConditions ?? defaultValues.terms_conditions),
+	// Jute header
+	jute_mr_no: details.jute?.mr_no ?? "",
+	jute_mukam_id: details.jute?.mukam_id ? String(details.jute.mukam_id) : "",
+	jute_claim_amount: details.jute?.claim_amount != null ? String(details.jute.claim_amount) : "",
+	jute_claim_description: details.jute?.claim_description ?? "",
+	// Govt SKG header
+	govtskg_pcso_no: details.govtskg?.pcso_no ?? "",
+	govtskg_pcso_date: details.govtskg?.pcso_date ?? "",
+	govtskg_admin_office: details.govtskg?.administrative_office_address ?? "",
+	govtskg_rail_head: details.govtskg?.destination_rail_head ?? "",
+	govtskg_loading_point: details.govtskg?.loading_point ?? "",
+	// Jute Yarn header
+	juteyarn_pcso_no: details.juteyarn?.pcso_no ?? "",
+	juteyarn_container_no: details.juteyarn?.container_no ?? "",
+	juteyarn_customer_ref_no: details.juteyarn?.customer_ref_no ?? "",
 });
 
 export const getOptionLabelFromList = (

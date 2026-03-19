@@ -13,6 +13,7 @@ export type UseSalesOrderHeaderSchemaParams = {
 	quotationRequired: boolean;
 	mode: "create" | "edit" | "view";
 	headerFieldsDisabled: boolean;
+	invoiceTypeLocked?: boolean;
 };
 
 export const useSalesOrderHeaderSchema = ({
@@ -26,6 +27,7 @@ export const useSalesOrderHeaderSchema = ({
 	quotationRequired,
 	mode,
 	headerFieldsDisabled,
+	invoiceTypeLocked,
 }: UseSalesOrderHeaderSchemaParams): Schema =>
 	React.useMemo(() => {
 		const fields: Field[] = [
@@ -39,6 +41,7 @@ export const useSalesOrderHeaderSchema = ({
 				grid: { xs: 12, md: 4 },
 			},
 			{ name: "date", label: "Order Date", type: "date", required: true, disabled: mode === "view", grid: { xs: 12, md: 4 } },
+			{ name: "invoice_type", label: "Invoice Type", type: "select", options: invoiceTypeOptions, disabled: headerFieldsDisabled || invoiceTypeLocked, grid: { xs: 12, md: 4 } },
 			{ name: "expiry_date", label: "Expiry Date", type: "date", disabled: headerFieldsDisabled, grid: { xs: 12, md: 4 } },
 			{
 				name: "party",
@@ -64,7 +67,6 @@ export const useSalesOrderHeaderSchema = ({
 		}
 
 		fields.push(
-			{ name: "invoice_type", label: "Invoice Type", type: "select", options: invoiceTypeOptions, disabled: headerFieldsDisabled, grid: { xs: 12, md: 4 } },
 			{
 				name: "broker",
 				label: "Broker",
@@ -89,5 +91,5 @@ export const useSalesOrderHeaderSchema = ({
 	}, [
 		branchOptions, customerOptions, customerBranchOptions,
 		brokerOptions, transporterOptions, quotationOptions,
-		invoiceTypeOptions, quotationRequired, mode, headerFieldsDisabled,
+		invoiceTypeOptions, quotationRequired, mode, headerFieldsDisabled, invoiceTypeLocked,
 	]);

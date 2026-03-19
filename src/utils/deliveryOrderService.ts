@@ -66,6 +66,12 @@ export type DODetails = {
   maxApprovalLevel?: number | null;
   updatedBy?: string;
   updatedAt?: string;
+  invoiceType?: string;
+  soExtensionData?: {
+    jute?: Record<string, unknown>;
+    govtskg?: Record<string, unknown>;
+    juteyarn?: Record<string, unknown>;
+  } | null;
   permissions?: import("@/utils/poService").ApprovalActionPermissions;
   lines: DOLine[];
 };
@@ -114,6 +120,7 @@ export type CreateDORequest = {
   party: string;
   party_branch?: string;
   sales_order?: string;
+  invoice_type?: string;
   billing_to?: string;
   shipping_to?: string;
   transporter?: string;

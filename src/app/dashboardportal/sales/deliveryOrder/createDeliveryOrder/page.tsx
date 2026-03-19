@@ -28,6 +28,7 @@ import { DeliveryOrderApprovalBar } from "./components/DeliveryOrderApprovalBar"
 import DeliveryOrderPreview from "./components/DeliveryOrderPreview";
 import { useDOLineItemColumns } from "./components/DeliveryOrderLineItemsTable";
 import { SalesOrderLinesDialog } from "./components/SalesOrderLinesDialog";
+import { DOSalesOrderExtensionDisplay } from "./components/DOSalesOrderExtensionDisplay";
 
 import { useDeliveryOrderFormState } from "./hooks/useDeliveryOrderFormState";
 import { useDeliveryOrderLineItems } from "./hooks/useDeliveryOrderLineItems";
@@ -337,6 +338,18 @@ function DOTransactionPageContent() {
 		uniqueGroups.forEach((groupId) => { ensureItemGroupData(groupId); });
 	}, [doDetails, ensureItemGroupData]);
 
+	// When sales_order is selected in create mode, auto-populate invoice_type from the SO record
+	React.useEffect(() => {
+		const soValue = formValues.sales_order;
+		if (!soValue || mode !== "create") return;
+		const selectedSO = setupData?.approvedSalesOrders?.find(
+			(so) => String(so.id) === String(soValue),
+		);
+		if (selectedSO?.invoiceType && !formValues.invoice_type) {
+			setFormValues((prev: Record<string, unknown>) => ({ ...prev, invoice_type: selectedSO.invoiceType }));
+		}
+	}, [formValues.sales_order, formValues.invoice_type, mode, setupData?.approvedSalesOrders, setFormValues]);
+
 	const isLineItemsReady = React.useMemo(() => {
 		if (mode === "view" || pageError || setupError) return true;
 		return lineItemsValid;
@@ -641,6 +654,11 @@ function DOTransactionPageContent() {
 				showSalesOrderButton={showSOButton}
 				onSalesOrderSelect={handleSOSelect}
 				salesOrderButtonDisabled={!formValues.sales_order}
+			/>
+
+			<DOSalesOrderExtensionDisplay
+				soExtensionData={doDetails?.soExtensionData}
+				invoiceTypeId={formValues.invoice_type as string}
 			/>
 
 			<SalesOrderLinesDialog

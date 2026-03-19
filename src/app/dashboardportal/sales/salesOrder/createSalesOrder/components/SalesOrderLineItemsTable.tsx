@@ -4,10 +4,11 @@ import { Input } from "@/components/ui/input";
 import type { TransactionLineColumn } from "@/components/ui/transaction";
 import type { EditableLineItem, Option, UomConversionEntry } from "../types/salesOrderTypes";
 import { computeConvertedRate } from "@/utils/uomConversion";
+import { isHessianOrder, isJuteOrder, isGovtSkgOrder } from "../utils/salesOrderConstants";
 
 type UseSalesOrderLineItemColumnsParams = {
 	canEdit: boolean;
-	invoiceTypeId?: string;
+	invoiceTypeCode?: string;
 	itemGroupOptions: Option[];
 	itemGroupLoading: Partial<Record<string, boolean>>;
 	getItemOptions: (groupId: string) => Option[];
@@ -20,7 +21,7 @@ type UseSalesOrderLineItemColumnsParams = {
 
 export const useSalesOrderLineItemColumns = ({
 	canEdit,
-	invoiceTypeId,
+	invoiceTypeCode,
 	itemGroupOptions,
 	itemGroupLoading,
 	getItemOptions,
@@ -110,13 +111,18 @@ export const useSalesOrderLineItemColumns = ({
 				width: "0.8fr",
 				minWidth: "80px",
 				renderCell: ({ item }) => {
-					const isHessian = invoiceTypeId === "2";
+					const isHessian = isHessianOrder(invoiceTypeCode);
 					// Hessian: qty input is bales, show MT annotation
 					const displayValue = isHessian ? (item.qtyBales ?? "") : item.quantity;
 					const fieldKey: keyof EditableLineItem = isHessian ? "qtyBales" : "quantity";
+					const qtyRounding = item.qtyRounding;
 					const mtAnnotation = isHessian && item.quantity && Number(item.quantity)
-						? `\u2248 ${Number(item.quantity).toFixed(4)} MT`
+						? `\u2248 ${Number(item.quantity).toFixed(qtyRounding ?? 4)} MT`
 						: null;
+					// Show rounded display for non-hessian when rounding is set
+					const formattedQty = !isHessian && displayValue && qtyRounding != null && Number(displayValue)
+						? Number(displayValue).toFixed(qtyRounding)
+						: displayValue;
 
 					if (canEdit) {
 						return (
@@ -139,7 +145,7 @@ export const useSalesOrderLineItemColumns = ({
 
 					return (
 						<div className="flex flex-col gap-0.5">
-							<span className="block truncate text-sm">{displayValue || "-"}</span>
+							<span className="block truncate text-sm">{formattedQty || "-"}</span>
 							{mtAnnotation ? (
 								<span className="text-[11px] text-muted-foreground leading-tight truncate">
 									{mtAnnotation}
@@ -149,7 +155,7 @@ export const useSalesOrderLineItemColumns = ({
 					);
 				},
 				getTooltip: ({ item }) => {
-					const isHessian = invoiceTypeId === "2";
+					const isHessian = isHessianOrder(invoiceTypeCode);
 					const parts: string[] = [];
 					if (isHessian && item.qtyBales) parts.push(`Bales: ${item.qtyBales}`);
 					if (isHessian && item.quantity) parts.push(`\u2248 ${item.quantity} MT`);
@@ -187,7 +193,7 @@ export const useSalesOrderLineItemColumns = ({
 				width: "0.8fr",
 				minWidth: "80px",
 				renderCell: ({ item }) => {
-					const isHessian = invoiceTypeId === "2";
+					const isHessian = isHessianOrder(invoiceTypeCode);
 
 					if (isHessian) {
 						// Hessian mode: input is rawRateMt (pre-brokerage rate per MT)
@@ -258,9 +264,12 @@ export const useSalesOrderLineItemColumns = ({
 						);
 					}
 
+					const rateRounding = item.rateRounding ?? 2;
+					const formattedRate = item.rate && Number(item.rate) ? Number(item.rate).toFixed(rateRounding) : item.rate;
+
 					return (
 						<div className="flex flex-col gap-0.5">
-							<span className="block truncate text-sm">{item.rate || "-"}</span>
+							<span className="block truncate text-sm">{formattedRate || "-"}</span>
 							{conversion ? (
 								<span className="text-[11px] text-muted-foreground leading-tight truncate">
 									{"\u2248"} {conversion.convertedRate} / {conversion.otherUomName}
@@ -270,7 +279,7 @@ export const useSalesOrderLineItemColumns = ({
 					);
 				},
 				getTooltip: ({ item }) => {
-					const isHessian = invoiceTypeId === "2";
+					const isHessian = isHessianOrder(invoiceTypeCode);
 					const parts: string[] = [];
 					if (isHessian) {
 						if (item.rawRateMt) parts.push(`Rate: ${item.rawRateMt} / MT`);
@@ -324,6 +333,154 @@ export const useSalesOrderLineItemColumns = ({
 						<span className="block truncate text-sm">{item.remarks || "-"}</span>
 					),
 			},
+			...(isJuteOrder(invoiceTypeCode) ? [
+				{
+					id: "juteClaimRate" as const,
+					header: "Claim Rate",
+					width: "0.7fr",
+					minWidth: "80px",
+					renderCell: ({ item }: { item: EditableLineItem }) =>
+						canEdit ? (
+							<Input
+								type="text"
+								value={item.juteClaimRate ?? ""}
+								onChange={(e) => handleLineFieldChange(item.id, "juteClaimRate", e.target.value)}
+								placeholder="0"
+								className="h-8 text-sm"
+							/>
+						) : (
+							<span className="block truncate text-sm">{item.juteClaimRate ?? "-"}</span>
+						),
+				},
+				{
+					id: "juteClaimAmountDtl" as const,
+					header: "Claim Amt",
+					width: "0.7fr",
+					minWidth: "80px",
+					renderCell: ({ item }: { item: EditableLineItem }) =>
+						canEdit ? (
+							<Input
+								type="text"
+								value={item.juteClaimAmountDtl ?? ""}
+								onChange={(e) => handleLineFieldChange(item.id, "juteClaimAmountDtl", e.target.value)}
+								placeholder="0"
+								className="h-8 text-sm"
+							/>
+						) : (
+							<span className="block truncate text-sm">{item.juteClaimAmountDtl ?? "-"}</span>
+						),
+				},
+				{
+					id: "juteClaimDesc" as const,
+					header: "Claim Desc",
+					width: "1fr",
+					minWidth: "100px",
+					renderCell: ({ item }: { item: EditableLineItem }) =>
+						canEdit ? (
+							<Input
+								type="text"
+								value={item.juteClaimDesc ?? ""}
+								onChange={(e) => handleLineFieldChange(item.id, "juteClaimDesc", e.target.value)}
+								placeholder=""
+								className="h-8 text-sm"
+							/>
+						) : (
+							<span className="block truncate text-sm">{item.juteClaimDesc || "-"}</span>
+						),
+				},
+				{
+					id: "juteUnitConversion" as const,
+					header: "Unit Conv.",
+					width: "0.7fr",
+					minWidth: "80px",
+					renderCell: ({ item }: { item: EditableLineItem }) =>
+						canEdit ? (
+							<Input
+								type="text"
+								value={item.juteUnitConversion ?? ""}
+								onChange={(e) => handleLineFieldChange(item.id, "juteUnitConversion", e.target.value)}
+								placeholder=""
+								className="h-8 text-sm"
+							/>
+						) : (
+							<span className="block truncate text-sm">{item.juteUnitConversion || "-"}</span>
+						),
+				},
+				{
+					id: "juteQtyUnitConversion" as const,
+					header: "Qty (Conv.)",
+					width: "0.7fr",
+					minWidth: "80px",
+					renderCell: ({ item }: { item: EditableLineItem }) =>
+						canEdit ? (
+							<Input
+								type="text"
+								value={item.juteQtyUnitConversion ?? ""}
+								onChange={(e) => handleLineFieldChange(item.id, "juteQtyUnitConversion", e.target.value)}
+								placeholder="0"
+								className="h-8 text-sm"
+							/>
+						) : (
+							<span className="block truncate text-sm">{item.juteQtyUnitConversion ?? "-"}</span>
+						),
+				},
+			] as TransactionLineColumn<EditableLineItem>[] : []),
+			...(isGovtSkgOrder(invoiceTypeCode) ? [
+				{
+					id: "govtskgPackSheet" as const,
+					header: "Pack Sheet",
+					width: "0.7fr",
+					minWidth: "80px",
+					renderCell: ({ item }: { item: EditableLineItem }) =>
+						canEdit ? (
+							<Input
+								type="text"
+								value={item.govtskgPackSheet ?? ""}
+								onChange={(e) => handleLineFieldChange(item.id, "govtskgPackSheet", e.target.value)}
+								placeholder="0"
+								className="h-8 text-sm"
+							/>
+						) : (
+							<span className="block truncate text-sm">{item.govtskgPackSheet ?? "-"}</span>
+						),
+				},
+				{
+					id: "govtskgNetWeight" as const,
+					header: "Net Weight",
+					width: "0.7fr",
+					minWidth: "80px",
+					renderCell: ({ item }: { item: EditableLineItem }) =>
+						canEdit ? (
+							<Input
+								type="text"
+								value={item.govtskgNetWeight ?? ""}
+								onChange={(e) => handleLineFieldChange(item.id, "govtskgNetWeight", e.target.value)}
+								placeholder="0"
+								className="h-8 text-sm"
+							/>
+						) : (
+							<span className="block truncate text-sm">{item.govtskgNetWeight ?? "-"}</span>
+						),
+				},
+				{
+					id: "govtskgTotalWeight" as const,
+					header: "Total Weight",
+					width: "0.7fr",
+					minWidth: "80px",
+					renderCell: ({ item }: { item: EditableLineItem }) =>
+						canEdit ? (
+							<Input
+								type="text"
+								value={item.govtskgTotalWeight ?? ""}
+								onChange={(e) => handleLineFieldChange(item.id, "govtskgTotalWeight", e.target.value)}
+								placeholder="0"
+								className="h-8 text-sm"
+							/>
+						) : (
+							<span className="block truncate text-sm">{item.govtskgTotalWeight ?? "-"}</span>
+						),
+				},
+			] as TransactionLineColumn<EditableLineItem>[] : []),
 		],
-		[canEdit, invoiceTypeId, itemGroupOptions, itemGroupLoading, getItemOptions, getMakeOptions, getUomOptions, getUomConversions, getItemGroupLabel, handleLineFieldChange],
+		[canEdit, invoiceTypeCode, itemGroupOptions, itemGroupLoading, getItemOptions, getMakeOptions, getUomOptions, getUomConversions, getItemGroupLabel, handleLineFieldChange],
 	);

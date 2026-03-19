@@ -66,6 +66,7 @@ export const useDeliveryOrderFormSubmission = ({
 				party: String(values.party ?? formValues.party ?? ""),
 				party_branch: String(values.party_branch ?? formValues.party_branch ?? "") || undefined,
 				sales_order: String(values.sales_order ?? formValues.sales_order ?? "") || undefined,
+				invoice_type: String(values.invoice_type ?? formValues.invoice_type ?? "") || undefined,
 				billing_to: String(values.billing_to ?? formValues.billing_to ?? "") || undefined,
 				shipping_to: String(values.shipping_to ?? formValues.shipping_to ?? "") || undefined,
 				transporter: String(values.transporter ?? formValues.transporter ?? "") || undefined,

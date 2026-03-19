@@ -74,7 +74,7 @@ export const usePOHeaderSchema = ({
       { name: "tax_payable", label: "Tax Payable", type: "select", options: [{ label: "Yes", value: "Yes" }, { label: "No", value: "No" }], required: true, disabled: headerFieldsDisabled, grid: { xs: 12, md: 4 } },
       {
         name: "credit_term",
-        label: "Credit Term (days)",
+        label: "",
         type: "custom",
         disabled: headerFieldsDisabled,
         render: ({ value, onChange, disabled: fieldDisabled }) => (
@@ -109,7 +109,7 @@ export const usePOHeaderSchema = ({
       },
       {
         name: "delivery_timeline",
-        label: "Delivery Timeline (days)",
+        label: "",
         type: "custom",
         required: true,
         disabled: headerFieldsDisabled,
@@ -146,7 +146,7 @@ export const usePOHeaderSchema = ({
       },
       {
         name: "expected_date",
-        label: "Expected Date",
+        label: "",
         type: "custom",
         render: () => (
           <TextField

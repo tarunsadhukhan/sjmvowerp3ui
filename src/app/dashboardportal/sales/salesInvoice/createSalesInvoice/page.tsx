@@ -32,12 +32,12 @@ import { DeliveryOrderLinesDialog } from "./components/DeliveryOrderLinesDialog"
 import { useSalesInvoiceFormState } from "./hooks/useSalesInvoiceFormState";
 import { useSalesInvoiceLineItems } from "./hooks/useSalesInvoiceLineItems";
 import { useSalesInvoiceSelectOptions } from "./hooks/useSalesInvoiceSelectOptions";
-import { useSalesInvoiceHeaderSchema, useSalesInvoiceFooterSchema } from "./hooks/useSalesInvoiceFormSchemas";
+import { useSalesInvoiceHeaderSchema, useSalesInvoiceJuteHeaderSchema, useSalesInvoiceFooterSchema } from "./hooks/useSalesInvoiceFormSchemas";
 import { useSalesInvoiceFormSubmission } from "./hooks/useSalesInvoiceFormSubmission";
 import { useSalesInvoiceApproval } from "./hooks/useSalesInvoiceApproval";
 
 import type { ItemGroupCacheEntry, InvoiceSetupData } from "./types/salesInvoiceTypes";
-import { mapItemGroupDetailResponse, mapInvoiceSetupResponse, mapInvoiceDetailsToFormValues } from "./utils/salesInvoiceMappers";
+import { mapItemGroupDetailResponse, mapInvoiceSetupResponse, mapInvoiceDetailsToFormValues, buildMukamOptions } from "./utils/salesInvoiceMappers";
 import { calculateInvoiceTotals } from "./utils/salesInvoiceCalculations";
 import { buildDefaultFormValues, createBlankLine } from "./utils/salesInvoiceFactories";
 import {
@@ -45,9 +45,11 @@ import {
 	EMPTY_TRANSPORTERS,
 	EMPTY_BROKERS,
 	EMPTY_APPROVED_DELIVERY_ORDERS,
+	EMPTY_APPROVED_SALES_ORDERS,
 	EMPTY_ITEM_GROUPS,
 	EMPTY_INVOICE_TYPES,
 	EMPTY_SETUP_PARAMS,
+	isRawJuteInvoice,
 } from "./utils/salesInvoiceConstants";
 
 function InvoicePageLoading() {
@@ -67,6 +69,9 @@ export default function InvoiceTransactionPage() {
 }
 
 function InvoiceTransactionPageContent() {
+	const [mounted, setMounted] = React.useState(false);
+	React.useEffect(() => { setMounted(true); }, []);
+
 	const router = useRouter();
 	const searchParams = useSearchParams();
 
@@ -152,6 +157,7 @@ function InvoiceTransactionPageContent() {
 	const transporters = setupData?.transporters ?? EMPTY_TRANSPORTERS;
 	const brokers = setupData?.brokers ?? EMPTY_BROKERS;
 	const approvedDeliveryOrders = setupData?.approvedDeliveryOrders ?? EMPTY_APPROVED_DELIVERY_ORDERS;
+	const approvedSalesOrders = setupData?.approvedSalesOrders ?? EMPTY_APPROVED_SALES_ORDERS;
 	const itemGroups = setupData?.itemGroups ?? EMPTY_ITEM_GROUPS;
 	const invoiceTypes = setupData?.invoiceTypes ?? EMPTY_INVOICE_TYPES;
 
@@ -198,6 +204,103 @@ function InvoiceTransactionPageContent() {
 		return selectedCustomer.branches.find((b) => b.id === shippingBranchId)?.stateName ?? partyState;
 	}, [shippingBranchId, selectedCustomer, partyState]);
 
+	// Derive company branch state_code from setup data
+	const companyBranchStateCode = React.useMemo(() => {
+		if (!setupData?.branches || !branchValue) return undefined;
+		const branch = setupData.branches.find((b) => String(b.branch_id) === branchValue);
+		return branch?.state_code;
+	}, [setupData, branchValue]);
+
+	// Auto-fill shipping_state_code and intra_inter_state based on shipping_to selection
+	React.useEffect(() => {
+		if (mode === "view") return;
+		const shippingBranch = shippingBranchId && selectedCustomer?.branches
+			? selectedCustomer.branches.find((b) => b.id === shippingBranchId)
+			: undefined;
+		const shippingStateCode = shippingBranch?.stateCode ?? "";
+
+		setFormValues((prev) => {
+			const updates: Record<string, unknown> = {};
+			if (prev.shipping_state_code !== shippingStateCode) {
+				updates.shipping_state_code = shippingStateCode;
+			}
+			if (companyBranchStateCode && shippingStateCode) {
+				const intraInter = companyBranchStateCode === shippingStateCode ? "0" : "1";
+				if (prev.intra_inter_state !== intraInter) {
+					updates.intra_inter_state = intraInter;
+				}
+			}
+			if (Object.keys(updates).length === 0) return prev;
+			return { ...prev, ...updates };
+		});
+	}, [shippingBranchId, selectedCustomer, companyBranchStateCode, mode, setFormValues]);
+
+	// Auto-fill billing_state_code based on billing_to selection
+	const billingBranchId = formValues.billing_to ? String(formValues.billing_to) : undefined;
+	React.useEffect(() => {
+		if (mode === "view") return;
+		const billingBranch = billingBranchId && selectedCustomer?.branches
+			? selectedCustomer.branches.find((b) => b.id === billingBranchId)
+			: undefined;
+		const billingStateCode = billingBranch?.stateCode ?? "";
+		setFormValues((prev) => {
+			if (prev.billing_state_code === billingStateCode) return prev;
+			return { ...prev, billing_state_code: billingStateCode };
+		});
+	}, [billingBranchId, selectedCustomer, mode, setFormValues]);
+
+	// Auto-fill sales_order_id from delivery order when DO is selected
+	React.useEffect(() => {
+		if (mode === "view") return;
+		const doId = formValues.delivery_order ? String(formValues.delivery_order) : "";
+		if (!doId) return;
+		const doRecord = approvedDeliveryOrders.find((d) => d.id === doId);
+		if (!doRecord?.salesOrderId) return;
+		const soId = String(doRecord.salesOrderId);
+		setFormValues((prev) => {
+			if (prev.sales_order_id === soId) return prev;
+			return {
+				...prev,
+				sales_order_id: soId,
+				sales_order_date: doRecord.salesOrderDate ?? "",
+			};
+		});
+	}, [formValues.delivery_order, approvedDeliveryOrders, mode, setFormValues]);
+
+	// Auto-fill sales_order_date and payment_terms when sales_order_id changes
+	React.useEffect(() => {
+		if (mode === "view") return;
+		const soId = formValues.sales_order_id ? String(formValues.sales_order_id) : "";
+		if (!soId) {
+			setFormValues((prev) => {
+				if (!prev.sales_order_date && !prev.payment_terms) return prev;
+				return { ...prev, sales_order_date: "", payment_terms: "" };
+			});
+			return;
+		}
+		const soRecord = approvedSalesOrders.find((s) => s.id === soId);
+		if (!soRecord) return;
+		setFormValues((prev) => {
+			const updates: Record<string, unknown> = {};
+			const soDate = soRecord.salesOrderDate ?? "";
+			if (prev.sales_order_date !== soDate) updates.sales_order_date = soDate;
+			if (soRecord.paymentTerms != null) {
+				const ptStr = String(soRecord.paymentTerms);
+				if (prev.payment_terms !== ptStr) updates.payment_terms = ptStr;
+			}
+			if (Object.keys(updates).length === 0) return prev;
+			return { ...prev, ...updates };
+		});
+	}, [formValues.sales_order_id, approvedSalesOrders, mode, setFormValues]);
+
+	// Whether sales order dropdown should be disabled (auto-populated from DO)
+	const salesOrderDisabled = React.useMemo(() => {
+		const doId = formValues.delivery_order ? String(formValues.delivery_order) : "";
+		if (!doId) return false;
+		const doRecord = approvedDeliveryOrders.find((d) => d.id === doId);
+		return Boolean(doRecord?.salesOrderId);
+	}, [formValues.delivery_order, approvedDeliveryOrders]);
+
 	const {
 		lineItems, setLineItems, replaceItems, removeLineItems,
 		handleLineFieldChange, handleDeliveryOrderLinesConfirm,
@@ -225,6 +328,29 @@ function InvoiceTransactionPageContent() {
 			return [createBlankLine()];
 		});
 	}, [mode, setLineItems]);
+
+	const juteFormRef = React.useRef<{ submit: () => Promise<void>; isDirty: () => boolean; setValue: (name: string, value: unknown) => void } | null>(null);
+
+	// Auto-sum header claim amount from line item claim amounts for Raw Jute invoices
+	React.useEffect(() => {
+		const invoiceTypeId = String(formValues.invoice_type ?? "");
+		if (!isRawJuteInvoice(invoiceTypeId)) return;
+		if (mode === "view") return;
+
+		const sum = filledLineItems.reduce(
+			(acc, line) => acc + (Number(line.juteClaimAmountDtl) || 0),
+			0,
+		);
+		const rounded = Number(sum.toFixed(2));
+
+		setFormValues((prev) => {
+			const current = Number(prev.jute_claim_amount) || 0;
+			if (current === rounded) return prev;
+			return { ...prev, jute_claim_amount: rounded };
+		});
+
+		juteFormRef.current?.setValue("jute_claim_amount", rounded);
+	}, [filledLineItems, formValues.invoice_type, mode, setFormValues]);
 
 	const freightCharges = Number(formValues.freight_charges) || 0;
 	const roundOff = Number(formValues.round_off) || 0;
@@ -354,7 +480,7 @@ function InvoiceTransactionPageContent() {
 	);
 
 	const {
-		customerOptions, customerBranchOptions, transporterOptions, brokerOptions, deliveryOrderOptions,
+		customerOptions, customerBranchOptions, transporterOptions, brokerOptions, deliveryOrderOptions, salesOrderOptions,
 		invoiceTypeOptions, itemGroupOptions, getItemGroupLabel,
 		getItemOptions, getMakeOptions, getUomOptions,
 		getItemLabel, getMakeLabel, getUomLabel, getUomConversions, getOptionLabel,
@@ -363,6 +489,7 @@ function InvoiceTransactionPageContent() {
 		transporters,
 		brokers,
 		approvedDeliveryOrders,
+		approvedSalesOrders,
 		invoiceTypes,
 		itemGroupsFromLineItems,
 		itemGroupCache,
@@ -376,11 +503,15 @@ function InvoiceTransactionPageContent() {
 		transporterOptions,
 		brokerOptions,
 		deliveryOrderOptions,
+		salesOrderOptions,
 		invoiceTypeOptions,
 		mode,
 		headerFieldsDisabled,
+		salesOrderDisabled,
 	});
 
+	const mukamOptions = React.useMemo(() => buildMukamOptions(setupData?.mukamList ?? []), [setupData?.mukamList]);
+	const juteHeaderSchema = useSalesInvoiceJuteHeaderSchema({ mode, headerFieldsDisabled, mukamOptions, invoiceTypeId: String(formValues.invoice_type ?? "") });
 	const footerSchema = useSalesInvoiceFooterSchema({ mode });
 
 	const canEdit = mode !== "view";
@@ -557,6 +688,8 @@ function InvoiceTransactionPageContent() {
 		formValues,
 	});
 
+	if (!mounted) return <InvoicePageLoading />;
+
 	const primaryActionLabel = mode === "create" ? "Create" : "Save";
 	const handleSaveClick = React.useCallback(() => {
 		if (!formRef.current?.submit) return;
@@ -645,6 +778,9 @@ function InvoiceTransactionPageContent() {
 				showDeliveryOrderButton={showDOButton}
 				onDeliveryOrderSelect={handleDOSelect}
 				deliveryOrderButtonDisabled={!formValues.delivery_order}
+				juteSchema={juteHeaderSchema}
+				invoiceTypeId={String(formValues.invoice_type ?? "")}
+				juteFormRef={juteFormRef}
 			/>
 
 			<DeliveryOrderLinesDialog

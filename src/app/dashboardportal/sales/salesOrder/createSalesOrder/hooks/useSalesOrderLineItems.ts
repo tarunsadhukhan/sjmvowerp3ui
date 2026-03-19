@@ -31,8 +31,8 @@ type UseSalesOrderLineItemsParams = {
 	itemGroupLoading: Partial<Record<string, boolean>>;
 	ensureItemGroupData: (groupId: string) => void;
 	itemGroups: ReadonlyArray<ItemGroupRecord>;
-	/** Current invoice type from form header (\"2\" = Hessian) */
-	invoiceTypeId?: string;
+	/** Resolved invoice type code from form header (e.g. "hessian", "govt_skg") */
+	invoiceTypeCode?: string;
 	/** Broker commission percent from form header */
 	brokeragePercent?: number;
 };
@@ -46,7 +46,7 @@ export const useSalesOrderLineItems = ({
 	itemGroupLoading,
 	ensureItemGroupData,
 	itemGroups,
-	invoiceTypeId,
+	invoiceTypeCode,
 	brokeragePercent,
 }: UseSalesOrderLineItemsParams) => {
 	const {
@@ -61,18 +61,33 @@ export const useSalesOrderLineItems = ({
 		maintainTrailingBlank: true,
 	});
 
-	const calculateLineTax = (amount: number, taxPct: number) => {
+	// Store in refs to keep calculateLineTax stable across renders
+	const billingToStateRef = React.useRef(billingToState);
+	billingToStateRef.current = billingToState;
+	const shippingToStateRef = React.useRef(shippingToState);
+	shippingToStateRef.current = shippingToState;
+	const coConfigRef = React.useRef(coConfig);
+	coConfigRef.current = coConfig;
+
+	const calculateLineTax = React.useCallback((amount: number, taxPct: number) => {
 		if (!taxPct || !amount) return { igst: 0, cgst: 0, sgst: 0, total: 0 };
 		const taxAmount = (amount * taxPct) / 100;
-		const isSameState = billingToState && shippingToState && billingToState === shippingToState;
-		if (coConfig?.india_gst && isSameState) {
+		const isSameState = billingToStateRef.current && shippingToStateRef.current && billingToStateRef.current === shippingToStateRef.current;
+		if (coConfigRef.current?.india_gst && isSameState) {
 			const half = taxAmount / 2;
 			return { igst: 0, cgst: Math.round(half * 100) / 100, sgst: Math.round(half * 100) / 100, total: Math.round(taxAmount * 100) / 100 };
 		}
 		return { igst: Math.round(taxAmount * 100) / 100, cgst: 0, sgst: 0, total: Math.round(taxAmount * 100) / 100 };
-	};
+	}, []);
 
-	const calculateLineAmount = (qty: number, rate: number, discountMode?: number, discountValue?: number) => {
+	/** Round a number to the specified decimal places. */
+	const roundTo = React.useCallback((value: number, decimals: number | undefined): number => {
+		if (decimals == null || decimals < 0) return value;
+		const factor = Math.pow(10, decimals);
+		return Math.round(value * factor) / factor;
+	}, []);
+
+	const calculateLineAmount = React.useCallback((qty: number, rate: number, discountMode?: number, discountValue?: number) => {
 		const gross = qty * rate;
 		let discountAmount = 0;
 		if (discountMode === 1 && discountValue) {
@@ -81,9 +96,42 @@ export const useSalesOrderLineItems = ({
 			discountAmount = discountValue * qty;
 		}
 		return { amount: Math.max(0, gross - discountAmount), discountAmount };
-	};
+	}, []);
 
-	const isHessian = invoiceTypeId === "2";
+	const isHessian = invoiceTypeCode === "hessian";
+
+	/**
+	 * Resolve the effective qty rounding for a line item.
+	 * Priority: UOM-specific rounding from uom_item_map_mst > item-level uom_rounding from item_mst.
+	 */
+	const resolveQtyRounding = React.useCallback(
+		(groupId: string, itemId: string, uomId: string): number | undefined => {
+			const cache = itemGroupCache[groupId];
+			if (!cache) return undefined;
+			// Check UOM-specific rounding from conversions
+			const conversions = cache.uomConversionsByItemId[itemId];
+			if (conversions?.length) {
+				for (const conv of conversions) {
+					if (conv.mapFromId === uomId || conv.mapToId === uomId) {
+						if (conv.rounding != null) return conv.rounding;
+					}
+				}
+			}
+			// Fall back to item-level uom_rounding
+			const itemRounding = cache.itemUomRoundingById?.[itemId];
+			return itemRounding ?? undefined;
+		},
+		[itemGroupCache],
+	);
+
+	/** Resolve rate rounding for an item. Default 2. */
+	const resolveRateRounding = React.useCallback(
+		(groupId: string, itemId: string): number => {
+			const cache = itemGroupCache[groupId];
+			return cache?.itemRateRoundingById?.[itemId] ?? 2;
+		},
+		[itemGroupCache],
+	);
 
 	/**
 	 * Look up the Bales-per-MT conversion factor for an item.
@@ -153,16 +201,22 @@ export const useSalesOrderLineItems = ({
 	);
 
 	const mapLineToEditable = React.useCallback((line: SalesOrderLine): EditableLineItem => {
+		const groupId = line.itemGroup ? String(line.itemGroup) : "";
+		const itemId = line.item ?? "";
+		const uomId = line.uom ?? line.qtyUom ?? "";
+		const qtyRound = groupId && itemId && uomId ? resolveQtyRounding(groupId, itemId, uomId) : undefined;
+		const rateRound = groupId && itemId ? resolveRateRounding(groupId, itemId) : 2;
+
 		const base: EditableLineItem = {
 			id: line.id ? String(line.id) : generateLineId(),
 			quotationLineitemId: line.quotationLineitemId,
 			hsnCode: line.hsnCode,
-			itemGroup: line.itemGroup ? String(line.itemGroup) : "",
-			item: line.item ?? "",
+			itemGroup: groupId,
+			item: itemId,
 			itemMake: line.itemMake ?? "",
 			quantity: line.quantity != null ? String(line.quantity) : "",
 			rate: line.rate != null ? String(line.rate) : "",
-			uom: line.uom ?? "",
+			uom: uomId,
 			discountType: line.discountType ?? undefined,
 			discountValue: line.discountedRate != null ? String(line.discountedRate) : "",
 			discountAmount: line.discountAmount ?? undefined,
@@ -173,6 +227,8 @@ export const useSalesOrderLineItems = ({
 			cgstAmount: line.gst?.cgstAmount ?? undefined,
 			sgstAmount: line.gst?.sgstAmount ?? undefined,
 			taxAmount: line.gst?.gstTotal ?? undefined,
+			qtyRounding: qtyRound,
+			rateRounding: rateRound,
 		};
 
 		// Restore hessian fields when present (invoice_type = 2)
@@ -191,8 +247,26 @@ export const useSalesOrderLineItems = ({
 			base.conversionFactor = convFactor || undefined;
 		}
 
+		// Restore jute detail fields when present (invoice_type = 4)
+		const jd = line.juteDtl;
+		if (jd) {
+			base.juteClaimRate = jd.claimRate != null ? String(jd.claimRate) : "";
+			base.juteClaimAmountDtl = jd.claimAmountDtl != null ? String(jd.claimAmountDtl) : "";
+			base.juteClaimDesc = jd.claimDesc ?? "";
+			base.juteUnitConversion = jd.unitConversion ?? "";
+			base.juteQtyUnitConversion = jd.qtyUnitConversion != null ? String(jd.qtyUnitConversion) : "";
+		}
+
+		// Restore govt SKG detail fields when present (invoice_type = 5)
+		const gd = line.govtskgDtl;
+		if (gd) {
+			base.govtskgPackSheet = gd.packSheet != null ? String(gd.packSheet) : "";
+			base.govtskgNetWeight = gd.netWeight != null ? String(gd.netWeight) : "";
+			base.govtskgTotalWeight = gd.totalWeight != null ? String(gd.totalWeight) : "";
+		}
+
 		return base;
-	}, []);
+	}, [resolveQtyRounding, resolveRateRounding]);
 
 	const handleLineFieldChange = React.useCallback(
 		(id: string, field: keyof EditableLineItem, rawValue: string | number) => {
@@ -229,11 +303,16 @@ export const useSalesOrderLineItems = ({
 						if (defaultUom && uomOptions.some((opt) => opt.value === defaultUom)) nextUom = defaultUom;
 						else if (uomOptions.length) nextUom = uomOptions[0].value;
 						const tax = calculateLineTax(0, defaultTax || 0);
+						const qtyRound = resolveQtyRounding(item.itemGroup, value, nextUom);
+						const rateRound = resolveRateRounding(item.itemGroup, value);
+						const roundedRate = defaultRate != null ? roundTo(defaultRate, rateRound) : undefined;
 						const updated: EditableLineItem = {
 							...item, item: value, uom: nextUom,
-							rate: defaultRate != null ? String(defaultRate) : item.rate,
+							rate: roundedRate != null ? String(roundedRate) : item.rate,
 							taxPercentage: defaultTax,
 							igstAmount: tax.igst, cgstAmount: tax.cgst, sgstAmount: tax.sgst, taxAmount: tax.total,
+							qtyRounding: qtyRound,
+							rateRounding: rateRound,
 						};
 						// In hessian mode, also resolve the conversion factor for the new item
 						if (isHessian && value && nextUom) {
@@ -241,7 +320,7 @@ export const useSalesOrderLineItems = ({
 							updated.conversionFactor = convFactor;
 							// Reset hessian user-entered fields — user must re-enter after item change
 							updated.qtyBales = "";
-							updated.rawRateMt = defaultRate != null ? String(defaultRate) : "";
+							updated.rawRateMt = roundedRate != null ? String(roundedRate) : "";
 							updated.ratePerBale = undefined;
 							updated.billingRateMt = undefined;
 							updated.billingRateBale = undefined;
@@ -273,8 +352,11 @@ export const useSalesOrderLineItems = ({
 					prev.map((item) => {
 						if (item.id !== id) return item;
 						const updated = { ...item, [field]: sanitized };
-						const qty = Number(updated.quantity) || 0;
-						const rate = Number(updated.rate) || 0;
+						// Apply rounding: quantity uses qtyRounding, rate uses rateRounding (default 2)
+						const rawQty = Number(updated.quantity) || 0;
+						const rawRate = Number(updated.rate) || 0;
+						const qty = updated.qtyRounding != null ? roundTo(rawQty, updated.qtyRounding) : rawQty;
+						const rate = roundTo(rawRate, updated.rateRounding ?? 2);
 						const { amount, discountAmount } = calculateLineAmount(qty, rate, updated.discountType, Number(updated.discountValue) || 0);
 						updated.discountAmount = discountAmount;
 						updated.amount = amount;
@@ -295,8 +377,10 @@ export const useSalesOrderLineItems = ({
 					prev.map((item) => {
 						if (item.id !== id) return item;
 						const updated = { ...item, discountType: modeValue, discountValue: "" };
-						const qty = Number(updated.quantity) || 0;
-						const rate = Number(updated.rate) || 0;
+						const rawQty = Number(updated.quantity) || 0;
+						const rawRate = Number(updated.rate) || 0;
+						const qty = updated.qtyRounding != null ? roundTo(rawQty, updated.qtyRounding) : rawQty;
+						const rate = roundTo(rawRate, updated.rateRounding ?? 2);
 						const { amount, discountAmount } = calculateLineAmount(qty, rate, modeValue, 0);
 						updated.discountAmount = discountAmount;
 						updated.amount = amount;
@@ -316,13 +400,41 @@ export const useSalesOrderLineItems = ({
 				setLineItems((prev) =>
 					prev.map((item) => {
 						if (item.id !== id) return item;
-						const rate = Number(item.rate) || 0;
+						const rawRate = Number(item.rate) || 0;
+						const rate = roundTo(rawRate, item.rateRounding ?? 2);
 						let discountValue = Number(sanitized) || 0;
 						if (item.discountType === 1 && discountValue >= 100) discountValue = 99.99;
 						else if (item.discountType === 2 && discountValue >= rate && rate > 0) discountValue = rate - 0.01;
 						const updated = { ...item, discountValue: String(discountValue === 0 ? sanitized : discountValue) };
-						const qty = Number(updated.quantity) || 0;
+						const rawQty = Number(updated.quantity) || 0;
+						const qty = updated.qtyRounding != null ? roundTo(rawQty, updated.qtyRounding) : rawQty;
 						const { amount, discountAmount } = calculateLineAmount(qty, rate, item.discountType, discountValue);
+						updated.discountAmount = discountAmount;
+						updated.amount = amount;
+						const tax = calculateLineTax(amount, updated.taxPercentage || 0);
+						updated.igstAmount = tax.igst;
+						updated.cgstAmount = tax.cgst;
+						updated.sgstAmount = tax.sgst;
+						updated.taxAmount = tax.total;
+						return updated;
+					}),
+				);
+				return;
+			}
+
+			if (field === "uom") {
+				setLineItems((prev) =>
+					prev.map((item) => {
+						if (item.id !== id) return item;
+						const updated = { ...item, uom: value };
+						// Update qty rounding based on new UOM
+						updated.qtyRounding = resolveQtyRounding(item.itemGroup, item.item, value);
+						// Recalculate amount with updated rounding
+						const rawQty = Number(updated.quantity) || 0;
+						const rawRate = Number(updated.rate) || 0;
+						const qty = updated.qtyRounding != null ? roundTo(rawQty, updated.qtyRounding) : rawQty;
+						const rate = roundTo(rawRate, updated.rateRounding ?? 2);
+						const { amount, discountAmount } = calculateLineAmount(qty, rate, updated.discountType, Number(updated.discountValue) || 0);
 						updated.discountAmount = discountAmount;
 						updated.amount = amount;
 						const tax = calculateLineTax(amount, updated.taxPercentage || 0);
@@ -340,7 +452,7 @@ export const useSalesOrderLineItems = ({
 				prev.map((item) => (item.id === id ? { ...item, [field]: value } as EditableLineItem : item)),
 			);
 		},
-		[mode, setLineItems, itemGroupCache, itemGroupLoading, ensureItemGroupData, billingToState, shippingToState, coConfig, isHessian, getConversionFactor, applyHessianToLine],
+		[mode, setLineItems, itemGroupCache, itemGroupLoading, ensureItemGroupData, isHessian, getConversionFactor, applyHessianToLine, calculateLineTax, calculateLineAmount, resolveQtyRounding, resolveRateRounding, roundTo],
 	);
 
 	const handleQuotationItemsConfirm = React.useCallback(
@@ -349,29 +461,35 @@ export const useSalesOrderLineItems = ({
 				const filledLines = prev.filter(lineHasAnyData);
 				const newLines: EditableLineItem[] = items.map((item) => {
 					const groupId = String(item.item_grp_id ?? "");
+					const itemId = String(item.item_id ?? "");
+					const uomId = String(item.uom_id ?? "");
 					if (groupId && !itemGroupCache[groupId]) ensureItemGroupData(groupId);
+					const qtyRound = groupId && itemId && uomId ? resolveQtyRounding(groupId, itemId, uomId) : undefined;
+					const rateRound = groupId && itemId ? resolveRateRounding(groupId, itemId) : 2;
 					return {
 						id: generateLineId(),
 						quotationLineitemId: item.sales_quotation_dtl_id ? Number(item.sales_quotation_dtl_id) : undefined,
 						hsnCode: item.hsn_code ? String(item.hsn_code) : undefined,
 						itemGroup: groupId,
-						item: String(item.item_id ?? ""),
+						item: itemId,
 						itemMake: item.item_make_id ? String(item.item_make_id) : "",
 						quantity: String(item.quantity ?? ""),
 						rate: String(item.rate ?? ""),
-						uom: String(item.uom_id ?? ""),
+						uom: uomId,
 						discountType: item.discount_type ? Number(item.discount_type) : undefined,
 						discountValue: item.discounted_rate != null ? String(item.discounted_rate) : "",
 						discountAmount: item.discount_amount ? Number(item.discount_amount) : undefined,
 						amount: item.total_amount ? Number(item.total_amount) : undefined,
 						remarks: item.remarks ? String(item.remarks) : "",
 						taxPercentage: item.tax_percentage ? Number(item.tax_percentage) : undefined,
+						qtyRounding: qtyRound,
+						rateRounding: rateRound,
 					};
 				});
 				return [...filledLines, ...newLines];
 			});
 		},
-		[ensureItemGroupData, itemGroupCache, setLineItems],
+		[ensureItemGroupData, itemGroupCache, setLineItems, resolveQtyRounding, resolveRateRounding],
 	);
 
 	const filledLineItems = React.useMemo(() => lineItems.filter(lineHasAnyData), [lineItems]);

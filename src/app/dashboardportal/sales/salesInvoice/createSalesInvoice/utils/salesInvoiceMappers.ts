@@ -9,6 +9,8 @@ import type {
 	BrokerRecordRaw,
 	ApprovedDeliveryOrderRecord,
 	ApprovedDeliveryOrderRecordRaw,
+	ApprovedSalesOrderRecord,
+	ApprovedSalesOrderRecordRaw,
 	InvoiceTypeRecord,
 	InvoiceTypeRecordRaw,
 	ItemGroupRecord,
@@ -21,6 +23,7 @@ import type {
 	InvoiceSetup1ResponseRaw,
 	InvoiceSetup2ResponseRaw,
 	InvoiceSetupData,
+	MukamRecord,
 	Option,
 	UomConversionEntry,
 } from "../types/salesInvoiceTypes";
@@ -42,6 +45,7 @@ export const mapCustomerBranchRecords = (records: unknown[]): CustomerBranchReco
 				fullAddress,
 				stateName: data?.state_name,
 				stateId: data?.state_id,
+				stateCode: data?.state_code,
 				gstNo: data?.gst_no,
 			} satisfies CustomerBranchRecord;
 		})
@@ -104,6 +108,9 @@ export const mapApprovedDeliveryOrders = (records: unknown[]): ApprovedDeliveryO
 				deliveryOrderDate: data?.delivery_order_date,
 				partyName: data?.party_name,
 				netAmount: data?.net_amount,
+				salesOrderId: data?.sales_order_id,
+				salesOrderDate: data?.sales_order_date,
+				salesOrderNo: data?.sales_order_no,
 			} satisfies ApprovedDeliveryOrderRecord;
 		})
 		.filter(Boolean) as ApprovedDeliveryOrderRecord[];
@@ -137,6 +144,35 @@ export const mapInvoiceTypeRecords = (records: unknown[]): InvoiceTypeRecord[] =
 		})
 		.filter(Boolean) as InvoiceTypeRecord[];
 
+export const mapMukamRecords = (records: unknown[]): MukamRecord[] =>
+	records
+		.map((row) => {
+			const data = row as { mukam_id?: number; mukam_name?: string };
+			if (!data?.mukam_id) return null;
+			return { mukam_id: Number(data.mukam_id), mukam_name: String(data.mukam_name ?? "") } satisfies MukamRecord;
+		})
+		.filter(Boolean) as MukamRecord[];
+
+export const mapApprovedSalesOrders = (records: unknown[]): ApprovedSalesOrderRecord[] =>
+	records
+		.map((row) => {
+			const data = row as ApprovedSalesOrderRecordRaw;
+			const id = data?.sales_order_id ?? data?.id;
+			if (!id) return null;
+			return {
+				id: String(id),
+				salesOrderNo: data?.sales_order_no ?? String(id),
+				salesOrderDate: data?.sales_order_date,
+				partyId: data?.party_id,
+				partyName: data?.party_name,
+				paymentTerms: data?.payment_terms,
+			} satisfies ApprovedSalesOrderRecord;
+		})
+		.filter(Boolean) as ApprovedSalesOrderRecord[];
+
+export const buildMukamOptions = (mukams: MukamRecord[]): Option[] =>
+	mukams.map((m) => ({ label: m.mukam_name, value: String(m.mukam_id) }));
+
 export const mapInvoiceSetupResponse = (response: unknown): InvoiceSetupData => {
 	try {
 		const result = response as InvoiceSetup1ResponseRaw;
@@ -145,8 +181,11 @@ export const mapInvoiceSetupResponse = (response: unknown): InvoiceSetupData => 
 			transporters: mapTransporterRecords(result?.transporters ?? []),
 			brokers: mapBrokerRecords(result?.brokers ?? []),
 			approvedDeliveryOrders: mapApprovedDeliveryOrders(result?.approved_delivery_orders ?? []),
+			approvedSalesOrders: mapApprovedSalesOrders(result?.approved_sales_orders ?? []),
 			itemGroups: mapItemGroupRecords(result?.item_groups ?? []),
 			invoiceTypes: mapInvoiceTypeRecords(result?.invoice_types ?? []),
+			mukamList: mapMukamRecords((result?.mukam_list as unknown[]) ?? []),
+			branches: (result?.branches as InvoiceSetupData["branches"]) ?? [],
 		} satisfies InvoiceSetupData;
 	} catch (error) {
 		console.error("Failed to map invoice setup response", error);
@@ -287,18 +326,9 @@ export const mapInvoiceDetailsToFormValues = (
 		party?: unknown;
 		partyBranch?: unknown;
 		deliveryOrder?: unknown;
-		salesDeliveryOrderId?: unknown;
-		brokerId?: unknown;
 		billingTo?: unknown;
-		billingToId?: unknown;
 		shippingTo?: unknown;
-		shippingToId?: unknown;
-		shippingStateCode?: unknown;
 		transporter?: unknown;
-		transporterNameStored?: string;
-		transporterAddress?: string;
-		transporterStateCode?: string;
-		transporterStateName?: string;
 		vehicleNo?: string;
 		ewayBillNo?: string;
 		ewayBillDate?: string;
@@ -309,20 +339,36 @@ export const mapInvoiceDetailsToFormValues = (
 		internalNote?: string;
 		termsConditions?: string;
 		grossAmount?: number;
-		taxAmount?: number;
-		taxPayable?: number;
 		netAmount?: number;
 		freightCharges?: number;
 		roundOff?: number;
-		intraInterState?: string;
 		dueDate?: string;
 		typeOfSale?: string;
-		taxId?: unknown;
+		taxId?: string;
+		transporterAddress?: string;
+		transporterStateCode?: string;
+		transporterStateName?: string;
 		containerNo?: string;
-		contractNo?: unknown;
+		contractNo?: string;
 		contractDate?: string;
 		consignmentNo?: string;
 		consignmentDate?: string;
+		paymentTerms?: number;
+		salesOrderId?: number;
+		salesOrderDate?: string;
+		billingStateCode?: number;
+		shippingStateCode?: string | number;
+		intraInterState?: string | number;
+		jute?: {
+			mrNo?: string;
+			mrId?: number;
+			claimAmount?: number;
+			otherReference?: string;
+			unitConversion?: string;
+			claimDescription?: string;
+			mukamId?: number;
+			mukamName?: string;
+		} | null;
 	},
 	defaultValues: Record<string, unknown>,
 ): Record<string, unknown> => ({
@@ -331,15 +377,10 @@ export const mapInvoiceDetailsToFormValues = (
 	date: normalizeDate(details.invoiceDate) || toStringValue(defaultValues.date),
 	party: toStringValue(details.party ?? defaultValues.party),
 	party_branch: toStringValue(details.partyBranch ?? defaultValues.party_branch),
-	delivery_order: toStringValue(details.deliveryOrder ?? details.salesDeliveryOrderId ?? defaultValues.delivery_order),
-	broker: toStringValue(details.brokerId ?? defaultValues.broker),
-	billing_to: toStringValue(details.billingTo ?? details.billingToId ?? defaultValues.billing_to),
-	shipping_to: toStringValue(details.shippingTo ?? details.shippingToId ?? defaultValues.shipping_to),
+	delivery_order: toStringValue(details.deliveryOrder ?? defaultValues.delivery_order),
+	billing_to: toStringValue(details.billingTo ?? defaultValues.billing_to),
+	shipping_to: toStringValue(details.shippingTo ?? defaultValues.shipping_to),
 	transporter: toStringValue(details.transporter ?? defaultValues.transporter),
-	transporter_name: toStringValue(details.transporterNameStored ?? defaultValues.transporter_name),
-	transporter_address: toStringValue(details.transporterAddress ?? defaultValues.transporter_address),
-	transporter_state_code: toStringValue(details.transporterStateCode ?? defaultValues.transporter_state_code),
-	transporter_state_name: toStringValue(details.transporterStateName ?? defaultValues.transporter_state_name),
 	vehicle_no: toStringValue(details.vehicleNo ?? defaultValues.vehicle_no),
 	eway_bill_no: toStringValue(details.ewayBillNo ?? defaultValues.eway_bill_no),
 	eway_bill_date: normalizeDate(details.ewayBillDate) || toStringValue(defaultValues.eway_bill_date),
@@ -354,9 +395,22 @@ export const mapInvoiceDetailsToFormValues = (
 	due_date: normalizeDate(details.dueDate) || toStringValue(defaultValues.due_date),
 	type_of_sale: toStringValue(details.typeOfSale ?? defaultValues.type_of_sale),
 	tax_id: toStringValue(details.taxId ?? defaultValues.tax_id),
+	transporter_address: toStringValue(details.transporterAddress ?? defaultValues.transporter_address),
+	transporter_state_code: toStringValue(details.transporterStateCode ?? defaultValues.transporter_state_code),
+	transporter_state_name: toStringValue(details.transporterStateName ?? defaultValues.transporter_state_name),
 	container_no: toStringValue(details.containerNo ?? defaultValues.container_no),
 	contract_no: toStringValue(details.contractNo ?? defaultValues.contract_no),
 	contract_date: normalizeDate(details.contractDate) || toStringValue(defaultValues.contract_date),
 	consignment_no: toStringValue(details.consignmentNo ?? defaultValues.consignment_no),
 	consignment_date: normalizeDate(details.consignmentDate) || toStringValue(defaultValues.consignment_date),
+	payment_terms: details.paymentTerms != null ? String(details.paymentTerms) : toStringValue(defaultValues.payment_terms),
+	sales_order_id: details.salesOrderId != null ? String(details.salesOrderId) : toStringValue(defaultValues.sales_order_id),
+	sales_order_date: normalizeDate(details.salesOrderDate) || toStringValue(defaultValues.sales_order_date),
+	billing_state_code: details.billingStateCode != null ? String(details.billingStateCode) : toStringValue(defaultValues.billing_state_code),
+	shipping_state_code: details.shippingStateCode != null ? String(details.shippingStateCode) : toStringValue(defaultValues.shipping_state_code),
+	intra_inter_state: details.intraInterState != null ? String(details.intraInterState) : toStringValue(defaultValues.intra_inter_state),
+	jute_mr_no: toStringValue(details.jute?.mrNo ?? defaultValues.jute_mr_no),
+	jute_claim_amount: details.jute?.claimAmount != null ? String(details.jute.claimAmount) : toStringValue(defaultValues.jute_claim_amount),
+	jute_claim_description: toStringValue(details.jute?.claimDescription ?? defaultValues.jute_claim_description),
+	jute_mukam_id: details.jute?.mukamId != null ? String(details.jute.mukamId) : toStringValue(defaultValues.jute_mukam_id),
 });

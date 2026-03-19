@@ -102,7 +102,7 @@ export function useJutePOFormSchemas({
       },
       {
         name: "juteUnit",
-        label: "Default Unit",
+        label: "Unit Conversion",
         type: "select",
         required: true,
         disabled: isViewMode,

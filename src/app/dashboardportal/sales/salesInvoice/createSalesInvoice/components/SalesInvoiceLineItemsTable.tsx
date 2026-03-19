@@ -4,7 +4,7 @@ import { Input } from "@/components/ui/input";
 import type { TransactionLineColumn } from "@/components/ui/transaction";
 import type { EditableLineItem, Option, UomConversionEntry } from "../types/salesInvoiceTypes";
 import { computeConvertedRate } from "@/utils/uomConversion";
-import { DISCOUNT_TYPE } from "../utils/salesInvoiceConstants";
+import { DISCOUNT_TYPE, isJuteInvoice } from "../utils/salesInvoiceConstants";
 
 const DISCOUNT_TYPE_OPTIONS: Option[] = [
 	{ label: "None", value: "" },
@@ -264,6 +264,98 @@ export const useInvoiceLineItemColumns = ({
 					),
 				getTooltip: ({ item }) => (item.remarks ? item.remarks : undefined),
 			},
+			...(isJuteInvoice(invoiceTypeId) ? [
+				{
+					id: "juteClaimRate" as const,
+					header: "Claim Rate",
+					width: "0.7fr",
+					minWidth: "80px",
+					renderCell: ({ item }: { item: EditableLineItem }) =>
+						canEdit ? (
+							<Input
+								type="text"
+								value={item.juteClaimRate ?? ""}
+								onChange={(e) => onFieldChange(item.id, "juteClaimRate", e.target.value)}
+								placeholder="0"
+								className="h-8 text-sm"
+							/>
+						) : (
+							<span className="block truncate text-sm">{item.juteClaimRate ?? "-"}</span>
+						),
+				},
+				{
+					id: "juteClaimAmountDtl" as const,
+					header: "Claim Amt",
+					width: "0.7fr",
+					minWidth: "80px",
+					renderCell: ({ item }: { item: EditableLineItem }) =>
+						canEdit ? (
+							<Input
+								type="text"
+								value={item.juteClaimAmountDtl ?? ""}
+								onChange={(e) => onFieldChange(item.id, "juteClaimAmountDtl", e.target.value)}
+								placeholder="0"
+								className="h-8 text-sm"
+							/>
+						) : (
+							<span className="block truncate text-sm">{item.juteClaimAmountDtl ?? "-"}</span>
+						),
+				},
+				{
+					id: "juteClaimDesc" as const,
+					header: "Claim Desc",
+					width: "1fr",
+					minWidth: "100px",
+					renderCell: ({ item }: { item: EditableLineItem }) =>
+						canEdit ? (
+							<Input
+								type="text"
+								value={item.juteClaimDesc ?? ""}
+								onChange={(e) => onFieldChange(item.id, "juteClaimDesc", e.target.value)}
+								placeholder=""
+								className="h-8 text-sm"
+							/>
+						) : (
+							<span className="block truncate text-sm">{item.juteClaimDesc || "-"}</span>
+						),
+				},
+				{
+					id: "juteUnitConversion" as const,
+					header: "Unit Conv.",
+					width: "0.7fr",
+					minWidth: "80px",
+					renderCell: ({ item }: { item: EditableLineItem }) =>
+						canEdit ? (
+							<Input
+								type="text"
+								value={item.juteUnitConversion ?? ""}
+								onChange={(e) => onFieldChange(item.id, "juteUnitConversion", e.target.value)}
+								placeholder=""
+								className="h-8 text-sm"
+							/>
+						) : (
+							<span className="block truncate text-sm">{item.juteUnitConversion || "-"}</span>
+						),
+				},
+				{
+					id: "juteQtyUnitConversion" as const,
+					header: "Qty (Conv.)",
+					width: "0.7fr",
+					minWidth: "80px",
+					renderCell: ({ item }: { item: EditableLineItem }) =>
+						canEdit ? (
+							<Input
+								type="text"
+								value={item.juteQtyUnitConversion ?? ""}
+								onChange={(e) => onFieldChange(item.id, "juteQtyUnitConversion", e.target.value)}
+								placeholder="0"
+								className="h-8 text-sm"
+							/>
+						) : (
+							<span className="block truncate text-sm">{item.juteQtyUnitConversion ?? "-"}</span>
+						),
+				},
+			] as TransactionLineColumn<EditableLineItem>[] : []),
 		],
 		[canEdit, itemGroupOptions, getItemGroupLabel, getItemOptions, getItemLabel, getUomOptions, getUomLabel, onFieldChange, invoiceTypeId, getUomConversions],
 	);

@@ -8,6 +8,8 @@ type UseSalesOrderTaxCalculationsParams = {
 	billingToState?: string;
 	shippingToState?: string;
 	setLineItems: React.Dispatch<React.SetStateAction<EditableLineItem[]>>;
+	/** When true, the next tax recalculation effect is skipped (auto-resets to false). */
+	suppressRef?: React.MutableRefObject<boolean>;
 };
 
 export const useSalesOrderTaxCalculations = ({
@@ -16,6 +18,7 @@ export const useSalesOrderTaxCalculations = ({
 	billingToState,
 	shippingToState,
 	setLineItems,
+	suppressRef,
 }: UseSalesOrderTaxCalculationsParams) => {
 	const taxType = React.useMemo(() => {
 		if (!coConfig?.india_gst) return "";
@@ -27,6 +30,10 @@ export const useSalesOrderTaxCalculations = ({
 
 	React.useEffect(() => {
 		if (mode === "view") return;
+		if (suppressRef?.current) {
+			suppressRef.current = false;
+			return;
+		}
 		if (!coConfig?.india_gst || !billingToState || !shippingToState) return;
 
 		setLineItems((prev) =>

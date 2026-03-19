@@ -8,6 +8,10 @@ import TransactionWrapper, {
 import {
 	useTransactionSetup,
 	useTransactionPreview,
+	buildApprovalTransactionActions,
+	useRejectDialog,
+	useUnsavedChanges,
+	AutoResizeTextarea,
 } from "@/components/ui/transaction";
 import { useBranchOptions } from "@/utils/branchUtils";
 import {
@@ -15,7 +19,6 @@ import {
 	fetchIssueSetup1,
 	getIssueById,
 	updateIssue,
-	updateIssueStatus,
 	type IssueDetails,
 	type InventoryListItem,
 } from "@/utils/issueService";
@@ -30,10 +33,18 @@ import type {
 	IssueSetupData,
 } from "./types/issueTypes";
 
+import {
+	Dialog,
+	DialogContent,
+	DialogHeader,
+	DialogFooter,
+	DialogTitle,
+	DialogDescription,
+} from "@/components/ui/dialog";
+import { Button } from "@/components/ui/button";
+
 // Utils
 import {
-	ISSUE_STATUS_IDS,
-	ISSUE_STATUS_LABELS,
 	EMPTY_DEPARTMENTS,
 	EMPTY_EXPENSES,
 	EMPTY_PROJECTS,
@@ -42,7 +53,6 @@ import {
 	EMPTY_SETUP_PARAMS,
 } from "./utils/issueConstants";
 import {
-	buildDefaultFormValues,
 	createBlankLine,
 	createLineFromInventory,
 	lineIsComplete,
@@ -57,6 +67,7 @@ import { useIssueFormState } from "./hooks/useIssueFormState";
 import { useIssueLineItems } from "./hooks/useIssueLineItems";
 import { useIssueFormSchema } from "./hooks/useIssueFormSchemas";
 import { useIssueSelectOptions } from "./hooks/useIssueSelectOptions";
+import { useIssueApproval } from "./hooks/useIssueApproval";
 
 // Components
 import { IssueHeaderForm } from "./components/IssueHeaderForm";
@@ -287,6 +298,7 @@ function IssueTransactionPageContent() {
 					mapLineToEditable(line as unknown as Record<string, unknown>)
 				);
 				replaceItems(mappedLines.length ? mappedLines : [createBlankLine()]);
+				setBaseline(base, mappedLines.filter(lineHasAnyData));
 				setPageError(null);
 			})
 			.catch((error) => {
@@ -378,31 +390,74 @@ function IssueTransactionPageContent() {
 		projectOptions,
 	});
 
+	// Approval hook
+	const {
+		approvalLoading,
+		approvalInfo,
+		approvalPermissions,
+		statusChipProps,
+		handleOpen,
+		handleCancelDraft,
+		handleReopen,
+		handleSendForApproval,
+		handleApprove,
+		handleReject,
+		handleViewApprovalLog,
+		handleClone,
+	} = useIssueApproval({
+		mode,
+		requestedId,
+		formValues,
+		issueDetails,
+		coId,
+		getMenuId,
+		setIssueDetails,
+		setFormValues,
+	});
+
+	// Reject dialog
+	const {
+		rejectDialogOpen,
+		rejectReason,
+		setRejectReason,
+		openRejectDialog,
+		handleRejectConfirm,
+		handleRejectCancel,
+	} = useRejectDialog(handleReject);
+
 	// Derived values
-	const canEdit = mode !== "view";
+	const canEdit = mode !== "view" && approvalPermissions.canSave === true;
 	const filledLineItems = React.useMemo(
 		() => lineItems.filter((item) => lineIsComplete(item)),
 		[lineItems]
 	);
 	const lineItemsValid = filledLineItems.length > 0;
 
-	// Status helpers
-	const currentStatusId = React.useMemo(() => {
-		return issueDetails?.statusId ?? ISSUE_STATUS_IDS.DRAFT;
-	}, [issueDetails?.statusId]);
+	// Unsaved changes detection
+	const getComparableLineData = React.useCallback(
+		(item: EditableLineItem) => ({
+			itemId: item.itemId,
+			inwardDtlId: item.inwardDtlId,
+			quantity: item.quantity,
+			expenseType: item.expenseType,
+			costFactor: item.costFactor,
+			machine: item.machine,
+			remarks: item.remarks,
+		}),
+		[]
+	);
 
-	const statusChipProps = React.useMemo(() => {
-		const label =
-			ISSUE_STATUS_LABELS[currentStatusId as keyof typeof ISSUE_STATUS_LABELS] ??
-			issueDetails?.status ??
-			"Draft";
-		let variant: "default" | "success" | "warning" | "destructive" = "default";
-		if (currentStatusId === ISSUE_STATUS_IDS.APPROVED) variant = "success";
-		else if (currentStatusId === ISSUE_STATUS_IDS.REJECTED) variant = "destructive";
-		else if (currentStatusId === ISSUE_STATUS_IDS.PENDING_APPROVAL)
-			variant = "warning";
-		return { label, variant };
-	}, [currentStatusId, issueDetails?.status]);
+	const comparableLineItems = React.useMemo(
+		() => lineItems.filter(lineHasAnyData),
+		[lineItems]
+	);
+
+	const { hasUnsavedChanges, resetBaseline, setBaseline } = useUnsavedChanges({
+		formValues,
+		lineItems: comparableLineItems,
+		getComparableLineData,
+		enabled: mode !== "create",
+	});
 
 	// Line item columns
 	const lineItemColumns = useIssueLineItemColumns({
@@ -417,7 +472,7 @@ function IssueTransactionPageContent() {
 	// Form submit handler
 	const handleFormSubmit = React.useCallback(
 		async (values: Record<string, unknown>) => {
-			if (mode === "view" || pageError || setupError) return;
+			if (mode === "view" || !canEdit || pageError || setupError) return;
 
 			if (!lineItemsValid) {
 				toast({
@@ -495,6 +550,7 @@ function IssueTransactionPageContent() {
 			filledLineItems,
 			lineItemsValid,
 			mode,
+			canEdit,
 			pageError,
 			setupError,
 			requestedId,
@@ -503,55 +559,12 @@ function IssueTransactionPageContent() {
 		]
 	);
 
-	// Approval actions
-	const handleOpen = React.useCallback(async () => {
-		if (!requestedId || !coId) return;
-		setSaving(true);
-		try {
-			await updateIssueStatus(
-				coId,
-				requestedId,
-				{ status_id: ISSUE_STATUS_IDS.OPEN },
-				getMenuId()
-			);
-			toast({ title: "Issue opened" });
-			// Refresh the page
-			router.refresh();
-		} catch (error) {
-			toast({
-				variant: "destructive",
-				title: "Failed to open issue",
-				description:
-					error instanceof Error ? error.message : "Please try again.",
-			});
-		} finally {
-			setSaving(false);
-		}
-	}, [requestedId, coId, getMenuId, router]);
-
-	const handleApprove = React.useCallback(async () => {
-		if (!requestedId || !coId) return;
-		setSaving(true);
-		try {
-			await updateIssueStatus(
-				coId,
-				requestedId,
-				{ status_id: ISSUE_STATUS_IDS.APPROVED },
-				getMenuId()
-			);
-			toast({ title: "Issue approved" });
-			router.refresh();
-		} catch (error) {
-			toast({
-				variant: "destructive",
-				title: "Failed to approve issue",
-				description:
-					error instanceof Error ? error.message : "Please try again.",
-			});
-		} finally {
-			setSaving(false);
-		}
-	}, [requestedId, coId, getMenuId, router]);
+	// Reset baseline after approval actions refresh details
+	React.useEffect(() => {
+		if (!issueDetails || mode === "create") return;
+		const timer = setTimeout(() => resetBaseline(), 0);
+		return () => clearTimeout(timer);
+	}, [issueDetails, mode, resetBaseline]);
 
 	// Page metadata
 	const pageTitle =
@@ -606,25 +619,62 @@ function IssueTransactionPageContent() {
 		return statusChipProps;
 	}, [issueDetails?.status, statusChipProps]);
 
-	// Primary actions
+	// Primary actions (unified save + approval pattern)
 	const primaryActions = React.useMemo<TransactionAction[] | undefined>(() => {
-		if (mode === "view" || pageError || setupError) return undefined;
-		return [
-			{
-				label: mode === "create" ? "Create Issue" : "Save Changes",
-				onClick: () => formRef.current?.submit(),
-				disabled: saving || !lineItemsValid || setupLoading,
-				loading: saving,
+		if (pageError || setupError) return undefined;
+
+		// Create mode
+		if (mode === "create") {
+			return [
+				{
+					label: "Create Issue",
+					onClick: () => formRef.current?.submit(),
+					disabled: saving || !lineItemsValid || setupLoading,
+					loading: saving,
+				},
+			];
+		}
+
+		// No details yet (still loading)
+		if (!issueDetails) return undefined;
+
+		// Edit mode with unsaved changes → Save button
+		if (mode === "edit" && approvalPermissions.canSave && hasUnsavedChanges) {
+			return [
+				{
+					label: "Save Changes",
+					onClick: () => formRef.current?.submit(),
+					disabled: saving || !lineItemsValid || setupLoading,
+					loading: saving,
+				},
+			];
+		}
+
+		// View mode, or edit without changes → Approval buttons
+		const approvalActions = buildApprovalTransactionActions({
+			approvalInfo,
+			permissions: approvalPermissions,
+			handlers: {
+				onOpen: handleOpen,
+				onCancelDraft: handleCancelDraft,
+				onReopen: handleReopen,
+				onSendForApproval: handleSendForApproval,
+				onApprove: handleApprove,
+				onReject: openRejectDialog,
+				onViewApprovalLog: handleViewApprovalLog,
+				onClone: handleClone,
 			},
-		];
+			loading: approvalLoading,
+			disabled: saving || loading || setupLoading,
+		});
+
+		return approvalActions.length ? approvalActions : undefined;
 	}, [
-		mode,
-		pageError,
-		setupError,
-		saving,
-		lineItemsValid,
-		setupLoading,
-		formRef,
+		mode, pageError, setupError, saving, lineItemsValid, setupLoading,
+		formRef, issueDetails, approvalPermissions, hasUnsavedChanges,
+		approvalInfo, approvalLoading, loading,
+		handleOpen, handleCancelDraft, handleReopen, handleSendForApproval,
+		handleApprove, openRejectDialog, handleViewApprovalLog, handleClone,
 	]);
 
 	// Secondary actions
@@ -632,44 +682,15 @@ function IssueTransactionPageContent() {
 		if (!requestedId || pageError) return undefined;
 		const actions: TransactionAction[] = [];
 
-		if (mode === "view") {
-			// Edit button for draft/open status
-			if (
-				currentStatusId === ISSUE_STATUS_IDS.DRAFT ||
-				currentStatusId === ISSUE_STATUS_IDS.OPEN
-			) {
-				actions.push({
-					label: "Edit",
-					variant: "secondary",
-					onClick: () =>
-						router.replace(
-							`/dashboardportal/inventory/issue/createIssue?mode=edit&id=${encodeURIComponent(requestedId)}`
-						),
-				});
-			}
-
-			// Open button for draft status
-			if (currentStatusId === ISSUE_STATUS_IDS.DRAFT) {
-				actions.push({
-					label: "Open",
-					variant: "default",
-					onClick: handleOpen,
-					disabled: saving,
-				});
-			}
-
-			// Approve button for open/pending status
-			if (
-				currentStatusId === ISSUE_STATUS_IDS.OPEN ||
-				currentStatusId === ISSUE_STATUS_IDS.PENDING_APPROVAL
-			) {
-				actions.push({
-					label: "Approve",
-					variant: "default",
-					onClick: handleApprove,
-					disabled: saving,
-				});
-			}
+		if (mode === "view" && approvalPermissions.canSave) {
+			actions.push({
+				label: "Edit",
+				variant: "secondary",
+				onClick: () =>
+					router.replace(
+						`/dashboardportal/inventory/issue/createIssue?mode=edit&id=${encodeURIComponent(requestedId)}`
+					),
+			});
 		}
 
 		if (mode === "edit") {
@@ -684,16 +705,7 @@ function IssueTransactionPageContent() {
 		}
 
 		return actions.length ? actions : undefined;
-	}, [
-		mode,
-		requestedId,
-		router,
-		pageError,
-		currentStatusId,
-		saving,
-		handleOpen,
-		handleApprove,
-	]);
+	}, [mode, requestedId, router, pageError, approvalPermissions.canSave]);
 
 	// Alerts
 	const alerts =
@@ -763,6 +775,7 @@ function IssueTransactionPageContent() {
 	}
 
 	return (
+		<>
 		<TransactionWrapper
 			title={pageTitle}
 			subtitle={subtitle}
@@ -811,5 +824,40 @@ function IssueTransactionPageContent() {
 				) : null}
 			</div>
 		</TransactionWrapper>
+
+		{/* ── Reject Confirmation Dialog ────────────────────────────────── */}
+		<Dialog open={rejectDialogOpen} onOpenChange={(open) => { if (!open) handleRejectCancel(); }}>
+			<DialogContent className="sm:max-w-125">
+				<DialogHeader>
+					<DialogTitle>Reject Issue</DialogTitle>
+					<DialogDescription>Please provide a reason for rejecting this issue.</DialogDescription>
+				</DialogHeader>
+				<div className="space-y-4 py-4">
+					<div className="space-y-2">
+						<label htmlFor="reject-reason" className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70">
+							Rejection Reason *
+						</label>
+						<AutoResizeTextarea
+							id="reject-reason"
+							placeholder="Enter rejection reason..."
+							value={rejectReason}
+							onChange={(e) => setRejectReason(e.target.value)}
+							className="min-h-20 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+							minHeight={80}
+							maxHeight={200}
+						/>
+					</div>
+				</div>
+				<DialogFooter>
+					<Button variant="outline" onClick={handleRejectCancel}>
+						Cancel
+					</Button>
+					<Button variant="destructive" onClick={handleRejectConfirm} disabled={!rejectReason.trim()}>
+						Reject
+					</Button>
+				</DialogFooter>
+			</DialogContent>
+		</Dialog>
+		</>
 	);
 }

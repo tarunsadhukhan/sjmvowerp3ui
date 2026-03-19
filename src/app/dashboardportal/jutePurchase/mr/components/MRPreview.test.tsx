@@ -104,7 +104,7 @@ describe("MRPreview", () => {
 	// ── Header fields ──
 	it("renders MR number and date", () => {
 		render(<MRPreview header={mockHeader} lineItems={[]} totalAcceptedWeight={0} />);
-		expect(screen.getByText("2426")).toBeInTheDocument();
+		expect(screen.getByText("MR-2426")).toBeInTheDocument();
 		expect(screen.getByText("23/05/2025")).toBeInTheDocument();
 	});
 

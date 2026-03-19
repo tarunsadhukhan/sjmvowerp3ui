@@ -61,15 +61,12 @@ function CreateRoleContent() {
     const searchParams = useSearchParams();
     const roleId = searchParams.get('roleId');
     const router = useRouter();
-    const [mounted, setMounted] = useState(false);
     const [menuData, setMenuData] = useState<MenuItem[]>([]);
     const [roleName, setRoleName] = useState<string>("");
     const [loading, setLoading] = useState(true);
     const [fetchError, setFetchError] = useState<string | null>(null);
     const [selectedMenuIds, setSelectedMenuIds] = useState<number[]>([]);
     const [menuAccessLevels, setMenuAccessLevels] = useState<Record<number, string>>({}); // State for access levels
-
-    useEffect(() => { setMounted(true); }, []);
 
     useEffect(() => {
         const fetchMenuData = async () => {
@@ -158,8 +155,6 @@ function CreateRoleContent() {
             setLoading(false);
         }
     };
-
-    if (!mounted) return <LoadingFallback />;
 
     return (
         <main className="p-6">

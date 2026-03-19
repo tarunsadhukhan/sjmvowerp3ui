@@ -127,6 +127,7 @@ export type GateEntryLineItem = {
 	actualQuality: string;
 	actualQty: string;
 	actualWeight: string;
+	juteUom: string;  // Per-line UOM (e.g. "LOOSE", "BALE")
 	allowableMoisture: string;  // From PO or manually entered
 	remarks: string;
 	// Moisture reading fields for QC

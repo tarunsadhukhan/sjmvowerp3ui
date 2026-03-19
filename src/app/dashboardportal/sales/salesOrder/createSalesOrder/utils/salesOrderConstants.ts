@@ -33,4 +33,25 @@ export const EMPTY_ITEM_GROUPS: never[] = [];
 export const EMPTY_QUOTATIONS: never[] = [];
 export const EMPTY_BRANCH_ADDRESSES: never[] = [];
 export const EMPTY_INVOICE_TYPES: never[] = [];
+export const EMPTY_MUKAM_OPTIONS: never[] = [];
 export const EMPTY_SETUP_PARAMS: { branchId?: string } = {};
+
+// Invoice type codes — resolved from invoice_type_name, NOT from hardcoded IDs.
+// The invoice_type_mst IDs vary across deployments, so we match by name instead.
+export type InvoiceTypeCode = "regular" | "hessian" | "govt_skg" | "jute_yarn" | "jute" | "";
+
+export function resolveInvoiceTypeCode(name: string): InvoiceTypeCode {
+	const n = name.toLowerCase().trim();
+	if (n.includes("hessian")) return "hessian";
+	if (n.includes("govt") || n.includes("sacking") || n.includes("skg")) return "govt_skg";
+	if (n.includes("yarn")) return "jute_yarn";
+	if (n.includes("raw jute")) return "jute";
+	if (n === "jute" || n.includes("jute invoice")) return "jute";
+	return "regular";
+}
+
+// Type-checking helpers — accept a resolved typeCode string
+export const isHessianOrder = (typeCode?: string | null): boolean => typeCode === "hessian";
+export const isJuteYarnOrder = (typeCode?: string | null): boolean => typeCode === "jute_yarn";
+export const isJuteOrder = (typeCode?: string | null): boolean => typeCode === "jute";
+export const isGovtSkgOrder = (typeCode?: string | null): boolean => typeCode === "govt_skg";

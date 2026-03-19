@@ -32,7 +32,6 @@ import {
   type BillPassDetail,
   type BillPassDRCRLine,
 } from "@/utils/billPassService";
-import { openStyledPrintWindow } from "@/utils/printUtils";
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -197,7 +196,6 @@ export default function BillPassViewPage() {
   const [loading, setLoading] = React.useState(true);
   const [error, setError] = React.useState<string | null>(null);
   const [detail, setDetail] = React.useState<BillPassDetail | null>(null);
-  const printRef = React.useRef<HTMLDivElement>(null);
 
   React.useEffect(() => {
     if (!inwardId) {
@@ -235,20 +233,6 @@ export default function BillPassViewPage() {
   }, [detail]);
 
   const handleBack = () => router.push("/dashboardportal/procurement/billPass");
-
-  const handlePrint = () => {
-    const printContent = printRef.current?.innerHTML || "";
-    const printWindow = openStyledPrintWindow(
-      printContent,
-      `Bill Pass - ${detail?.bill_pass_no || "Print"}`
-    );
-    if (!printWindow) return;
-    printWindow.focus();
-    setTimeout(() => {
-      printWindow.print();
-      printWindow.close();
-    }, 300);
-  };
 
   if (loading) {
     return (
@@ -300,13 +284,12 @@ export default function BillPassViewPage() {
             variant="outlined"
           />
         </Box>
-        <Button variant="outlined" size="small" startIcon={<Printer size={16} />} onClick={handlePrint}>
+        <Button variant="outlined" size="small" startIcon={<Printer size={16} />} onClick={() => window.print()}>
           Print
         </Button>
       </Stack>
 
-      {/* ── Printable Content ─────────────────────────────────────────────── */}
-      <Box ref={printRef}>
+      {/* ── Summary Cards ────────────────────────────────────────────────── */}
       <Grid container spacing={2} mb={2}>
         <Grid size={{ xs: 12, sm: 6, md: 3 }}>
           <SummaryCard
@@ -373,9 +356,6 @@ export default function BillPassViewPage() {
             </Grid>
             <Grid size={{ xs: 6, md: 3 }}>
               <InfoField label="Challan Date" value={formatBillPassDate(detail.challan_date)} />
-            </Grid>
-            <Grid size={{ xs: 6, md: 3 }}>
-              <InfoField label="Invoice No." value={detail.invoice_no || "-"} />
             </Grid>
           </Grid>
         </CardContent>
@@ -595,7 +575,6 @@ export default function BillPassViewPage() {
           </Box>
         </CardContent>
       </Card>
-      </Box>
     </Box>
   );
 }

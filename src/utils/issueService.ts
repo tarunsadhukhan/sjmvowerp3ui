@@ -17,8 +17,6 @@ export type IssueLineResponse = {
 	rate?: number;
 	expense_id?: number;
 	expense_name?: string;
-	expense_type_id?: number;
-	expense_type_name?: string;
 	cost_factor_id?: number;
 	cost_factor_name?: string;
 	machine_id?: number;
@@ -47,6 +45,9 @@ export type IssueDetails = {
 	internalNote?: string;
 	status?: string;
 	statusId?: number;
+	approvalLevel?: number | null;
+	maxApprovalLevel?: number | null;
+	permissions?: Record<string, boolean>;
 	createdBy?: string;
 	createdAt?: string;
 	updatedBy?: string;
@@ -208,6 +209,9 @@ export const getIssueById = async (
 		internalNote: data.internal_note,
 		status: data.status ?? data.status_name,
 		statusId: data.status_id,
+		approvalLevel: data.approval_level ?? null,
+		maxApprovalLevel: data.max_approval_level ?? null,
+		permissions: data.permissions ?? undefined,
 		createdBy: data.created_by ?? data.updated_by_name,
 		createdAt: data.created_at ?? data.updated_date_time,
 		updatedBy: data.updated_by,
@@ -237,7 +241,6 @@ export const getIssueById = async (
 			// Handle both expense_type_id and expense_id variants
 			expenseId: line.expense_type_id ?? line.expense_id,
 			expense_type_id: line.expense_type_id ?? line.expense_id,
-			expenseTypeName: line.expense_type_name ?? line.expense_name,
 			expenseName: line.expense_type_name ?? line.expense_name,
 			costFactorId: line.cost_factor_id,
 			cost_factor_id: line.cost_factor_id,

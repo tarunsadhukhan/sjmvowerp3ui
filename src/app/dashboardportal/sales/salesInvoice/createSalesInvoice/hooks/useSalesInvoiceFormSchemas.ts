@@ -1,6 +1,7 @@
 import React from "react";
 import type { Schema, Field } from "@/components/ui/muiform";
 import type { Option } from "../types/salesInvoiceTypes";
+import { isRawJuteInvoice } from "../utils/salesInvoiceConstants";
 
 export type UseHeaderSchemaParams = {
 	branchOptions: Option[];
@@ -9,9 +10,11 @@ export type UseHeaderSchemaParams = {
 	transporterOptions: Option[];
 	brokerOptions: Option[];
 	deliveryOrderOptions: Option[];
+	salesOrderOptions: Option[];
 	invoiceTypeOptions: Option[];
 	mode: "create" | "edit" | "view";
 	headerFieldsDisabled: boolean;
+	salesOrderDisabled?: boolean;
 };
 
 export type UseFooterSchemaParams = {
@@ -20,7 +23,7 @@ export type UseFooterSchemaParams = {
 
 export const useSalesInvoiceHeaderSchema = ({
 	branchOptions, customerOptions, customerBranchOptions,
-	transporterOptions, brokerOptions, deliveryOrderOptions, invoiceTypeOptions, mode, headerFieldsDisabled,
+	transporterOptions, brokerOptions, deliveryOrderOptions, salesOrderOptions, invoiceTypeOptions, mode, headerFieldsDisabled, salesOrderDisabled,
 }: UseHeaderSchemaParams): Schema =>
 	React.useMemo(() => {
 		const fields: Field[] = [
@@ -30,14 +33,12 @@ export const useSalesInvoiceHeaderSchema = ({
 			{ name: "party", label: "Customer", type: "select", options: customerOptions, required: true, disabled: headerFieldsDisabled, grid: { xs: 12, md: 4 } },
 			{ name: "broker", label: "Broker", type: "select", options: brokerOptions, disabled: headerFieldsDisabled, grid: { xs: 12, md: 4 } },
 			{ name: "delivery_order", label: "Delivery Order", type: "select", options: deliveryOrderOptions, disabled: headerFieldsDisabled, grid: { xs: 12, md: 4 } },
+			{ name: "sales_order_id", label: "Sales Order", type: "select", options: salesOrderOptions, disabled: headerFieldsDisabled || salesOrderDisabled, grid: { xs: 12, md: 4 } },
+			{ name: "sales_order_date", label: "Sales Order Date", type: "date", disabled: true, grid: { xs: 12, md: 4 } },
+			{ name: "payment_terms", label: "Payment Terms (Days)", type: "text", disabled: headerFieldsDisabled, grid: { xs: 12, md: 4 } },
 			{ name: "billing_to", label: "Billing To", type: "select", options: customerBranchOptions, disabled: headerFieldsDisabled, grid: { xs: 12, md: 4 } },
 			{ name: "shipping_to", label: "Shipping To", type: "select", options: customerBranchOptions, disabled: headerFieldsDisabled, grid: { xs: 12, md: 4 } },
-			{ name: "due_date", label: "Due Date", type: "date", disabled: headerFieldsDisabled, grid: { xs: 12, md: 4 } },
 			{ name: "transporter", label: "Transporter", type: "select", options: transporterOptions, disabled: headerFieldsDisabled, grid: { xs: 12, md: 4 } },
-			{ name: "transporter_name", label: "Transporter Name", type: "text", disabled: headerFieldsDisabled, grid: { xs: 12, md: 4 } },
-			{ name: "transporter_address", label: "Transporter Address", type: "text", disabled: headerFieldsDisabled, grid: { xs: 12, md: 4 } },
-			{ name: "transporter_state_code", label: "Transporter State Code", type: "text", disabled: headerFieldsDisabled, grid: { xs: 12, md: 4 } },
-			{ name: "transporter_state_name", label: "Transporter State Name", type: "text", disabled: headerFieldsDisabled, grid: { xs: 12, md: 4 } },
 			{ name: "vehicle_no", label: "Vehicle No.", type: "text", disabled: headerFieldsDisabled, grid: { xs: 12, md: 4 } },
 			{ name: "challan_no", label: "Challan No.", type: "text", disabled: headerFieldsDisabled, grid: { xs: 12, md: 4 } },
 			{ name: "challan_date", label: "Challan Date", type: "date", disabled: headerFieldsDisabled, grid: { xs: 12, md: 4 } },
@@ -51,15 +52,36 @@ export const useSalesInvoiceHeaderSchema = ({
 			{ name: "consignment_date", label: "Consignment Date", type: "date", disabled: headerFieldsDisabled, grid: { xs: 12, md: 4 } },
 		];
 		return { fields } satisfies Schema;
-	}, [branchOptions, customerOptions, customerBranchOptions, transporterOptions, brokerOptions, deliveryOrderOptions, invoiceTypeOptions, mode, headerFieldsDisabled]);
+	}, [branchOptions, customerOptions, customerBranchOptions, transporterOptions, brokerOptions, deliveryOrderOptions, salesOrderOptions, invoiceTypeOptions, mode, headerFieldsDisabled, salesOrderDisabled]);
+
+export type UseJuteHeaderSchemaParams = {
+	mode: "create" | "edit" | "view";
+	headerFieldsDisabled: boolean;
+	mukamOptions?: Option[];
+	invoiceTypeId?: string;
+};
+
+export const useSalesInvoiceJuteHeaderSchema = ({
+	mode, headerFieldsDisabled, mukamOptions, invoiceTypeId,
+}: UseJuteHeaderSchemaParams): Schema =>
+	React.useMemo(() => {
+		const disabled = headerFieldsDisabled || mode === "view";
+		const claimDisabled = disabled || isRawJuteInvoice(invoiceTypeId);
+		const fields: Field[] = [
+			{ name: "jute_mr_no", label: "MR No.", type: "text", disabled, grid: { xs: 12, md: 3 } },
+			{ name: "jute_mukam_id", label: "Mukam", type: "select", options: mukamOptions ?? [], disabled, grid: { xs: 12, md: 3 } },
+			{ name: "jute_claim_amount", label: "Claim Amount", type: "text", disabled: claimDisabled, grid: { xs: 12, md: 3 } },
+			{ name: "jute_claim_description", label: "Claim Description", type: "textarea", disabled, grid: { xs: 12, md: 3 } },
+		];
+		return { fields } satisfies Schema;
+	}, [mode, headerFieldsDisabled, mukamOptions, invoiceTypeId]);
 
 export const useSalesInvoiceFooterSchema = ({ mode }: UseFooterSchemaParams): Schema =>
 	React.useMemo(() => {
 		const disabled = mode === "view";
 		const fields: Field[] = [
-			{ name: "freight_charges", label: "Freight Charges", type: "text", disabled, grid: { xs: 12, md: 3 } },
-			{ name: "round_off", label: "Round Off", type: "text", disabled, grid: { xs: 12, md: 3 } },
-			{ name: "tax_id", label: "Tax ID", type: "text", disabled, grid: { xs: 12, md: 3 } },
+			{ name: "freight_charges", label: "Freight Charges", type: "text", disabled, grid: { xs: 12, md: 4 } },
+			{ name: "round_off", label: "Round Off", type: "text", disabled, grid: { xs: 12, md: 4 } },
 			{ name: "footer_note", label: "Footer Note", type: "textarea", disabled, grid: { xs: 12 } },
 			{ name: "internal_note", label: "Internal Note", type: "textarea", disabled, grid: { xs: 12 } },
 			{ name: "terms_conditions", label: "Terms & Conditions", type: "textarea", disabled, grid: { xs: 12 } },

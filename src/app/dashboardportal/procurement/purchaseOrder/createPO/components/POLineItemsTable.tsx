@@ -122,7 +122,7 @@ export const usePOLineItemColumns = ({
       },
       {
         id: "rate",
-        header: "Rate *",
+        header: "Rate",
         width: "0.8fr",
         minWidth: "80px",
         renderCell: ({ item }) => {
@@ -139,8 +139,6 @@ export const usePOLineItemColumns = ({
               </div>
             );
           }
-          const rateValue = Number(item.rate) || 0;
-          const isRateInvalid = !item.rate || rateValue <= 0;
           return (
             <div className="flex flex-col gap-0.5 w-full">
               <Input
@@ -148,8 +146,7 @@ export const usePOLineItemColumns = ({
                 value={item.rate}
                 onChange={(e) => onFieldChange(item.id, "rate", e.target.value)}
                 placeholder="0.00"
-                className={`h-8 text-sm ${isRateInvalid ? "border-red-500" : ""}`}
-                title={isRateInvalid ? "Rate is required and must be greater than 0" : ""}
+                className="h-8 text-sm"
               />
               {lastPurchase && (
                 <p className="text-xs text-muted-foreground leading-tight" title={`Last purchased from ${lastPurchase.supplierName ?? "N/A"} on ${lastPurchase.date ?? "N/A"}`}>
@@ -192,7 +189,6 @@ export const usePOLineItemColumns = ({
               </div>
             );
           }
-          const isQtyInvalid = !!item.rowError;
           return (
             <div className="flex flex-col gap-0.5 w-full">
               <Input
@@ -200,8 +196,7 @@ export const usePOLineItemColumns = ({
                 value={item.quantity}
                 onChange={(e) => onFieldChange(item.id, "quantity", e.target.value)}
                 placeholder="0"
-                className={`h-8 text-sm ${isQtyInvalid ? "border-red-500" : ""}`}
-                title={isQtyInvalid ? item.rowError : ""}
+                className="h-8 text-sm"
               />
               {item.rowError && (
                 <p className="text-xs text-red-600 leading-tight">{item.rowError}</p>
@@ -209,22 +204,7 @@ export const usePOLineItemColumns = ({
             </div>
           );
         },
-        getTooltip: ({ item }) => {
-          const parts: string[] = [];
-          if (item.rowError) {
-            parts.push(item.rowError);
-          }
-          if (item.quantity) {
-            parts.push(`Qty: ${item.quantity}`);
-          }
-          if (item.availableIndentQty != null) {
-            parts.push(`Available Balance: ${item.availableIndentQty}`);
-            const qty = Number(item.quantity) || 0;
-            const outstandingQty = item.availableIndentQty + qty;
-            parts.push(`Outstanding Indent Qty: ${outstandingQty}`);
-          }
-          return parts.length ? parts.join("\n") : undefined;
-        },
+        getTooltip: ({ item }) => (item.quantity ? `Quantity: ${item.quantity}` : undefined),
       },
       {
         id: "uom",

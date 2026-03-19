@@ -4,6 +4,7 @@ import type {
 	TransporterRecord,
 	BrokerRecord,
 	ApprovedDeliveryOrderRecord,
+	ApprovedSalesOrderRecord,
 	InvoiceTypeRecord,
 	ItemGroupCacheEntry,
 	ItemGroupRecord,
@@ -16,6 +17,7 @@ type Params = {
 	transporters: ReadonlyArray<TransporterRecord>;
 	brokers: ReadonlyArray<BrokerRecord>;
 	approvedDeliveryOrders: ReadonlyArray<ApprovedDeliveryOrderRecord>;
+	approvedSalesOrders: ReadonlyArray<ApprovedSalesOrderRecord>;
 	invoiceTypes: ReadonlyArray<InvoiceTypeRecord>;
 	itemGroupsFromLineItems: ReadonlyArray<ItemGroupRecord>;
 	itemGroupCache?: Partial<Record<string, ItemGroupCacheEntry>>;
@@ -23,7 +25,7 @@ type Params = {
 };
 
 export const useSalesInvoiceSelectOptions = ({
-	customers, transporters, brokers, approvedDeliveryOrders, invoiceTypes,
+	customers, transporters, brokers, approvedDeliveryOrders, approvedSalesOrders, invoiceTypes,
 	itemGroupsFromLineItems, itemGroupCache = {}, selectedPartyId,
 }: Params) => {
 	const customerOptions = React.useMemo<Option[]>(() => {
@@ -60,6 +62,16 @@ export const useSalesInvoiceSelectOptions = ({
 			value: doRec.id,
 		}));
 	}, [approvedDeliveryOrders]);
+
+	const salesOrderOptions = React.useMemo<Option[]>(() => {
+		if (!approvedSalesOrders?.length) return [];
+		return approvedSalesOrders
+			.filter((so) => !selectedPartyId || String(so.partyId) === selectedPartyId)
+			.map((so) => ({
+				label: so.salesOrderNo + (so.partyName ? ` — ${so.partyName}` : ""),
+				value: so.id,
+			}));
+	}, [approvedSalesOrders, selectedPartyId]);
 
 	const invoiceTypeOptions = React.useMemo<Option[]>(
 		() => invoiceTypes.map((t) => ({ label: t.name || t.id, value: t.id })),
@@ -138,7 +150,7 @@ export const useSalesInvoiceSelectOptions = ({
 	);
 
 	return {
-		customerOptions, customerBranchOptions, transporterOptions, brokerOptions, deliveryOrderOptions,
+		customerOptions, customerBranchOptions, transporterOptions, brokerOptions, deliveryOrderOptions, salesOrderOptions,
 		invoiceTypeOptions, itemGroupOptions, getItemGroupLabel,
 		getItemOptions, getMakeOptions, getUomOptions,
 		getItemLabel, getMakeLabel, getUomLabel, getUomConversions, getOptionLabel,

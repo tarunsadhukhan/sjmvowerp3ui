@@ -58,14 +58,19 @@ export const useSalesInvoiceLineItems = ({
 		netAmount: line.netAmount,
 		totalAmount: line.totalAmount,
 		remarks: line.remarks ?? "",
-		taxPercentage: line.taxPercentage,
+		taxPercentage: line.gst?.taxPercentage ?? line.taxPercentage,
 		igstAmount: line.gst?.igstAmount,
 		igstPercent: line.gst?.igstPercent,
 		cgstAmount: line.gst?.cgstAmount,
 		cgstPercent: line.gst?.cgstPercent,
 		sgstAmount: line.gst?.sgstAmount,
 		sgstPercent: line.gst?.sgstPercent,
-		gstTotal: line.gst?.gstTotal,
+		gstTotal: line.gst?.taxAmount ?? line.gst?.gstTotal,
+		juteClaimAmountDtl: line.juteDtl?.claimAmountDtl,
+		juteClaimDesc: line.juteDtl?.claimDesc ?? "",
+		juteClaimRate: line.juteDtl?.claimRate,
+		juteUnitConversion: line.juteDtl?.unitConversion ?? "",
+		juteQtyUnitConversion: line.juteDtl?.qtyUnitConversion,
 	}), []);
 
 	const recalcLine = React.useCallback((item: EditableLineItem): EditableLineItem => {

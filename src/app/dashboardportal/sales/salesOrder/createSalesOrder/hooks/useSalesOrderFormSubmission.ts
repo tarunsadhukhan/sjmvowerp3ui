@@ -3,6 +3,7 @@ import { useRouter } from "next/navigation";
 import { toast } from "@/hooks/use-toast";
 import { createSalesOrder, updateSalesOrder, type CreateSalesOrderRequest } from "@/utils/salesOrderService";
 import type { EditableLineItem } from "../types/salesOrderTypes";
+import { isHessianOrder, isJuteOrder, isGovtSkgOrder, isJuteYarnOrder } from "../utils/salesOrderConstants";
 
 type UseSalesOrderFormSubmissionParams = {
 	mode: "create" | "edit" | "view";
@@ -11,6 +12,8 @@ type UseSalesOrderFormSubmissionParams = {
 	filledLineItems: ReadonlyArray<EditableLineItem>;
 	isLineItemsReady: boolean;
 	requestedId: string;
+	formValues: Record<string, unknown>;
+	invoiceTypeCode: string;
 };
 
 export const useSalesOrderFormSubmission = ({
@@ -20,6 +23,8 @@ export const useSalesOrderFormSubmission = ({
 	filledLineItems,
 	isLineItemsReady,
 	requestedId,
+	formValues,
+	invoiceTypeCode,
 }: UseSalesOrderFormSubmissionParams) => {
 	const [saving, setSaving] = React.useState(false);
 	const router = useRouter();
@@ -33,7 +38,7 @@ export const useSalesOrderFormSubmission = ({
 				return;
 			}
 
-			const isHessian = values.invoice_type ? Number(values.invoice_type) === 2 : false;
+			const isHessian = isHessianOrder(invoiceTypeCode);
 
 			const itemsPayload: CreateSalesOrderRequest["items"] = filledLineItems.map((item) => ({
 				item: item.item || undefined,
@@ -64,6 +69,18 @@ export const useSalesOrderFormSubmission = ({
 					billing_rate_mt: item.billingRateMt ?? null,
 					billing_rate_bale: item.billingRateBale ?? null,
 				} : undefined,
+				jute_dtl: isJuteOrder(invoiceTypeCode) && item.juteClaimRate ? {
+					claim_amount_dtl: Number(item.juteClaimAmountDtl) || null,
+					claim_desc: item.juteClaimDesc || null,
+					claim_rate: Number(item.juteClaimRate) || null,
+					unit_conversion: item.juteUnitConversion || null,
+					qty_untit_conversion: Number(item.juteQtyUnitConversion) || null,
+				} : undefined,
+				govtskg_dtl: isGovtSkgOrder(invoiceTypeCode) ? {
+					pack_sheet: Number(item.govtskgPackSheet) || null,
+					net_weight: Number(item.govtskgNetWeight) || null,
+					total_weight: Number(item.govtskgTotalWeight) || null,
+				} : undefined,
 			}));
 
 			// Calculate totals
@@ -72,10 +89,32 @@ export const useSalesOrderFormSubmission = ({
 			const freightCharges = values.freight_charges ? Number(values.freight_charges) : 0;
 			const netAmount = grossAmount + totalTax + freightCharges;
 
+			// Build header-level extension data conditionally
+			const juteHeader = isJuteOrder(invoiceTypeCode) ? {
+				mr_no: String(values.jute_mr_no ?? formValues.jute_mr_no ?? "") || undefined,
+				mukam_id: String(values.jute_mukam_id ?? formValues.jute_mukam_id ?? "") || undefined,
+				claim_amount: Number(values.jute_claim_amount ?? formValues.jute_claim_amount) || undefined,
+				claim_description: String(values.jute_claim_description ?? formValues.jute_claim_description ?? "") || undefined,
+			} : undefined;
+
+			const govtskgHeader = isGovtSkgOrder(invoiceTypeCode) ? {
+				pcso_no: String(values.govtskg_pcso_no ?? formValues.govtskg_pcso_no ?? "") || undefined,
+				pcso_date: String(values.govtskg_pcso_date ?? formValues.govtskg_pcso_date ?? "") || undefined,
+				administrative_office_address: String(values.govtskg_admin_office ?? formValues.govtskg_admin_office ?? "") || undefined,
+				destination_rail_head: String(values.govtskg_rail_head ?? formValues.govtskg_rail_head ?? "") || undefined,
+				loading_point: String(values.govtskg_loading_point ?? formValues.govtskg_loading_point ?? "") || undefined,
+			} : undefined;
+
+			const juteyarnHeader = isJuteYarnOrder(invoiceTypeCode) ? {
+				pcso_no: String(values.juteyarn_pcso_no ?? formValues.juteyarn_pcso_no ?? "") || undefined,
+				container_no: String(values.juteyarn_container_no ?? formValues.juteyarn_container_no ?? "") || undefined,
+				customer_ref_no: String(values.juteyarn_customer_ref_no ?? formValues.juteyarn_customer_ref_no ?? "") || undefined,
+			} : undefined;
+
 			setSaving(true);
 			try {
 				if (mode === "edit" && requestedId) {
-					await updateSalesOrder({
+					const updatePayload = {
 						id: requestedId,
 						branch: String(values.branch ?? ""),
 						party: values.party ? String(values.party) : undefined,
@@ -99,7 +138,11 @@ export const useSalesOrderFormSubmission = ({
 						grossAmount,
 						netAmount,
 						items: itemsPayload,
-					} as Parameters<typeof updateSalesOrder>[0]);
+					} as Parameters<typeof updateSalesOrder>[0];
+					if (juteHeader) (updatePayload as Record<string, unknown>).jute = juteHeader;
+					if (govtskgHeader) (updatePayload as Record<string, unknown>).govtskg = govtskgHeader;
+					if (juteyarnHeader) (updatePayload as Record<string, unknown>).juteyarn = juteyarnHeader;
+					await updateSalesOrder(updatePayload);
 					toast({ title: "Sales order updated" });
 					router.replace(`/dashboardportal/sales/salesOrder/createSalesOrder?mode=view&id=${requestedId}`);
 				} else {
@@ -127,6 +170,9 @@ export const useSalesOrderFormSubmission = ({
 						net_amount: netAmount,
 						items: itemsPayload,
 					};
+					if (juteHeader) payload.jute = juteHeader;
+					if (govtskgHeader) payload.govtskg = govtskgHeader;
+					if (juteyarnHeader) payload.juteyarn = juteyarnHeader;
 					const result = await createSalesOrder(payload);
 					toast({ title: result?.message ?? "Sales order created" });
 					const newId = result?.sales_order_id;
@@ -140,7 +186,7 @@ export const useSalesOrderFormSubmission = ({
 				setSaving(false);
 			}
 		},
-		[mode, pageError, setupError, filledLineItems, isLineItemsReady, requestedId, router],
+		[mode, pageError, setupError, filledLineItems, isLineItemsReady, requestedId, formValues, invoiceTypeCode, router],
 	);
 
 	return { saving, handleFormSubmit };

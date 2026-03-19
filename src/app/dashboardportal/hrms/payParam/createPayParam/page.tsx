@@ -120,9 +120,11 @@ function CreatePayParamContent() {
         <MuiForm
           ref={formRef}
           schema={schema}
-          values={formValues}
+          initialValues={formValues}
           mode={isDisabled ? "view" : "edit"}
-          onChange={handleChange}
+          onValuesChange={handleChange}
+          hideModeToggle
+          hideSubmit
         />
       </Paper>
 

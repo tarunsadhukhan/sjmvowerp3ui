@@ -30,6 +30,7 @@ export const createBlankLine = (): GateEntryLineItem => ({
 	actualQuality: "",
 	actualQty: "",
 	actualWeight: "",
+	juteUom: "",
 	allowableMoisture: "",
 	remarks: "",
 	moistureReadings: [],

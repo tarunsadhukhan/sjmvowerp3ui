@@ -217,6 +217,7 @@ export const mapLineItemsFromAPI = (lineItems: GateEntryLineItemAPI[]): GateEntr
 		actualQuality: li.actual_item_id ? String(li.actual_item_id) : "",
 		actualQty: li.actual_qty ? String(li.actual_qty) : "",
 		actualWeight: li.actual_weight ? String(li.actual_weight) : "",
+		juteUom: li.unit_conversion ?? "",
 		allowableMoisture: li.allowable_moisture != null ? String(li.allowable_moisture) : "",
 		remarks: li.remarks ?? "",
 		moistureReadings: [],  // Populated from separate moisture readings API if available

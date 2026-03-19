@@ -301,6 +301,7 @@ export const mapFormValuesToCreatePayload = (
       allowable_moisture: li.allowableMoisture
         ? Number(li.allowableMoisture)
         : null,
+      jute_unit: formValues.juteUnit,
     })),
 });
 
@@ -339,6 +340,7 @@ export const mapFormToUpdatePayload = (
       allowable_moisture: li.allowableMoisture
         ? Number(li.allowableMoisture)
         : null,
+      jute_unit: formValues.juteUnit,
     })),
 });
 

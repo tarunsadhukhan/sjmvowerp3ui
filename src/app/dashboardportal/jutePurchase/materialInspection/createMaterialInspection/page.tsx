@@ -439,6 +439,7 @@ function JuteGateEntryCreatePageContent() {
 					challanQuality: poli.quality_id ? String(poli.quality_id) : "",
 					challanQty: poli.quantity ? String(poli.quantity) : "",
 					challanWeight: "",
+					juteUom: poli.uom ?? poData.jute_uom ?? "",
 					actualItem: poli.item_grp_id ? String(poli.item_grp_id) : "",
 						actualQuality: poli.quality_id ? String(poli.quality_id) : "",
 						actualQty: poli.quantity ? String(poli.quantity) : "",
@@ -610,6 +611,7 @@ function JuteGateEntryCreatePageContent() {
 					actual_item_id: li.actualQuality ? Number(li.actualQuality) : null,
 					actual_qty: li.actualQty ? parseFloat(li.actualQty) : null,
 					actual_weight: li.actualWeight ? parseFloat(li.actualWeight) : null,
+					unit_conversion: li.juteUom || null,
 					allowable_moisture: li.allowableMoisture ? parseFloat(li.allowableMoisture) : null,
 					moisture_readings: (li.moistureReadings ?? []).map((r) => ({
 						moisture_percentage: r,
@@ -720,6 +722,8 @@ function JuteGateEntryCreatePageContent() {
 				actual_item_id: li.actualQuality ? Number(li.actualQuality) : null,
 				actual_qty: li.actualQty ? parseFloat(li.actualQty) : null,
 				actual_weight: li.actualWeight ? parseFloat(li.actualWeight) : null,
+				// UOM
+				unit_conversion: li.juteUom || null,
 				// Moisture
 				allowable_moisture: li.allowableMoisture ? parseFloat(li.allowableMoisture) : null,
 				moisture_readings: (li.moistureReadings ?? []).map((r) => ({

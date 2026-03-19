@@ -36,6 +36,9 @@ import { useSalesOrderFormState } from "./hooks/useSalesOrderFormState";
 import { useSalesOrderTaxCalculations } from "./hooks/useSalesOrderTaxCalculations";
 import { useSalesOrderSelectOptions } from "./hooks/useSalesOrderSelectOptions";
 import { useSalesOrderHeaderSchema } from "./hooks/useSalesOrderFormSchemas";
+import { useSalesOrderGovtskgSchema } from "./hooks/useSalesOrderGovtskgSchema";
+import { useSalesOrderJuteSchema } from "./hooks/useSalesOrderJuteSchema";
+import { useSalesOrderJuteYarnSchema } from "./hooks/useSalesOrderJuteYarnSchema";
 import { useSalesOrderFormSubmission } from "./hooks/useSalesOrderFormSubmission";
 import { useSalesOrderApproval } from "./hooks/useSalesOrderApproval";
 import { useSalesOrderLineItems } from "./hooks/useSalesOrderLineItems";
@@ -246,6 +249,45 @@ function SalesOrderTransactionPageContent() {
 		return customerBranches.find((b) => b.id === shippingId)?.stateName;
 	}, [formValues.shipping_to, customerBranches]);
 
+	// Resolve invoice type code from selected ID + invoiceTypes list (name-based, not hardcoded ID)
+	const invoiceTypeCode = React.useMemo(() => {
+		const selectedId = String(formValues.invoice_type ?? "");
+		if (!selectedId) return "";
+		const found = invoiceTypes.find((t) => t.id === selectedId);
+		return found?.typeCode ?? "";
+	}, [formValues.invoice_type, invoiceTypes]);
+
+	// Lock invoice type dropdown when type-specific header fields have data
+	const hasTypeSpecificHeaderData = React.useMemo(() => {
+		const v = formValues;
+		const hasGovtskg = !!(v.govtskg_pcso_no || v.govtskg_pcso_date || v.govtskg_admin_office || v.govtskg_rail_head || v.govtskg_loading_point);
+		const hasJute = !!(v.jute_mr_no || v.jute_mukam_id || v.jute_claim_amount || v.jute_claim_description);
+		const hasJuteYarn = !!(v.juteyarn_pcso_no || v.juteyarn_container_no || v.juteyarn_customer_ref_no);
+		return hasGovtskg || hasJute || hasJuteYarn;
+	}, [formValues]);
+
+	// Clear previous type's header fields when invoice type changes
+	const prevInvoiceTypeCodeRef = React.useRef<string>("");
+	React.useEffect(() => {
+		if (mode === "view") return;
+		const currentCode = invoiceTypeCode;
+		const prevCode = prevInvoiceTypeCodeRef.current;
+		prevInvoiceTypeCodeRef.current = currentCode;
+		if (!prevCode || prevCode === currentCode) return;
+
+		const clearFields: Record<string, string> = {};
+		if (prevCode === "govt_skg") {
+			Object.assign(clearFields, { govtskg_pcso_no: "", govtskg_pcso_date: "", govtskg_admin_office: "", govtskg_rail_head: "", govtskg_loading_point: "" });
+		} else if (prevCode === "jute") {
+			Object.assign(clearFields, { jute_mr_no: "", jute_mukam_id: "", jute_claim_amount: "", jute_claim_description: "" });
+		} else if (prevCode === "jute_yarn") {
+			Object.assign(clearFields, { juteyarn_pcso_no: "", juteyarn_container_no: "", juteyarn_customer_ref_no: "" });
+		}
+		if (Object.keys(clearFields).length) {
+			setFormValues((prev) => ({ ...prev, ...clearFields }));
+		}
+	}, [invoiceTypeCode, mode, setFormValues]);
+
 	// Clear party-dependent fields when customer changes
 	const prevPartyRef = React.useRef<string>("");
 	React.useEffect(() => {
@@ -278,7 +320,7 @@ function SalesOrderTransactionPageContent() {
 		itemGroupLoading,
 		ensureItemGroupData,
 		itemGroups,
-		invoiceTypeId: String(formValues.invoice_type ?? ""),
+		invoiceTypeCode,
 		brokeragePercent: formValues.broker_commission_percent ? Number(formValues.broker_commission_percent) : undefined,
 	});
 
@@ -517,13 +559,18 @@ function SalesOrderTransactionPageContent() {
 		quotationRequired,
 		mode,
 		headerFieldsDisabled,
+		invoiceTypeLocked: hasTypeSpecificHeaderData,
 	});
+
+	const govtskgSchema = useSalesOrderGovtskgSchema({ mode, headerFieldsDisabled });
+	const juteYarnSchema = useSalesOrderJuteYarnSchema({ mode, headerFieldsDisabled });
+	const juteSchema = useSalesOrderJuteSchema({ mukamOptions: [], mode, headerFieldsDisabled });
 
 	const canEdit = mode !== "view";
 
 	const lineItemColumns = useSalesOrderLineItemColumns({
 		canEdit,
-		invoiceTypeId: String(formValues.invoice_type ?? ""),
+		invoiceTypeCode,
 		itemGroupOptions,
 		itemGroupLoading,
 		getItemOptions,
@@ -618,6 +665,7 @@ function SalesOrderTransactionPageContent() {
 		isLineItemsReady,
 		requestedId,
 		formValues,
+		invoiceTypeCode,
 	});
 
 	const primaryActionLabel = mode === "create" ? "Create" : "Save";
@@ -764,6 +812,10 @@ function SalesOrderTransactionPageContent() {
 				showQuotationButton={quotationRequired && mode !== "view"}
 				onQuotationSelect={handleQuotationSelect}
 				quotationButtonDisabled={!isMounted || !formValues.quotation}
+				govtskgSchema={govtskgSchema}
+				juteSchema={juteSchema}
+				juteYarnSchema={juteYarnSchema}
+				invoiceTypeCode={invoiceTypeCode}
 			/>
 		</TransactionWrapper>
 	);

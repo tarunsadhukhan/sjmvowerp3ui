@@ -3,7 +3,7 @@ import { useRouter } from "next/navigation";
 import { toast } from "@/hooks/use-toast";
 import { createSalesOrder, updateSalesOrder, type CreateSalesOrderRequest } from "@/utils/salesOrderService";
 import type { EditableLineItem } from "../types/salesOrderTypes";
-import { isJuteOrder, isGovtSkgOrder, isJuteYarnOrder } from "../utils/salesOrderConstants";
+import { isHessianOrder, isJuteOrder, isGovtSkgOrder, isJuteYarnOrder } from "../utils/salesOrderConstants";
 
 type UseSalesOrderFormSubmissionParams = {
 	mode: "create" | "edit" | "view";
@@ -13,6 +13,7 @@ type UseSalesOrderFormSubmissionParams = {
 	isLineItemsReady: boolean;
 	requestedId: string;
 	formValues: Record<string, unknown>;
+	invoiceTypeCode: string;
 };
 
 export const useSalesOrderFormSubmission = ({
@@ -23,6 +24,7 @@ export const useSalesOrderFormSubmission = ({
 	isLineItemsReady,
 	requestedId,
 	formValues,
+	invoiceTypeCode,
 }: UseSalesOrderFormSubmissionParams) => {
 	const [saving, setSaving] = React.useState(false);
 	const router = useRouter();
@@ -36,8 +38,7 @@ export const useSalesOrderFormSubmission = ({
 				return;
 			}
 
-			const invoiceTypeId = String(values.invoice_type ?? "");
-			const isHessian = invoiceTypeId ? Number(invoiceTypeId) === 2 : false;
+			const isHessian = isHessianOrder(invoiceTypeCode);
 
 			const itemsPayload: CreateSalesOrderRequest["items"] = filledLineItems.map((item) => ({
 				item: item.item || undefined,
@@ -68,14 +69,14 @@ export const useSalesOrderFormSubmission = ({
 					billing_rate_mt: item.billingRateMt ?? null,
 					billing_rate_bale: item.billingRateBale ?? null,
 				} : undefined,
-				jute_dtl: isJuteOrder(invoiceTypeId) && item.juteClaimRate ? {
+				jute_dtl: isJuteOrder(invoiceTypeCode) && item.juteClaimRate ? {
 					claim_amount_dtl: Number(item.juteClaimAmountDtl) || null,
 					claim_desc: item.juteClaimDesc || null,
 					claim_rate: Number(item.juteClaimRate) || null,
 					unit_conversion: item.juteUnitConversion || null,
 					qty_untit_conversion: Number(item.juteQtyUnitConversion) || null,
 				} : undefined,
-				govtskg_dtl: isGovtSkgOrder(invoiceTypeId) ? {
+				govtskg_dtl: isGovtSkgOrder(invoiceTypeCode) ? {
 					pack_sheet: Number(item.govtskgPackSheet) || null,
 					net_weight: Number(item.govtskgNetWeight) || null,
 					total_weight: Number(item.govtskgTotalWeight) || null,
@@ -89,14 +90,14 @@ export const useSalesOrderFormSubmission = ({
 			const netAmount = grossAmount + totalTax + freightCharges;
 
 			// Build header-level extension data conditionally
-			const juteHeader = isJuteOrder(invoiceTypeId) ? {
+			const juteHeader = isJuteOrder(invoiceTypeCode) ? {
 				mr_no: String(values.jute_mr_no ?? formValues.jute_mr_no ?? "") || undefined,
 				mukam_id: String(values.jute_mukam_id ?? formValues.jute_mukam_id ?? "") || undefined,
 				claim_amount: Number(values.jute_claim_amount ?? formValues.jute_claim_amount) || undefined,
 				claim_description: String(values.jute_claim_description ?? formValues.jute_claim_description ?? "") || undefined,
 			} : undefined;
 
-			const govtskgHeader = isGovtSkgOrder(invoiceTypeId) ? {
+			const govtskgHeader = isGovtSkgOrder(invoiceTypeCode) ? {
 				pcso_no: String(values.govtskg_pcso_no ?? formValues.govtskg_pcso_no ?? "") || undefined,
 				pcso_date: String(values.govtskg_pcso_date ?? formValues.govtskg_pcso_date ?? "") || undefined,
 				administrative_office_address: String(values.govtskg_admin_office ?? formValues.govtskg_admin_office ?? "") || undefined,
@@ -104,7 +105,7 @@ export const useSalesOrderFormSubmission = ({
 				loading_point: String(values.govtskg_loading_point ?? formValues.govtskg_loading_point ?? "") || undefined,
 			} : undefined;
 
-			const juteyarnHeader = isJuteYarnOrder(invoiceTypeId) ? {
+			const juteyarnHeader = isJuteYarnOrder(invoiceTypeCode) ? {
 				pcso_no: String(values.juteyarn_pcso_no ?? formValues.juteyarn_pcso_no ?? "") || undefined,
 				container_no: String(values.juteyarn_container_no ?? formValues.juteyarn_container_no ?? "") || undefined,
 				customer_ref_no: String(values.juteyarn_customer_ref_no ?? formValues.juteyarn_customer_ref_no ?? "") || undefined,
@@ -185,7 +186,7 @@ export const useSalesOrderFormSubmission = ({
 				setSaving(false);
 			}
 		},
-		[mode, pageError, setupError, filledLineItems, isLineItemsReady, requestedId, formValues, router],
+		[mode, pageError, setupError, filledLineItems, isLineItemsReady, requestedId, formValues, invoiceTypeCode, router],
 	);
 
 	return { saving, handleFormSubmit };

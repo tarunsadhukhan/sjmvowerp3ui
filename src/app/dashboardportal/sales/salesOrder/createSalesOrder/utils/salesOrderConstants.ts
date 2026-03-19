@@ -36,30 +36,22 @@ export const EMPTY_INVOICE_TYPES: never[] = [];
 export const EMPTY_MUKAM_OPTIONS: never[] = [];
 export const EMPTY_SETUP_PARAMS: { branchId?: string } = {};
 
-// Invoice type IDs
-export const REGULAR_TYPE_ID = "1";
-export const HESSIAN_TYPE_ID = "2";
-export const JUTE_YARN_TYPE_ID = "3";
-export const JUTE_TYPE_ID = "4";
-export const GOVT_SKG_TYPE_ID = "5";
+// Invoice type codes — resolved from invoice_type_name, NOT from hardcoded IDs.
+// The invoice_type_mst IDs vary across deployments, so we match by name instead.
+export type InvoiceTypeCode = "regular" | "hessian" | "govt_skg" | "jute_yarn" | "jute" | "";
 
-// Type-checking helpers
-export const isHessianOrder = (id?: string | number | null): boolean => {
-	if (id == null || id === "") return false;
-	return String(id) === HESSIAN_TYPE_ID;
-};
+export function resolveInvoiceTypeCode(name: string): InvoiceTypeCode {
+	const n = name.toLowerCase().trim();
+	if (n.includes("hessian")) return "hessian";
+	if (n.includes("govt") || n.includes("sacking") || n.includes("skg")) return "govt_skg";
+	if (n.includes("yarn")) return "jute_yarn";
+	if (n.includes("raw jute")) return "jute";
+	if (n === "jute" || n.includes("jute invoice")) return "jute";
+	return "regular";
+}
 
-export const isJuteYarnOrder = (id?: string | number | null): boolean => {
-	if (id == null || id === "") return false;
-	return String(id) === JUTE_YARN_TYPE_ID;
-};
-
-export const isJuteOrder = (id?: string | number | null): boolean => {
-	if (id == null || id === "") return false;
-	return String(id) === JUTE_TYPE_ID;
-};
-
-export const isGovtSkgOrder = (id?: string | number | null): boolean => {
-	if (id == null || id === "") return false;
-	return String(id) === GOVT_SKG_TYPE_ID;
-};
+// Type-checking helpers — accept a resolved typeCode string
+export const isHessianOrder = (typeCode?: string | null): boolean => typeCode === "hessian";
+export const isJuteYarnOrder = (typeCode?: string | null): boolean => typeCode === "jute_yarn";
+export const isJuteOrder = (typeCode?: string | null): boolean => typeCode === "jute";
+export const isGovtSkgOrder = (typeCode?: string | null): boolean => typeCode === "govt_skg";

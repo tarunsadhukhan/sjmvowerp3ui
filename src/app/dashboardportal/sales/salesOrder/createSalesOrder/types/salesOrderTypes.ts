@@ -66,6 +66,7 @@ export type ItemGroupRecord = {
 export type InvoiceTypeRecord = {
 	id: string;
 	name: string;
+	typeCode: string;
 };
 
 export type ItemOption = Option & {

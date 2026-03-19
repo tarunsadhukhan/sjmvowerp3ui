@@ -31,8 +31,8 @@ type UseSalesOrderLineItemsParams = {
 	itemGroupLoading: Partial<Record<string, boolean>>;
 	ensureItemGroupData: (groupId: string) => void;
 	itemGroups: ReadonlyArray<ItemGroupRecord>;
-	/** Current invoice type from form header (\"2\" = Hessian) */
-	invoiceTypeId?: string;
+	/** Resolved invoice type code from form header (e.g. "hessian", "govt_skg") */
+	invoiceTypeCode?: string;
 	/** Broker commission percent from form header */
 	brokeragePercent?: number;
 };
@@ -46,7 +46,7 @@ export const useSalesOrderLineItems = ({
 	itemGroupLoading,
 	ensureItemGroupData,
 	itemGroups,
-	invoiceTypeId,
+	invoiceTypeCode,
 	brokeragePercent,
 }: UseSalesOrderLineItemsParams) => {
 	const {
@@ -98,7 +98,7 @@ export const useSalesOrderLineItems = ({
 		return { amount: Math.max(0, gross - discountAmount), discountAmount };
 	}, []);
 
-	const isHessian = invoiceTypeId === "2";
+	const isHessian = invoiceTypeCode === "hessian";
 
 	/**
 	 * Resolve the effective qty rounding for a line item.

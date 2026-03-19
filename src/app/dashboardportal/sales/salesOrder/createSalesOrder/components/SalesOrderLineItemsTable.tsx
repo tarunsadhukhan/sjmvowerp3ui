@@ -4,11 +4,11 @@ import { Input } from "@/components/ui/input";
 import type { TransactionLineColumn } from "@/components/ui/transaction";
 import type { EditableLineItem, Option, UomConversionEntry } from "../types/salesOrderTypes";
 import { computeConvertedRate } from "@/utils/uomConversion";
-import { isJuteOrder, isGovtSkgOrder } from "../utils/salesOrderConstants";
+import { isHessianOrder, isJuteOrder, isGovtSkgOrder } from "../utils/salesOrderConstants";
 
 type UseSalesOrderLineItemColumnsParams = {
 	canEdit: boolean;
-	invoiceTypeId?: string;
+	invoiceTypeCode?: string;
 	itemGroupOptions: Option[];
 	itemGroupLoading: Partial<Record<string, boolean>>;
 	getItemOptions: (groupId: string) => Option[];
@@ -21,7 +21,7 @@ type UseSalesOrderLineItemColumnsParams = {
 
 export const useSalesOrderLineItemColumns = ({
 	canEdit,
-	invoiceTypeId,
+	invoiceTypeCode,
 	itemGroupOptions,
 	itemGroupLoading,
 	getItemOptions,
@@ -111,7 +111,7 @@ export const useSalesOrderLineItemColumns = ({
 				width: "0.8fr",
 				minWidth: "80px",
 				renderCell: ({ item }) => {
-					const isHessian = invoiceTypeId === "2";
+					const isHessian = isHessianOrder(invoiceTypeCode);
 					// Hessian: qty input is bales, show MT annotation
 					const displayValue = isHessian ? (item.qtyBales ?? "") : item.quantity;
 					const fieldKey: keyof EditableLineItem = isHessian ? "qtyBales" : "quantity";
@@ -155,7 +155,7 @@ export const useSalesOrderLineItemColumns = ({
 					);
 				},
 				getTooltip: ({ item }) => {
-					const isHessian = invoiceTypeId === "2";
+					const isHessian = isHessianOrder(invoiceTypeCode);
 					const parts: string[] = [];
 					if (isHessian && item.qtyBales) parts.push(`Bales: ${item.qtyBales}`);
 					if (isHessian && item.quantity) parts.push(`\u2248 ${item.quantity} MT`);
@@ -193,7 +193,7 @@ export const useSalesOrderLineItemColumns = ({
 				width: "0.8fr",
 				minWidth: "80px",
 				renderCell: ({ item }) => {
-					const isHessian = invoiceTypeId === "2";
+					const isHessian = isHessianOrder(invoiceTypeCode);
 
 					if (isHessian) {
 						// Hessian mode: input is rawRateMt (pre-brokerage rate per MT)
@@ -279,7 +279,7 @@ export const useSalesOrderLineItemColumns = ({
 					);
 				},
 				getTooltip: ({ item }) => {
-					const isHessian = invoiceTypeId === "2";
+					const isHessian = isHessianOrder(invoiceTypeCode);
 					const parts: string[] = [];
 					if (isHessian) {
 						if (item.rawRateMt) parts.push(`Rate: ${item.rawRateMt} / MT`);
@@ -333,7 +333,7 @@ export const useSalesOrderLineItemColumns = ({
 						<span className="block truncate text-sm">{item.remarks || "-"}</span>
 					),
 			},
-			...(isJuteOrder(invoiceTypeId) ? [
+			...(isJuteOrder(invoiceTypeCode) ? [
 				{
 					id: "juteClaimRate" as const,
 					header: "Claim Rate",
@@ -425,7 +425,7 @@ export const useSalesOrderLineItemColumns = ({
 						),
 				},
 			] as TransactionLineColumn<EditableLineItem>[] : []),
-			...(isGovtSkgOrder(invoiceTypeId) ? [
+			...(isGovtSkgOrder(invoiceTypeCode) ? [
 				{
 					id: "govtskgPackSheet" as const,
 					header: "Pack Sheet",
@@ -482,5 +482,5 @@ export const useSalesOrderLineItemColumns = ({
 				},
 			] as TransactionLineColumn<EditableLineItem>[] : []),
 		],
-		[canEdit, invoiceTypeId, itemGroupOptions, itemGroupLoading, getItemOptions, getMakeOptions, getUomOptions, getUomConversions, getItemGroupLabel, handleLineFieldChange],
+		[canEdit, invoiceTypeCode, itemGroupOptions, itemGroupLoading, getItemOptions, getMakeOptions, getUomOptions, getUomConversions, getItemGroupLabel, handleLineFieldChange],
 	);

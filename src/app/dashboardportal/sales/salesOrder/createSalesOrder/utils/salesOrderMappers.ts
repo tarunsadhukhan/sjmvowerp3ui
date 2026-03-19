@@ -26,6 +26,7 @@ import type {
 	TransporterRecordRaw,
 	UomConversionEntry,
 } from "../types/salesOrderTypes";
+import { resolveInvoiceTypeCode } from "./salesOrderConstants";
 
 // ---------------------------------------------------------------------------
 // Customer mapping
@@ -180,9 +181,11 @@ export const mapInvoiceTypeRecords = (records: unknown[]): InvoiceTypeRecord[] =
 			const data = row as InvoiceTypeRecordRaw;
 			const id = data?.invoice_type_id;
 			if (!id) return null;
+			const name = data?.invoice_type_name ?? String(id);
 			return {
 				id: String(id),
-				name: data?.invoice_type_name ?? String(id),
+				name,
+				typeCode: resolveInvoiceTypeCode(name),
 			} satisfies InvoiceTypeRecord;
 		})
 		.filter(Boolean) as InvoiceTypeRecord[];

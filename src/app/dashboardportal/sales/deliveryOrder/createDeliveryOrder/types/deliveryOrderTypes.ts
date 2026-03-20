@@ -43,9 +43,14 @@ export type ApprovedSalesOrderRecord = {
 	id: string;
 	salesNo: string;
 	salesOrderDate?: string;
+	partyId?: string;
 	partyName?: string;
 	netAmount?: number;
 	invoiceType?: string;
+	brokerId?: string;
+	billingToId?: string;
+	shippingToId?: string;
+	transporterId?: string;
 };
 
 export type InvoiceTypeRecord = {
@@ -162,9 +167,14 @@ export type ApprovedSalesOrderRecordRaw = {
 	sales_no?: string;
 	sales_order_no?: string;
 	sales_order_date?: string;
+	party_id?: string | number;
 	party_name?: string;
 	net_amount?: number;
 	invoice_type?: string | number;
+	broker_id?: string | number;
+	billing_to_id?: string | number;
+	shipping_to_id?: string | number;
+	transporter_id?: string | number;
 };
 
 export type InvoiceTypeRecordRaw = {

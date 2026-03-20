@@ -113,6 +113,64 @@ const toSerializable = (rows: UOMRow[]) =>
 
 const serializeRows = (rows: UOMRow[]) => JSON.stringify(toSerializable(rows));
 
+/** Controlled numeric input that allows intermediate decimal states like "1." or ".5".
+ *  Uses a plain <input> to avoid MUI v7 TextField interference with character filtering. */
+const DecimalInput: React.FC<{
+  value: number | null;
+  onChange: (v: number | null) => void;
+  disabled?: boolean;
+}> = ({ value, onChange, disabled }) => {
+  const [text, setText] = React.useState(value != null ? String(value) : "");
+  const [focused, setFocused] = React.useState(false);
+
+  // Only sync from parent when NOT focused — while editing, local text owns the state
+  React.useEffect(() => {
+    if (!focused) {
+      setText(value != null ? String(value) : "");
+    }
+  }, [value, focused]);
+
+  return (
+    <input
+      type="text"
+      inputMode="decimal"
+      style={{
+        width: "100%",
+        padding: "8.5px 14px",
+        fontSize: "0.875rem",
+        border: "1px solid rgba(0,0,0,0.23)",
+        borderRadius: 4,
+        outline: "none",
+        boxSizing: "border-box",
+        fontFamily: "inherit",
+        background: disabled ? "#f5f5f5" : "inherit",
+      }}
+      value={text}
+      onFocus={() => setFocused(true)}
+      onChange={(e) => {
+        const v = e.target.value;
+        // Allow empty, digits, one decimal point, optional leading minus
+        if (v === "" || /^-?\d*\.?\d*$/.test(v)) {
+          setText(v);
+        }
+      }}
+      onBlur={() => {
+        setFocused(false);
+        const trimmed = text.replace(/\.$/, ""); // clean trailing dot
+        const num = trimmed === "" ? null : Number(trimmed);
+        if (trimmed === "" || (num != null && !Number.isNaN(num))) {
+          onChange(num);
+          setText(num != null ? String(num) : "");
+        } else {
+          // invalid input — revert to parent value
+          setText(value != null ? String(value) : "");
+        }
+      }}
+      disabled={disabled}
+    />
+  );
+};
+
 const UOMMappingTable: React.FC<UOMMappingTableProps> = ({ value = [], uomOptions, itemDefaultUom = null, onChange, disabled = false, readOnly = false }) => {
   const disabledAll = disabled || readOnly;
   const syncingFromPropRef = React.useRef(false);
@@ -269,16 +327,9 @@ const UOMMappingTable: React.FC<UOMMappingTableProps> = ({ value = [], uomOption
                   />
                 </TableCell>
                 <TableCell>
-                  <TextField
-                    size="small"
-                    fullWidth
-                    value={r.relationValue ?? ""}
-                    onChange={(e) => {
-                      // accept only decimal
-                      const v = e.target.value;
-                      const num = v === "" ? null : Number(v);
-                      if (v === "" || !Number.isNaN(num)) updateRow(idx, { relationValue: num });
-                    }}
+                  <DecimalInput
+                    value={r.relationValue ?? null}
+                    onChange={(num) => updateRow(idx, { relationValue: num })}
                     disabled={disabledAll}
                   />
                 </TableCell>

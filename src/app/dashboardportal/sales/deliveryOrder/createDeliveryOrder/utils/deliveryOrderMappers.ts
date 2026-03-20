@@ -102,9 +102,14 @@ export const mapApprovedSalesOrders = (records: unknown[]): ApprovedSalesOrderRe
 				id: String(id),
 				salesNo: data?.sales_no ?? data?.sales_order_no ?? String(id),
 				salesOrderDate: data?.sales_order_date,
+				partyId: data?.party_id != null ? String(data.party_id) : undefined,
 				partyName: data?.party_name,
 				netAmount: data?.net_amount,
 				invoiceType: data?.invoice_type ? String(data.invoice_type) : undefined,
+				brokerId: data?.broker_id != null ? String(data.broker_id) : undefined,
+				billingToId: data?.billing_to_id != null ? String(data.billing_to_id) : undefined,
+				shippingToId: data?.shipping_to_id != null ? String(data.shipping_to_id) : undefined,
+				transporterId: data?.transporter_id != null ? String(data.transporter_id) : undefined,
 			} satisfies ApprovedSalesOrderRecord;
 		})
 		.filter(Boolean) as ApprovedSalesOrderRecord[];

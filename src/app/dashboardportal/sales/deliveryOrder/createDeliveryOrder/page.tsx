@@ -338,17 +338,34 @@ function DOTransactionPageContent() {
 		uniqueGroups.forEach((groupId) => { ensureItemGroupData(groupId); });
 	}, [doDetails, ensureItemGroupData]);
 
-	// When sales_order is selected in create mode, auto-populate invoice_type from the SO record
+	// When sales_order is selected in create mode, auto-populate header fields from the SO record
+	const prevSORef = React.useRef<string | undefined>(undefined);
 	React.useEffect(() => {
-		const soValue = formValues.sales_order;
+		const soValue = formValues.sales_order ? String(formValues.sales_order) : undefined;
 		if (!soValue || mode !== "create") return;
+		// Only autofill when the SO selection actually changes
+		if (prevSORef.current === soValue) return;
+		prevSORef.current = soValue;
+
 		const selectedSO = setupData?.approvedSalesOrders?.find(
-			(so) => String(so.id) === String(soValue),
+			(so) => String(so.id) === soValue,
 		);
-		if (selectedSO?.invoiceType && !formValues.invoice_type) {
-			setFormValues((prev: Record<string, unknown>) => ({ ...prev, invoice_type: selectedSO.invoiceType }));
-		}
-	}, [formValues.sales_order, formValues.invoice_type, mode, setupData?.approvedSalesOrders, setFormValues]);
+		if (!selectedSO) return;
+
+		setFormValues((prev: Record<string, unknown>) => {
+			const next = { ...prev };
+			if (selectedSO.partyId) next.party = selectedSO.partyId;
+			if (selectedSO.billingToId) {
+				next.billing_to = selectedSO.billingToId;
+				// Use billing address as default party branch if not already set
+				if (!prev.party_branch) next.party_branch = selectedSO.billingToId;
+			}
+			if (selectedSO.shippingToId) next.shipping_to = selectedSO.shippingToId;
+			if (selectedSO.transporterId) next.transporter = selectedSO.transporterId;
+			if (selectedSO.invoiceType) next.invoice_type = selectedSO.invoiceType;
+			return next;
+		});
+	}, [formValues.sales_order, mode, setupData?.approvedSalesOrders, setFormValues]);
 
 	const isLineItemsReady = React.useMemo(() => {
 		if (mode === "view" || pageError || setupError) return true;

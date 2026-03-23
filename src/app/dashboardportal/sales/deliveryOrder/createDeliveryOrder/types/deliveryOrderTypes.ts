@@ -125,10 +125,14 @@ export type CustomerBranchRecordRaw = {
 	id?: string | number;
 	party_mst_branch_id?: string | number;
 	party_branch_name?: string;
+	address?: string;
+	address_additional?: string;
+	zip_code?: string;
 	branch_address1?: string;
 	fatory_address?: string; // production typo - do not fix
 	state_name?: string;
 	state_id?: number;
+	state_code?: string;
 	gst_no?: string;
 };
 

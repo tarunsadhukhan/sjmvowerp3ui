@@ -31,9 +31,11 @@ export const mapCustomerBranchRecords = (records: unknown[]): CustomerBranchReco
 			const data = row as CustomerBranchRecordRaw;
 			const id = data?.party_mst_branch_id ?? data?.id;
 			if (!id) return null;
-			const address = data?.fatory_address ?? data?.branch_address1 ?? "";
+			const address = data?.address ?? data?.fatory_address ?? data?.branch_address1 ?? "";
+			const addressAdditional = data?.address_additional ?? "";
+			const zipCode = data?.zip_code ?? "";
 			const stateName = data?.state_name ?? "";
-			const addressParts = [address, stateName].filter(Boolean);
+			const addressParts = [address, addressAdditional, stateName, zipCode].filter(Boolean);
 			const fullAddress = addressParts.length > 0 ? addressParts.join(", ") : String(id);
 			return {
 				id: String(id),

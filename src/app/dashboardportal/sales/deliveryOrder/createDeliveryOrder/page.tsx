@@ -14,6 +14,7 @@ import { useBranchOptions } from "@/utils/branchUtils";
 import {
 	fetchDOSetup1,
 	fetchDOSetup2,
+	fetchSalesOrderLines,
 	getDOById,
 	type DODetails,
 } from "@/utils/deliveryOrderService";
@@ -338,17 +339,59 @@ function DOTransactionPageContent() {
 		uniqueGroups.forEach((groupId) => { ensureItemGroupData(groupId); });
 	}, [doDetails, ensureItemGroupData]);
 
-	// When sales_order is selected in create mode, auto-populate invoice_type from the SO record
+	// Track whether line items were sourced from a sales order or entered manually
+	const [soLinesImported, setSOLinesImported] = React.useState(false);
+
+	// Determine if lines were manually entered (without an SO selected)
+	const hasManualLines = React.useMemo(() => {
+		if (mode !== "create") return false;
+		if (soLinesImported) return false;
+		return filledLineItems.length > 0;
+	}, [mode, soLinesImported, filledLineItems.length]);
+
+	// When sales_order is selected in create mode, auto-populate header fields + line items from the SO
+	const prevSORef = React.useRef<string | undefined>(undefined);
 	React.useEffect(() => {
-		const soValue = formValues.sales_order;
+		const soValue = formValues.sales_order ? String(formValues.sales_order) : undefined;
 		if (!soValue || mode !== "create") return;
+		// Only autofill when the SO selection actually changes
+		if (prevSORef.current === soValue) return;
+		prevSORef.current = soValue;
+
 		const selectedSO = setupData?.approvedSalesOrders?.find(
-			(so) => String(so.id) === String(soValue),
+			(so) => String(so.id) === soValue,
 		);
-		if (selectedSO?.invoiceType && !formValues.invoice_type) {
-			setFormValues((prev: Record<string, unknown>) => ({ ...prev, invoice_type: selectedSO.invoiceType }));
-		}
-	}, [formValues.sales_order, formValues.invoice_type, mode, setupData?.approvedSalesOrders, setFormValues]);
+		if (!selectedSO) return;
+
+		// Autofill header fields
+		setFormValues((prev: Record<string, unknown>) => {
+			const next = { ...prev };
+			if (selectedSO.partyId) next.party = selectedSO.partyId;
+			if (selectedSO.billingToId) {
+				next.billing_to = selectedSO.billingToId;
+				if (!prev.party_branch) next.party_branch = selectedSO.billingToId;
+			}
+			if (selectedSO.shippingToId) next.shipping_to = selectedSO.shippingToId;
+			if (selectedSO.transporterId) next.transporter = selectedSO.transporterId;
+			if (selectedSO.brokerId) next.broker = selectedSO.brokerId;
+			if (selectedSO.invoiceType) next.invoice_type = selectedSO.invoiceType;
+			return next;
+		});
+
+		// Auto-import ALL line items from the sales order
+		fetchSalesOrderLines(soValue)
+			.then((response) => {
+				const lines = response.data || [];
+				if (lines.length > 0) {
+					handleSalesOrderLinesConfirm(lines);
+					setSOLinesImported(true);
+				}
+			})
+			.catch((error) => {
+				const description = error instanceof Error ? error.message : "Unable to load sales order lines.";
+				toast({ variant: "destructive", title: "Failed to import SO lines", description });
+			});
+	}, [formValues.sales_order, mode, setupData?.approvedSalesOrders, setFormValues, handleSalesOrderLinesConfirm]);
 
 	const isLineItemsReady = React.useMemo(() => {
 		if (mode === "view" || pageError || setupError) return true;
@@ -393,6 +436,7 @@ function DOTransactionPageContent() {
 		invoiceTypeOptions,
 		mode,
 		headerFieldsDisabled,
+		hasManualLines,
 	});
 
 	const footerSchema = useDeliveryOrderFooterSchema({ mode });
@@ -463,34 +507,38 @@ function DOTransactionPageContent() {
 
 	const statusLabel = React.useMemo(() => statusChipProps?.label ?? doDetails?.status, [statusChipProps?.label, doDetails?.status]);
 
+	// Resolve billing/shipping addresses for print preview
+	const billingBranchId = formValues.billing_to ? String(formValues.billing_to) : undefined;
+	const billingToAddress = React.useMemo(() => {
+		if (!selectedCustomer?.branches || !billingBranchId) return undefined;
+		return selectedCustomer.branches.find((b) => b.id === billingBranchId)?.fullAddress;
+	}, [selectedCustomer, billingBranchId]);
+
+	const shippingToAddress = React.useMemo(() => {
+		if (!selectedCustomer?.branches || !shippingBranchId) return undefined;
+		return selectedCustomer.branches.find((b) => b.id === shippingBranchId)?.fullAddress;
+	}, [selectedCustomer, shippingBranchId]);
+
 	const previewHeader = React.useMemo(
 		() => ({
 			doNo: doDetails?.deliveryOrderNo,
 			doDate: (formValues.date as string) || doDetails?.deliveryOrderDate,
-			expectedDeliveryDate: (formValues.expected_delivery_date as string) || doDetails?.expectedDeliveryDate,
 			branch: branchLabel,
 			customer: customerLabel,
-			customerBranch: customerBranchLabel,
+			billingToAddress,
+			shippingToAddress,
 			salesOrder: salesOrderLabel,
-			billingTo: billingToLabel,
-			shippingTo: shippingToLabel,
 			transporter: transporterLabel,
 			vehicleNo: (formValues.vehicle_no as string) || doDetails?.vehicleNo,
 			driverName: (formValues.driver_name as string) || doDetails?.driverName,
-			driverContact: (formValues.driver_contact as string) || doDetails?.driverContact,
-			ewayBillNo: (formValues.eway_bill_no as string) || doDetails?.ewayBillNo,
-			ewayBillDate: (formValues.eway_bill_date as string) || doDetails?.ewayBillDate,
 			companyName,
 			status: statusLabel,
-			updatedBy: doDetails?.updatedBy,
-			updatedAt: doDetails?.updatedAt,
 		}),
 		[
-			doDetails, formValues.date, formValues.expected_delivery_date,
-			formValues.vehicle_no, formValues.driver_name, formValues.driver_contact,
-			formValues.eway_bill_no, formValues.eway_bill_date,
-			branchLabel, customerLabel, customerBranchLabel, salesOrderLabel,
-			billingToLabel, shippingToLabel, transporterLabel, companyName, statusLabel,
+			doDetails, formValues.date,
+			formValues.vehicle_no, formValues.driver_name,
+			branchLabel, customerLabel, billingToAddress, shippingToAddress, salesOrderLabel,
+			transporterLabel, companyName, statusLabel,
 		],
 	);
 
@@ -582,8 +630,9 @@ function DOTransactionPageContent() {
 	}, [mode, doDetails?.deliveryOrderNo]);
 
 	const showSOButton = React.useMemo(() => {
-		return mode !== "view" && Boolean(formValues.sales_order);
-	}, [mode, formValues.sales_order]);
+		// Show button only when SO is selected and lines are already imported (for re-importing specific lines)
+		return mode !== "view" && Boolean(formValues.sales_order) && soLinesImported;
+	}, [mode, formValues.sales_order, soLinesImported]);
 
 	return (
 		<TransactionWrapper

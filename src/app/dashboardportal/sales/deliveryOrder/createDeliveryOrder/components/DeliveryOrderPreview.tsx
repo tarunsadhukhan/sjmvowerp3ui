@@ -7,22 +7,15 @@ import { Button } from "@/components/ui/button";
 export type DOPreviewHeader = {
 	doNo?: string;
 	doDate?: string;
-	expectedDeliveryDate?: string;
 	branch?: string;
 	customer?: string;
-	customerBranch?: string;
-	billingTo?: string;
-	shippingTo?: string;
+	billingToAddress?: string;
+	shippingToAddress?: string;
 	salesOrder?: string;
 	transporter?: string;
 	vehicleNo?: string;
 	driverName?: string;
-	driverContact?: string;
-	ewayBillNo?: string;
-	ewayBillDate?: string;
 	status?: string;
-	updatedBy?: string;
-	updatedAt?: string;
 	companyName?: string;
 };
 
@@ -58,28 +51,6 @@ type DOPreviewProps = {
 	onDownload?: () => void;
 };
 
-const FieldRow = ({ label, value }: { label: string; value?: React.ReactNode }) => (
-	<Stack direction="column" spacing={0.25} sx={{ minWidth: 0 }}>
-		<Typography variant="caption" color="text.secondary" sx={{ fontSize: "0.75rem" }}>
-			{label}:
-		</Typography>
-		<Typography variant="body2" sx={{ fontWeight: 400, fontSize: "0.875rem" }}>
-			{value ?? "-"}
-		</Typography>
-	</Stack>
-);
-
-const TotalsRow = ({ label, value, isBold = false }: { label: string; value?: React.ReactNode; isBold?: boolean }) => (
-	<Stack direction="row" justifyContent="space-between" alignItems="center" spacing={2} sx={{ minWidth: 280 }}>
-		<Typography variant="body2" color="text.secondary" sx={{ fontSize: "0.8125rem", fontWeight: isBold ? 600 : 400 }}>
-			{label}:
-		</Typography>
-		<Typography variant="body2" sx={{ fontWeight: isBold ? 600 : 400, fontSize: "0.875rem", textAlign: "right", minWidth: 120, fontVariantNumeric: "tabular-nums" }}>
-			{value ?? "-"}
-		</Typography>
-	</Stack>
-);
-
 const formatDate = (dateStr?: string) => {
 	if (!dateStr) return "-";
 	try {
@@ -91,23 +62,12 @@ const formatDate = (dateStr?: string) => {
 	}
 };
 
-const formatDateTime = (dateStr?: string) => {
-	if (!dateStr) return "-";
-	try {
-		const date = new Date(dateStr);
-		if (Number.isNaN(date.getTime())) return dateStr;
-		return date.toLocaleString("en-GB", { year: "numeric", month: "2-digit", day: "2-digit", hour: "2-digit", minute: "2-digit", second: "2-digit", hour12: true });
-	} catch {
-		return dateStr;
-	}
-};
-
-const formatAmount = (value?: number | string) => {
-	if (value === null || value === undefined || value === "") return "-";
-	const num = Number(value);
-	if (Number.isNaN(num)) return value;
-	return num.toLocaleString("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
-};
+const cellSx = {
+	border: "1px solid",
+	borderColor: "divider",
+	p: 0.75,
+	fontSize: 12,
+} as const;
 
 const DeliveryOrderPreview: React.FC<DOPreviewProps> = ({ header, items, totals, remarks, onPrint, onDownload }) => {
 	const previewRef = useRef<HTMLDivElement>(null);
@@ -134,7 +94,6 @@ const DeliveryOrderPreview: React.FC<DOPreviewProps> = ({ header, items, totals,
 			@media print { @page { margin: 12mm; } }
 			body { margin: 0; padding: 20px; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
 			table { width: 100%; border-collapse: collapse; }
-			#preview-left-pane { max-width: 25% !important; flex-basis: 25% !important; word-break: break-word; white-space: normal; }
 		`;
 		printWindow.document.head.appendChild(helperStyle);
 
@@ -162,62 +121,59 @@ const DeliveryOrderPreview: React.FC<DOPreviewProps> = ({ header, items, totals,
 	return (
 		<Box sx={{ display: "flex", flexDirection: "column", gap: 2 }}>
 			<Box ref={previewRef} sx={{ border: "1px solid", borderColor: "divider", borderRadius: 1, p: 3, backgroundColor: "#fff" }}>
-				<Stack direction="row" justifyContent="space-between" alignItems="flex-start" sx={{ mb: 3 }}>
-					<Stack id="preview-left-pane" spacing={0.5} sx={{ minWidth: 200, maxWidth: { xs: "100%", md: "25%" }, flexBasis: { md: "25%" } }}>
-						<Typography variant="body1" sx={{ fontWeight: 600, fontSize: "1rem", wordBreak: "break-word", whiteSpace: "normal" }}>
-							{header.companyName || "-"}
-						</Typography>
-						<Typography variant="body2" sx={{ fontSize: "0.875rem", color: "text.secondary", wordBreak: "break-word", whiteSpace: "normal" }}>
-							{header.branch || "-"}
-						</Typography>
-					</Stack>
-
-					<Box sx={{ flex: 1, display: "flex", justifyContent: "center" }}>
-						<Stack spacing={0.25} alignItems="center">
-							<Typography variant="h5" sx={{ fontWeight: 600 }}>Delivery Order</Typography>
-							{header.status ? (
-								<Typography variant="body2" color="text.secondary" sx={{ fontSize: "0.875rem" }}>{header.status}</Typography>
-							) : null}
-						</Stack>
-					</Box>
-
-					<Stack spacing={0.5} alignItems="flex-end" sx={{ minWidth: 200 }}>
-						<Stack direction="row" spacing={0.5} alignItems="center">
-							<Typography variant="caption" color="text.secondary" sx={{ fontSize: "0.75rem" }}>DO Date:</Typography>
-							<Typography variant="body2" sx={{ fontWeight: 400, fontSize: "0.875rem" }}>{formatDate(header.doDate)}</Typography>
-						</Stack>
-						<Stack direction="row" spacing={0.5} alignItems="center">
-							<Typography variant="caption" color="text.secondary" sx={{ fontSize: "0.75rem" }}>DO No:</Typography>
-							<Typography variant="body2" sx={{ fontWeight: 400, fontSize: "0.875rem" }}>{header.doNo || "-"}</Typography>
-						</Stack>
-					</Stack>
-				</Stack>
+				{/* Company Header */}
+				<Typography variant="body1" sx={{ fontWeight: 700, fontSize: "1rem", textTransform: "uppercase" }}>
+					{header.companyName || "-"}
+				</Typography>
+				<Typography variant="body2" sx={{ fontSize: "0.8125rem", color: "text.secondary", mb: 1 }}>
+					{header.branch || ""}
+				</Typography>
 
 				<Divider sx={{ mb: 2 }} />
 
-				<Box sx={{ display: "grid", gridTemplateColumns: { xs: "1fr", sm: "repeat(2, 1fr)", md: "repeat(3, 1fr)" }, gap: 2, mb: 3 }}>
-					<FieldRow label="Customer" value={header.customer || "-"} />
-					<FieldRow label="Customer Branch" value={header.customerBranch || "-"} />
-					<FieldRow label="Sales Order" value={header.salesOrder || "-"} />
-					<FieldRow label="Billing To" value={header.billingTo || "-"} />
-					<FieldRow label="Shipping To" value={header.shippingTo || "-"} />
-					<FieldRow label="Expected Delivery" value={header.expectedDeliveryDate ? formatDate(header.expectedDeliveryDate) : "-"} />
-					<FieldRow label="Transporter" value={header.transporter || "-"} />
-					<FieldRow label="Vehicle No." value={header.vehicleNo || "-"} />
-					<FieldRow label="Driver Name" value={header.driverName || "-"} />
-					{header.driverContact ? <FieldRow label="Driver Contact" value={header.driverContact} /> : null}
-					{header.ewayBillNo ? <FieldRow label="E-Way Bill No." value={header.ewayBillNo} /> : null}
-					{header.ewayBillDate ? <FieldRow label="E-Way Bill Date" value={formatDate(header.ewayBillDate)} /> : null}
-				</Box>
+				{/* Title + DO/Sale info */}
+				<Stack direction="row" justifyContent="space-between" alignItems="flex-start" sx={{ mb: 2 }}>
+					<Typography variant="h6" sx={{ fontWeight: 700, textDecoration: "underline" }}>
+						DELIVERY ORDER
+					</Typography>
 
-				<Divider sx={{ my: 2 }} />
+					<Box component="table" sx={{ borderCollapse: "collapse", width: "auto" }}>
+						<Box component="tbody">
+							<Box component="tr">
+								<Box component="td" sx={{ pr: 1, fontSize: 12, fontWeight: 600 }}>DO No.</Box>
+								<Box component="td" sx={{ pr: 1, fontSize: 12 }}>:</Box>
+								<Box component="td" sx={{ fontSize: 12, fontWeight: 500 }}>{header.doNo || "Pending"}</Box>
+							</Box>
+							<Box component="tr">
+								<Box component="td" sx={{ pr: 1, fontSize: 12, fontWeight: 600 }}>Date</Box>
+								<Box component="td" sx={{ pr: 1, fontSize: 12 }}>:</Box>
+								<Box component="td" sx={{ fontSize: 12 }}>{formatDate(header.doDate)}</Box>
+							</Box>
+							{header.salesOrder ? (
+								<>
+									<Box component="tr">
+										<Box component="td" sx={{ pr: 1, fontSize: 12, fontWeight: 600 }}>Sale No.</Box>
+										<Box component="td" sx={{ pr: 1, fontSize: 12 }}>:</Box>
+										<Box component="td" sx={{ fontSize: 12 }}>{header.salesOrder}</Box>
+									</Box>
+								</>
+							) : null}
+						</Box>
+					</Box>
+				</Stack>
 
-				<Box sx={{ overflowX: "auto" }}>
+				{/* Items Table */}
+				<Box sx={{ overflowX: "auto", mb: 2 }}>
 					<Box component="table" sx={{ width: "100%", borderCollapse: "collapse" }}>
 						<Box component="thead" sx={{ backgroundColor: "rgba(12,60,96,0.08)" }}>
 							<Box component="tr">
-								{["Sr No", "Item", "Qty", "UOM", "Rate", "Disc. Amt", "Amount", "Remarks"].map((col) => (
-									<Box key={col} component="th" sx={{ border: "1px solid", borderColor: "divider", p: 1, fontSize: 12, textAlign: col === "Remarks" ? "left" : "center" }}>
+								{["Sr No", "Description", "Quantity", "UOM"].map((col) => (
+									<Box key={col} component="th" sx={{
+										...cellSx,
+										fontWeight: 600,
+										textAlign: col === "Description" ? "left" : "center",
+										...(col === "Description" ? { width: "55%" } : {}),
+									}}>
 										{col}
 									</Box>
 								))}
@@ -227,19 +183,15 @@ const DeliveryOrderPreview: React.FC<DOPreviewProps> = ({ header, items, totals,
 							{items.length ? (
 								items.map((item) => (
 									<Box component="tr" key={`do-preview-row-${item.srNo}`}>
-										<Box component="td" sx={{ border: "1px solid", borderColor: "divider", p: 1, fontSize: 12, textAlign: "center" }}>{item.srNo}</Box>
-										<Box component="td" sx={{ border: "1px solid", borderColor: "divider", p: 1, fontSize: 12 }}>{item.item || "-"}</Box>
-										<Box component="td" sx={{ border: "1px solid", borderColor: "divider", p: 1, fontSize: 12, textAlign: "right" }}>{item.quantity ?? "-"}</Box>
-										<Box component="td" sx={{ border: "1px solid", borderColor: "divider", p: 1, fontSize: 12, textAlign: "center" }}>{item.uom || "-"}</Box>
-										<Box component="td" sx={{ border: "1px solid", borderColor: "divider", p: 1, fontSize: 12, textAlign: "right" }}>{formatAmount(item.rate)}</Box>
-										<Box component="td" sx={{ border: "1px solid", borderColor: "divider", p: 1, fontSize: 12, textAlign: "right" }}>{formatAmount(item.discountAmount)}</Box>
-										<Box component="td" sx={{ border: "1px solid", borderColor: "divider", p: 1, fontSize: 12, textAlign: "right" }}>{formatAmount(item.netAmount)}</Box>
-										<Box component="td" sx={{ border: "1px solid", borderColor: "divider", p: 1, fontSize: 12 }}>{item.remarks || "-"}</Box>
+										<Box component="td" sx={{ ...cellSx, textAlign: "center", width: 50 }}>{item.srNo}</Box>
+										<Box component="td" sx={{ ...cellSx }}>{item.item || "-"}</Box>
+										<Box component="td" sx={{ ...cellSx, textAlign: "right", width: 100 }}>{item.quantity ?? "-"}</Box>
+										<Box component="td" sx={{ ...cellSx, textAlign: "center", width: 80 }}>{item.uom || "-"}</Box>
 									</Box>
 								))
 							) : (
 								<Box component="tr">
-									<Box component="td" colSpan={8} sx={{ border: "1px solid", borderColor: "divider", p: 2, fontSize: 12, textAlign: "center" }}>
+									<Box component="td" colSpan={4} sx={{ ...cellSx, textAlign: "center", py: 2 }}>
 										No line items captured yet.
 									</Box>
 								</Box>
@@ -248,46 +200,69 @@ const DeliveryOrderPreview: React.FC<DOPreviewProps> = ({ header, items, totals,
 					</Box>
 				</Box>
 
-				{totals ? (
+				{/* Customer / Billing / Shipping Info */}
+				<Stack spacing={0.5} sx={{ mb: 2 }}>
+					<Typography variant="body2" sx={{ fontSize: "0.8125rem" }}>
+						<strong>A/C Messrs.</strong> {header.customer || "-"}
+					</Typography>
+					{header.billingToAddress ? (
+						<Typography variant="body2" sx={{ fontSize: "0.8125rem" }}>
+							<strong>Billing To :</strong> {header.billingToAddress}
+						</Typography>
+					) : null}
+					{header.shippingToAddress ? (
+						<Typography variant="body2" sx={{ fontSize: "0.8125rem" }}>
+							<strong>Ship To :</strong> {header.shippingToAddress}
+						</Typography>
+					) : null}
+				</Stack>
+
+				<Divider sx={{ my: 1.5 }} />
+
+				{/* Transport Details */}
+				{(header.transporter || header.vehicleNo || header.driverName) ? (
+					<Stack direction="row" spacing={4} sx={{ mb: 2, flexWrap: "wrap" }}>
+						{header.transporter ? (
+							<Typography variant="body2" sx={{ fontSize: "0.8125rem" }}>
+								<strong>Transporter:</strong> {header.transporter}
+							</Typography>
+						) : null}
+						{header.vehicleNo ? (
+							<Typography variant="body2" sx={{ fontSize: "0.8125rem" }}>
+								<strong>Vehicle No.:</strong> {header.vehicleNo}
+							</Typography>
+						) : null}
+						{header.driverName ? (
+							<Typography variant="body2" sx={{ fontSize: "0.8125rem" }}>
+								<strong>Driver:</strong> {header.driverName}
+							</Typography>
+						) : null}
+					</Stack>
+				) : null}
+
+				{/* Remarks */}
+				{remarks ? (
 					<>
-						<Divider sx={{ my: 2 }} />
-						<Stack direction={{ xs: "column", md: "row" }} spacing={2} justifyContent="flex-end" sx={{ pr: 2 }}>
-							<Box sx={{ minWidth: 280 }}>
-								<Stack spacing={0.75}>
-									<TotalsRow label="Gross Amount" value={formatAmount(totals.grossAmount)} />
-									<TotalsRow label="IGST" value={formatAmount(totals.totalIGST)} />
-									<TotalsRow label="CGST" value={formatAmount(totals.totalCGST)} />
-									<TotalsRow label="SGST" value={formatAmount(totals.totalSGST)} />
-									{totals.freightCharges ? <TotalsRow label="Freight Charges" value={formatAmount(totals.freightCharges)} /> : null}
-									{totals.roundOffValue ? <TotalsRow label="Round Off" value={formatAmount(totals.roundOffValue)} /> : null}
-									<Divider sx={{ my: 0.5 }} />
-									<TotalsRow label="Net Amount" value={formatAmount(totals.netAmount)} isBold />
-								</Stack>
-							</Box>
-						</Stack>
+						<Typography variant="body2" sx={{ fontSize: "0.8125rem", mb: 2 }}>
+							<strong>Remarks:</strong> {remarks}
+						</Typography>
 					</>
 				) : null}
 
-				<Divider sx={{ my: 2 }} />
+				<Divider sx={{ my: 1.5 }} />
 
-				<Stack spacing={1}>
-					<Typography variant="subtitle2">Remarks</Typography>
-					<Box sx={{ border: "1px solid", borderColor: "divider", borderRadius: 1, p: 1.5, minHeight: 80 }}>
-						<Typography variant="body2" color="text.secondary">
-							{remarks || "No remarks provided."}
+				{/* Signature Area */}
+				<Stack direction="row" justifyContent="space-between" sx={{ mt: 4 }}>
+					<Stack spacing={0.5} alignItems="center">
+						<Box sx={{ borderBottom: "1px solid", borderColor: "divider", width: 180, height: 24 }} />
+						<Typography variant="caption" color="text.secondary">Receiver&apos;s Signature</Typography>
+					</Stack>
+					<Stack spacing={0.5} alignItems="center">
+						<Typography variant="body2" sx={{ fontWeight: 600, fontSize: "0.8125rem", textTransform: "uppercase" }}>
+							{header.companyName || ""}
 						</Typography>
-					</Box>
-				</Stack>
-
-				<Divider sx={{ my: 2 }} />
-
-				<Stack direction={{ xs: "column", sm: "row" }} justifyContent="flex-start" spacing={4}>
-					<Stack spacing={0.5}>
-						<Typography variant="caption" color="text.secondary">Updated By</Typography>
-						<Box sx={{ borderBottom: "1px solid", borderColor: "divider", width: 200, height: 24 }} />
-						<Typography variant="caption" color="text.secondary">
-							Last Updated: {header.updatedAt ? formatDateTime(header.updatedAt) : "-"}
-						</Typography>
+						<Box sx={{ borderBottom: "1px solid", borderColor: "divider", width: 180, height: 24 }} />
+						<Typography variant="caption" color="text.secondary">Authorised Signatory</Typography>
 					</Stack>
 				</Stack>
 			</Box>

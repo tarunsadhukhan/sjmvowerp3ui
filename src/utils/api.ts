@@ -132,6 +132,15 @@ const apiRoutesPortalMasters = {
     ITEM_MAKE_CREATE_SETUP: `${API_URL}/itemMaster/item_make_create_setup`,
     ITEM_MAKE_CREATE: `${API_URL}/itemMaster/item_make_create`,
 
+        // Item BOM Master endpoints
+    BOM_LIST: `${API_URL}/itemBomMaster/get_bom_list`,
+    BOM_TREE: `${API_URL}/itemBomMaster/get_bom_tree`,
+    BOM_CHILDREN: `${API_URL}/itemBomMaster/get_bom_children`,
+    BOM_PARENTS: `${API_URL}/itemBomMaster/get_bom_parents`,
+    BOM_CREATE_SETUP: `${API_URL}/itemBomMaster/bom_create_setup`,
+    BOM_ADD_COMPONENT: `${API_URL}/itemBomMaster/bom_add_component`,
+    BOM_EDIT_COMPONENT: `${API_URL}/itemBomMaster/bom_edit_component`,
+    BOM_REMOVE_COMPONENT: `${API_URL}/itemBomMaster/bom_remove_component`,
     
     DEPT_MASTER_TABLE: `${API_URL}/deptMaster/dept_master_table`,
     DEPT_MASTER_VALIDATE_TABLE: `${API_URL}/deptMaster/dept_master_validate_table`,

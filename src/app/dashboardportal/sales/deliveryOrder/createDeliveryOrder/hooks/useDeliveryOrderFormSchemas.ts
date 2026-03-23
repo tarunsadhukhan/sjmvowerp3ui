@@ -12,6 +12,8 @@ export type UseHeaderSchemaParams = {
 	invoiceTypeOptions: Option[];
 	mode: "create" | "edit" | "view";
 	headerFieldsDisabled: boolean;
+	/** True when line items were manually entered without an SO — disables the SO dropdown */
+	hasManualLines?: boolean;
 };
 
 export type UseFooterSchemaParams = {
@@ -21,8 +23,12 @@ export type UseFooterSchemaParams = {
 export const useDeliveryOrderHeaderSchema = ({
 	branchOptions, customerOptions, customerBranchOptions,
 	transporterOptions, brokerOptions, salesOrderOptions, invoiceTypeOptions, mode, headerFieldsDisabled,
+	hasManualLines,
 }: UseHeaderSchemaParams): Schema =>
 	React.useMemo(() => {
+		// SO dropdown disabled when manual lines exist (mutual exclusivity)
+		const soDisabled = headerFieldsDisabled || Boolean(hasManualLines);
+
 		const fields: Field[] = [
 			{ name: "branch", label: "Branch", type: "select", options: branchOptions, required: true, disabled: mode !== "create", grid: { xs: 12, md: 4 } },
 			{ name: "date", label: "DO Date", type: "date", required: true, disabled: mode === "view", grid: { xs: 12, md: 4 } },
@@ -30,7 +36,7 @@ export const useDeliveryOrderHeaderSchema = ({
 			{ name: "expected_delivery_date", label: "Expected Delivery Date", type: "date", disabled: headerFieldsDisabled, grid: { xs: 12, md: 4 } },
 			{ name: "party", label: "Customer", type: "select", options: customerOptions, required: true, disabled: headerFieldsDisabled, grid: { xs: 12, md: 4 } },
 			{ name: "broker", label: "Broker", type: "select", options: brokerOptions, disabled: headerFieldsDisabled, grid: { xs: 12, md: 4 } },
-			{ name: "sales_order", label: "Sales Order", type: "select", options: salesOrderOptions, disabled: headerFieldsDisabled, grid: { xs: 12, md: 4 } },
+			{ name: "sales_order", label: "Sales Order", type: "select", options: salesOrderOptions, disabled: soDisabled, grid: { xs: 12, md: 4 } },
 			{ name: "billing_to", label: "Billing To", type: "select", options: customerBranchOptions, disabled: headerFieldsDisabled, grid: { xs: 12, md: 4 } },
 			{ name: "shipping_to", label: "Shipping To", type: "select", options: customerBranchOptions, disabled: headerFieldsDisabled, grid: { xs: 12, md: 4 } },
 			{ name: "transporter", label: "Transporter", type: "select", options: transporterOptions, disabled: headerFieldsDisabled, grid: { xs: 12, md: 4 } },
@@ -41,7 +47,7 @@ export const useDeliveryOrderHeaderSchema = ({
 			{ name: "eway_bill_date", label: "E-Way Bill Date", type: "date", disabled: headerFieldsDisabled, grid: { xs: 12, md: 4 } },
 		];
 		return { fields } satisfies Schema;
-	}, [branchOptions, customerOptions, customerBranchOptions, transporterOptions, brokerOptions, salesOrderOptions, invoiceTypeOptions, mode, headerFieldsDisabled]);
+	}, [branchOptions, customerOptions, customerBranchOptions, transporterOptions, brokerOptions, salesOrderOptions, invoiceTypeOptions, mode, headerFieldsDisabled, hasManualLines]);
 
 export const useDeliveryOrderFooterSchema = ({ mode }: UseFooterSchemaParams): Schema =>
 	React.useMemo(() => {

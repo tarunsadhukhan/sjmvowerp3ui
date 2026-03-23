@@ -688,8 +688,6 @@ function InvoiceTransactionPageContent() {
 		formValues,
 	});
 
-	if (!mounted) return <InvoicePageLoading />;
-
 	const primaryActionLabel = mode === "create" ? "Create" : "Save";
 	const handleSaveClick = React.useCallback(() => {
 		if (!formRef.current?.submit) return;
@@ -707,6 +705,8 @@ function InvoiceTransactionPageContent() {
 	const showDOButton = React.useMemo(() => {
 		return mode !== "view" && Boolean(formValues.delivery_order);
 	}, [mode, formValues.delivery_order]);
+
+	if (!mounted) return <InvoicePageLoading />;
 
 	return (
 		<TransactionWrapper

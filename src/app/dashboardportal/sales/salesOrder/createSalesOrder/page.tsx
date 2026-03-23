@@ -55,6 +55,7 @@ import {
 	EMPTY_QUOTATIONS,
 	EMPTY_SETUP_PARAMS,
 	EMPTY_TRANSPORTERS,
+	isHessianOrder,
 } from "./utils/salesOrderConstants";
 
 function SOPageLoading() {
@@ -623,22 +624,69 @@ function SalesOrderTransactionPageContent() {
 	);
 
 	const previewItems = React.useMemo(() => {
+		const isHessian = isHessianOrder(invoiceTypeCode);
 		return filledLineItems.map((line, index) => {
+			const groupLabel = getItemGroupLabel(line.itemGroup);
 			const itemLabel = getItemLabel(line.itemGroup, line.item);
+			// Concatenate item group label + item label (each already has code — name)
+			const fullItemName = [groupLabel, itemLabel].filter((p) => p && p !== "-").join("\n") || "-";
+
 			const uomOptions = getUomOptions(line.itemGroup, line.item);
-			const uomLabel = uomOptions.find((opt) => opt.value === line.uom)?.label ?? line.uom ?? "-";
+			const uomLabel = uomOptions.find((opt) => opt.value === line.uom)?.label ?? line.uom ?? "";
+			const qtyRounding = line.qtyRounding;
+			const rawQty = line.quantity;
+			const formattedQty = rawQty && Number(rawQty) && qtyRounding != null
+				? Number(rawQty).toFixed(qtyRounding) : (rawQty || "-");
+			const qtyDisplay = `${formattedQty} ${uomLabel}`.trim();
+
+			// Hessian: show bales qty as other qty
+			let otherQtyDisplay: string | undefined;
+			if (isHessian && line.qtyBales && Number(line.qtyBales)) {
+				otherQtyDisplay = `${line.qtyBales} Bales`;
+			} else if (!isHessian) {
+				// For non-hessian, show converted qty if available
+				const conversions = getUomConversions?.(line.itemGroup, line.item);
+				if (conversions?.length && rawQty && Number(rawQty) && line.uom) {
+					for (const conv of conversions) {
+						if (conv.relationValue === 0) continue;
+						let convertedQty: number;
+						let otherUomName: string;
+						if (line.uom === conv.mapFromId) {
+							convertedQty = Number(rawQty) * conv.relationValue;
+							otherUomName = conv.mapToName;
+						} else if (line.uom === conv.mapToId) {
+							convertedQty = Number(rawQty) / conv.relationValue;
+							otherUomName = conv.mapFromName;
+						} else {
+							continue;
+						}
+						otherQtyDisplay = `${convertedQty.toFixed(conv.rounding ?? 2)} ${otherUomName}`;
+						break;
+					}
+				}
+			}
+
+			// Rate with UOM label
+			const rateRounding = line.rateRounding ?? 2;
+			const rateVal = line.rate;
+			const formattedRate = rateVal && Number(rateVal) ? Number(rateVal).toFixed(rateRounding) : (rateVal || "-");
+			const rateUomLabel = uomLabel;
+			const rateDisplay = formattedRate !== "-"
+				? `${new Intl.NumberFormat("en-IN", { style: "currency", currency: "INR", minimumFractionDigits: 2 }).format(Number(formattedRate))} / ${rateUomLabel}`
+				: "-";
+
 			return {
 				index: index + 1,
-				itemName: itemLabel !== "-" ? itemLabel : line.item || "-",
-				quantity: line.quantity || "-",
-				uom: uomLabel,
-				rate: line.rate || "-",
+				itemName: fullItemName,
+				qtyDisplay,
+				otherQtyDisplay,
+				rateDisplay,
 				amount: line.amount ?? "-",
 				gst: line.taxAmount ?? "-",
 				total: ((line.amount ?? 0) + (line.taxAmount ?? 0)) || "-",
 			};
 		});
-	}, [filledLineItems, getItemLabel, getUomOptions]);
+	}, [filledLineItems, getItemLabel, getItemGroupLabel, getUomOptions, getUomConversions, invoiceTypeCode]);
 
 	const previewRemarks = React.useMemo(() => {
 		return (formValues.internal_note as string) || soDetails?.internalNote || (formValues.footer_note as string) || soDetails?.footerNote || "";

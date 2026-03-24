@@ -482,6 +482,7 @@ const apiRoutesPortalMasters = {
     SALES_INVOICE_SETUP_1: `${API_URL}/salesInvoice/get_sales_invoice_setup_1`,
     SALES_INVOICE_SETUP_2: `${API_URL}/salesInvoice/get_sales_invoice_setup_2`,
     SALES_INVOICE_DELIVERY_ORDER_LINES: `${API_URL}/salesInvoice/get_delivery_order_lines`,
+    SALES_INVOICE_SALES_ORDER_LINES: `${API_URL}/salesInvoice/get_sales_order_lines`,
     SALES_INVOICE_CREATE: `${API_URL}/salesInvoice/create_sales_invoice`,
     SALES_INVOICE_UPDATE: `${API_URL}/salesInvoice/update_sales_invoice`,
     SALES_INVOICE_OPEN: `${API_URL}/salesInvoice/open_sales_invoice`,

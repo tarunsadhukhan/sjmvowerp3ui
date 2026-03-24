@@ -1,7 +1,7 @@
 import React from "react";
 import type { Schema, Field } from "@/components/ui/muiform";
 import type { Option } from "../types/salesInvoiceTypes";
-import { isRawJuteInvoice } from "../utils/salesInvoiceConstants";
+import { isRawJuteInvoice, isGovtSkgInvoice } from "../utils/salesInvoiceConstants";
 
 export type UseHeaderSchemaParams = {
 	branchOptions: Option[];
@@ -15,6 +15,7 @@ export type UseHeaderSchemaParams = {
 	mode: "create" | "edit" | "view";
 	headerFieldsDisabled: boolean;
 	salesOrderDisabled?: boolean;
+	deliveryOrderDisabled?: boolean;
 };
 
 export type UseFooterSchemaParams = {
@@ -23,7 +24,7 @@ export type UseFooterSchemaParams = {
 
 export const useSalesInvoiceHeaderSchema = ({
 	branchOptions, customerOptions, customerBranchOptions,
-	transporterOptions, brokerOptions, deliveryOrderOptions, salesOrderOptions, invoiceTypeOptions, mode, headerFieldsDisabled, salesOrderDisabled,
+	transporterOptions, brokerOptions, deliveryOrderOptions, salesOrderOptions, invoiceTypeOptions, mode, headerFieldsDisabled, salesOrderDisabled, deliveryOrderDisabled,
 }: UseHeaderSchemaParams): Schema =>
 	React.useMemo(() => {
 		const fields: Field[] = [
@@ -32,7 +33,7 @@ export const useSalesInvoiceHeaderSchema = ({
 			{ name: "invoice_type", label: "Invoice Type", type: "select", options: invoiceTypeOptions, disabled: headerFieldsDisabled, grid: { xs: 12, md: 4 } },
 			{ name: "party", label: "Customer", type: "select", options: customerOptions, required: true, disabled: headerFieldsDisabled, grid: { xs: 12, md: 4 } },
 			{ name: "broker", label: "Broker", type: "select", options: brokerOptions, disabled: headerFieldsDisabled, grid: { xs: 12, md: 4 } },
-			{ name: "delivery_order", label: "Delivery Order", type: "select", options: deliveryOrderOptions, disabled: headerFieldsDisabled, grid: { xs: 12, md: 4 } },
+			{ name: "delivery_order", label: "Delivery Order", type: "select", options: deliveryOrderOptions, disabled: headerFieldsDisabled || deliveryOrderDisabled, grid: { xs: 12, md: 4 } },
 			{ name: "sales_order_id", label: "Sales Order", type: "select", options: salesOrderOptions, disabled: headerFieldsDisabled || salesOrderDisabled, grid: { xs: 12, md: 4 } },
 			{ name: "sales_order_date", label: "Sales Order Date", type: "date", disabled: true, grid: { xs: 12, md: 4 } },
 			{ name: "payment_terms", label: "Payment Terms (Days)", type: "text", disabled: headerFieldsDisabled, grid: { xs: 12, md: 4 } },
@@ -52,7 +53,7 @@ export const useSalesInvoiceHeaderSchema = ({
 			{ name: "consignment_date", label: "Consignment Date", type: "date", disabled: headerFieldsDisabled, grid: { xs: 12, md: 4 } },
 		];
 		return { fields } satisfies Schema;
-	}, [branchOptions, customerOptions, customerBranchOptions, transporterOptions, brokerOptions, deliveryOrderOptions, salesOrderOptions, invoiceTypeOptions, mode, headerFieldsDisabled, salesOrderDisabled]);
+	}, [branchOptions, customerOptions, customerBranchOptions, transporterOptions, brokerOptions, deliveryOrderOptions, salesOrderOptions, invoiceTypeOptions, mode, headerFieldsDisabled, salesOrderDisabled, deliveryOrderDisabled]);
 
 export type UseJuteHeaderSchemaParams = {
 	mode: "create" | "edit" | "view";
@@ -61,19 +62,38 @@ export type UseJuteHeaderSchemaParams = {
 	invoiceTypeId?: string;
 };
 
-export const useSalesInvoiceJuteHeaderSchema = ({
+export const useSalesInvoiceTypeSpecificHeaderSchema = ({
 	mode, headerFieldsDisabled, mukamOptions, invoiceTypeId,
-}: UseJuteHeaderSchemaParams): Schema =>
+}: UseJuteHeaderSchemaParams): Schema | null =>
 	React.useMemo(() => {
 		const disabled = headerFieldsDisabled || mode === "view";
-		const claimDisabled = disabled || isRawJuteInvoice(invoiceTypeId);
-		const fields: Field[] = [
-			{ name: "jute_mr_no", label: "MR No.", type: "text", disabled, grid: { xs: 12, md: 3 } },
-			{ name: "jute_mukam_id", label: "Mukam", type: "select", options: mukamOptions ?? [], disabled, grid: { xs: 12, md: 3 } },
-			{ name: "jute_claim_amount", label: "Claim Amount", type: "text", disabled: claimDisabled, grid: { xs: 12, md: 3 } },
-			{ name: "jute_claim_description", label: "Claim Description", type: "textarea", disabled, grid: { xs: 12, md: 3 } },
-		];
-		return { fields } satisfies Schema;
+
+		if (isRawJuteInvoice(invoiceTypeId)) {
+			const claimDisabled = disabled || true; // claim amount auto-summed for raw jute
+			const fields: Field[] = [
+				{ name: "jute_mr_no", label: "MR No.", type: "text", disabled, grid: { xs: 12, md: 3 } },
+				{ name: "jute_mukam_id", label: "Mukam", type: "select", options: mukamOptions ?? [], disabled, grid: { xs: 12, md: 3 } },
+				{ name: "jute_claim_amount", label: "Claim Amount", type: "text", disabled: claimDisabled, grid: { xs: 12, md: 3 } },
+				{ name: "jute_claim_description", label: "Claim Description", type: "textarea", disabled, grid: { xs: 12, md: 3 } },
+			];
+			return { fields } satisfies Schema;
+		}
+
+		if (isGovtSkgInvoice(invoiceTypeId)) {
+			const fields: Field[] = [
+				{ name: "govtskg_pcso_no", label: "PCSO No.", type: "text", disabled, grid: { xs: 12, md: 3 } },
+				{ name: "govtskg_pcso_date", label: "PCSO Date", type: "date", disabled, grid: { xs: 12, md: 3 } },
+				{ name: "govtskg_admin_office_address", label: "Admin Office Address", type: "textarea", disabled, grid: { xs: 12, md: 6 } },
+				{ name: "govtskg_destination_rail_head", label: "Destination Rail Head", type: "text", disabled, grid: { xs: 12, md: 3 } },
+				{ name: "govtskg_loading_point", label: "Loading Point", type: "text", disabled, grid: { xs: 12, md: 3 } },
+				{ name: "govtskg_pack_sheet", label: "Pack Sheet", type: "text", disabled, grid: { xs: 12, md: 2 } },
+				{ name: "govtskg_net_weight", label: "Net Weight", type: "text", disabled, grid: { xs: 12, md: 2 } },
+				{ name: "govtskg_total_weight", label: "Total Weight", type: "text", disabled, grid: { xs: 12, md: 2 } },
+			];
+			return { fields } satisfies Schema;
+		}
+
+		return null;
 	}, [mode, headerFieldsDisabled, mukamOptions, invoiceTypeId]);
 
 export const useSalesInvoiceFooterSchema = ({ mode }: UseFooterSchemaParams): Schema =>

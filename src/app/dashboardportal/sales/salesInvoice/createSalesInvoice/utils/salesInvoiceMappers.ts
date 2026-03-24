@@ -34,9 +34,11 @@ export const mapCustomerBranchRecords = (records: unknown[]): CustomerBranchReco
 			const data = row as CustomerBranchRecordRaw;
 			const id = data?.party_mst_branch_id ?? data?.id;
 			if (!id) return null;
-			const address = data?.fatory_address ?? data?.branch_address1 ?? "";
+			const address = data?.address ?? data?.fatory_address ?? data?.branch_address1 ?? "";
+			const addressAdditional = data?.address_additional ?? "";
+			const zipCode = data?.zip_code ?? "";
 			const stateName = data?.state_name ?? "";
-			const addressParts = [address, stateName].filter(Boolean);
+			const addressParts = [address, addressAdditional, zipCode, stateName].filter(Boolean);
 			const fullAddress = addressParts.length > 0 ? addressParts.join(", ") : String(id);
 			return {
 				id: String(id),
@@ -106,11 +108,16 @@ export const mapApprovedDeliveryOrders = (records: unknown[]): ApprovedDeliveryO
 				id: String(id),
 				deliveryOrderNo: data?.delivery_order_no ?? data?.do_no ?? String(id),
 				deliveryOrderDate: data?.delivery_order_date,
+				partyId: data?.party_id,
 				partyName: data?.party_name,
 				netAmount: data?.net_amount,
 				salesOrderId: data?.sales_order_id,
 				salesOrderDate: data?.sales_order_date,
 				salesOrderNo: data?.sales_order_no,
+				invoiceType: data?.invoice_type,
+				billingToId: data?.billing_to_id,
+				shippingToId: data?.shipping_to_id,
+				transporterId: data?.transporter_id,
 			} satisfies ApprovedDeliveryOrderRecord;
 		})
 		.filter(Boolean) as ApprovedDeliveryOrderRecord[];
@@ -166,6 +173,11 @@ export const mapApprovedSalesOrders = (records: unknown[]): ApprovedSalesOrderRe
 				partyId: data?.party_id,
 				partyName: data?.party_name,
 				paymentTerms: data?.payment_terms,
+				invoiceType: data?.invoice_type,
+				brokerId: data?.broker_id,
+				billingToId: data?.billing_to_id,
+				shippingToId: data?.shipping_to_id,
+				transporterId: data?.transporter_id,
 			} satisfies ApprovedSalesOrderRecord;
 		})
 		.filter(Boolean) as ApprovedSalesOrderRecord[];
@@ -369,6 +381,16 @@ export const mapInvoiceDetailsToFormValues = (
 			mukamId?: number;
 			mukamName?: string;
 		} | null;
+		govtskg?: {
+			pcsoNo?: string;
+			pcsoDate?: string;
+			administrativeOfficeAddress?: string;
+			destinationRailHead?: string;
+			loadingPoint?: string;
+			packSheet?: number;
+			netWeight?: number;
+			totalWeight?: number;
+		} | null;
 	},
 	defaultValues: Record<string, unknown>,
 ): Record<string, unknown> => ({
@@ -413,4 +435,12 @@ export const mapInvoiceDetailsToFormValues = (
 	jute_claim_amount: details.jute?.claimAmount != null ? String(details.jute.claimAmount) : toStringValue(defaultValues.jute_claim_amount),
 	jute_claim_description: toStringValue(details.jute?.claimDescription ?? defaultValues.jute_claim_description),
 	jute_mukam_id: details.jute?.mukamId != null ? String(details.jute.mukamId) : toStringValue(defaultValues.jute_mukam_id),
+	govtskg_pcso_no: toStringValue(details.govtskg?.pcsoNo ?? defaultValues.govtskg_pcso_no),
+	govtskg_pcso_date: normalizeDate(details.govtskg?.pcsoDate) || toStringValue(defaultValues.govtskg_pcso_date),
+	govtskg_admin_office_address: toStringValue(details.govtskg?.administrativeOfficeAddress ?? defaultValues.govtskg_admin_office_address),
+	govtskg_destination_rail_head: toStringValue(details.govtskg?.destinationRailHead ?? defaultValues.govtskg_destination_rail_head),
+	govtskg_loading_point: toStringValue(details.govtskg?.loadingPoint ?? defaultValues.govtskg_loading_point),
+	govtskg_pack_sheet: details.govtskg?.packSheet != null ? String(details.govtskg.packSheet) : toStringValue(defaultValues.govtskg_pack_sheet),
+	govtskg_net_weight: details.govtskg?.netWeight != null ? String(details.govtskg.netWeight) : toStringValue(defaultValues.govtskg_net_weight),
+	govtskg_total_weight: details.govtskg?.totalWeight != null ? String(details.govtskg.totalWeight) : toStringValue(defaultValues.govtskg_total_weight),
 });

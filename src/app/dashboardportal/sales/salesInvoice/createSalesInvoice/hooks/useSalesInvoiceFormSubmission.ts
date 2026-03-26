@@ -3,7 +3,7 @@ import { useRouter } from "next/navigation";
 import { toast } from "@/hooks/use-toast";
 import { createInvoice, updateInvoice, type SaveInvoiceRequest } from "@/utils/salesInvoiceService";
 import type { EditableLineItem } from "../types/salesInvoiceTypes";
-import { isJuteInvoice } from "../utils/salesInvoiceConstants";
+import { isRawJuteInvoice, isHessianInvoice, isGovtSkgInvoice } from "../utils/salesInvoiceConstants";
 
 type Params = {
 	mode: "create" | "edit" | "view";
@@ -31,12 +31,15 @@ export const useSalesInvoiceFormSubmission = ({
 			}
 
 			const invoiceTypeId = String(values.invoice_type ?? formValues.invoice_type ?? "");
-			const juteType = isJuteInvoice(invoiceTypeId);
+			const rawJute = isRawJuteInvoice(invoiceTypeId);
+			const hessian = isHessianInvoice(invoiceTypeId);
+			const govtSkg = isGovtSkgInvoice(invoiceTypeId);
 
 			const itemsPayload = filledLineItems.map((item) => ({
 				item: item.item || "",
 				item_make: item.itemMake || undefined,
 				delivery_order_dtl_id: item.deliveryOrderDtlId,
+				sales_order_dtl_id: item.salesOrderDtlId,
 				hsn_code: item.hsnCode || undefined,
 				quantity: item.quantity || "0",
 				uom: item.uom || "",
@@ -58,13 +61,28 @@ export const useSalesInvoiceFormSubmission = ({
 					tax_percentage: item.taxPercentage || 0,
 					tax_amount: item.gstTotal || 0,
 				},
-				...(juteType ? {
+				...(rawJute ? {
 					jute_dtl: {
 						claim_amount_dtl: Number(item.juteClaimAmountDtl) || undefined,
 						claim_desc: item.juteClaimDesc || undefined,
 						claim_rate: Number(item.juteClaimRate) || undefined,
 						unit_conversion: item.juteUnitConversion || undefined,
 						qty_untit_conversion: Number(item.juteQtyUnitConversion) || undefined,
+					},
+				} : {}),
+				...(hessian ? {
+					hessian_dtl: {
+						qty_bales: Number(item.hessianQtyBales) || undefined,
+						rate_per_bale: Number(item.hessianRatePerBale) || undefined,
+						billing_rate_mt: Number(item.hessianBillingRateMt) || undefined,
+						billing_rate_bale: Number(item.hessianBillingRateBale) || undefined,
+					},
+				} : {}),
+				...(govtSkg ? {
+					govtskg_dtl: {
+						pack_sheet: Number(item.govtskgPackSheet) || undefined,
+						net_weight: Number(item.govtskgNetWeight) || undefined,
+						total_weight: Number(item.govtskgTotalWeight) || undefined,
 					},
 				} : {}),
 			}));
@@ -116,12 +134,25 @@ export const useSalesInvoiceFormSubmission = ({
 				items: itemsPayload,
 			};
 
-			if (juteType) {
+			if (rawJute) {
 				payload.jute = {
 					mr_no: String(values.jute_mr_no ?? formValues.jute_mr_no ?? "") || undefined,
 					mukam_id: Number(values.jute_mukam_id ?? formValues.jute_mukam_id) || undefined,
 					claim_amount: Number(values.jute_claim_amount ?? formValues.jute_claim_amount) || undefined,
 					claim_description: String(values.jute_claim_description ?? formValues.jute_claim_description ?? "") || undefined,
+				};
+			}
+
+			if (govtSkg) {
+				payload.govtskg = {
+					pcso_no: String(values.govtskg_pcso_no ?? formValues.govtskg_pcso_no ?? "") || undefined,
+					pcso_date: String(values.govtskg_pcso_date ?? formValues.govtskg_pcso_date ?? "") || undefined,
+					administrative_office_address: String(values.govtskg_admin_office_address ?? formValues.govtskg_admin_office_address ?? "") || undefined,
+					destination_rail_head: String(values.govtskg_destination_rail_head ?? formValues.govtskg_destination_rail_head ?? "") || undefined,
+					loading_point: String(values.govtskg_loading_point ?? formValues.govtskg_loading_point ?? "") || undefined,
+					pack_sheet: Number(values.govtskg_pack_sheet ?? formValues.govtskg_pack_sheet) || undefined,
+					net_weight: Number(values.govtskg_net_weight ?? formValues.govtskg_net_weight) || undefined,
+					total_weight: Number(values.govtskg_total_weight ?? formValues.govtskg_total_weight) || undefined,
 				};
 			}
 

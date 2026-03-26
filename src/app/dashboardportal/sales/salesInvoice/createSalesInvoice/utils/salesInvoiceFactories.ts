@@ -21,6 +21,13 @@ export const createBlankLine = (): EditableLineItem => ({
 	juteClaimRate: undefined,
 	juteUnitConversion: "",
 	juteQtyUnitConversion: undefined,
+	hessianQtyBales: undefined,
+	hessianRatePerBale: undefined,
+	hessianBillingRateMt: undefined,
+	hessianBillingRateBale: undefined,
+	govtskgPackSheet: undefined,
+	govtskgNetWeight: undefined,
+	govtskgTotalWeight: undefined,
 });
 
 export const buildDefaultFormValues = (skipDate = false) => ({
@@ -64,4 +71,12 @@ export const buildDefaultFormValues = (skipDate = false) => ({
 	jute_claim_amount: "",
 	jute_claim_description: "",
 	jute_mukam_id: "",
+	govtskg_pcso_no: "",
+	govtskg_pcso_date: "",
+	govtskg_admin_office_address: "",
+	govtskg_destination_rail_head: "",
+	govtskg_loading_point: "",
+	govtskg_pack_sheet: "",
+	govtskg_net_weight: "",
+	govtskg_total_weight: "",
 });

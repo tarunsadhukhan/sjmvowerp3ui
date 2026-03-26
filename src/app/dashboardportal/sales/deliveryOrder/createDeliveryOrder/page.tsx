@@ -266,9 +266,7 @@ function DOTransactionPageContent() {
 			return;
 		}
 
-		if (!setupEnabled) return;
-		if (setupLoading) return;
-		if (!setupData) return;
+		if (!coId) return;
 		if (detailsFetchedRef.current) return;
 
 		detailsFetchedRef.current = true;
@@ -325,7 +323,6 @@ function DOTransactionPageContent() {
 		mode, requestedId, coId, getMenuId,
 		setInitialValues, setFormValues, bumpFormKey,
 		replaceItems, mapLineToEditable,
-		setupEnabled, setupLoading, setupData,
 		branchIdFromUrl, branchValue,
 	]);
 

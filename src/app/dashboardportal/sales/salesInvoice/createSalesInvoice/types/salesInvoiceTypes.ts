@@ -40,11 +40,16 @@ export type ApprovedDeliveryOrderRecord = {
 	id: string;
 	deliveryOrderNo: string;
 	deliveryOrderDate?: string;
+	partyId?: number;
 	partyName?: string;
 	netAmount?: number;
 	salesOrderId?: number;
 	salesOrderDate?: string;
 	salesOrderNo?: string;
+	invoiceType?: number;
+	billingToId?: number;
+	shippingToId?: number;
+	transporterId?: number;
 };
 
 export type ApprovedSalesOrderRecord = {
@@ -54,6 +59,11 @@ export type ApprovedSalesOrderRecord = {
 	partyId?: number;
 	partyName?: string;
 	paymentTerms?: number;
+	invoiceType?: number;
+	brokerId?: number;
+	billingToId?: number;
+	shippingToId?: number;
+	transporterId?: number;
 };
 
 export type InvoiceTypeRecord = {
@@ -89,6 +99,7 @@ export type ItemGroupCacheEntry = {
 export type EditableLineItem = {
 	id: string;
 	deliveryOrderDtlId?: number;
+	salesOrderDtlId?: number;
 	hsnCode?: string;
 	itemGroup: string;
 	item: string;
@@ -111,12 +122,21 @@ export type EditableLineItem = {
 	sgstAmount?: number;
 	sgstPercent?: number;
 	gstTotal?: number;
-	// Jute detail fields (only used when invoice_type is 2-6)
+	// Raw Jute detail fields (invoice_type = 5)
 	juteClaimAmountDtl?: number;
 	juteClaimDesc?: string;
 	juteClaimRate?: number;
 	juteUnitConversion?: string;
 	juteQtyUnitConversion?: number;
+	// Hessian detail fields (invoice_type = 2)
+	hessianQtyBales?: number;
+	hessianRatePerBale?: number;
+	hessianBillingRateMt?: number;
+	hessianBillingRateBale?: number;
+	// Govt Sacking detail fields (invoice_type = 3)
+	govtskgPackSheet?: number;
+	govtskgNetWeight?: number;
+	govtskgTotalWeight?: number;
 };
 
 export type MukamRecord = {
@@ -140,6 +160,9 @@ export type CustomerBranchRecordRaw = {
 	id?: string | number;
 	party_mst_branch_id?: string | number;
 	party_branch_name?: string;
+	address?: string;
+	address_additional?: string;
+	zip_code?: string;
 	branch_address1?: string;
 	fatory_address?: string;
 	state_name?: string;
@@ -183,11 +206,16 @@ export type ApprovedDeliveryOrderRecordRaw = {
 	delivery_order_no?: string;
 	do_no?: string;
 	delivery_order_date?: string;
+	party_id?: number;
 	party_name?: string;
 	net_amount?: number;
 	sales_order_id?: number;
 	sales_order_date?: string;
 	sales_order_no?: string;
+	invoice_type?: number;
+	billing_to_id?: number;
+	shipping_to_id?: number;
+	transporter_id?: number;
 };
 
 export type ApprovedSalesOrderRecordRaw = {
@@ -198,6 +226,11 @@ export type ApprovedSalesOrderRecordRaw = {
 	party_id?: number;
 	party_name?: string;
 	payment_terms?: number;
+	invoice_type?: number;
+	broker_id?: number;
+	billing_to_id?: number;
+	shipping_to_id?: number;
+	transporter_id?: number;
 };
 
 export type InvoiceTypeRecordRaw = {

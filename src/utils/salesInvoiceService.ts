@@ -6,6 +6,7 @@ export type { ApprovalActionPermissions } from "@/utils/poService";
 export type InvoiceLine = {
   id: string;
   deliveryOrderDtlId?: number;
+  salesOrderDtlId?: number;
   hsnCode?: string;
   itemGroup?: string;
   item?: string;
@@ -40,6 +41,17 @@ export type InvoiceLine = {
     claimRate?: number;
     unitConversion?: string;
     qtyUnitConversion?: number;
+  } | null;
+  hessianDtl?: {
+    qtyBales?: number;
+    ratePerBale?: number;
+    billingRateMt?: number;
+    billingRateBale?: number;
+  } | null;
+  govtskgDtl?: {
+    packSheet?: number;
+    netWeight?: number;
+    totalWeight?: number;
   } | null;
 };
 
@@ -106,6 +118,16 @@ export type InvoiceDetails = {
     mukamId?: number;
     mukamName?: string;
   } | null;
+  govtskg?: {
+    pcsoNo?: string;
+    pcsoDate?: string;
+    administrativeOfficeAddress?: string;
+    destinationRailHead?: string;
+    loadingPoint?: string;
+    packSheet?: number;
+    netWeight?: number;
+    totalWeight?: number;
+  } | null;
   lines: InvoiceLine[];
 };
 
@@ -125,6 +147,30 @@ export type InvoiceSetup2Response = {
 
 export type DeliveryOrderLineForInvoice = {
   delivery_order_dtl_id: number;
+  item_id: number;
+  item_code?: string;
+  item_name?: string;
+  item_grp_id: number;
+  item_grp_code?: string;
+  item_grp_name?: string;
+  item_make_id?: number;
+  item_make_name?: string;
+  hsn_code?: string;
+  quantity: number;
+  uom_id: number;
+  uom_name?: string;
+  rate?: number;
+  discount_type?: number;
+  discounted_rate?: number;
+  discount_amount?: number;
+  net_amount?: number;
+  total_amount?: number;
+  remarks?: string;
+  tax_percentage?: number;
+};
+
+export type SalesOrderLineForInvoice = {
+  sales_order_dtl_id: number;
   item_id: number;
   item_code?: string;
   item_name?: string;
@@ -194,10 +240,21 @@ export type CreateInvoiceRequest = {
     claim_description?: string;
     mukam_id?: number;
   };
+  govtskg?: {
+    pcso_no?: string;
+    pcso_date?: string;
+    administrative_office_address?: string;
+    destination_rail_head?: string;
+    loading_point?: string;
+    pack_sheet?: number;
+    net_weight?: number;
+    total_weight?: number;
+  };
   items: Array<{
     item: string;
     item_make?: string;
     delivery_order_dtl_id?: number;
+    sales_order_dtl_id?: number;
     hsn_code?: string;
     quantity: string;
     uom: string;
@@ -225,6 +282,17 @@ export type CreateInvoiceRequest = {
       claim_rate?: number;
       unit_conversion?: string;
       qty_untit_conversion?: number;
+    };
+    hessian_dtl?: {
+      qty_bales?: number;
+      rate_per_bale?: number;
+      billing_rate_mt?: number;
+      billing_rate_bale?: number;
+    };
+    govtskg_dtl?: {
+      pack_sheet?: number;
+      net_weight?: number;
+      total_weight?: number;
     };
   }>;
 };
@@ -275,6 +343,17 @@ export async function fetchDeliveryOrderLines(deliveryOrderId: string): Promise<
   );
   if (error) throw new Error(error);
   if (!data) throw new Error("Empty delivery order lines response.");
+  return data;
+}
+
+export async function fetchSalesOrderLinesForInvoice(salesOrderId: string): Promise<{ data: SalesOrderLineForInvoice[] }> {
+  const query = new URLSearchParams({ sales_order_id: salesOrderId });
+  const { data, error } = await fetchWithCookie<{ data: SalesOrderLineForInvoice[] }>(
+    `${apiRoutesPortalMasters.SALES_INVOICE_SALES_ORDER_LINES}?${query.toString()}`,
+    "GET"
+  );
+  if (error) throw new Error(error);
+  if (!data) throw new Error("Empty sales order lines response.");
   return data;
 }
 

@@ -1,10 +1,15 @@
 import React from "react";
 import MuiForm, { type Schema, type MuiFormMode } from "@/components/ui/muiform";
-import { Button } from "@/components/ui/button";
-import { isJuteInvoice } from "../utils/salesInvoiceConstants";
+import { hasTypeSpecificHeader, isRawJuteInvoice, isGovtSkgInvoice } from "../utils/salesInvoiceConstants";
 
 type FormRef = React.MutableRefObject<{ submit: () => Promise<void>; isDirty: () => boolean; setValue: (name: string, value: unknown) => void } | null>;
-type JuteFormRef = React.MutableRefObject<{ submit: () => Promise<void>; isDirty: () => boolean; setValue: (name: string, value: unknown) => void } | null>;
+type TypeSpecificFormRef = React.MutableRefObject<{ submit: () => Promise<void>; isDirty: () => boolean; setValue: (name: string, value: unknown) => void } | null>;
+
+function getTypeSpecificSectionTitle(invoiceTypeId?: string): string {
+	if (isRawJuteInvoice(invoiceTypeId)) return "Raw Jute Details";
+	if (isGovtSkgInvoice(invoiceTypeId)) return "Govt Sacking Details";
+	return "Additional Details";
+}
 
 type SalesInvoiceHeaderFormProps = {
 	schema: Schema;
@@ -14,12 +19,9 @@ type SalesInvoiceHeaderFormProps = {
 	formRef: FormRef;
 	onSubmit: (values: Record<string, unknown>) => Promise<void>;
 	onValuesChange: (values: Record<string, unknown>) => void;
-	showDeliveryOrderButton: boolean;
-	onDeliveryOrderSelect: () => void;
-	deliveryOrderButtonDisabled: boolean;
-	juteSchema?: Schema;
+	typeSpecificSchema?: Schema | null;
 	invoiceTypeId?: string;
-	juteFormRef?: JuteFormRef;
+	juteFormRef?: TypeSpecificFormRef;
 };
 
 export function SalesInvoiceHeaderForm({
@@ -30,10 +32,7 @@ export function SalesInvoiceHeaderForm({
 	formRef,
 	onSubmit,
 	onValuesChange,
-	showDeliveryOrderButton,
-	onDeliveryOrderSelect,
-	deliveryOrderButtonDisabled,
-	juteSchema,
+	typeSpecificSchema,
 	invoiceTypeId,
 	juteFormRef,
 }: SalesInvoiceHeaderFormProps) {
@@ -51,28 +50,19 @@ export function SalesInvoiceHeaderForm({
 				onValuesChange={onValuesChange}
 			/>
 
-			{juteSchema && isJuteInvoice(invoiceTypeId) && (
+			{typeSpecificSchema && hasTypeSpecificHeader(invoiceTypeId) && (
 				<div className="space-y-3 pt-4 border-t border-dashed">
-					<h3 className="text-sm font-medium text-muted-foreground">Jute Details</h3>
+					<h3 className="text-sm font-medium text-muted-foreground">{getTypeSpecificSectionTitle(invoiceTypeId)}</h3>
 					<MuiForm
-						key={`jute-${formKey}`}
+						key={`type-specific-${formKey}`}
 						ref={juteFormRef}
-						schema={juteSchema}
+						schema={typeSpecificSchema}
 						initialValues={initialValues}
 						mode={mode}
 						hideModeToggle
 						hideSubmit
 						onValuesChange={onValuesChange}
 					/>
-				</div>
-			)}
-
-			{showDeliveryOrderButton && (
-				<div className="space-y-2">
-					<Button variant="outline" onClick={onDeliveryOrderSelect} disabled={deliveryOrderButtonDisabled}>
-						Import from Delivery Order
-					</Button>
-					<p className="text-xs text-slate-500">Select items from an approved delivery order to populate the line items.</p>
 				</div>
 			)}
 		</div>

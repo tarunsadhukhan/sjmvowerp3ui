@@ -15,6 +15,8 @@ import {
 	fetchInvoiceSetup1,
 	fetchInvoiceSetup2,
 	getInvoiceById,
+	fetchDeliveryOrderLines,
+	fetchSalesOrderLinesForInvoice,
 	type InvoiceDetails,
 } from "@/utils/salesInvoiceService";
 import useSelectedCompanyCoId from "@/hooks/use-selected-company-coid";
@@ -27,12 +29,10 @@ import { SalesInvoiceFooterForm, SalesInvoiceTotalsDisplay } from "./components/
 import { SalesInvoiceApprovalBar } from "./components/SalesInvoiceApprovalBar";
 import SalesInvoicePreview from "./components/SalesInvoicePreview";
 import { useInvoiceLineItemColumns } from "./components/SalesInvoiceLineItemsTable";
-import { DeliveryOrderLinesDialog } from "./components/DeliveryOrderLinesDialog";
-
 import { useSalesInvoiceFormState } from "./hooks/useSalesInvoiceFormState";
 import { useSalesInvoiceLineItems } from "./hooks/useSalesInvoiceLineItems";
 import { useSalesInvoiceSelectOptions } from "./hooks/useSalesInvoiceSelectOptions";
-import { useSalesInvoiceHeaderSchema, useSalesInvoiceJuteHeaderSchema, useSalesInvoiceFooterSchema } from "./hooks/useSalesInvoiceFormSchemas";
+import { useSalesInvoiceHeaderSchema, useSalesInvoiceTypeSpecificHeaderSchema, useSalesInvoiceFooterSchema } from "./hooks/useSalesInvoiceFormSchemas";
 import { useSalesInvoiceFormSubmission } from "./hooks/useSalesInvoiceFormSubmission";
 import { useSalesInvoiceApproval } from "./hooks/useSalesInvoiceApproval";
 
@@ -99,7 +99,7 @@ function InvoiceTransactionPageContent() {
 	const [invoiceDetails, setInvoiceDetails] = React.useState<InvoiceDetails | null>(null);
 	const [loading, setLoading] = React.useState<boolean>(mode !== "create");
 	const [pageError, setPageError] = React.useState<string | null>(null);
-	const [doDialogOpen, setDODialogOpen] = React.useState(false);
+	const [linesLoading, setLinesLoading] = React.useState(false);
 
 	const branchValue = React.useMemo(() => {
 		if (lockedBranchId) return lockedBranchId;
@@ -249,29 +249,37 @@ function InvoiceTransactionPageContent() {
 		});
 	}, [billingBranchId, selectedCustomer, mode, setFormValues]);
 
-	// Auto-fill sales_order_id from delivery order when DO is selected
+	// Auto-fill header fields from delivery order when DO is selected
 	React.useEffect(() => {
 		if (mode === "view") return;
 		const doId = formValues.delivery_order ? String(formValues.delivery_order) : "";
 		if (!doId) return;
 		const doRecord = approvedDeliveryOrders.find((d) => d.id === doId);
-		if (!doRecord?.salesOrderId) return;
-		const soId = String(doRecord.salesOrderId);
-		setFormValues((prev) => {
-			if (prev.sales_order_id === soId) return prev;
-			return {
-				...prev,
-				sales_order_id: soId,
-				sales_order_date: doRecord.salesOrderDate ?? "",
-			};
-		});
-	}, [formValues.delivery_order, approvedDeliveryOrders, mode, setFormValues]);
+		if (!doRecord) return;
+		const updates: Record<string, unknown> = {};
+		if (doRecord.salesOrderId) {
+			updates.sales_order_id = String(doRecord.salesOrderId);
+			if (doRecord.salesOrderDate) updates.sales_order_date = doRecord.salesOrderDate;
+		}
+		if (doRecord.partyId) updates.party = String(doRecord.partyId);
+		if (doRecord.billingToId) { updates.billing_to = String(doRecord.billingToId); updates.party_branch = String(doRecord.billingToId); }
+		if (doRecord.shippingToId) updates.shipping_to = String(doRecord.shippingToId);
+		if (doRecord.transporterId) updates.transporter = String(doRecord.transporterId);
+		if (doRecord.invoiceType) updates.invoice_type = String(doRecord.invoiceType);
+		if (Object.keys(updates).length === 0) return;
+		for (const [key, value] of Object.entries(updates)) {
+			formRef.current?.setValue(key, value);
+		}
+		setFormValues((prev) => ({ ...prev, ...updates }));
+	}, [formValues.delivery_order, approvedDeliveryOrders, mode, setFormValues, formRef]);
 
-	// Auto-fill sales_order_date and payment_terms when sales_order_id changes
+	// Auto-fill header fields when sales_order_id changes
 	React.useEffect(() => {
 		if (mode === "view") return;
 		const soId = formValues.sales_order_id ? String(formValues.sales_order_id) : "";
 		if (!soId) {
+			formRef.current?.setValue("sales_order_date", "");
+			formRef.current?.setValue("payment_terms", "");
 			setFormValues((prev) => {
 				if (!prev.sales_order_date && !prev.payment_terms) return prev;
 				return { ...prev, sales_order_date: "", payment_terms: "" };
@@ -280,18 +288,21 @@ function InvoiceTransactionPageContent() {
 		}
 		const soRecord = approvedSalesOrders.find((s) => s.id === soId);
 		if (!soRecord) return;
-		setFormValues((prev) => {
-			const updates: Record<string, unknown> = {};
-			const soDate = soRecord.salesOrderDate ?? "";
-			if (prev.sales_order_date !== soDate) updates.sales_order_date = soDate;
-			if (soRecord.paymentTerms != null) {
-				const ptStr = String(soRecord.paymentTerms);
-				if (prev.payment_terms !== ptStr) updates.payment_terms = ptStr;
-			}
-			if (Object.keys(updates).length === 0) return prev;
-			return { ...prev, ...updates };
-		});
-	}, [formValues.sales_order_id, approvedSalesOrders, mode, setFormValues]);
+		const updates: Record<string, unknown> = {};
+		if (soRecord.salesOrderDate) updates.sales_order_date = soRecord.salesOrderDate;
+		if (soRecord.paymentTerms != null) updates.payment_terms = String(soRecord.paymentTerms);
+		if (soRecord.partyId) updates.party = String(soRecord.partyId);
+		if (soRecord.billingToId) { updates.billing_to = String(soRecord.billingToId); updates.party_branch = String(soRecord.billingToId); }
+		if (soRecord.shippingToId) updates.shipping_to = String(soRecord.shippingToId);
+		if (soRecord.brokerId) updates.broker = String(soRecord.brokerId);
+		if (soRecord.transporterId) updates.transporter = String(soRecord.transporterId);
+		if (soRecord.invoiceType) updates.invoice_type = String(soRecord.invoiceType);
+		if (Object.keys(updates).length === 0) return;
+		for (const [key, value] of Object.entries(updates)) {
+			formRef.current?.setValue(key, value);
+		}
+		setFormValues((prev) => ({ ...prev, ...updates }));
+	}, [formValues.sales_order_id, approvedSalesOrders, mode, setFormValues, formRef]);
 
 	// Whether sales order dropdown should be disabled (auto-populated from DO)
 	const salesOrderDisabled = React.useMemo(() => {
@@ -301,9 +312,21 @@ function InvoiceTransactionPageContent() {
 		return Boolean(doRecord?.salesOrderId);
 	}, [formValues.delivery_order, approvedDeliveryOrders]);
 
+	// Whether delivery order dropdown should be disabled (no DOs exist for selected SO)
+	const deliveryOrderDisabled = React.useMemo(() => {
+		if (headerFieldsDisabled) return true;
+		const soId = formValues.sales_order_id ? String(formValues.sales_order_id) : "";
+		if (!soId) return false;
+		const dosForSo = approvedDeliveryOrders.filter(
+			(d) => d.salesOrderId != null && String(d.salesOrderId) === soId,
+		);
+		return dosForSo.length === 0;
+	}, [formValues.sales_order_id, approvedDeliveryOrders, headerFieldsDisabled]);
+
 	const {
 		lineItems, setLineItems, replaceItems, removeLineItems,
-		handleLineFieldChange, handleDeliveryOrderLinesConfirm,
+		handleLineFieldChange, replaceWithDeliveryOrderLines, replaceWithSalesOrderLines,
+		clearImportedLines,
 		mapLineToEditable, filledLineItems, lineItemsValid, itemGroupsFromLineItems,
 	} = useSalesInvoiceLineItems({
 		mode,
@@ -328,6 +351,67 @@ function InvoiceTransactionPageContent() {
 			return [createBlankLine()];
 		});
 	}, [mode, setLineItems]);
+
+	// Auto-fetch lines when delivery order changes
+	React.useEffect(() => {
+		if (mode === "view") return;
+		const doId = formValues.delivery_order ? String(formValues.delivery_order) : "";
+
+		if (!doId) {
+			clearImportedLines();
+			return;
+		}
+
+		let cancelled = false;
+		setLinesLoading(true);
+		fetchDeliveryOrderLines(doId)
+			.then((response) => {
+				if (cancelled) return;
+				replaceWithDeliveryOrderLines(response.data || []);
+			})
+			.catch((error) => {
+				if (!cancelled) {
+					console.error("Error fetching DO lines:", error);
+					toast({ variant: "destructive", title: "Unable to load delivery order lines", description: error instanceof Error ? error.message : "Please try again." });
+				}
+			})
+			.finally(() => { if (!cancelled) setLinesLoading(false); });
+
+		return () => { cancelled = true; };
+	}, [formValues.delivery_order, mode, replaceWithDeliveryOrderLines, clearImportedLines]);
+
+	// Auto-fetch lines when sales order changes (only if no DO is selected)
+	React.useEffect(() => {
+		if (mode === "view") return;
+		const soId = formValues.sales_order_id ? String(formValues.sales_order_id) : "";
+
+		if (!soId) {
+			if (!formValues.delivery_order) {
+				clearImportedLines();
+			}
+			return;
+		}
+
+		// DO lines take priority — skip SO fetch if a DO is selected
+		if (formValues.delivery_order) return;
+
+		let cancelled = false;
+		setLinesLoading(true);
+		fetchSalesOrderLinesForInvoice(soId)
+			.then((response) => {
+				if (cancelled) return;
+				replaceWithSalesOrderLines(response.data || []);
+			})
+			.catch((error) => {
+				if (!cancelled) {
+					console.error("Error fetching SO lines:", error);
+					toast({ variant: "destructive", title: "Unable to load sales order lines", description: error instanceof Error ? error.message : "Please try again." });
+				}
+			})
+			.finally(() => { if (!cancelled) setLinesLoading(false); });
+
+		return () => { cancelled = true; };
+	}, [formValues.sales_order_id, formValues.delivery_order, mode, replaceWithSalesOrderLines, clearImportedLines]);
 
 	const juteFormRef = React.useRef<{ submit: () => Promise<void>; isDirty: () => boolean; setValue: (name: string, value: unknown) => void } | null>(null);
 
@@ -467,18 +551,6 @@ function InvoiceTransactionPageContent() {
 		return lineItemsValid;
 	}, [lineItemsValid, mode, pageError, setupError]);
 
-	const handleDOSelect = React.useCallback(() => {
-		setDODialogOpen(true);
-	}, []);
-
-	const handleDOLinesConfirm = React.useCallback(
-		(selectedItems: import("@/utils/salesInvoiceService").DeliveryOrderLineForInvoice[]) => {
-			handleDeliveryOrderLinesConfirm(selectedItems);
-			setDODialogOpen(false);
-		},
-		[handleDeliveryOrderLinesConfirm],
-	);
-
 	const {
 		customerOptions, customerBranchOptions, transporterOptions, brokerOptions, deliveryOrderOptions, salesOrderOptions,
 		invoiceTypeOptions, itemGroupOptions, getItemGroupLabel,
@@ -508,10 +580,11 @@ function InvoiceTransactionPageContent() {
 		mode,
 		headerFieldsDisabled,
 		salesOrderDisabled,
+		deliveryOrderDisabled,
 	});
 
 	const mukamOptions = React.useMemo(() => buildMukamOptions(setupData?.mukamList ?? []), [setupData?.mukamList]);
-	const juteHeaderSchema = useSalesInvoiceJuteHeaderSchema({ mode, headerFieldsDisabled, mukamOptions, invoiceTypeId: String(formValues.invoice_type ?? "") });
+	const typeSpecificHeaderSchema = useSalesInvoiceTypeSpecificHeaderSchema({ mode, headerFieldsDisabled, mukamOptions, invoiceTypeId: String(formValues.invoice_type ?? "") });
 	const footerSchema = useSalesInvoiceFooterSchema({ mode });
 
 	const canEdit = mode !== "view";
@@ -702,9 +775,7 @@ function InvoiceTransactionPageContent() {
 		return invoiceDetails?.invoiceNo ? `Sales Invoice ${invoiceDetails.invoiceNo}` : "Sales Invoice Details";
 	}, [mode, invoiceDetails?.invoiceNo]);
 
-	const showDOButton = React.useMemo(() => {
-		return mode !== "view" && Boolean(formValues.delivery_order);
-	}, [mode, formValues.delivery_order]);
+
 
 	if (!mounted) return <InvoicePageLoading />;
 
@@ -715,7 +786,7 @@ function InvoiceTransactionPageContent() {
 			metadata={metadata}
 			statusChip={statusChipProps}
 			backAction={{ onClick: () => router.push("/dashboardportal/sales/salesInvoice") }}
-			loading={loading || setupLoading}
+			loading={loading || setupLoading || linesLoading}
 			alerts={pageError ? <div role="alert" aria-live="assertive" className="text-red-600">{pageError}</div> : undefined}
 			preview={
 				<SalesInvoicePreview
@@ -731,7 +802,7 @@ function InvoiceTransactionPageContent() {
 				getItemId: (item) => item.id,
 				canEdit,
 				columns: lineItemColumns,
-				placeholder: "Add line items manually or import from a delivery order",
+				placeholder: linesLoading ? "Loading line items..." : "Add line items manually, or select a Delivery Order / Sales Order above to auto-populate",
 				selectionColumnWidth: "28px",
 			}}
 			footer={
@@ -775,19 +846,9 @@ function InvoiceTransactionPageContent() {
 				formRef={formRef}
 				onSubmit={handleFormSubmit}
 				onValuesChange={handleMainFormValuesChange}
-				showDeliveryOrderButton={showDOButton}
-				onDeliveryOrderSelect={handleDOSelect}
-				deliveryOrderButtonDisabled={!formValues.delivery_order}
-				juteSchema={juteHeaderSchema}
+				typeSpecificSchema={typeSpecificHeaderSchema}
 				invoiceTypeId={String(formValues.invoice_type ?? "")}
 				juteFormRef={juteFormRef}
-			/>
-
-			<DeliveryOrderLinesDialog
-				open={doDialogOpen}
-				onOpenChange={setDODialogOpen}
-				onConfirm={handleDOLinesConfirm}
-				deliveryOrderId={formValues.delivery_order ? String(formValues.delivery_order) : undefined}
 			/>
 		</TransactionWrapper>
 	);

@@ -4,7 +4,7 @@ import { Input } from "@/components/ui/input";
 import type { TransactionLineColumn } from "@/components/ui/transaction";
 import type { EditableLineItem, Option, UomConversionEntry } from "../types/salesInvoiceTypes";
 import { computeConvertedRate } from "@/utils/uomConversion";
-import { DISCOUNT_TYPE, isJuteInvoice } from "../utils/salesInvoiceConstants";
+import { DISCOUNT_TYPE, isRawJuteInvoice, isHessianInvoice, isGovtSkgInvoice } from "../utils/salesInvoiceConstants";
 
 const DISCOUNT_TYPE_OPTIONS: Option[] = [
 	{ label: "None", value: "" },
@@ -264,7 +264,8 @@ export const useInvoiceLineItemColumns = ({
 					),
 				getTooltip: ({ item }) => (item.remarks ? item.remarks : undefined),
 			},
-			...(isJuteInvoice(invoiceTypeId) ? [
+			// --- Raw Jute (type 5) line item columns ---
+			...(isRawJuteInvoice(invoiceTypeId) ? [
 				{
 					id: "juteClaimRate" as const,
 					header: "Claim Rate",
@@ -353,6 +354,138 @@ export const useInvoiceLineItemColumns = ({
 							/>
 						) : (
 							<span className="block truncate text-sm">{item.juteQtyUnitConversion ?? "-"}</span>
+						),
+				},
+			] as TransactionLineColumn<EditableLineItem>[] : []),
+			// --- Hessian (type 2) line item columns ---
+			...(isHessianInvoice(invoiceTypeId) ? [
+				{
+					id: "hessianQtyBales" as const,
+					header: "Qty Bales",
+					width: "0.7fr",
+					minWidth: "80px",
+					renderCell: ({ item }: { item: EditableLineItem }) =>
+						canEdit ? (
+							<Input
+								type="text"
+								value={item.hessianQtyBales ?? ""}
+								onChange={(e) => onFieldChange(item.id, "hessianQtyBales", e.target.value)}
+								placeholder="0"
+								className="h-8 text-sm"
+							/>
+						) : (
+							<span className="block truncate text-sm">{item.hessianQtyBales ?? "-"}</span>
+						),
+				},
+				{
+					id: "hessianRatePerBale" as const,
+					header: "Rate/Bale",
+					width: "0.7fr",
+					minWidth: "80px",
+					renderCell: ({ item }: { item: EditableLineItem }) =>
+						canEdit ? (
+							<Input
+								type="text"
+								value={item.hessianRatePerBale ?? ""}
+								onChange={(e) => onFieldChange(item.id, "hessianRatePerBale", e.target.value)}
+								placeholder="0"
+								className="h-8 text-sm"
+							/>
+						) : (
+							<span className="block truncate text-sm">{item.hessianRatePerBale ?? "-"}</span>
+						),
+				},
+				{
+					id: "hessianBillingRateMt" as const,
+					header: "Rate/MT",
+					width: "0.7fr",
+					minWidth: "80px",
+					renderCell: ({ item }: { item: EditableLineItem }) =>
+						canEdit ? (
+							<Input
+								type="text"
+								value={item.hessianBillingRateMt ?? ""}
+								onChange={(e) => onFieldChange(item.id, "hessianBillingRateMt", e.target.value)}
+								placeholder="0"
+								className="h-8 text-sm"
+							/>
+						) : (
+							<span className="block truncate text-sm">{item.hessianBillingRateMt ?? "-"}</span>
+						),
+				},
+				{
+					id: "hessianBillingRateBale" as const,
+					header: "Rate/Bale (Bill)",
+					width: "0.8fr",
+					minWidth: "90px",
+					renderCell: ({ item }: { item: EditableLineItem }) =>
+						canEdit ? (
+							<Input
+								type="text"
+								value={item.hessianBillingRateBale ?? ""}
+								onChange={(e) => onFieldChange(item.id, "hessianBillingRateBale", e.target.value)}
+								placeholder="0"
+								className="h-8 text-sm"
+							/>
+						) : (
+							<span className="block truncate text-sm">{item.hessianBillingRateBale ?? "-"}</span>
+						),
+				},
+			] as TransactionLineColumn<EditableLineItem>[] : []),
+			// --- Govt Sacking (type 3) line item columns ---
+			...(isGovtSkgInvoice(invoiceTypeId) ? [
+				{
+					id: "govtskgPackSheet" as const,
+					header: "Pack Sheet",
+					width: "0.7fr",
+					minWidth: "80px",
+					renderCell: ({ item }: { item: EditableLineItem }) =>
+						canEdit ? (
+							<Input
+								type="text"
+								value={item.govtskgPackSheet ?? ""}
+								onChange={(e) => onFieldChange(item.id, "govtskgPackSheet", e.target.value)}
+								placeholder="0"
+								className="h-8 text-sm"
+							/>
+						) : (
+							<span className="block truncate text-sm">{item.govtskgPackSheet ?? "-"}</span>
+						),
+				},
+				{
+					id: "govtskgNetWeight" as const,
+					header: "Net Weight",
+					width: "0.7fr",
+					minWidth: "80px",
+					renderCell: ({ item }: { item: EditableLineItem }) =>
+						canEdit ? (
+							<Input
+								type="text"
+								value={item.govtskgNetWeight ?? ""}
+								onChange={(e) => onFieldChange(item.id, "govtskgNetWeight", e.target.value)}
+								placeholder="0"
+								className="h-8 text-sm"
+							/>
+						) : (
+							<span className="block truncate text-sm">{item.govtskgNetWeight ?? "-"}</span>
+						),
+				},
+				{
+					id: "govtskgTotalWeight" as const,
+					header: "Total Weight",
+					width: "0.7fr",
+					minWidth: "80px",
+					renderCell: ({ item }: { item: EditableLineItem }) =>
+						canEdit ? (
+							<Input
+								type="text"
+								value={item.govtskgTotalWeight ?? ""}
+								onChange={(e) => onFieldChange(item.id, "govtskgTotalWeight", e.target.value)}
+								placeholder="0"
+								className="h-8 text-sm"
+							/>
+						) : (
+							<span className="block truncate text-sm">{item.govtskgTotalWeight ?? "-"}</span>
 						),
 				},
 			] as TransactionLineColumn<EditableLineItem>[] : []),

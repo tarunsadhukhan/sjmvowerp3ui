@@ -13,7 +13,7 @@ import {
 } from "@mui/material";
 import { fetchWithCookie } from "@/utils/apiClient2";
 import { apiRoutesPortalMasters } from "@/utils/api";
-import { ItemOption, UomOption, getCoId } from "@/app/dashboardportal/masters/itemBomMaster/_components/types";
+import { ItemOption, UomOption, getCoId } from "./types";
 
 type EditNode = {
   bom_id: number;

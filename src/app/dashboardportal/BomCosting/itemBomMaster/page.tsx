@@ -8,7 +8,7 @@ import { fetchWithCookie } from "@/utils/apiClient2";
 import { apiRoutesPortalMasters } from "@/utils/api";
 import { useRouter } from "next/navigation";
 import { FileSpreadsheet } from "lucide-react";
-import BomTreeEditor from "@/app/dashboardportal/masters/itemBomMaster/_components/BomTreeEditor";
+import BomTreeEditor from "@/app/dashboardportal/BomCosting/itemBomMaster/_components/BomTreeEditor";
 
 type BomItem = {
   id: number;
@@ -144,7 +144,7 @@ export default function ItemBomMasterPage() {
               onClick={(e) => {
                 e.stopPropagation();
                 router.push(
-                  `/dashboardportal/masters/bomCosting/costSheet?mode=edit&bom_hdr_id=${params.row.bom_hdr_id}`
+                  `/dashboardportal/BomCosting/bomCosting/costSheet?mode=edit&bom_hdr_id=${params.row.bom_hdr_id}`
                 );
               }}
             >

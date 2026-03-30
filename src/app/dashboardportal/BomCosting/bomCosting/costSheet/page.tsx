@@ -275,7 +275,7 @@ function CostSheetEditorPage() {
       {/* Header Bar */}
       <Stack direction="row" justifyContent="space-between" alignItems="center" sx={{ mb: 2 }}>
         <Stack direction="row" alignItems="center" spacing={1.5}>
-          <Button variant="ghost" size="sm" onClick={() => router.push("/dashboardportal/masters/bomCosting")}>
+          <Button variant="ghost" size="sm" onClick={() => router.push("/dashboardportal/BomCosting/bomCosting")}>
             <ArrowLeft size={16} />
           </Button>
           <Box>

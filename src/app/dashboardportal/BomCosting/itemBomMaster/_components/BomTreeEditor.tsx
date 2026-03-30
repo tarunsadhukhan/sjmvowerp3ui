@@ -15,10 +15,10 @@ import {
 } from "@mui/material";
 import { fetchWithCookie } from "@/utils/apiClient2";
 import { apiRoutesPortalMasters } from "@/utils/api";
-import BomTreeNode from "@/app/dashboardportal/masters/itemBomMaster/_components/BomTreeNode";
+import BomTreeNode from "./BomTreeNode";
 import AddComponentDialog from "./AddComponentDialog";
-import ConfirmDialog from "@/app/dashboardportal/masters/itemBomMaster/_components/ConfirmDialog";
-import { BomTreeItem, ItemOption, getCoId } from "@/app/dashboardportal/masters/itemBomMaster/_components/types";
+import ConfirmDialog from "./ConfirmDialog";
+import { BomTreeItem, ItemOption, getCoId } from "./types";
 
 type BomTreeEditorProps = {
   open: boolean;

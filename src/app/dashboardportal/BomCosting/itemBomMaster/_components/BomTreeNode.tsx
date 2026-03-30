@@ -3,7 +3,7 @@
 import React from "react";
 import { Box, IconButton, Typography, Tooltip } from "@mui/material";
 import { ChevronRight, ChevronDown, Plus, Pencil, Trash2, Package, Box as BoxIcon } from "lucide-react";
-import { BomTreeItem } from "@/app/dashboardportal/masters/itemBomMaster/_components/types";
+import { BomTreeItem } from "./types";
 
 type BomTreeNodeProps = {
   node: BomTreeItem;

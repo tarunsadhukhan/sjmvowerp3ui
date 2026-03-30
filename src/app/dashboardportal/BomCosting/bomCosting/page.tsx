@@ -124,7 +124,7 @@ export default function BomCostingListPage() {
       setSnackbar({ open: true, message: "BOM costing created", severity: "success" });
       // Navigate to cost sheet editor
       router.push(
-        `/dashboardportal/masters/bomCosting/costSheet?mode=edit&bom_hdr_id=${data.bom_hdr_id}`
+        `/dashboardportal/BomCosting/bomCosting/costSheet?mode=edit&bom_hdr_id=${data.bom_hdr_id}`
       );
     } catch (err: any) {
       setSnackbar({ open: true, message: err.message, severity: "error" });
@@ -133,13 +133,13 @@ export default function BomCostingListPage() {
 
   const handleView = (row: BomCostingRow) => {
     router.push(
-      `/dashboardportal/masters/bomCosting/costSheet?mode=view&bom_hdr_id=${row.bom_hdr_id}`
+      `/dashboardportal/BomCosting/bomCosting/costSheet?mode=view&bom_hdr_id=${row.bom_hdr_id}`
     );
   };
 
   const handleEdit = (row: BomCostingRow) => {
     router.push(
-      `/dashboardportal/masters/bomCosting/costSheet?mode=edit&bom_hdr_id=${row.bom_hdr_id}`
+      `/dashboardportal/BomCosting/bomCosting/costSheet?mode=edit&bom_hdr_id=${row.bom_hdr_id}`
     );
   };
 

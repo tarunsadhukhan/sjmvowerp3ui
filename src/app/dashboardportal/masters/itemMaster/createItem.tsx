@@ -156,6 +156,12 @@ const CreateItem: React.FC<CreateItemProps> = ({ open, onClose, mode = 'create',
           required: true,
           grid: { xs: 12, sm: 6 },
           disabled: mode !== 'create',
+          customValidate: (value: unknown) => {
+            if (typeof value === 'string' && value.includes('-')) {
+              return 'Item Code cannot contain hyphens (-)';
+            }
+            return null;
+          },
         },
         {
           name: 'itemName',
@@ -165,6 +171,7 @@ const CreateItem: React.FC<CreateItemProps> = ({ open, onClose, mode = 'create',
           grid: { xs: 12, sm: 6 },
           disabled: mode !== 'create',
         },
+        { name: 'hsnCode', label: 'HSN Code', type: 'text', grid: { xs: 12, sm: 4 } },
         { name: 'taxPercent', label: 'Tax %', type: 'number', grid: { xs: 12, sm: 4 } },
         {
           name: 'uomId',
@@ -233,6 +240,7 @@ const CreateItem: React.FC<CreateItemProps> = ({ open, onClose, mode = 'create',
       itemGroupId: "",
       itemCode: "",
       itemName: "",
+      hsnCode: "",
       taxPercent: "",
       uomId: "",
       uomRounding: "",
@@ -452,6 +460,7 @@ const CreateItem: React.FC<CreateItemProps> = ({ open, onClose, mode = 'create',
           itemGroupId: String(details.item_grp_id ?? details.item_group_id ?? details.itemGroupId ?? ""),
           itemCode: details.item_code ?? details.itemCode ?? "",
           itemName: details.item_name ?? details.itemName ?? "",
+          hsnCode: details.hsn_code ?? details.hsnCode ?? "",
           taxPercent: String(details.tax_percentage ?? details.taxPercent ?? ""),
           uomId: String(details.uom_id ?? details.uomId ?? ""),
           uomRounding: String(details.uom_rounding ?? details.uomRounding ?? details.uom_rounding ?? ""),

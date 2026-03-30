@@ -41,6 +41,7 @@ export type POPreviewItem = {
 
 export type POPreviewTotals = {
   netAmount?: number;
+  additionalCharges?: number;
   totalIGST?: number;
   totalCGST?: number;
   totalSGST?: number;
@@ -361,6 +362,9 @@ const POPreview: React.FC<POPreviewProps> = ({ header, items, totals, additional
               <Box sx={{ minWidth: 280 }}>
                 <Stack spacing={0.75}>
                   <TotalsRow label="Net Amount" value={formatAmount(totals.netAmount)} />
+                  {totals.additionalCharges != null && totals.additionalCharges > 0 && (
+                    <TotalsRow label="Additional Charges" value={formatAmount(totals.additionalCharges)} />
+                  )}
                   <TotalsRow label="IGST" value={formatAmount(totals.totalIGST)} />
                   <TotalsRow label="CGST" value={formatAmount(totals.totalCGST)} />
                   <TotalsRow label="SGST" value={formatAmount(totals.totalSGST)} />

@@ -330,6 +330,7 @@ function SRTransactionPageContent() {
 					header={header}
 					lineItems={lineItems}
 					totals={totals}
+					chargesTotals={chargesTotals}
 					srDate={srDate}
 					srRemarks={srRemarks}
 				/>

@@ -123,11 +123,19 @@ export const useSRLineItemColumns = ({
 				width: "1.8fr",
 				minWidth: "200px",
 				renderCell: ({ item }) => (
-					<Typography variant="body2" noWrap title={item.item_name || undefined}>
-						{item.item_name || "-"}
-					</Typography>
+					<div>
+						<Typography variant="body2" noWrap title={item.item_name || undefined}>
+							{item.item_name || "-"}
+						</Typography>
+						<Typography variant="caption" color="text.secondary" noWrap>
+							{item.full_item_code || item.item_code || ""}
+						</Typography>
+					</div>
 				),
-				getTooltip: ({ item }) => item.item_name || undefined,
+				getTooltip: ({ item }) => {
+					const code = item.full_item_code || item.item_code;
+					return code ? `${item.item_name} (${code})` : item.item_name || undefined;
+				},
 			},
 			{
 				id: "accepted_item_make_name",

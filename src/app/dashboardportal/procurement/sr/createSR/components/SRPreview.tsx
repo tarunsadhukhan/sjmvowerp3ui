@@ -65,10 +65,20 @@ const TotalsRow = ({ label, value, isBold = false }: { label: string; value?: Re
 	</Stack>
 );
 
+type AdditionalChargesTotals = {
+	baseAmount: number;
+	totalIGST: number;
+	totalCGST: number;
+	totalSGST: number;
+	totalTax: number;
+	totalAmount: number;
+};
+
 type SRPreviewProps = {
 	header: SRHeader | null;
 	lineItems: SRLineItem[];
 	totals: SRTotals;
+	chargesTotals?: AdditionalChargesTotals;
 	srDate: string;
 	srRemarks: string;
 	onPrint?: () => void;
@@ -81,6 +91,7 @@ export const SRPreview: React.FC<SRPreviewProps> = ({
 	header,
 	lineItems,
 	totals,
+	chargesTotals,
 	srDate,
 	srRemarks,
 	onPrint,
@@ -234,12 +245,21 @@ export const SRPreview: React.FC<SRPreviewProps> = ({
 						{totals.totalDiscount > 0 && (
 							<TotalsRow label="Discount" value={`-${formatCurrency(totals.totalDiscount)}`} />
 						)}
-						<TotalsRow label="Net Amount" value={formatCurrency(totals.netAmount)} />
-						{totals.totalIGST > 0 && <TotalsRow label="IGST" value={formatCurrency(totals.totalIGST)} />}
-						{totals.totalCGST > 0 && <TotalsRow label="CGST" value={formatCurrency(totals.totalCGST)} />}
-						{totals.totalSGST > 0 && <TotalsRow label="SGST" value={formatCurrency(totals.totalSGST)} />}
+						{(chargesTotals?.baseAmount ?? 0) > 0 && (
+							<TotalsRow label="Additional Charges" value={formatCurrency(chargesTotals!.baseAmount)} />
+						)}
+						<TotalsRow label="Net Amount" value={formatCurrency(totals.netAmount + (chargesTotals?.baseAmount ?? 0))} />
+						{(totals.totalIGST + (chargesTotals?.totalIGST ?? 0)) > 0 && (
+							<TotalsRow label="IGST" value={formatCurrency(totals.totalIGST + (chargesTotals?.totalIGST ?? 0))} />
+						)}
+						{(totals.totalCGST + (chargesTotals?.totalCGST ?? 0)) > 0 && (
+							<TotalsRow label="CGST" value={formatCurrency(totals.totalCGST + (chargesTotals?.totalCGST ?? 0))} />
+						)}
+						{(totals.totalSGST + (chargesTotals?.totalSGST ?? 0)) > 0 && (
+							<TotalsRow label="SGST" value={formatCurrency(totals.totalSGST + (chargesTotals?.totalSGST ?? 0))} />
+						)}
 						<Divider sx={{ my: 0.5 }} />
-						<TotalsRow label="Grand Total" value={formatCurrency(totals.grandTotal)} isBold />
+						<TotalsRow label="Grand Total" value={formatCurrency(totals.grandTotal + (chargesTotals?.baseAmount ?? 0) + (chargesTotals?.totalTax ?? 0))} isBold />
 					</Stack>
 				</Box>
 

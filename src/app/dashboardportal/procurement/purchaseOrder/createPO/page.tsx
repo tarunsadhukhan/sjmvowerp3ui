@@ -852,19 +852,27 @@ function POTransactionPageContent() {
   }, [filledLineItems, getItemLabel, getUomOptions, itemGroups]);
 
   const previewTotals = React.useMemo(
-    () => ({
-      netAmount: totals.netAmount,
-      totalIGST: totals.totalIGST,
-      totalCGST: totals.totalCGST,
-      totalSGST: totals.totalSGST,
-      totalAmount: totals.totalAmount,
-      advanceAmount: totals.advanceAmount,
-      advancePercentage:
-        formValues.advance_percentage != null && formValues.advance_percentage !== ""
-          ? Number(formValues.advance_percentage)
-          : poDetails?.advancePercentage,
-    }),
-    [totals, formValues.advance_percentage, poDetails?.advancePercentage],
+    () => {
+      const chargesBase = chargesTotals?.baseAmount ?? 0;
+      const chargesIGST = chargesTotals?.totalIGST ?? 0;
+      const chargesCGST = chargesTotals?.totalCGST ?? 0;
+      const chargesSGST = chargesTotals?.totalSGST ?? 0;
+      const chargesTax = chargesTotals?.totalTax ?? 0;
+      return {
+        netAmount: totals.netAmount,
+        additionalCharges: chargesBase,
+        totalIGST: totals.totalIGST + chargesIGST,
+        totalCGST: totals.totalCGST + chargesCGST,
+        totalSGST: totals.totalSGST + chargesSGST,
+        totalAmount: totals.totalAmount + chargesBase + chargesTax,
+        advanceAmount: totals.advanceAmount,
+        advancePercentage:
+          formValues.advance_percentage != null && formValues.advance_percentage !== ""
+            ? Number(formValues.advance_percentage)
+            : poDetails?.advancePercentage,
+      };
+    },
+    [totals, chargesTotals, formValues.advance_percentage, poDetails?.advancePercentage],
   );
 
   const previewAdditionalCharges = React.useMemo(() => {

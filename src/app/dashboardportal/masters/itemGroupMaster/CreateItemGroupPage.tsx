@@ -64,9 +64,11 @@ export default function CreateItemGroupPage({ open = true, onClose }: ItemGroupF
   // Handle form field changes
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value, type } = e.target;
+    // Disallow hyphens in item group code
+    const sanitizedValue = name === 'item_grp_code' ? value.replace(/-/g, '') : value;
     setForm((prev) => ({
       ...prev,
-      [name!]: type === "checkbox" ? (e.target as HTMLInputElement).checked : value,
+      [name!]: type === "checkbox" ? (e.target as HTMLInputElement).checked : sanitizedValue,
     }));
   };
 

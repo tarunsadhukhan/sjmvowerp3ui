@@ -137,6 +137,7 @@ export const mapSRLineItem = (
 		inward_dtl_id: raw.inward_dtl_id ?? 0,
 		item_id: raw.item_id ?? 0,
 		item_code: raw.item_code ?? "",
+		full_item_code: raw.full_item_code ?? "",
 		item_name: raw.item_name ?? "",
 		item_grp_id: raw.item_grp_id ?? 0,
 		item_grp_name: raw.item_grp_name ?? "",

@@ -143,7 +143,9 @@ export default function ItemMasterPage() {
   };
 
   const columns = useMemo<GridColDef<Item>[]>(() => ([
-    { field: "item_code", headerName: "Item Code", flex: 1, minWidth: 120 },
+    { field: "full_item_code", headerName: "Item Code", flex: 1, minWidth: 180,
+      valueGetter: (_value: string, row: Item) => row.full_item_code || row.item_code || "-",
+    },
     { field: "item_name", headerName: "Item Name", flex: 1, minWidth: 180 },
     { field: "item_group_code_display", headerName: "Group Code", flex: 1, minWidth: 120 },
     { field: "item_group_display", headerName: "Group Name", flex: 1, minWidth: 180 },

@@ -434,7 +434,7 @@ export const usePOLineItems = ({
 						indentNo: item.indent_no,
 						itemGroup: String(item.item_grp_id),
 						item: String(item.item_id),
-						itemCode: item.item_code,
+						itemCode: item.full_item_code || item.item_code,
 						itemMake: item.item_make_id ? String(item.item_make_id) : "",
 						quantity: String(availableQty),
 						rate: "",
@@ -442,6 +442,7 @@ export const usePOLineItems = ({
 						discountValue: "",
 						remarks: item.remarks || "",
 						taxPercentage: item.tax_percentage,
+						hsnCode: itemGroupCache[String(item.item_grp_id)]?.itemHsnById[String(item.item_id)] ?? "",
 						/** Max enterable qty for indent-based row = outstanding */
 						availableIndentQty: availableQty,
 						/** Qty is always editable for indent items (inc. open indent); validation enforces the cap and MOQ multiples */
@@ -599,6 +600,22 @@ export const usePOLineItems = ({
 		},
 		[allowManualEntry, branchId, coId, expenseTypeId, mode, poId, poType, setLineItems],
 	);
+
+	// Backfill HSN codes from cache when item group data loads after indent items were added
+	React.useEffect(() => {
+		if (mode === "view") return;
+		setLineItems((prev) => {
+			let changed = false;
+			const next = prev.map((line) => {
+				if (line.hsnCode || !line.item || !line.itemGroup) return line;
+				const hsn = itemGroupCache[line.itemGroup]?.itemHsnById[line.item];
+				if (!hsn) return line;
+				changed = true;
+				return { ...line, hsnCode: hsn };
+			});
+			return changed ? next : prev;
+		});
+	}, [itemGroupCache, mode, setLineItems]);
 
 	return {
 		lineItems,

@@ -24,6 +24,7 @@ export type IndentLineItem = {
   indent_type?: string;
   item_id: number;
   item_code: string;
+  full_item_code?: string;
   item_name: string;
   item_grp_id: number;
   item_grp_code: string;
@@ -305,7 +306,7 @@ export function IndentLineItemsDialog({
                       />
                       <div className="flex-1 grid grid-cols-12 gap-2 text-sm">
                         <div className="col-span-2 min-w-0">
-                          <div className="font-medium truncate">{item.item_code || "-"}</div>
+                          <div className="font-medium truncate">{item.full_item_code || item.item_code || "-"}</div>
                           <div className="text-muted-foreground text-xs truncate">{item.item_name || "-"}</div>
                         </div>
                         <div className="col-span-3 min-w-0">

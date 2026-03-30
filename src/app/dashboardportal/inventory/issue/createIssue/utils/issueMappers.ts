@@ -128,7 +128,7 @@ export const mapAvailableInventoryItems = (records: unknown[]): AvailableInvento
 				branchName: String(data?.branch_name ?? ""),
 				itemId: String(data?.item_id ?? ""),
 				itemName: String(data?.item_name ?? ""),
-				itemCode: String(data?.item_code ?? ""),
+				itemCode: String(data?.full_item_code ?? data?.item_code ?? ""),
 				itemGrpId: String(data?.item_grp_id ?? ""),
 				itemGrpName: String(data?.item_grp_name ?? ""),
 				itemMakeId: data?.item_make_id ? String(data.item_make_id) : undefined,

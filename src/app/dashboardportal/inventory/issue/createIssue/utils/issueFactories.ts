@@ -49,7 +49,7 @@ export const createLineFromInventory = (inv: InventoryListItem): EditableLineIte
 	inwardDtlId: String(inv.inward_dtl_id ?? ""),
 	itemId: String(inv.item_id ?? ""),
 	itemName: inv.item_name ?? "",
-	itemCode: inv.item_code ?? "",
+	itemCode: inv.full_item_code ?? inv.item_code ?? "",
 	itemGrpId: String(inv.item_grp_id ?? ""),
 	itemGrpName: inv.item_grp_name ?? "",
 	uomId: String(inv.uom_id ?? ""),

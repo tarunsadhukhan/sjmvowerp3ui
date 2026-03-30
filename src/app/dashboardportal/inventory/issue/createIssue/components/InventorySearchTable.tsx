@@ -331,7 +331,7 @@ export function InventorySearchTable({
 										{row.item_grp_name || "-"}
 									</TableCell>
 									<TableCell className="font-mono text-xs">
-										{row.item_code || "-"}
+										{row.full_item_code || row.item_code || "-"}
 									</TableCell>
 									<TableCell className="text-sm">
 										{row.item_name || "-"}

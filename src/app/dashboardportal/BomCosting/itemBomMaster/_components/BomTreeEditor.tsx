@@ -15,10 +15,10 @@ import {
 } from "@mui/material";
 import { fetchWithCookie } from "@/utils/apiClient2";
 import { apiRoutesPortalMasters } from "@/utils/api";
-import BomTreeNode from "@/app/dashboardportal/masters/itemBomMaster/_components/BomTreeNode";
+import BomTreeNode from "./BomTreeNode";
 import AddComponentDialog from "./AddComponentDialog";
-import ConfirmDialog from "@/app/dashboardportal/masters/itemBomMaster/_components/ConfirmDialog";
-import { BomTreeItem, ItemOption, getCoId } from "@/app/dashboardportal/masters/itemBomMaster/_components/types";
+import ConfirmDialog from "./ConfirmDialog";
+import { BomTreeItem, ItemOption, getCoId } from "./types";
 
 type BomTreeEditorProps = {
   open: boolean;
@@ -40,6 +40,8 @@ const initialState = {
   itemSearchValue: "",
   confirmRemoveNode: null as BomTreeItem | null,
 };
+
+const BOM_GRID_COLUMNS = "60px 1fr 80px 90px 80px 100px";
 
 export default function BomTreeEditor({ open, onClose, item, onSnackbar }: BomTreeEditorProps) {
   const [tree, setTree] = useState(initialState.tree);
@@ -221,18 +223,52 @@ export default function BomTreeEditor({ open, onClose, item, onSnackbar }: BomTr
                   No components defined yet. Click &quot;Add Component&quot; to get started.
                 </Typography>
               ) : (
-                tree.map((node) => (
-                  <BomTreeNode
-                    key={node.bom_id}
-                    node={node}
-                    level={0}
-                    expanded={expanded}
-                    onToggle={handleToggle}
-                    onAddChild={handleAddChild}
-                    onEdit={handleEdit}
-                    onRemove={(node) => setConfirmRemoveNode(node)}
-                  />
-                ))
+                <Box sx={{ border: "1px solid", borderColor: "divider", borderRadius: 1, overflow: "hidden" }}>
+                  {/* Header row */}
+                  <Box
+                    sx={{
+                      display: "grid",
+                      gridTemplateColumns: BOM_GRID_COLUMNS,
+                      bgcolor: "grey.50",
+                      borderBottom: "2px solid",
+                      borderColor: "divider",
+                      position: "sticky",
+                      top: 0,
+                      zIndex: 1,
+                    }}
+                  >
+                    <Typography variant="caption" sx={{ fontWeight: 700, textTransform: "uppercase", py: 1, textAlign: "center", borderRight: "1px solid", borderColor: "divider" }}>
+                      Seq
+                    </Typography>
+                    <Typography variant="caption" sx={{ fontWeight: 700, textTransform: "uppercase", py: 1, px: 1, borderRight: "1px solid", borderColor: "divider" }}>
+                      Item
+                    </Typography>
+                    <Typography variant="caption" sx={{ fontWeight: 700, textTransform: "uppercase", py: 1, px: 1, textAlign: "right", borderRight: "1px solid", borderColor: "divider" }}>
+                      Qty
+                    </Typography>
+                    <Typography variant="caption" sx={{ fontWeight: 700, textTransform: "uppercase", py: 1, px: 1, textAlign: "right", borderRight: "1px solid", borderColor: "divider" }}>
+                      BOM Qty
+                    </Typography>
+                    <Typography variant="caption" sx={{ fontWeight: 700, textTransform: "uppercase", py: 1, px: 1, textAlign: "right", borderRight: "1px solid", borderColor: "divider" }}>
+                      UOM
+                    </Typography>
+                    <Box />
+                  </Box>
+                  {/* Tree rows */}
+                  {tree.map((node) => (
+                    <BomTreeNode
+                      key={node.bom_id}
+                      node={node}
+                      level={0}
+                      expanded={expanded}
+                      gridColumns={BOM_GRID_COLUMNS}
+                      onToggle={handleToggle}
+                      onAddChild={handleAddChild}
+                      onEdit={handleEdit}
+                      onRemove={(node) => setConfirmRemoveNode(node)}
+                    />
+                  ))}
+                </Box>
               )}
               {rootItemId && (
                 <Button

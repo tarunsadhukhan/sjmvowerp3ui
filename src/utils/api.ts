@@ -141,7 +141,37 @@ const apiRoutesPortalMasters = {
     BOM_ADD_COMPONENT: `${API_URL}/itemBomMaster/bom_add_component`,
     BOM_EDIT_COMPONENT: `${API_URL}/itemBomMaster/bom_edit_component`,
     BOM_REMOVE_COMPONENT: `${API_URL}/itemBomMaster/bom_remove_component`,
-    
+
+    // BOM Costing endpoints
+    BOM_COSTING_LIST: `${API_URL}/bomCosting/bom_costing_list`,
+    BOM_COSTING_DETAIL: `${API_URL}/bomCosting/bom_costing_detail`,
+    BOM_COSTING_CREATE_SETUP: `${API_URL}/bomCosting/bom_costing_create_setup`,
+    BOM_COSTING_CREATE: `${API_URL}/bomCosting/bom_costing_create`,
+    BOM_COSTING_UPDATE: `${API_URL}/bomCosting/bom_costing_update`,
+    BOM_COST_ENTRY_SAVE: `${API_URL}/bomCosting/bom_cost_entry_save`,
+    BOM_COST_ENTRY_BULK_SAVE: `${API_URL}/bomCosting/bom_cost_entry_bulk_save`,
+    BOM_COST_ENTRY_DELETE: `${API_URL}/bomCosting/bom_cost_entry_delete`,
+    BOM_COST_ROLLUP: `${API_URL}/bomCosting/bom_cost_rollup`,
+    BOM_COST_SNAPSHOT_LIST: `${API_URL}/bomCosting/bom_cost_snapshot_list`,
+    BOM_COST_SNAPSHOT_DETAIL: `${API_URL}/bomCosting/bom_cost_snapshot_detail`,
+    BOM_COST_SUMMARY: `${API_URL}/bomCosting/bom_cost_summary`,
+
+    // Cost Element Master endpoints
+    COST_ELEMENT_TREE: `${API_URL}/bomCostElement/cost_element_tree`,
+    COST_ELEMENT_LIST: `${API_URL}/bomCostElement/cost_element_list`,
+    COST_ELEMENT_CREATE: `${API_URL}/bomCostElement/cost_element_create`,
+    COST_ELEMENT_UPDATE: `${API_URL}/bomCostElement/cost_element_update`,
+    COST_ELEMENT_TOGGLE_ACTIVE: `${API_URL}/bomCostElement/cost_element_toggle_active`,
+    COST_ELEMENT_SEED: `${API_URL}/bomCostElement/cost_element_seed`,
+
+    // Standard Rate Card endpoints
+    STD_RATE_CARD_LIST: `${API_URL}/stdRateCard/std_rate_card_list`,
+    STD_RATE_CARD_CURRENT: `${API_URL}/stdRateCard/std_rate_card_current`,
+    STD_RATE_CARD_CREATE: `${API_URL}/stdRateCard/std_rate_card_create`,
+    STD_RATE_CARD_UPDATE: `${API_URL}/stdRateCard/std_rate_card_update`,
+    STD_RATE_CARD_TOGGLE_ACTIVE: `${API_URL}/stdRateCard/std_rate_card_toggle_active`,
+    STD_RATE_CARD_APPLY: `${API_URL}/stdRateCard/std_rate_card_apply`,
+
     DEPT_MASTER_TABLE: `${API_URL}/deptMaster/dept_master_table`,
     DEPT_MASTER_VALIDATE_TABLE: `${API_URL}/deptMaster/dept_master_validate_table`,
     DEPT_MASTER_CREATE_SETUP: `${API_URL}/deptMaster/dept_master_create_setup`,

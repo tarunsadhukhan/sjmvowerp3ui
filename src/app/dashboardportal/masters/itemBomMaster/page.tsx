@@ -1,11 +1,13 @@
 "use client";
 
 import React, { useEffect, useMemo, useState } from "react";
-import { Snackbar, Alert } from "@mui/material";
+import { Snackbar, Alert, Chip, IconButton, Tooltip } from "@mui/material";
 import IndexWrapper from "@/components/ui/IndexWrapper";
-import { GridColDef, GridPaginationModel } from "@mui/x-data-grid";
+import { GridColDef, GridPaginationModel, GridRenderCellParams } from "@mui/x-data-grid";
 import { fetchWithCookie } from "@/utils/apiClient2";
 import { apiRoutesPortalMasters } from "@/utils/api";
+import { useRouter } from "next/navigation";
+import { FileSpreadsheet } from "lucide-react";
 import BomTreeEditor from "@/app/dashboardportal/masters/itemBomMaster/_components/BomTreeEditor";
 
 type BomItem = {
@@ -15,10 +17,16 @@ type BomItem = {
   item_name: string;
   item_group_name: string;
   component_count: number;
+  bom_hdr_id: number | null;
+  bom_version: number | null;
+  version_label: string | null;
+  costing_status: string | null;
+  total_cost: number | null;
   [key: string]: any;
 };
 
 export default function ItemBomMasterPage() {
+  const router = useRouter();
   const [rows, setRows] = useState<BomItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [paginationModel, setPaginationModel] = useState<GridPaginationModel>({ pageSize: 10, page: 0 });
@@ -87,11 +95,65 @@ export default function ItemBomMasterPage() {
   };
 
   const columns = useMemo<GridColDef<BomItem>[]>(() => ([
-    { field: "item_code", headerName: "Item Code", flex: 1, minWidth: 120 },
+    { field: "item_code", headerName: "Item Code", flex: 0.8, minWidth: 110 },
     { field: "item_name", headerName: "Item Name", flex: 1.5, minWidth: 180 },
-    { field: "item_group_name", headerName: "Item Group", flex: 1, minWidth: 150 },
-    { field: "component_count", headerName: "Components", flex: 0.5, minWidth: 100, type: "number" },
-  ]), []);
+    { field: "item_group_name", headerName: "Item Group", flex: 1, minWidth: 140 },
+    { field: "component_count", headerName: "Components", flex: 0.5, minWidth: 90, type: "number" },
+    {
+      field: "bom_version",
+      headerName: "Cost Ver",
+      flex: 0.4,
+      minWidth: 70,
+      renderCell: (params: GridRenderCellParams<BomItem>) =>
+        params.row.bom_version != null
+          ? `v${params.row.bom_version}${params.row.version_label ? ` (${params.row.version_label})` : ""}`
+          : "-",
+    },
+    {
+      field: "total_cost",
+      headerName: "Total Cost",
+      flex: 0.7,
+      minWidth: 100,
+      type: "number",
+      valueFormatter: (value: number | null) =>
+        value && value > 0 ? `\u20B9 ${value.toLocaleString("en-IN")}` : "-",
+    },
+    {
+      field: "costing_status",
+      headerName: "Costing",
+      flex: 0.5,
+      minWidth: 80,
+      renderCell: (params: GridRenderCellParams<BomItem>) =>
+        params.row.costing_status ? (
+          <Chip label={params.row.costing_status} size="small" sx={{ height: 20, fontSize: "0.7rem" }} />
+        ) : (
+          "-"
+        ),
+    },
+    {
+      field: "__cost_sheet",
+      headerName: "",
+      width: 40,
+      sortable: false,
+      filterable: false,
+      renderCell: (params: GridRenderCellParams<BomItem>) =>
+        params.row.bom_hdr_id ? (
+          <Tooltip title="Open Cost Sheet">
+            <IconButton
+              size="small"
+              onClick={(e) => {
+                e.stopPropagation();
+                router.push(
+                  `/dashboardportal/masters/bomCosting/costSheet?mode=edit&bom_hdr_id=${params.row.bom_hdr_id}`
+                );
+              }}
+            >
+              <FileSpreadsheet size={15} />
+            </IconButton>
+          </Tooltip>
+        ) : null,
+    },
+  ]), [router]);
 
   return (
     <IndexWrapper

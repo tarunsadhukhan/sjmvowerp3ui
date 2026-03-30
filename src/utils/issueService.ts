@@ -98,6 +98,7 @@ export type InventoryListItem = {
 	item_id: number;
 	item_name: string;
 	item_code: string;
+	full_item_code?: string;
 	item_grp_id: number;
 	item_grp_name: string;
 	item_grp_code?: string;

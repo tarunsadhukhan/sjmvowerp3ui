@@ -238,7 +238,7 @@ function IssueTransactionPageContent() {
 			inwardDtlId: String(apiLine.inwardDtlId ?? apiLine.inward_dtl_id ?? ""),
 			itemId: String(apiLine.itemId ?? apiLine.item_id ?? ""),
 			itemName: String(apiLine.itemName ?? apiLine.item_name ?? ""),
-			itemCode: String(apiLine.itemCode ?? apiLine.item_code ?? ""),
+			itemCode: String(apiLine.full_item_code ?? apiLine.itemCode ?? apiLine.item_code ?? ""),
 			itemGrpId: String(apiLine.itemGroupId ?? apiLine.item_grp_id ?? apiLine.item_group_id ?? ""),
 			itemGrpName: String(apiLine.itemGroupName ?? apiLine.item_grp_name ?? apiLine.item_group_name ?? ""),
 			uomId: String(apiLine.uomId ?? apiLine.uom_id ?? ""),

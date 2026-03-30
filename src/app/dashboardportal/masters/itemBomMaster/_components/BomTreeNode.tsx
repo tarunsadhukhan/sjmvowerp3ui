@@ -10,6 +10,7 @@ type BomTreeNodeProps = {
   level: number;
   expanded: Record<number, boolean>;
   gridColumns: string;
+  parentMultiplier?: number;
   onToggle: (itemId: number) => void;
   onAddChild: (parentItemId: number) => void;
   onEdit: (node: BomTreeItem) => void;
@@ -21,6 +22,7 @@ export default function BomTreeNode({
   level,
   expanded,
   gridColumns,
+  parentMultiplier = 1,
   onToggle,
   onAddChild,
   onEdit,
@@ -28,6 +30,7 @@ export default function BomTreeNode({
 }: BomTreeNodeProps) {
   const isExpanded = expanded[node.child_item_id] || false;
   const hasChildren = node.children && node.children.length > 0;
+  const bomQty = node.qty * parentMultiplier;
 
   return (
     <div>
@@ -79,6 +82,13 @@ export default function BomTreeNode({
           <Typography variant="body2">{node.qty}</Typography>
         </Box>
 
+        {/* BOM Qty (qty × all ancestor quantities) */}
+        <Box sx={{ display: "flex", justifyContent: "flex-end", alignItems: "center", py: 0.75, px: 1, borderRight: "1px solid", borderColor: "divider" }}>
+          <Typography variant="body2" sx={{ fontWeight: 600 }}>
+            {Math.round(bomQty * 1000) / 1000}
+          </Typography>
+        </Box>
+
         {/* UOM */}
         <Box sx={{ display: "flex", justifyContent: "flex-end", alignItems: "center", py: 0.75, px: 1, borderRight: "1px solid", borderColor: "divider" }}>
           <Typography variant="body2" color="text.secondary">{node.uom_name}</Typography>
@@ -116,6 +126,7 @@ export default function BomTreeNode({
               level={level + 1}
               expanded={expanded}
               gridColumns={gridColumns}
+              parentMultiplier={bomQty}
               onToggle={onToggle}
               onAddChild={onAddChild}
               onEdit={onEdit}

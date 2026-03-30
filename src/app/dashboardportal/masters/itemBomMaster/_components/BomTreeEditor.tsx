@@ -41,7 +41,7 @@ const initialState = {
   confirmRemoveNode: null as BomTreeItem | null,
 };
 
-const BOM_GRID_COLUMNS = "60px 1fr 80px 80px 100px";
+const BOM_GRID_COLUMNS = "60px 1fr 80px 90px 80px 100px";
 
 export default function BomTreeEditor({ open, onClose, item, onSnackbar }: BomTreeEditorProps) {
   const [tree, setTree] = useState(initialState.tree);
@@ -245,6 +245,9 @@ export default function BomTreeEditor({ open, onClose, item, onSnackbar }: BomTr
                     </Typography>
                     <Typography variant="caption" sx={{ fontWeight: 700, textTransform: "uppercase", py: 1, px: 1, textAlign: "right", borderRight: "1px solid", borderColor: "divider" }}>
                       Qty
+                    </Typography>
+                    <Typography variant="caption" sx={{ fontWeight: 700, textTransform: "uppercase", py: 1, px: 1, textAlign: "right", borderRight: "1px solid", borderColor: "divider" }}>
+                      BOM Qty
                     </Typography>
                     <Typography variant="caption" sx={{ fontWeight: 700, textTransform: "uppercase", py: 1, px: 1, textAlign: "right", borderRight: "1px solid", borderColor: "divider" }}>
                       UOM

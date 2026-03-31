@@ -37,7 +37,7 @@ export function computeHessianFields(
 	return {
 		qtyMt: Math.round(qtyMt * 10000) / 10000,
 		ratePerBale: Math.round(ratePerBale * 100) / 100,
-		billingRateMt: Math.round(billingRateMt * 100) / 100,
+		billingRateMt: Math.round(billingRateMt),
 		billingRateBale: Math.round(billingRateBale * 100) / 100,
 	};
 }

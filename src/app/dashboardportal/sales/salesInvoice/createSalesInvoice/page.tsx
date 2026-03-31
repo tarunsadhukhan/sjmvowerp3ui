@@ -36,7 +36,7 @@ import { useSalesInvoiceHeaderSchema, useSalesInvoiceTypeSpecificHeaderSchema, u
 import { useSalesInvoiceFormSubmission } from "./hooks/useSalesInvoiceFormSubmission";
 import { useSalesInvoiceApproval } from "./hooks/useSalesInvoiceApproval";
 
-import type { ItemGroupCacheEntry, InvoiceSetupData } from "./types/salesInvoiceTypes";
+import type { ItemGroupCacheEntry, InvoiceSetupData, Option } from "./types/salesInvoiceTypes";
 import { mapItemGroupDetailResponse, mapInvoiceSetupResponse, mapInvoiceDetailsToFormValues, buildMukamOptions } from "./utils/salesInvoiceMappers";
 import { calculateInvoiceTotals } from "./utils/salesInvoiceCalculations";
 import { buildDefaultFormValues, createBlankLine } from "./utils/salesInvoiceFactories";
@@ -336,6 +336,7 @@ function InvoiceTransactionPageContent() {
 		itemGroupLoading,
 		ensureItemGroupData,
 		itemGroups,
+		invoiceTypeId: String(formValues.invoice_type ?? ""),
 	});
 
 	const initialLineSeededRef = React.useRef(false);
@@ -568,6 +569,11 @@ function InvoiceTransactionPageContent() {
 		selectedPartyId,
 	});
 
+	const bankDetailOptions = React.useMemo<Option[]>(
+		() => (setupData?.bankDetails ?? []).map((b) => ({ label: `${b.bankName} - ${b.accNo}`, value: b.id })),
+		[setupData?.bankDetails],
+	);
+
 	const headerSchema = useSalesInvoiceHeaderSchema({
 		branchOptions: resolvedBranchOptions,
 		customerOptions,
@@ -577,6 +583,7 @@ function InvoiceTransactionPageContent() {
 		deliveryOrderOptions,
 		salesOrderOptions,
 		invoiceTypeOptions,
+		bankDetailOptions,
 		mode,
 		headerFieldsDisabled,
 		salesOrderDisabled,
@@ -653,24 +660,117 @@ function InvoiceTransactionPageContent() {
 
 	const statusLabel = React.useMemo(() => statusChipProps?.label ?? invoiceDetails?.status, [statusChipProps?.label, invoiceDetails?.status]);
 
+	const billingBranchRecord = React.useMemo(() => {
+		const id = billingBranchId ?? (invoiceDetails?.billingTo ? String(invoiceDetails.billingTo) : undefined);
+		if (!id || !selectedCustomer?.branches) return null;
+		return selectedCustomer.branches.find((b) => b.id === id) ?? null;
+	}, [billingBranchId, invoiceDetails?.billingTo, selectedCustomer]);
+
+	const shippingBranchRecord = React.useMemo(() => {
+		const id = shippingBranchId ?? (invoiceDetails?.shippingTo ? String(invoiceDetails.shippingTo) : undefined);
+		if (!id || !selectedCustomer?.branches) return null;
+		return selectedCustomer.branches.find((b) => b.id === id) ?? null;
+	}, [shippingBranchId, invoiceDetails?.shippingTo, selectedCustomer]);
+
+	const selectedDeliveryOrderRecord = React.useMemo(() => {
+		const doId = formValues.delivery_order ? String(formValues.delivery_order) : "";
+		if (!doId) return null;
+		return approvedDeliveryOrders.find((d) => d.id === doId) ?? null;
+	}, [formValues.delivery_order, approvedDeliveryOrders]);
+
+	const dominantGstPercents = React.useMemo(() => {
+		const firstWithIgst = filledLineItems.find((l) => (l.igstAmount ?? 0) > 0);
+		const firstWithCgst = filledLineItems.find((l) => (l.cgstAmount ?? 0) > 0);
+		return {
+			igstPercent: firstWithIgst?.igstPercent,
+			cgstPercent: firstWithCgst?.cgstPercent,
+			sgstPercent: firstWithCgst?.sgstPercent,
+		};
+	}, [filledLineItems]);
+
 	const previewHeader = React.useMemo(
 		() => ({
 			invoiceNo: invoiceDetails?.invoiceNo,
 			invoiceDate: (formValues.date as string) || invoiceDetails?.invoiceDate,
 			challanNo: (formValues.challan_no as string) || invoiceDetails?.challanNo,
 			challanDate: (formValues.challan_date as string) || invoiceDetails?.challanDate,
+			saleNo: invoiceDetails?.saleNo,
+			deliveryOrderNo: invoiceDetails?.deliveryOrderNo || selectedDeliveryOrderRecord?.deliveryOrderNo,
+			deliveryOrderDate: selectedDeliveryOrderRecord?.deliveryOrderDate || invoiceDetails?.challanDate,
+			salesOrderNo: invoiceDetails?.salesOrderNo || (formValues.sales_order_id as string),
+			salesOrderDate: (formValues.sales_order_date as string) || invoiceDetails?.salesOrderDate,
 			branch: branchLabel,
 			customer: customerLabel,
 			customerBranch: customerBranchLabel,
 			deliveryOrder: deliveryOrderLabel,
 			billingTo: billingToLabel,
 			shippingTo: shippingToLabel,
+			billingToName: customerLabel,
+			billingToAddress: billingBranchRecord?.address,
+			billingToState: billingBranchRecord?.stateName,
+			billingToStateCode: billingBranchRecord?.stateCode,
+			billingToGstin: billingBranchRecord?.gstNo,
+			shippingToName: customerLabel,
+			shippingToAddress: shippingBranchRecord?.address,
+			shippingToState: shippingBranchRecord?.stateName,
+			shippingToStateCode: shippingBranchRecord?.stateCode,
+			shippingToGstin: shippingBranchRecord?.gstNo,
 			transporter: transporterLabel,
 			vehicleNo: (formValues.vehicle_no as string) || invoiceDetails?.vehicleNo,
 			ewayBillNo: (formValues.eway_bill_no as string) || invoiceDetails?.ewayBillNo,
 			ewayBillDate: (formValues.eway_bill_date as string) || invoiceDetails?.ewayBillDate,
-			invoiceType: (formValues.invoice_type as string) || invoiceDetails?.invoiceType,
+			transactionType: (formValues.type_of_sale as string) || invoiceDetails?.typeOfSale,
 			companyName,
+			companyAddress: (() => {
+				const co = setupData?.company;
+				if (!co) return invoiceDetails?.companyAddress1 ? [invoiceDetails.companyAddress1, invoiceDetails.companyAddress2, invoiceDetails.companyZipcode ? String(invoiceDetails.companyZipcode) : null, invoiceDetails.companyStateName].filter(Boolean).join(", ") : undefined;
+				const parts = [co.co_address1, co.co_address2, co.co_zipcode ? String(co.co_zipcode) : null, co.state_name].filter(Boolean);
+				return parts.length > 0 ? parts.join(", ") : undefined;
+			})(),
+			companyStateCode: (() => {
+				const selectedBranch = setupData?.branches?.find((b) => String(b.branch_id) === branchValue);
+				if (selectedBranch?.state_code) return String(selectedBranch.state_code);
+				if (setupData?.company?.state_code) return String(setupData.company.state_code);
+				return invoiceDetails?.companyStateCode ? String(invoiceDetails.companyStateCode) : undefined;
+			})(),
+			companyGstin: (() => {
+				const selectedBranch = setupData?.branches?.find((b) => String(b.branch_id) === branchValue);
+				if (selectedBranch?.gst_no) return selectedBranch.gst_no;
+				return invoiceDetails?.branchGstNo ?? undefined;
+			})(),
+			companyCinNo: setupData?.company?.co_cin_no ?? invoiceDetails?.companyCinNo ?? undefined,
+			branchAddress: (() => {
+				const selectedBranch = setupData?.branches?.find((b) => String(b.branch_id) === branchValue);
+				if (!selectedBranch) {
+					if (invoiceDetails?.branchAddress1) return [invoiceDetails.branchAddress1, invoiceDetails.branchAddress2, invoiceDetails.branchZipcode ? String(invoiceDetails.branchZipcode) : null, invoiceDetails.branchStateName].filter(Boolean).join(", ");
+					return undefined;
+				}
+				const parts = [selectedBranch.branch_address1, selectedBranch.branch_address2, selectedBranch.branch_zipcode ? String(selectedBranch.branch_zipcode) : null, selectedBranch.state_name].filter(Boolean);
+				return parts.length > 0 ? parts.join(", ") : undefined;
+			})(),
+			branchGstNo: (() => {
+				const selectedBranch = setupData?.branches?.find((b) => String(b.branch_id) === branchValue);
+				return selectedBranch?.gst_no ?? invoiceDetails?.branchGstNo ?? undefined;
+			})(),
+			branchStateCode: (() => {
+				const selectedBranch = setupData?.branches?.find((b) => String(b.branch_id) === branchValue);
+				return selectedBranch?.state_code ? String(selectedBranch.state_code) : (invoiceDetails?.branchStateCode ? String(invoiceDetails.branchStateCode) : undefined);
+			})(),
+			bankName: (() => {
+				const bankId = (formValues.bank_detail_id as string) ?? invoiceDetails?.bankDetailId;
+				if (!bankId) return invoiceDetails?.bankName ?? undefined;
+				return setupData?.bankDetails?.find((b) => b.id === String(bankId))?.bankName ?? invoiceDetails?.bankName ?? undefined;
+			})(),
+			bankAccNo: (() => {
+				const bankId = (formValues.bank_detail_id as string) ?? invoiceDetails?.bankDetailId;
+				if (!bankId) return invoiceDetails?.bankAccNo ?? undefined;
+				return setupData?.bankDetails?.find((b) => b.id === String(bankId))?.accNo ?? invoiceDetails?.bankAccNo ?? undefined;
+			})(),
+			bankIfscCode: (() => {
+				const bankId = (formValues.bank_detail_id as string) ?? invoiceDetails?.bankDetailId;
+				if (!bankId) return invoiceDetails?.bankIfscCode ?? undefined;
+				return setupData?.bankDetails?.find((b) => b.id === String(bankId))?.ifscCode ?? invoiceDetails?.bankIfscCode ?? undefined;
+			})(),
 			status: statusLabel,
 			updatedBy: invoiceDetails?.updatedBy,
 			updatedAt: invoiceDetails?.updatedAt,
@@ -678,9 +778,12 @@ function InvoiceTransactionPageContent() {
 		[
 			invoiceDetails, formValues.date, formValues.challan_no, formValues.challan_date,
 			formValues.vehicle_no, formValues.eway_bill_no, formValues.eway_bill_date,
-			formValues.invoice_type,
-			branchLabel, customerLabel, customerBranchLabel, deliveryOrderLabel,
+			formValues.invoice_type, formValues.type_of_sale, formValues.sales_order_id, formValues.sales_order_date,
+			formValues.bank_detail_id,
+			branchLabel, branchValue, customerLabel, customerBranchLabel, deliveryOrderLabel,
 			billingToLabel, shippingToLabel, transporterLabel, companyName, statusLabel,
+			billingBranchRecord, shippingBranchRecord, selectedDeliveryOrderRecord,
+			setupData,
 		],
 	);
 
@@ -701,8 +804,10 @@ function InvoiceTransactionPageContent() {
 			})();
 			return {
 				srNo: index + 1,
+				hsnCode: line.hsnCode,
 				itemGroup: groupLabel || undefined,
 				item: displayItem,
+				netWeight: line.govtskgNetWeight != null ? line.govtskgNetWeight : undefined,
 				quantity: line.quantity || "-",
 				uom: uomLabel,
 				rate: line.rate,
@@ -720,11 +825,14 @@ function InvoiceTransactionPageContent() {
 			totalIGST: totals.totalIGST,
 			totalCGST: totals.totalCGST,
 			totalSGST: totals.totalSGST,
+			cgstPercent: dominantGstPercents.cgstPercent,
+			sgstPercent: dominantGstPercents.sgstPercent,
+			igstPercent: dominantGstPercents.igstPercent,
 			freightCharges: totals.freightCharges,
 			roundOff: totals.roundOff,
 			netAmount: totals.netAmount,
 		}),
-		[totals],
+		[totals, dominantGstPercents],
 	);
 
 	const previewRemarks = React.useMemo(() => {

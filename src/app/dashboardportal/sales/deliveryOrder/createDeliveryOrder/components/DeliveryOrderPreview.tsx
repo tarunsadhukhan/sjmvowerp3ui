@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useRef } from "react";
+import React from "react";
 import { Box, Divider, Stack, Typography } from "@mui/material";
 import { Button } from "@/components/ui/button";
 
@@ -70,35 +70,128 @@ const cellSx = {
 } as const;
 
 const DeliveryOrderPreview: React.FC<DOPreviewProps> = ({ header, items, totals, remarks, onPrint, onDownload }) => {
-	const previewRef = useRef<HTMLDivElement>(null);
 
 	const buildPrintableWindow = (titleSuffix: string) => {
-		const printContent = previewRef.current?.innerHTML || "";
 		const printWindow = window.open("", "_blank");
 		if (!printWindow) {
 			alert("Please allow popups to continue.");
 			return null;
 		}
 
+		const h = header;
+
+		const itemRowsHtml = items.length
+			? items
+					.map(
+						(item) => `
+				<tr>
+					<td style="border:1px solid #ccc;padding:6px 8px;font-size:12px;text-align:center;width:50px;">${item.srNo}</td>
+					<td style="border:1px solid #ccc;padding:6px 8px;font-size:12px;">${item.item || "-"}</td>
+					<td style="border:1px solid #ccc;padding:6px 8px;font-size:12px;text-align:right;width:100px;">${item.quantity ?? "-"}</td>
+					<td style="border:1px solid #ccc;padding:6px 8px;font-size:12px;text-align:center;width:80px;">${item.uom || "-"}</td>
+				</tr>`,
+					)
+					.join("")
+			: `<tr><td colspan="4" style="border:1px solid #ccc;padding:12px;text-align:center;font-size:12px;">No line items captured yet.</td></tr>`;
+
+		const transportHtml =
+			h.transporter || h.vehicleNo || h.driverName
+				? `<div style="display:flex;gap:32px;flex-wrap:wrap;margin-bottom:16px;">
+					${h.transporter ? `<div style="font-size:13px;"><strong>Transporter:</strong> ${h.transporter}</div>` : ""}
+					${h.vehicleNo ? `<div style="font-size:13px;"><strong>Vehicle No.:</strong> ${h.vehicleNo}</div>` : ""}
+					${h.driverName ? `<div style="font-size:13px;"><strong>Driver:</strong> ${h.driverName}</div>` : ""}
+				</div>`
+				: "";
+
+		const remarksHtml = remarks
+			? `<div style="font-size:13px;margin-bottom:16px;"><strong>Remarks:</strong> ${remarks}</div>`
+			: "";
+
+		const html = `<!DOCTYPE html>
+<html>
+<head>
+	<meta charset="utf-8"/>
+	<title>Delivery Order - ${titleSuffix}</title>
+	<style>
+		@page { margin: 12mm; }
+		* { box-sizing: border-box; }
+		body { font-family: Arial, sans-serif; margin: 0; padding: 20px; color: #111; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+		hr { border: none; border-top: 1px solid #ccc; margin: 12px 0; }
+	</style>
+</head>
+<body>
+	<div style="font-size:15px;font-weight:700;text-transform:uppercase;">${h.companyName || "-"}</div>
+	<div style="font-size:13px;color:#555;margin-bottom:8px;">${h.branch || ""}</div>
+	<hr/>
+	<table style="width:100%;border-collapse:collapse;margin-bottom:16px;">
+		<tr>
+			<td style="vertical-align:top;">
+				<div style="font-size:16px;font-weight:700;text-decoration:underline;">DELIVERY ORDER</div>
+			</td>
+			<td style="text-align:right;vertical-align:top;">
+				<table style="border-collapse:collapse;margin-left:auto;">
+					<tr>
+						<td style="padding:2px 4px;font-size:12px;font-weight:600;">DO No.</td>
+						<td style="padding:2px 4px;font-size:12px;">:</td>
+						<td style="padding:2px 4px;font-size:12px;font-weight:500;">${h.doNo || "Pending"}</td>
+					</tr>
+					<tr>
+						<td style="padding:2px 4px;font-size:12px;font-weight:600;">Date</td>
+						<td style="padding:2px 4px;font-size:12px;">:</td>
+						<td style="padding:2px 4px;font-size:12px;">${formatDate(h.doDate)}</td>
+					</tr>
+					${h.salesOrder ? `<tr>
+						<td style="padding:2px 4px;font-size:12px;font-weight:600;">Sale No.</td>
+						<td style="padding:2px 4px;font-size:12px;">:</td>
+						<td style="padding:2px 4px;font-size:12px;">${h.salesOrder}</td>
+					</tr>` : ""}
+				</table>
+			</td>
+		</tr>
+	</table>
+
+	<table style="width:100%;border-collapse:collapse;margin-bottom:16px;">
+		<thead>
+			<tr style="background-color:#e8f0f7;">
+				<th style="border:1px solid #ccc;padding:6px 8px;font-size:12px;text-align:center;width:50px;">Sr No</th>
+				<th style="border:1px solid #ccc;padding:6px 8px;font-size:12px;text-align:left;width:55%;">Description</th>
+				<th style="border:1px solid #ccc;padding:6px 8px;font-size:12px;text-align:center;width:100px;">Quantity</th>
+				<th style="border:1px solid #ccc;padding:6px 8px;font-size:12px;text-align:center;width:80px;">UOM</th>
+			</tr>
+		</thead>
+		<tbody>${itemRowsHtml}</tbody>
+	</table>
+
+	<div style="margin-bottom:16px;">
+		<div style="font-size:13px;margin-bottom:4px;"><strong>A/C Messrs.</strong> ${h.customer || "-"}</div>
+		${h.billingToAddress ? `<div style="font-size:13px;margin-bottom:4px;"><strong>Billing To :</strong> ${h.billingToAddress}</div>` : ""}
+		${h.shippingToAddress ? `<div style="font-size:13px;margin-bottom:4px;"><strong>Ship To :</strong> ${h.shippingToAddress}</div>` : ""}
+	</div>
+
+	<hr/>
+	${transportHtml}
+	${remarksHtml}
+	<hr/>
+
+	<table style="width:100%;border-collapse:collapse;margin-top:32px;">
+		<tr>
+			<td style="text-align:center;width:50%;padding-top:8px;">
+				<div style="border-bottom:1px solid #ccc;width:180px;height:24px;margin:0 auto;"></div>
+				<div style="font-size:11px;color:#888;margin-top:4px;">Receiver&apos;s Signature</div>
+			</td>
+			<td style="text-align:center;width:50%;padding-top:8px;">
+				<div style="font-size:13px;font-weight:600;text-transform:uppercase;">${h.companyName || ""}</div>
+				<div style="border-bottom:1px solid #ccc;width:180px;height:24px;margin:8px auto 0;"></div>
+				<div style="font-size:11px;color:#888;margin-top:4px;">Authorised Signatory</div>
+			</td>
+		</tr>
+	</table>
+</body>
+</html>`;
+
 		printWindow.document.open();
-		printWindow.document.write(`<!DOCTYPE html><html><head><title>Delivery Order - ${titleSuffix}</title></head><body><div id="print-root"></div></body></html>`);
+		printWindow.document.write(html);
 		printWindow.document.close();
-
-		const styleNodes = document.querySelectorAll("style, link[rel=\"stylesheet\"]");
-		styleNodes.forEach((node) => {
-			printWindow.document.head.appendChild(node.cloneNode(true));
-		});
-
-		const helperStyle = printWindow.document.createElement("style");
-		helperStyle.textContent = `
-			@media print { @page { margin: 12mm; } }
-			body { margin: 0; padding: 20px; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
-			table { width: 100%; border-collapse: collapse; }
-		`;
-		printWindow.document.head.appendChild(helperStyle);
-
-		const root = printWindow.document.getElementById("print-root");
-		if (root) root.innerHTML = printContent;
 		return printWindow;
 	};
 
@@ -120,7 +213,7 @@ const DeliveryOrderPreview: React.FC<DOPreviewProps> = ({ header, items, totals,
 
 	return (
 		<Box sx={{ display: "flex", flexDirection: "column", gap: 2 }}>
-			<Box ref={previewRef} sx={{ border: "1px solid", borderColor: "divider", borderRadius: 1, p: 3, backgroundColor: "#fff" }}>
+			<Box sx={{ border: "1px solid", borderColor: "divider", borderRadius: 1, p: 3, backgroundColor: "#fff" }}>
 				{/* Company Header */}
 				<Typography variant="body1" sx={{ fontWeight: 700, fontSize: "1rem", textTransform: "uppercase" }}>
 					{header.companyName || "-"}

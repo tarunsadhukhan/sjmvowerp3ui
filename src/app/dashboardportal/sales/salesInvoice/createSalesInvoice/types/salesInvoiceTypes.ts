@@ -144,6 +144,26 @@ export type MukamRecord = {
 	mukam_name: string;
 };
 
+export type BankDetailRecord = {
+	id: string;
+	bankName: string;
+	bankBranch?: string;
+	accNo: string;
+	ifscCode: string;
+};
+
+export type CompanyRecord = {
+	co_name?: string;
+	co_address1?: string;
+	co_address2?: string;
+	co_zipcode?: number;
+	co_cin_no?: string;
+	co_email_id?: string;
+	co_pan_no?: string;
+	state_name?: string;
+	state_code?: string;
+};
+
 export type InvoiceSetupData = {
 	customers: CustomerRecord[];
 	transporters: TransporterRecord[];
@@ -153,7 +173,20 @@ export type InvoiceSetupData = {
 	itemGroups: ItemGroupRecord[];
 	invoiceTypes: InvoiceTypeRecord[];
 	mukamList: MukamRecord[];
-	branches?: Array<{ branch_id: number; branch_name: string; state_id?: number; state_code?: string }>;
+	branches?: Array<{
+		branch_id: number;
+		branch_name: string;
+		branch_address1?: string;
+		branch_address2?: string;
+		branch_zipcode?: number;
+		state_id?: number;
+		state_code?: string;
+		state_name?: string;
+		gst_no?: string;
+		contact_no?: string;
+	}>;
+	bankDetails?: BankDetailRecord[];
+	company?: CompanyRecord;
 };
 
 export type CustomerBranchRecordRaw = {
@@ -278,6 +311,14 @@ export type ItemUomOptionRaw = {
 	rounding?: number | null;
 };
 
+export type BankDetailRecordRaw = {
+	bank_detail_id?: number;
+	bank_name?: string;
+	bank_branch?: string;
+	acc_no?: string;
+	ifsc_code?: string;
+};
+
 export type InvoiceSetup1ResponseRaw = {
 	customers?: CustomerRecordRaw[];
 	transporters?: TransporterRecordRaw[];
@@ -288,6 +329,8 @@ export type InvoiceSetup1ResponseRaw = {
 	invoice_types?: InvoiceTypeRecordRaw[];
 	mukam_list?: Array<{ mukam_id?: number; mukam_name?: string }>;
 	branches?: unknown[];
+	bank_details?: BankDetailRecordRaw[];
+	company?: CompanyRecord;
 };
 
 export type InvoiceSetup2ResponseRaw = {

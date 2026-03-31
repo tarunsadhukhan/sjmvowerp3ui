@@ -152,10 +152,10 @@ function POTransactionPageContent() {
     const exists = branchOptions.some((opt) => String(opt.value) === String(branchValue));
     if (exists) return branchOptions;
     const fallbackLabel =
-      (poDetails?.branch && typeof poDetails.branch === "string" ? poDetails.branch : undefined) ||
+      poDetails?.branchName ||
       branchValue;
     return [...branchOptions, { label: fallbackLabel, value: branchValue }];
-  }, [branchOptions, branchValue, poDetails?.branch]);
+  }, [branchOptions, branchValue, poDetails?.branchName]);
 
   // Memoize branch ID for setup - only changes when branch value actually changes
   const branchIdForSetup = React.useMemo(() => {
@@ -726,8 +726,8 @@ function POTransactionPageContent() {
 
   const branchLabel = React.useMemo(() => {
     const value = formValues.branch ?? poDetails?.branch;
-    return getOptionLabel(resolvedBranchOptions, value) ?? (typeof value === "string" ? value : undefined);
-  }, [resolvedBranchOptions, formValues.branch, poDetails?.branch, getOptionLabel]);
+    return getOptionLabel(resolvedBranchOptions, value) ?? poDetails?.branchName ?? (typeof value === "string" ? value : undefined);
+  }, [resolvedBranchOptions, formValues.branch, poDetails?.branch, poDetails?.branchName, getOptionLabel]);
 
   const supplierLabel = React.useMemo(() => {
     const value = formValues.supplier ?? poDetails?.supplier;

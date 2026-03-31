@@ -12,6 +12,7 @@ export type UseHeaderSchemaParams = {
 	deliveryOrderOptions: Option[];
 	salesOrderOptions: Option[];
 	invoiceTypeOptions: Option[];
+	bankDetailOptions: Option[];
 	mode: "create" | "edit" | "view";
 	headerFieldsDisabled: boolean;
 	salesOrderDisabled?: boolean;
@@ -24,7 +25,7 @@ export type UseFooterSchemaParams = {
 
 export const useSalesInvoiceHeaderSchema = ({
 	branchOptions, customerOptions, customerBranchOptions,
-	transporterOptions, brokerOptions, deliveryOrderOptions, salesOrderOptions, invoiceTypeOptions, mode, headerFieldsDisabled, salesOrderDisabled, deliveryOrderDisabled,
+	transporterOptions, brokerOptions, deliveryOrderOptions, salesOrderOptions, invoiceTypeOptions, bankDetailOptions, mode, headerFieldsDisabled, salesOrderDisabled, deliveryOrderDisabled,
 }: UseHeaderSchemaParams): Schema =>
 	React.useMemo(() => {
 		const fields: Field[] = [
@@ -45,15 +46,21 @@ export const useSalesInvoiceHeaderSchema = ({
 			{ name: "challan_date", label: "Challan Date", type: "date", disabled: headerFieldsDisabled, grid: { xs: 12, md: 4 } },
 			{ name: "eway_bill_no", label: "E-Way Bill No.", type: "text", disabled: headerFieldsDisabled, grid: { xs: 12, md: 4 } },
 			{ name: "eway_bill_date", label: "E-Way Bill Date", type: "date", disabled: headerFieldsDisabled, grid: { xs: 12, md: 4 } },
-			{ name: "type_of_sale", label: "Type of Sale", type: "text", disabled: headerFieldsDisabled, grid: { xs: 12, md: 4 } },
+			{ name: "type_of_sale", label: "Transaction Type", type: "select", options: [
+				{ label: "Type 1", value: "Type 1" },
+				{ label: "Type 2", value: "Type 2" },
+				{ label: "Type 3", value: "Type 3" },
+				{ label: "Combination of Type 2 and 3", value: "Combination of Type 2 and 3" },
+			], required: true, disabled: headerFieldsDisabled, grid: { xs: 12, md: 4 } },
 			{ name: "container_no", label: "Container No.", type: "text", disabled: headerFieldsDisabled, grid: { xs: 12, md: 4 } },
 			{ name: "contract_no", label: "Contract No.", type: "text", disabled: headerFieldsDisabled, grid: { xs: 12, md: 4 } },
 			{ name: "contract_date", label: "Contract Date", type: "date", disabled: headerFieldsDisabled, grid: { xs: 12, md: 4 } },
 			{ name: "consignment_no", label: "Consignment No.", type: "text", disabled: headerFieldsDisabled, grid: { xs: 12, md: 4 } },
 			{ name: "consignment_date", label: "Consignment Date", type: "date", disabled: headerFieldsDisabled, grid: { xs: 12, md: 4 } },
+			{ name: "bank_detail_id", label: "Bank Account", type: "select", options: bankDetailOptions, disabled: headerFieldsDisabled, grid: { xs: 12, md: 4 } },
 		];
 		return { fields } satisfies Schema;
-	}, [branchOptions, customerOptions, customerBranchOptions, transporterOptions, brokerOptions, deliveryOrderOptions, salesOrderOptions, invoiceTypeOptions, mode, headerFieldsDisabled, salesOrderDisabled, deliveryOrderDisabled]);
+	}, [branchOptions, customerOptions, customerBranchOptions, transporterOptions, brokerOptions, deliveryOrderOptions, salesOrderOptions, invoiceTypeOptions, bankDetailOptions, mode, headerFieldsDisabled, salesOrderDisabled, deliveryOrderDisabled]);
 
 export type UseJuteHeaderSchemaParams = {
 	mode: "create" | "edit" | "view";

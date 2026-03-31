@@ -21,11 +21,23 @@ export async function middleware(request: NextRequest) {
     ? hostname.split('.localhost:3000')[0]
     : hostname.split('.')[0];
 
-  // Simulate subdomain validation
-  const staticSubdomains = ['admin', 'sls', 'abc', 'dev3', 'amcl'];
-  const isSubdomainValid = staticSubdomains.includes(subdomain);
-
-  if (!isSubdomainValid) {
+  // Validate subdomain dynamically against the database via backend API
+  try {
+    const validateRes = await fetch(
+      `${apiRoutes.VALIDATE_SUBDOMAIN}?subdomain=${encodeURIComponent(subdomain)}`,
+      { method: 'GET' }
+    );
+    if (validateRes.ok) {
+      const validateData = await validateRes.json();
+      if (!validateData?.valid) {
+        return NextResponse.redirect(new URL('https://vowerp.com', request.url));
+      }
+    } else {
+      // If the API is unreachable, fail closed (reject unknown subdomains)
+      return NextResponse.redirect(new URL('https://vowerp.com', request.url));
+    }
+  } catch {
+    // Network error — fail closed
     return NextResponse.redirect(new URL('https://vowerp.com', request.url));
   }
 

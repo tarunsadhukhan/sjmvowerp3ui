@@ -194,7 +194,7 @@ export const SRPreview: React.FC<SRPreviewProps> = ({
 									{item.po_no_formatted || "-"}
 								</td>
 								<td style={{ border: "1px solid #ddd", padding: "8px" }}>
-									{item.item_name}
+									{item.full_item_code || item.item_code || ""}{item.item_name ? ` - ${item.item_name}` : ""}
 									{item.accepted_item_make_name && (
 										<span style={{ color: "#666", fontSize: "11px" }}>
 											{" "}({item.accepted_item_make_name})

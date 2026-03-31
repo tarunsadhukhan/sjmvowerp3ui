@@ -332,7 +332,7 @@ export const MuiForm = React.forwardRef(function MuiForm(
 						},
 						minWidth: 0,
 					}}>
-				{mode === "view" && field.type !== "checkbox" ? (
+				{mode === "view" && field.type !== "checkbox" && field.type !== "custom" ? (
 					<Box>
 						<Typography variant="caption" color="text.secondary">
 							{field.label}

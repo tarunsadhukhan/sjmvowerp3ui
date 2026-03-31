@@ -23,6 +23,8 @@ import type {
 	InvoiceSetup1ResponseRaw,
 	InvoiceSetup2ResponseRaw,
 	InvoiceSetupData,
+	BankDetailRecord,
+	BankDetailRecordRaw,
 	MukamRecord,
 	Option,
 	UomConversionEntry,
@@ -185,6 +187,21 @@ export const mapApprovedSalesOrders = (records: unknown[]): ApprovedSalesOrderRe
 export const buildMukamOptions = (mukams: MukamRecord[]): Option[] =>
 	mukams.map((m) => ({ label: m.mukam_name, value: String(m.mukam_id) }));
 
+export const mapBankDetailRecords = (records: unknown[]): BankDetailRecord[] =>
+	records
+		.map((row) => {
+			const data = row as BankDetailRecordRaw;
+			if (!data?.bank_detail_id) return null;
+			return {
+				id: String(data.bank_detail_id),
+				bankName: data.bank_name ?? "",
+				bankBranch: data.bank_branch,
+				accNo: data.acc_no ?? "",
+				ifscCode: data.ifsc_code ?? "",
+			} satisfies BankDetailRecord;
+		})
+		.filter(Boolean) as BankDetailRecord[];
+
 export const mapInvoiceSetupResponse = (response: unknown): InvoiceSetupData => {
 	try {
 		const result = response as InvoiceSetup1ResponseRaw;
@@ -198,6 +215,8 @@ export const mapInvoiceSetupResponse = (response: unknown): InvoiceSetupData => 
 			invoiceTypes: mapInvoiceTypeRecords(result?.invoice_types ?? []),
 			mukamList: mapMukamRecords((result?.mukam_list as unknown[]) ?? []),
 			branches: (result?.branches as InvoiceSetupData["branches"]) ?? [],
+			bankDetails: mapBankDetailRecords((result?.bank_details as unknown[]) ?? []),
+			company: result?.company ?? undefined,
 		} satisfies InvoiceSetupData;
 	} catch (error) {
 		console.error("Failed to map invoice setup response", error);
@@ -369,6 +388,7 @@ export const mapInvoiceDetailsToFormValues = (
 		salesOrderId?: number;
 		salesOrderDate?: string;
 		billingStateCode?: number;
+		bankDetailId?: number;
 		shippingStateCode?: string | number;
 		intraInterState?: string | number;
 		jute?: {
@@ -429,6 +449,7 @@ export const mapInvoiceDetailsToFormValues = (
 	sales_order_id: details.salesOrderId != null ? String(details.salesOrderId) : toStringValue(defaultValues.sales_order_id),
 	sales_order_date: normalizeDate(details.salesOrderDate) || toStringValue(defaultValues.sales_order_date),
 	billing_state_code: details.billingStateCode != null ? String(details.billingStateCode) : toStringValue(defaultValues.billing_state_code),
+	bank_detail_id: details.bankDetailId != null ? String(details.bankDetailId) : toStringValue(defaultValues.bank_detail_id),
 	shipping_state_code: details.shippingStateCode != null ? String(details.shippingStateCode) : toStringValue(defaultValues.shipping_state_code),
 	intra_inter_state: details.intraInterState != null ? String(details.intraInterState) : toStringValue(defaultValues.intra_inter_state),
 	jute_mr_no: toStringValue(details.jute?.mrNo ?? defaultValues.jute_mr_no),

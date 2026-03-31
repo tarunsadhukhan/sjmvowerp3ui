@@ -57,29 +57,41 @@ export const useIssueApproval = ({
 
 	const getApprovalPermissions = React.useCallback(
 		(status: ApprovalStatusId, currentMode: MuiFormMode, apiPermissions?: ApprovalActionPermissions): ApprovalActionPermissions => {
+			// If backend provides permissions, use them directly (includes canApprove, canReject, etc.)
 			if (apiPermissions) return apiPermissions;
 
-			if (currentMode === "view") {
-				return { canViewApprovalLog: true, canClone: true };
-			}
+			// Fallback permissions without backend-provided approval access.
+			// Note: canApprove/canReject are NOT granted by default — they require backend permission check.
+			// In view mode, canSave is omitted since the document is read-only.
+			const isView = currentMode === "view";
 
 			if (status === ISSUE_STATUS_IDS.DRAFT) {
-				return { canSave: true, canOpen: true, canCancelDraft: true };
+				return isView
+					? { canOpen: true, canCancelDraft: true }
+					: { canSave: true, canOpen: true, canCancelDraft: true };
 			}
 			if (status === ISSUE_STATUS_IDS.CANCELLED) {
-				return { canSave: true, canReopen: true, canClone: true, canViewApprovalLog: true };
+				return isView
+					? { canReopen: true, canClone: true, canViewApprovalLog: true }
+					: { canSave: true, canReopen: true, canClone: true, canViewApprovalLog: true };
 			}
 			if (status === ISSUE_STATUS_IDS.OPEN) {
-				return { canSave: true, canViewApprovalLog: true };
+				return isView
+					? { canViewApprovalLog: true }
+					: { canSave: true, canViewApprovalLog: true };
 			}
 			if (status === ISSUE_STATUS_IDS.PENDING_APPROVAL) {
-				return { canSave: true, canViewApprovalLog: true };
+				return isView
+					? { canViewApprovalLog: true }
+					: { canSave: true, canViewApprovalLog: true };
 			}
 			if (status === ISSUE_STATUS_IDS.APPROVED) {
 				return { canViewApprovalLog: true, canClone: true };
 			}
 			if (status === ISSUE_STATUS_IDS.REJECTED) {
-				return { canSave: true, canReopen: true, canClone: true, canViewApprovalLog: true };
+				return isView
+					? { canReopen: true, canClone: true, canViewApprovalLog: true }
+					: { canSave: true, canReopen: true, canClone: true, canViewApprovalLog: true };
 			}
 			if (status === ISSUE_STATUS_IDS.CLOSED) {
 				return { canViewApprovalLog: true };

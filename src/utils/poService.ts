@@ -59,6 +59,7 @@ export type PODetails = {
   poNo: string;
   poDate: string;
   branch: string;
+  branchName?: string;
   supplier: string;
   supplierBranch: string;
   supplierState?: string;

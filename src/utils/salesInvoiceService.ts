@@ -101,6 +101,25 @@ export type InvoiceDetails = {
   salesOrderDate?: string;
   salesOrderNo?: string;
   billingStateCode?: number;
+  bankDetailId?: number;
+  bankName?: string;
+  bankAccNo?: string;
+  bankIfscCode?: string;
+  bankBranchName?: string;
+  companyName?: string;
+  companyAddress1?: string;
+  companyAddress2?: string;
+  companyZipcode?: number;
+  companyCinNo?: string;
+  companyPanNo?: string;
+  companyStateName?: string;
+  companyStateCode?: string;
+  branchAddress1?: string;
+  branchAddress2?: string;
+  branchZipcode?: number;
+  branchGstNo?: string;
+  branchStateName?: string;
+  branchStateCode?: string;
   status?: string;
   statusId?: 1 | 3 | 4 | 5 | 6 | 20 | 21;
   approvalLevel?: number | null;
@@ -231,6 +250,7 @@ export type CreateInvoiceRequest = {
   payment_terms?: number;
   sales_order_id?: number;
   billing_state_code?: number;
+  bank_detail_id?: number;
   jute?: {
     mr_no?: string;
     mr_id?: number;

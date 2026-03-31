@@ -566,6 +566,13 @@ const apiRoutesPortalMasters = {
     CONTRACTOR_CREATE_SETUP: `${API_URL}/contractorMaster/contractor_create_setup`,
     CONTRACTOR_CREATE: `${API_URL}/contractorMaster/contractor_create`,
     CONTRACTOR_EDIT: `${API_URL}/contractorMaster/contractor_edit`,
+
+    // Bank Details Master endpoints
+    BANK_DETAILS_TABLE: `${API_URL}/bankDetailsMaster/get_bank_details_table`,
+    BANK_DETAILS_BY_ID: `${API_URL}/bankDetailsMaster/get_bank_detail_by_id`,
+    BANK_DETAILS_CREATE_SETUP: `${API_URL}/bankDetailsMaster/bank_details_create_setup`,
+    BANK_DETAILS_CREATE: `${API_URL}/bankDetailsMaster/bank_details_create`,
+    BANK_DETAILS_EDIT: `${API_URL}/bankDetailsMaster/bank_details_edit`,
 };
 
 export { apiRoutes, apiRoutesconsole, apiRoutesPortalMasters };

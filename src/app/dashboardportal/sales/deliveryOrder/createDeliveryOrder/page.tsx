@@ -28,7 +28,6 @@ import { DeliveryOrderFooterForm, DeliveryOrderTotalsDisplay } from "./component
 import { DeliveryOrderApprovalBar } from "./components/DeliveryOrderApprovalBar";
 import DeliveryOrderPreview from "./components/DeliveryOrderPreview";
 import { useDOLineItemColumns } from "./components/DeliveryOrderLineItemsTable";
-import { SalesOrderLinesDialog } from "./components/SalesOrderLinesDialog";
 import { DOSalesOrderExtensionDisplay } from "./components/DOSalesOrderExtensionDisplay";
 
 import { useDeliveryOrderFormState } from "./hooks/useDeliveryOrderFormState";
@@ -85,6 +84,8 @@ function DOTransactionPageContent() {
 	const branchPrefillAppliedRef = React.useRef(false);
 
 	const { getMenuId } = useMenuId({ transactionType: "delivery-order", menuIdFromUrl });
+	const getMenuIdRef = React.useRef(getMenuId);
+	React.useEffect(() => { getMenuIdRef.current = getMenuId; }, [getMenuId]);
 	const companyName = useCompanyName();
 
 	const {
@@ -96,7 +97,6 @@ function DOTransactionPageContent() {
 	const [doDetails, setDODetails] = React.useState<DODetails | null>(null);
 	const [loading, setLoading] = React.useState<boolean>(mode !== "create");
 	const [pageError, setPageError] = React.useState<string | null>(null);
-	const [soDialogOpen, setSODialogOpen] = React.useState(false);
 
 	const branchValue = React.useMemo(() => {
 		if (lockedBranchId) return lockedBranchId;
@@ -213,6 +213,7 @@ function DOTransactionPageContent() {
 		itemGroupLoading,
 		ensureItemGroupData,
 		itemGroups,
+		invoiceTypeId: String(formValues.invoice_type ?? ""),
 	});
 
 	const initialLineSeededRef = React.useRef(false);
@@ -236,20 +237,15 @@ function DOTransactionPageContent() {
 		[filledLineItems, freightCharges, roundOffValue],
 	);
 
-	const detailsFetchKey = React.useMemo(
-		() => [mode, requestedId || "", branchIdForSetup || branchIdFromUrl || "", coId || ""].join("|"),
-		[mode, requestedId, branchIdForSetup, branchIdFromUrl, coId],
-	);
-
-	const lastDetailsKeyRef = React.useRef<string | null>(null);
-	const detailsFetchedRef = React.useRef(false);
-
+	// Refs for callbacks used inside the fetch effect — avoids including them in deps
+	const fetchCallbacksRef = React.useRef({ setInitialValues, setFormValues, bumpFormKey, replaceItems, mapLineToEditable });
 	React.useEffect(() => {
-		if (lastDetailsKeyRef.current !== detailsFetchKey) {
-			lastDetailsKeyRef.current = detailsFetchKey;
-			detailsFetchedRef.current = false;
-		}
-	}, [detailsFetchKey]);
+		fetchCallbacksRef.current = { setInitialValues, setFormValues, bumpFormKey, replaceItems, mapLineToEditable };
+	});
+	const branchValueRef = React.useRef(branchValue);
+	React.useEffect(() => { branchValueRef.current = branchValue; }, [branchValue]);
+
+	const lastDetailsFetchKeyRef = React.useRef("");
 
 	React.useEffect(() => {
 		if (mode === "create") {
@@ -267,15 +263,17 @@ function DOTransactionPageContent() {
 		}
 
 		if (!coId) return;
-		if (detailsFetchedRef.current) return;
 
-		detailsFetchedRef.current = true;
+		const fetchKey = `${requestedId}|${coId}`;
+		if (lastDetailsFetchKeyRef.current === fetchKey) return;
 
 		let cancelled = false;
+		lastDetailsFetchKeyRef.current = fetchKey;
+
 		const fetchDetails = async () => {
 			setLoading(true);
 			try {
-				const details = await getDOById(requestedId, coId || undefined, getMenuId() || undefined);
+				const details = await getDOById(requestedId, coId || undefined, getMenuIdRef.current() || undefined);
 				if (cancelled) return;
 
 				setDODetails(details);
@@ -284,10 +282,11 @@ function DOTransactionPageContent() {
 
 				const detailsWithBranchId = details as unknown as { branch_id?: unknown; branchId?: unknown };
 				const branchIdFromDetails = detailsWithBranchId?.branch_id ?? detailsWithBranchId?.branchId;
+				const currentBranchValue = branchValueRef.current;
 				const resolvedBranchValue = (() => {
 					if (branchIdFromDetails != null && branchIdFromDetails !== "") return String(branchIdFromDetails);
 					if (branchIdFromUrl) return String(branchIdFromUrl);
-					if (branchValue && /^\d+$/.test(branchValue)) return branchValue;
+					if (currentBranchValue && /^\d+$/.test(currentBranchValue)) return currentBranchValue;
 					const mappedValue = nextValues.branch != null ? String(nextValues.branch) : "";
 					return /^\d+$/.test(mappedValue) ? mappedValue : "";
 				})();
@@ -297,12 +296,13 @@ function DOTransactionPageContent() {
 					setLockedBranchId(resolvedBranchValue);
 				}
 
-				setInitialValues(nextValues);
-				setFormValues(nextValues);
-				bumpFormKey();
+				const { setInitialValues: setInit, setFormValues: setForm, bumpFormKey: bump, replaceItems: replace, mapLineToEditable: mapLine } = fetchCallbacksRef.current;
+				setInit(nextValues);
+				setForm(nextValues);
+				bump();
 
-				const normalizedLines = (details.lines ?? []).map((line) => mapLineToEditable(line));
-				replaceItems(normalizedLines);
+				const normalizedLines = (details.lines ?? []).map((line) => mapLine(line));
+				replace(normalizedLines);
 
 				setPageError(null);
 			} catch (error) {
@@ -318,13 +318,11 @@ function DOTransactionPageContent() {
 
 		void fetchDetails();
 
-		return () => { cancelled = true; };
-	}, [
-		mode, requestedId, coId, getMenuId,
-		setInitialValues, setFormValues, bumpFormKey,
-		replaceItems, mapLineToEditable,
-		branchIdFromUrl, branchValue,
-	]);
+		return () => {
+			cancelled = true;
+			lastDetailsFetchKeyRef.current = "";
+		};
+	}, [mode, requestedId, coId, branchIdFromUrl]);
 
 	React.useEffect(() => {
 		if (!doDetails?.lines?.length) return;
@@ -336,15 +334,12 @@ function DOTransactionPageContent() {
 		uniqueGroups.forEach((groupId) => { ensureItemGroupData(groupId); });
 	}, [doDetails, ensureItemGroupData]);
 
-	// Track whether line items were sourced from a sales order or entered manually
-	const [soLinesImported, setSOLinesImported] = React.useState(false);
-
-	// Determine if lines were manually entered (without an SO selected)
+	// Disable the SO dropdown if lines were manually entered without an SO selected
 	const hasManualLines = React.useMemo(() => {
 		if (mode !== "create") return false;
-		if (soLinesImported) return false;
+		if (formValues.sales_order) return false;
 		return filledLineItems.length > 0;
-	}, [mode, soLinesImported, filledLineItems.length]);
+	}, [mode, formValues.sales_order, filledLineItems.length]);
 
 	// When sales_order is selected in create mode, auto-populate header fields + line items from the SO
 	const prevSORef = React.useRef<string | undefined>(undefined);
@@ -360,19 +355,21 @@ function DOTransactionPageContent() {
 		);
 		if (!selectedSO) return;
 
-		// Autofill header fields
-		setFormValues((prev: Record<string, unknown>) => {
-			const next = { ...prev };
-			if (selectedSO.partyId) next.party = selectedSO.partyId;
-			if (selectedSO.billingToId) {
-				next.billing_to = selectedSO.billingToId;
-				if (!prev.party_branch) next.party_branch = selectedSO.billingToId;
-			}
-			if (selectedSO.shippingToId) next.shipping_to = selectedSO.shippingToId;
-			if (selectedSO.transporterId) next.transporter = selectedSO.transporterId;
-			if (selectedSO.brokerId) next.broker = selectedSO.brokerId;
-			if (selectedSO.invoiceType) next.invoice_type = selectedSO.invoiceType;
-			return next;
+		// Autofill header fields — update both React state and the live form via formRef
+		const headerUpdates: Record<string, unknown> = {};
+		if (selectedSO.partyId) headerUpdates.party = selectedSO.partyId;
+		if (selectedSO.billingToId) {
+			headerUpdates.billing_to = selectedSO.billingToId;
+			headerUpdates.party_branch = selectedSO.billingToId;
+		}
+		if (selectedSO.shippingToId) headerUpdates.shipping_to = selectedSO.shippingToId;
+		if (selectedSO.transporterId) headerUpdates.transporter = selectedSO.transporterId;
+		if (selectedSO.brokerId) headerUpdates.broker = selectedSO.brokerId;
+		if (selectedSO.invoiceType) headerUpdates.invoice_type = selectedSO.invoiceType;
+
+		setFormValues((prev: Record<string, unknown>) => ({ ...prev, ...headerUpdates }));
+		Object.entries(headerUpdates).forEach(([key, value]) => {
+			formRef.current?.setValue(key, value);
 		});
 
 		// Auto-import ALL line items from the sales order
@@ -381,31 +378,18 @@ function DOTransactionPageContent() {
 				const lines = response.data || [];
 				if (lines.length > 0) {
 					handleSalesOrderLinesConfirm(lines);
-					setSOLinesImported(true);
 				}
 			})
 			.catch((error) => {
 				const description = error instanceof Error ? error.message : "Unable to load sales order lines.";
 				toast({ variant: "destructive", title: "Failed to import SO lines", description });
 			});
-	}, [formValues.sales_order, mode, setupData?.approvedSalesOrders, setFormValues, handleSalesOrderLinesConfirm]);
+	}, [formValues.sales_order, mode, setupData?.approvedSalesOrders, setFormValues, handleSalesOrderLinesConfirm, formRef]);
 
 	const isLineItemsReady = React.useMemo(() => {
 		if (mode === "view" || pageError || setupError) return true;
 		return lineItemsValid;
 	}, [lineItemsValid, mode, pageError, setupError]);
-
-	const handleSOSelect = React.useCallback(() => {
-		setSODialogOpen(true);
-	}, []);
-
-	const handleSOLinesConfirm = React.useCallback(
-		(selectedItems: import("@/utils/deliveryOrderService").SalesOrderLine[]) => {
-			handleSalesOrderLinesConfirm(selectedItems);
-			setSODialogOpen(false);
-		},
-		[handleSalesOrderLinesConfirm],
-	);
 
 	const {
 		customerOptions, customerBranchOptions, transporterOptions, brokerOptions, salesOrderOptions,
@@ -626,11 +610,6 @@ function DOTransactionPageContent() {
 		return doDetails?.deliveryOrderNo ? `Delivery Order ${doDetails.deliveryOrderNo}` : "Delivery Order Details";
 	}, [mode, doDetails?.deliveryOrderNo]);
 
-	const showSOButton = React.useMemo(() => {
-		// Show button only when SO is selected and lines are already imported (for re-importing specific lines)
-		return mode !== "view" && Boolean(formValues.sales_order) && soLinesImported;
-	}, [mode, formValues.sales_order, soLinesImported]);
-
 	return (
 		<TransactionWrapper
 			title={pageTitle}
@@ -697,21 +676,11 @@ function DOTransactionPageContent() {
 				formRef={formRef}
 				onSubmit={handleFormSubmit}
 				onValuesChange={handleMainFormValuesChange}
-				showSalesOrderButton={showSOButton}
-				onSalesOrderSelect={handleSOSelect}
-				salesOrderButtonDisabled={!formValues.sales_order}
 			/>
 
 			<DOSalesOrderExtensionDisplay
 				soExtensionData={doDetails?.soExtensionData}
 				invoiceTypeId={formValues.invoice_type as string}
-			/>
-
-			<SalesOrderLinesDialog
-				open={soDialogOpen}
-				onOpenChange={setSODialogOpen}
-				onConfirm={handleSOLinesConfirm}
-				salesOrderId={formValues.sales_order ? String(formValues.sales_order) : undefined}
 			/>
 		</TransactionWrapper>
 	);

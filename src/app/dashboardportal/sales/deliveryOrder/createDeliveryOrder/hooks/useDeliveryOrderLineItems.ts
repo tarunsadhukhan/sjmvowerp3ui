@@ -24,12 +24,14 @@ type Params = {
 	itemGroupLoading: Partial<Record<string, boolean>>;
 	ensureItemGroupData: (groupId: string) => void;
 	itemGroups: ReadonlyArray<ItemGroupRecord>;
+	invoiceTypeId?: string;
 };
 
 export const useDeliveryOrderLineItems = ({
 	mode, partyState, shippingState,
-	itemGroupCache, itemGroupLoading, ensureItemGroupData, itemGroups,
+	itemGroupCache, itemGroupLoading, ensureItemGroupData, itemGroups, invoiceTypeId,
 }: Params) => {
+	const isHessian = invoiceTypeId === "2";
 	const {
 		items: lineItems, setItems: setLineItems, replaceItems, removeItems: removeLineItems,
 	} = useLineItems<EditableLineItem>({
@@ -116,9 +118,10 @@ export const useDeliveryOrderLineItems = ({
 						let nextUom = item.uom;
 						if (defaultUom && uomOptions.some((opt) => opt.value === defaultUom)) nextUom = defaultUom;
 						else if (uomOptions.length) nextUom = uomOptions[0].value;
+						const effectiveRate = isHessian && defaultRate != null ? Math.round(defaultRate) : defaultRate;
 						const updated: EditableLineItem = {
 							...item, item: value, uom: nextUom,
-							rate: defaultRate != null ? String(defaultRate) : item.rate,
+							rate: effectiveRate != null ? String(effectiveRate) : item.rate,
 							taxPercentage: defaultTax,
 						};
 						return recalcLine(updated);
@@ -129,10 +132,13 @@ export const useDeliveryOrderLineItems = ({
 
 			if (field === "quantity" || field === "rate") {
 				const sanitized = value.replace(/[^0-9.]/g, "");
+				const applied = isHessian && field === "rate"
+					? String(Math.round(Number(sanitized) || 0))
+					: sanitized;
 				setLineItems((prev) =>
 					prev.map((item) => {
 						if (item.id !== id) return item;
-						return recalcLine({ ...item, [field]: sanitized });
+						return recalcLine({ ...item, [field]: applied });
 					}),
 				);
 				return;
@@ -177,7 +183,7 @@ export const useDeliveryOrderLineItems = ({
 				prev.map((item) => (item.id === id ? { ...item, [field]: value } as EditableLineItem : item)),
 			);
 		},
-		[mode, setLineItems, itemGroupCache, itemGroupLoading, ensureItemGroupData, recalcLine, partyState, shippingState],
+		[mode, setLineItems, itemGroupCache, itemGroupLoading, ensureItemGroupData, recalcLine, isHessian, partyState, shippingState],
 	);
 
 	const handleSalesOrderLinesConfirm = React.useCallback(

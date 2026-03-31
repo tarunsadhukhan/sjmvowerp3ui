@@ -321,8 +321,8 @@ export const useSRLineItemColumns = ({
 					// If not in the dropdown list, inject a synthetic option so the
 					// Autocomplete `value` always matches one of the `options`.
 					let effectiveOptions = warehouseOptions;
-					if (!selectedOption && item.warehouse_id && (item.warehouse_path || item.warehouse_name)) {
-						selectedOption = { label: item.warehouse_path || item.warehouse_name, value: String(item.warehouse_id) };
+					if (!selectedOption && item.warehouse_id) {
+						selectedOption = { label: item.warehouse_path || item.warehouse_name || `Warehouse ${item.warehouse_id}`, value: String(item.warehouse_id) };
 						effectiveOptions = [...warehouseOptions, selectedOption];
 					}
 

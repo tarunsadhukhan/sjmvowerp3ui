@@ -131,6 +131,7 @@ export const useSalesInvoiceFormSubmission = ({
 				payment_terms: Number(values.payment_terms ?? formValues.payment_terms) || undefined,
 				sales_order_id: Number(values.sales_order_id ?? formValues.sales_order_id) || undefined,
 				billing_state_code: Number(values.billing_state_code ?? formValues.billing_state_code) || undefined,
+				bank_detail_id: Number(values.bank_detail_id ?? formValues.bank_detail_id) || undefined,
 				items: itemsPayload,
 			};
 

@@ -122,19 +122,18 @@ export const useSRLineItemColumns = ({
 				header: "Item",
 				width: "1.8fr",
 				minWidth: "200px",
-				renderCell: ({ item }) => (
-					<div>
-						<Typography variant="body2" noWrap title={item.item_name || undefined}>
-							{item.item_name || "-"}
+				renderCell: ({ item }) => {
+					const code = item.full_item_code || item.item_code || "";
+					const displayText = code && item.item_name ? `${code} - ${item.item_name}` : item.item_name || code || "-";
+					return (
+						<Typography variant="body2" noWrap title={displayText}>
+							{displayText}
 						</Typography>
-						<Typography variant="caption" color="text.secondary" noWrap>
-							{item.full_item_code || item.item_code || ""}
-						</Typography>
-					</div>
-				),
+					);
+				},
 				getTooltip: ({ item }) => {
 					const code = item.full_item_code || item.item_code;
-					return code ? `${item.item_name} (${code})` : item.item_name || undefined;
+					return code && item.item_name ? `${code} - ${item.item_name}` : item.item_name || code || undefined;
 				},
 			},
 			{

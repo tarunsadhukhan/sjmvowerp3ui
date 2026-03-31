@@ -149,7 +149,7 @@ export const SRPreview: React.FC<SRPreviewProps> = ({
 						mb: 3,
 					}}
 				>
-					<FieldRow label="SR No" value={<Typography component="span" fontWeight={600} color="primary">{header?.sr_no || "Draft"}</Typography>} />
+					<FieldRow label="SR No" value={<Typography component="span" fontWeight={600} color="primary">{header?.sr_no || header?.sr_status_name || "Draft"}</Typography>} />
 					<FieldRow label="SR Date" value={formatDate(srDate)} />
 					<FieldRow label="GRN No" value={header?.inward_no} />
 					<FieldRow label="GRN Date" value={formatDate(header?.inward_date)} />
@@ -194,7 +194,7 @@ export const SRPreview: React.FC<SRPreviewProps> = ({
 									{item.po_no_formatted || "-"}
 								</td>
 								<td style={{ border: "1px solid #ddd", padding: "8px" }}>
-									{item.item_name}
+									{item.full_item_code || item.item_code || ""}{item.item_name ? ` - ${item.item_name}` : ""}
 									{item.accepted_item_make_name && (
 										<span style={{ color: "#666", fontSize: "11px" }}>
 											{" "}({item.accepted_item_make_name})

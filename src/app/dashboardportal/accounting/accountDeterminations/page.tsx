@@ -149,10 +149,9 @@ export default function AccountDeterminationsPage() {
       try {
         await updateAccountDeterminations({
           co_id: selectedCompany.co_id,
-          determinations: [
+          rules: [
             {
-              doc_type: row.doc_type,
-              determination_key: row.line_type,
+              acc_account_determination_id: rowId,
               acc_ledger_id: newLedgerId,
             },
           ],

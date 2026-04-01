@@ -132,9 +132,9 @@ export default function FinancialYearsPage() {
       try {
         await createFinancialYear({
           co_id: selectedCompany.co_id,
-          fy_name: data.fy_label,
-          start_date: data.fy_start,
-          end_date: data.fy_end,
+          fy_label: data.fy_label,
+          fy_start: data.fy_start,
+          fy_end: data.fy_end,
         });
         await Swal.fire({
           icon: "success",

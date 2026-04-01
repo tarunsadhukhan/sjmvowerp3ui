@@ -33,20 +33,28 @@ export type VoucherType = {
 };
 
 export type FinancialYear = {
-  acc_fy_id: number;
-  fy_name: string;
-  start_date: string;
-  end_date: string;
-  is_active: boolean;
-  is_closed: boolean;
+  acc_financial_year_id: number;
+  co_id: number;
+  fy_start: string;
+  fy_end: string;
+  fy_label: string;
+  is_active: number;
+  is_locked: number;
+  locked_by?: number | null;
+  locked_date_time?: string | null;
 };
 
 export type AccountDetermination = {
-  acc_det_id: number;
+  acc_account_determination_id: number;
+  co_id: number;
   doc_type: string;
-  determination_key: string;
+  line_type: string;
   acc_ledger_id: number | null;
   ledger_name: string | null;
+  ledger_code?: string | null;
+  item_grp_id?: number | null;
+  item_grp_name?: string | null;
+  is_default?: number;
 };
 
 export type VoucherLine = {
@@ -210,17 +218,16 @@ export type UpdateLedgerRequest = {
 
 export type CreateFinancialYearRequest = {
   co_id: number;
-  fy_name: string;
-  start_date: string;
-  end_date: string;
+  fy_label: string;
+  fy_start: string;
+  fy_end: string;
 };
 
 export type UpdateAccountDeterminationsRequest = {
   co_id: number;
-  determinations: Array<{
-    doc_type: string;
-    determination_key: string;
-    acc_ledger_id: number;
+  rules: Array<{
+    acc_account_determination_id: number;
+    acc_ledger_id: number | null;
   }>;
 };
 
@@ -297,13 +304,13 @@ export async function activateCompany(coId: number): Promise<{ message: string }
 /** Fetch all ledger groups for a company. */
 export async function fetchLedgerGroups(coId: number): Promise<LedgerGroup[]> {
   const query = buildQuery({ co_id: coId });
-  const { data, error } = await fetchWithCookie<LedgerGroup[]>(
+  const { data, error } = await fetchWithCookie<{ data: LedgerGroup[] }>(
     `${apiRoutesPortalMasters.ACC_LEDGER_GROUPS}?${query}`,
     "GET",
   );
 
   if (error) throw new Error(error);
-  return data ?? [];
+  return data?.data ?? [];
 }
 
 /** Create a new ledger group. */
@@ -335,13 +342,14 @@ export async function fetchLedgers(params: {
     page: params.page,
     limit: params.limit,
   });
-  const { data, error } = await fetchWithCookie<{ ledgers: Ledger[]; total: number }>(
+  const { data, error } = await fetchWithCookie<{ data: Ledger[] }>(
     `${apiRoutesPortalMasters.ACC_LEDGERS}?${query}`,
     "GET",
   );
 
   if (error) throw new Error(error);
-  return data ?? { ledgers: [], total: 0 };
+  const ledgers = data?.data ?? [];
+  return { ledgers, total: ledgers.length };
 }
 
 /** Create a new ledger. */
@@ -371,25 +379,25 @@ export async function updateLedger(ledgerId: number, payload: UpdateLedgerReques
 /** Fetch voucher types for a company. */
 export async function fetchVoucherTypes(coId: number): Promise<VoucherType[]> {
   const query = buildQuery({ co_id: coId });
-  const { data, error } = await fetchWithCookie<VoucherType[]>(
+  const { data, error } = await fetchWithCookie<{ data: VoucherType[] }>(
     `${apiRoutesPortalMasters.ACC_VOUCHER_TYPES}?${query}`,
     "GET",
   );
 
   if (error) throw new Error(error);
-  return data ?? [];
+  return data?.data ?? [];
 }
 
 /** Fetch financial years for a company. */
 export async function fetchFinancialYears(coId: number): Promise<FinancialYear[]> {
   const query = buildQuery({ co_id: coId });
-  const { data, error } = await fetchWithCookie<FinancialYear[]>(
+  const { data, error } = await fetchWithCookie<{ data: FinancialYear[] }>(
     `${apiRoutesPortalMasters.ACC_FINANCIAL_YEARS}?${query}`,
     "GET",
   );
 
   if (error) throw new Error(error);
-  return data ?? [];
+  return data?.data ?? [];
 }
 
 /** Create a new financial year. */
@@ -407,25 +415,25 @@ export async function createFinancialYear(payload: CreateFinancialYearRequest): 
 /** Fetch account determinations for a company, optionally filtered by doc type. */
 export async function fetchAccountDeterminations(coId: number, docType?: string): Promise<AccountDetermination[]> {
   const query = buildQuery({ co_id: coId, doc_type: docType });
-  const { data, error } = await fetchWithCookie<AccountDetermination[]>(
+  const { data, error } = await fetchWithCookie<{ data: AccountDetermination[] }>(
     `${apiRoutesPortalMasters.ACC_ACCOUNT_DETERMINATIONS}?${query}`,
     "GET",
   );
 
   if (error) throw new Error(error);
-  return data ?? [];
+  return data?.data ?? [];
 }
 
 /** Update account determinations (bulk). */
 export async function updateAccountDeterminations(payload: UpdateAccountDeterminationsRequest): Promise<{ message: string }> {
-  const { data, error } = await fetchWithCookie<{ message: string }>(
+  const { data, error } = await fetchWithCookie<{ data: { updated: number } }>(
     apiRoutesPortalMasters.ACC_ACCOUNT_DETERMINATIONS_UPDATE,
     "PUT",
     payload,
   );
 
   if (error) throw new Error(error);
-  return data ?? { message: "Account determinations updated." };
+  return data?.data ?? { message: "Account determinations updated." };
 }
 
 // ─── Voucher Operations ─────────────────────────────────────────────────────
@@ -455,25 +463,26 @@ export async function fetchVouchers(params: {
     page: params.page,
     limit: params.limit,
   });
-  const { data, error } = await fetchWithCookie<VoucherListResponse>(
+  const { data, error } = await fetchWithCookie<{ data: Voucher[]; page: number; limit: number }>(
     `${apiRoutesPortalMasters.ACC_VOUCHERS}?${query}`,
     "GET",
   );
 
   if (error) throw new Error(error);
-  return data ?? { vouchers: [], total: 0, page: 1, limit: 20 };
+  const vouchers = data?.data ?? [];
+  return { vouchers, total: vouchers.length, page: data?.page ?? 1, limit: data?.limit ?? 20 };
 }
 
 /** Fetch a single voucher by ID. */
 export async function fetchVoucherDetail(voucherId: number): Promise<Voucher> {
-  const { data, error } = await fetchWithCookie<Voucher>(
+  const { data, error } = await fetchWithCookie<{ data: Voucher }>(
     `${apiRoutesPortalMasters.ACC_VOUCHER_DETAIL}/${voucherId}`,
     "GET",
   );
 
   if (error) throw new Error(error);
-  if (!data) throw new Error("Empty voucher detail response.");
-  return data;
+  if (!data?.data) throw new Error("Empty voucher detail response.");
+  return data.data;
 }
 
 /** Create a new voucher. */
@@ -616,13 +625,13 @@ export async function fetchTrialBalance(params: {
     to_date: params.toDate,
     branch_id: params.branchId,
   });
-  const { data, error } = await fetchWithCookie<TrialBalanceRow[]>(
+  const { data, error } = await fetchWithCookie<{ data: TrialBalanceRow[] }>(
     `${apiRoutesPortalMasters.ACC_REPORT_TRIAL_BALANCE}?${query}`,
     "GET",
   );
 
   if (error) throw new Error(error);
-  return data ?? [];
+  return data?.data ?? [];
 }
 
 /** Fetch profit & loss report. */
@@ -638,13 +647,13 @@ export async function fetchProfitLoss(params: {
     to_date: params.toDate,
     branch_id: params.branchId,
   });
-  const { data, error } = await fetchWithCookie<ProfitLossSection[]>(
+  const { data, error } = await fetchWithCookie<{ data: ProfitLossSection[] }>(
     `${apiRoutesPortalMasters.ACC_REPORT_PROFIT_LOSS}?${query}`,
     "GET",
   );
 
   if (error) throw new Error(error);
-  return data ?? [];
+  return data?.data ?? [];
 }
 
 /** Fetch balance sheet report. */
@@ -658,13 +667,13 @@ export async function fetchBalanceSheet(params: {
     as_on_date: params.asOnDate,
     branch_id: params.branchId,
   });
-  const { data, error } = await fetchWithCookie<BalanceSheetSection[]>(
+  const { data, error } = await fetchWithCookie<{ data: BalanceSheetSection[] }>(
     `${apiRoutesPortalMasters.ACC_REPORT_BALANCE_SHEET}?${query}`,
     "GET",
   );
 
   if (error) throw new Error(error);
-  return data ?? [];
+  return data?.data ?? [];
 }
 
 /** Fetch ledger report for a specific ledger. */
@@ -682,13 +691,13 @@ export async function fetchLedgerReport(params: {
     to_date: params.toDate,
     branch_id: params.branchId,
   });
-  const { data, error } = await fetchWithCookie<LedgerReportRow[]>(
+  const { data, error } = await fetchWithCookie<{ data: LedgerReportRow[] }>(
     `${apiRoutesPortalMasters.ACC_REPORT_LEDGER}?${query}`,
     "GET",
   );
 
   if (error) throw new Error(error);
-  return data ?? [];
+  return data?.data ?? [];
 }
 
 /** Fetch day book report. */
@@ -706,13 +715,13 @@ export async function fetchDayBook(params: {
     branch_id: params.branchId,
     voucher_type_id: params.voucherTypeId,
   });
-  const { data, error } = await fetchWithCookie<DayBookEntry[]>(
+  const { data, error } = await fetchWithCookie<{ data: DayBookEntry[] }>(
     `${apiRoutesPortalMasters.ACC_REPORT_DAY_BOOK}?${query}`,
     "GET",
   );
 
   if (error) throw new Error(error);
-  return data ?? [];
+  return data?.data ?? [];
 }
 
 /** Fetch cash book report. */
@@ -728,13 +737,13 @@ export async function fetchCashBook(params: {
     to_date: params.toDate,
     branch_id: params.branchId,
   });
-  const { data, error } = await fetchWithCookie<DayBookEntry[]>(
+  const { data, error } = await fetchWithCookie<{ data: DayBookEntry[] }>(
     `${apiRoutesPortalMasters.ACC_REPORT_CASH_BOOK}?${query}`,
     "GET",
   );
 
   if (error) throw new Error(error);
-  return data ?? [];
+  return data?.data ?? [];
 }
 
 /** Fetch party outstanding report. */
@@ -748,13 +757,13 @@ export async function fetchPartyOutstanding(params: {
     party_type: params.partyType,
     branch_id: params.branchId,
   });
-  const { data, error } = await fetchWithCookie<PartyOutstandingRow[]>(
+  const { data, error } = await fetchWithCookie<{ data: PartyOutstandingRow[] }>(
     `${apiRoutesPortalMasters.ACC_REPORT_PARTY_OUTSTANDING}?${query}`,
     "GET",
   );
 
   if (error) throw new Error(error);
-  return data ?? [];
+  return data?.data ?? [];
 }
 
 /** Fetch ageing analysis report. */
@@ -768,13 +777,13 @@ export async function fetchAgeingAnalysis(params: {
     party_type: params.partyType,
     branch_id: params.branchId,
   });
-  const { data, error } = await fetchWithCookie<AgeingBucket[]>(
+  const { data, error } = await fetchWithCookie<{ data: AgeingBucket[] }>(
     `${apiRoutesPortalMasters.ACC_REPORT_AGEING}?${query}`,
     "GET",
   );
 
   if (error) throw new Error(error);
-  return data ?? [];
+  return data?.data ?? [];
 }
 
 /** Fetch GST summary report. */
@@ -790,13 +799,13 @@ export async function fetchGstSummary(params: {
     to_date: params.toDate,
     branch_gstin: params.branchGstin,
   });
-  const { data, error } = await fetchWithCookie<GstSummaryRow[]>(
+  const { data, error } = await fetchWithCookie<{ data: GstSummaryRow[] }>(
     `${apiRoutesPortalMasters.ACC_REPORT_GST_SUMMARY}?${query}`,
     "GET",
   );
 
   if (error) throw new Error(error);
-  return data ?? [];
+  return data?.data ?? [];
 }
 
 // ─── Opening Balance ─────────────────────────────────────────────────────────

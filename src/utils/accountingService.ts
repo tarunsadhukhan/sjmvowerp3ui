@@ -451,7 +451,7 @@ export async function updateAccountDeterminations(payload: UpdateAccountDetermin
   );
 
   if (error) throw new Error(error);
-  return data?.data ?? { message: "Account determinations updated." };
+  return data?.data ? { message: `${data.data.updated} account determinations updated.` } : { message: "Account determinations updated." };
 }
 
 // ─── Voucher Operations ─────────────────────────────────────────────────────

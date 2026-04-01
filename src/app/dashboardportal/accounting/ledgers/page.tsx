@@ -50,16 +50,14 @@ type LedgerRow = Ledger & { id: number };
 
 const ledgerSchema = z.object({
   ledger_name: z.string().min(1, "Ledger name is required").max(150),
-  ledger_code: z.string().max(30).optional().or(z.literal("")),
-  acc_ledger_group_id: z.number({ required_error: "Group is required" }),
-  ledger_type: z.enum(["G", "P", "B", "C"], {
-    required_error: "Ledger type is required",
-  }),
-  party_id: z.number().nullable().optional(),
-  credit_days: z.coerce.number().int().min(0).nullable().optional(),
-  credit_limit: z.coerce.number().min(0).nullable().optional(),
-  opening_balance: z.coerce.number().optional().default(0),
-  opening_balance_type: z.enum(["D", "C"]).optional().default("D"),
+  ledger_code: z.string().max(30),
+  acc_ledger_group_id: z.number().int(),
+  ledger_type: z.enum(["G", "P", "B", "C"]),
+  party_id: z.number().int().nullable().optional(),
+  credit_days: z.number().int().min(0).nullable().optional(),
+  credit_limit: z.number().min(0).nullable().optional(),
+  opening_balance: z.number(),
+  opening_balance_type: z.enum(["D", "C"]),
 });
 
 type LedgerFormData = z.infer<typeof ledgerSchema>;
@@ -206,7 +204,7 @@ export default function LedgersPage() {
       const mapped: LedgerRow[] = (result.ledgers ?? []).map((l) => ({
         ...l,
         id: l.acc_ledger_id,
-      }));
+      })) as unknown as LedgerRow[];
 
       setRows(mapped);
       setTotalRows(result.total ?? 0);

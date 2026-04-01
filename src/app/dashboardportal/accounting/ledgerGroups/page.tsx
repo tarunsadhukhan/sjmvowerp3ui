@@ -43,9 +43,9 @@ type LedgerGroupRow = LedgerGroup & { id: number; parent_group_name: string };
 
 const createGroupSchema = z.object({
   group_name: z.string().min(1, "Group name is required").max(100),
-  parent_group_id: z.number({ required_error: "Parent group is required" }),
+  parent_group_id: z.number().int("Parent group is required"),
   nature: z.enum(["A", "L", "I", "E"], {
-    required_error: "Nature is required",
+    message: "Nature must be A, L, I, or E",
   }),
 });
 

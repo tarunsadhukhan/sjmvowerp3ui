@@ -21,13 +21,8 @@ export async function middleware(request: NextRequest) {
     ? hostname.split('.localhost:3000')[0]
     : hostname.split('.')[0];
 
-  // Simulate subdomain validation
-  const staticSubdomains = ['admin', 'sls', 'abc', 'dev3', 'amcl'];
-  const isSubdomainValid = staticSubdomains.includes(subdomain);
-
-  if (!isSubdomainValid) {
-    return NextResponse.redirect(new URL('https://vowerp.com', request.url));
-  }
+  // Subdomain validation is handled client-side by SubdomainGuard component
+  // (validates against con_org_master via /authRoutes/validate-subdomain API)
 
   // Skip middleware for public paths
   if (PUBLIC_PATHS.some(path => pathname.startsWith(path))) {

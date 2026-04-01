@@ -7,6 +7,12 @@ import { apiRoutesPortalMasters } from "./api";
 
 // ─── Response Types ──────────────────────────────────────────────────────────
 
+export type Party = {
+  party_id: number;
+  supp_name: string;
+  supp_code: string | null;
+};
+
 export type LedgerGroup = {
   acc_group_id: number;
   group_name: string;
@@ -374,6 +380,18 @@ export async function updateLedger(ledgerId: number, payload: UpdateLedgerReques
 
   if (error) throw new Error(error);
   return data ?? { message: "Ledger updated." };
+}
+
+/** Fetch parties for dropdown/autocomplete in ledger creation. */
+export async function fetchPartiesDropdown(coId: number, search?: string): Promise<Party[]> {
+  const query = buildQuery({ co_id: coId, search });
+  const { data, error } = await fetchWithCookie<{ data: Party[] }>(
+    `${apiRoutesPortalMasters.ACC_PARTIES_DROPDOWN}?${query}`,
+    "GET",
+  );
+
+  if (error) throw new Error(error);
+  return data?.data ?? [];
 }
 
 /** Fetch voucher types for a company. */

@@ -13,6 +13,7 @@ import {
   InputLabel,
   Select,
   MenuItem,
+  Autocomplete,
 } from "@mui/material";
 import { GridColDef, GridPaginationModel } from "@mui/x-data-grid";
 import { z } from "zod";
@@ -26,6 +27,10 @@ import {
   createLedger,
   updateLedger,
   fetchLedgerGroups,
+  fetchPartiesDropdown,
+} from "@/utils/accountingService";
+import type {
+  Party,
 } from "@/utils/accountingService";
 import type {
   Ledger,
@@ -96,6 +101,8 @@ export default function LedgersPage() {
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editId, setEditId] = useState<number | undefined>(undefined);
   const [groups, setGroups] = useState<LedgerGroup[]>([]);
+  const [partyOptions, setPartyOptions] = useState<Party[]>([]);
+  const [partySearch, setPartySearch] = useState("");
   const [snackbar, setSnackbar] = useState<{
     open: boolean;
     message: string;
@@ -110,6 +117,8 @@ export default function LedgersPage() {
     control,
     handleSubmit,
     reset,
+    watch,
+    setValue,
     formState: { errors, isSubmitting },
   } = useForm<LedgerFormData>({
     resolver: zodResolver(ledgerSchema),
@@ -159,6 +168,24 @@ export default function LedgersPage() {
         /* silently ignore - groups will be empty */
       });
   }, [selectedCompany, flattenGroups]);
+
+  // -----------------------------------------------------------------------
+  // Fetch parties for dropdown
+  // -----------------------------------------------------------------------
+
+  const watchLedgerType = watch("ledger_type");
+
+  useEffect(() => {
+    if (!selectedCompany || watchLedgerType !== "P") {
+      setPartyOptions([]);
+      return;
+    }
+    fetchPartiesDropdown(selectedCompany.co_id, partySearch || undefined)
+      .then(setPartyOptions)
+      .catch(() => {
+        /* silently ignore - parties will be empty */
+      });
+  }, [selectedCompany, watchLedgerType, partySearch]);
 
   // -----------------------------------------------------------------------
   // Fetch ledgers
@@ -486,22 +513,34 @@ export default function LedgersPage() {
               )}
             />
 
-            <Controller
-              name="party_id"
-              control={control}
-              render={({ field }) => (
-                <TextField
-                  value={field.value ?? ""}
-                  onChange={(e) =>
-                    field.onChange(e.target.value ? Number(e.target.value) : null)
-                  }
-                  label="Party ID"
-                  type="number"
-                  fullWidth
-                  margin="dense"
-                />
-              )}
-            />
+            {watchLedgerType === "P" && (
+              <Controller
+                name="party_id"
+                control={control}
+                render={({ field }) => (
+                  <Autocomplete
+                    options={partyOptions}
+                    getOptionLabel={(option) =>
+                      `${option.supp_name}${option.supp_code ? ` (${option.supp_code})` : ""}`
+                    }
+                    onInputChange={(_, value) => setPartySearch(value)}
+                    onChange={(_, value) => setValue("party_id", value?.party_id ?? null)}
+                    value={partyOptions.find((o) => o.party_id === field.value) ?? null}
+                    renderInput={(params) => (
+                      <TextField
+                        {...params}
+                        label="Party"
+                        error={!!errors.party_id}
+                        helperText={errors.party_id?.message}
+                        margin="dense"
+                      />
+                    )}
+                    isOptionEqualToValue={(option, value) => option.party_id === value.party_id}
+                    size="small"
+                  />
+                )}
+              />
+            )}
 
             <Controller
               name="credit_days"

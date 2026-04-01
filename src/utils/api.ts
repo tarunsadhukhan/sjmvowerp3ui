@@ -585,6 +585,7 @@ const apiRoutesPortalMasters = {
     ACC_LEDGERS: `${API_URL}/accounting/ledgers`,
     ACC_LEDGER_CREATE: `${API_URL}/accounting/ledgers`,
     ACC_LEDGER_EDIT: `${API_URL}/accounting/ledgers`,
+    ACC_PARTIES_DROPDOWN: `${API_URL}/accounting/parties_dropdown`,
     ACC_VOUCHER_TYPES: `${API_URL}/accounting/voucher_types`,
     ACC_FINANCIAL_YEARS: `${API_URL}/accounting/financial_years`,
     ACC_FINANCIAL_YEAR_CREATE: `${API_URL}/accounting/financial_years`,

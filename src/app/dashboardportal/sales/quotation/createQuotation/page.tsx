@@ -21,6 +21,7 @@ import useSelectedCompanyCoId from "@/hooks/use-selected-company-coid";
 import { toast } from "@/hooks/use-toast";
 import { useMenuId } from "@/hooks/useMenuId";
 import { useCompanyName } from "@/hooks/useCompanyName";
+import { useCompanyLogo } from "@/hooks/useCompanyLogo";
 import { QuotationHeaderForm } from "./components/QuotationHeaderForm";
 import { QuotationFooterForm } from "./components/QuotationFooterForm";
 import { QuotationTotalsDisplay } from "./components/QuotationTotalsDisplay";
@@ -83,6 +84,7 @@ function QuotationTransactionPageContent() {
 
 	const { getMenuId } = useMenuId({ transactionType: "quotation", menuIdFromUrl });
 	const companyName = useCompanyName();
+	const companyLogo = useCompanyLogo(coId);
 
 	const {
 		initialValues,
@@ -461,6 +463,7 @@ function QuotationTransactionPageContent() {
 			billingAddress: billingAddressLabel,
 			shippingAddress: shippingAddressLabel,
 			companyName,
+			companyLogo,
 			status: statusLabel,
 			updatedBy: quotationDetails?.updatedBy,
 			updatedAt: quotationDetails?.updatedAt,
@@ -474,7 +477,7 @@ function QuotationTransactionPageContent() {
 			quotationDetails, formValues.quotation_date, formValues.quotation_expiry_date,
 			formValues.payment_terms, formValues.delivery_terms, formValues.delivery_days,
 			formValues.brokerage_percentage, branchLabel, customerLabel, brokerLabel,
-			billingAddressLabel, shippingAddressLabel, companyName, statusLabel, taxType,
+			billingAddressLabel, shippingAddressLabel, companyName, companyLogo, statusLabel, taxType,
 		],
 	);
 

@@ -21,6 +21,7 @@ import { toast } from "@/hooks/use-toast";
 import useSelectedCompanyCoId from "@/hooks/use-selected-company-coid";
 import { useSidebarContext } from "@/components/dashboard/sidebarContext";
 import type { MuiFormMode } from "@/components/ui/muiform";
+import { useCompanyLogo } from "@/hooks/useCompanyLogo";
 
 // Types
 import type { InwardSetupData, ItemGroupCacheEntry, POLineItem } from "./types/inwardTypes";
@@ -72,6 +73,7 @@ function InwardTransactionPageContent() {
 
 	const branchOptions = useBranchOptions();
 	const { coId } = useSelectedCompanyCoId();
+	const companyLogo = useCompanyLogo(coId);
 	const { availableMenus, menuItems: sidebarMenuItems } = useSidebarContext();
 
 	// Get menu_id from URL, or lookup from menuItems based on current path
@@ -553,6 +555,7 @@ function InwardTransactionPageContent() {
 		updatedBy: inwardDetails?.updatedBy,
 		updatedAt: inwardDetails?.updatedAt,
 		companyName: companyName,
+		companyLogo: companyLogo,
 	};
 
 	const { metadata } = useTransactionPreview({

@@ -1,15 +1,15 @@
 "use client";
 
-import React, { useMemo, useEffect, useState } from "react";
+import React, { useMemo, useEffect, useState, useRef } from "react";
 import { useForm, FormProvider, Controller } from "react-hook-form";
-import { 
-  TextField, 
-  Button, 
-  Card, 
+import {
+  TextField,
+  Button,
+  Card,
   CardContent,
-  FormControl, 
-  InputLabel, 
-  Select, 
+  FormControl,
+  InputLabel,
+  Select,
   MenuItem,
   FormHelperText,
   Box,
@@ -17,8 +17,11 @@ import {
   CircularProgress,
   OutlinedInput,
   Checkbox,
-  ListItemText
+  ListItemText,
+  Alert,
 } from "@mui/material";
+import axios from "axios";
+import { apiRoutesconsole } from "@/utils/api";
 
 interface CoFormData {
   co_name: string;
@@ -39,11 +42,15 @@ interface CoFormProps {
   allModules: any[];
   countries: any[];
   states: any[];
-  alert_email_id: string[];  
+  alert_email_id: string[];
   onSubmit: (data: CoFormData) => void;
   loading: boolean;
   isEdit: boolean;
+  coId?: string | null;
 }
+
+const ALLOWED_LOGO_TYPES = ["image/jpeg", "image/png"];
+const MAX_LOGO_SIZE = 2 * 1024 * 1024; // 2 MB
 
 const CoForm: React.FC<CoFormProps> = ({
   initialValues,
@@ -53,6 +60,7 @@ const CoForm: React.FC<CoFormProps> = ({
   onSubmit,
   loading,
   isEdit,
+  coId,
 }) => {
   const methods = useForm<CoFormData>({
     defaultValues: {
@@ -75,6 +83,74 @@ const CoForm: React.FC<CoFormProps> = ({
   
   // States for filtered options
   const [filteredStates, setFilteredStates] = useState<any[]>([]);
+
+  // Logo upload state
+  const [logoPreview, setLogoPreview] = useState<string | null>(null);
+  const [logoUploading, setLogoUploading] = useState(false);
+  const [logoError, setLogoError] = useState<string | null>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
+  // Fetch existing logo on edit
+  useEffect(() => {
+    if (isEdit && coId) {
+      axios
+        .get(`${apiRoutesconsole.GET_CO_LOGO}/${coId}`, { withCredentials: true })
+        .then((res) => {
+          const logo = res.data?.data?.co_logo;
+          if (logo) setLogoPreview(logo);
+        })
+        .catch(() => {});
+    }
+  }, [isEdit, coId]);
+
+  const handleLogoUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setLogoError(null);
+
+    if (!ALLOWED_LOGO_TYPES.includes(file.type)) {
+      setLogoError("Only JPEG and PNG images are allowed");
+      return;
+    }
+    if (file.size > MAX_LOGO_SIZE) {
+      setLogoError("File size must not exceed 2 MB");
+      return;
+    }
+
+    if (!coId) {
+      setLogoError("Please save the company first before uploading a logo");
+      return;
+    }
+
+    setLogoUploading(true);
+    try {
+      const formData = new FormData();
+      formData.append("file", file);
+      formData.append("co_id", coId);
+      const res = await axios.post(apiRoutesconsole.UPLOAD_CO_LOGO, formData, {
+        withCredentials: true,
+        headers: { "Content-Type": "multipart/form-data" },
+      });
+      setLogoPreview(res.data.co_logo);
+    } catch (err: any) {
+      setLogoError(err.response?.data?.detail || "Failed to upload logo");
+    } finally {
+      setLogoUploading(false);
+      if (fileInputRef.current) fileInputRef.current.value = "";
+    }
+  };
+
+  const handleLogoDelete = async () => {
+    if (!coId) return;
+    try {
+      await axios.delete(`${apiRoutesconsole.DELETE_CO_LOGO}/${coId}`, {
+        withCredentials: true,
+      });
+      setLogoPreview(null);
+    } catch (err: any) {
+      setLogoError(err.response?.data?.detail || "Failed to delete logo");
+    }
+  };
   
   // Effect to update states when country changes
   useEffect(() => {
@@ -329,10 +405,62 @@ const CoForm: React.FC<CoFormProps> = ({
               )}
             />
             
+            {/* Company Logo */}
+            {isEdit && (
+              <Box sx={{ mt: 3, mb: 2 }}>
+                <Typography variant="subtitle1" fontWeight={600} gutterBottom>
+                  Company Logo
+                </Typography>
+                <Typography variant="caption" color="text.secondary" display="block" sx={{ mb: 1 }}>
+                  JPEG or PNG, max 2 MB. Images larger than 500x500px will be resized automatically.
+                </Typography>
+
+                {logoPreview && (
+                  <Box sx={{ mb: 2, display: "flex", alignItems: "center", gap: 2 }}>
+                    <img
+                      src={logoPreview}
+                      alt="Company logo"
+                      style={{ maxHeight: 80, maxWidth: 200, border: "1px solid #ddd", borderRadius: 4, padding: 4 }}
+                    />
+                    <Button
+                      variant="outlined"
+                      color="error"
+                      size="small"
+                      onClick={handleLogoDelete}
+                    >
+                      Remove
+                    </Button>
+                  </Box>
+                )}
+
+                <input
+                  ref={fileInputRef}
+                  type="file"
+                  accept="image/jpeg,image/png"
+                  onChange={handleLogoUpload}
+                  style={{ display: "none" }}
+                />
+                <Button
+                  variant="outlined"
+                  size="small"
+                  disabled={logoUploading}
+                  onClick={() => fileInputRef.current?.click()}
+                >
+                  {logoUploading ? "Uploading..." : logoPreview ? "Change Logo" : "Upload Logo"}
+                </Button>
+
+                {logoError && (
+                  <Alert severity="error" sx={{ mt: 1 }}>
+                    {logoError}
+                  </Alert>
+                )}
+              </Box>
+            )}
+
             <Box sx={{ mt: 3 }}>
-              <Button 
-                type="submit" 
-                variant="contained" 
+              <Button
+                type="submit"
+                variant="contained"
                 color="primary"
                 sx={{
                   backgroundColor: '#9BC837',

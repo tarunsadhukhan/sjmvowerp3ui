@@ -100,7 +100,7 @@ export const MRPreview: React.FC<MRPreviewProps> = ({ header, lineItems, totalAc
 
 		const s = win.document.createElement("style");
 		s.textContent = `
-			@media print { @page { margin: 8mm; } }
+			@media print { @page { size: A4; margin: 8mm; } }
 			body { margin: 0; padding: 16px; font-family: Arial, sans-serif; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
 			table { width: 100%; border-collapse: collapse; }
 			th, td { border: 1px solid #333; padding: 5px 8px; font-size: 11px; }

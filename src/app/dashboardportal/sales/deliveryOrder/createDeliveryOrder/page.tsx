@@ -22,6 +22,7 @@ import useSelectedCompanyCoId from "@/hooks/use-selected-company-coid";
 import { toast } from "@/hooks/use-toast";
 import { useMenuId } from "@/hooks/useMenuId";
 import { useCompanyName } from "@/hooks/useCompanyName";
+import { useCompanyLogo } from "@/hooks/useCompanyLogo";
 
 import { DeliveryOrderHeaderForm } from "./components/DeliveryOrderHeaderForm";
 import { DeliveryOrderFooterForm, DeliveryOrderTotalsDisplay } from "./components/DeliveryOrderFooter";
@@ -87,6 +88,7 @@ function DOTransactionPageContent() {
 	const getMenuIdRef = React.useRef(getMenuId);
 	React.useEffect(() => { getMenuIdRef.current = getMenuId; }, [getMenuId]);
 	const companyName = useCompanyName();
+	const companyLogo = useCompanyLogo(coId);
 
 	const {
 		initialValues, setInitialValues, formValues, setFormValues,
@@ -513,13 +515,14 @@ function DOTransactionPageContent() {
 			vehicleNo: (formValues.vehicle_no as string) || doDetails?.vehicleNo,
 			driverName: (formValues.driver_name as string) || doDetails?.driverName,
 			companyName,
+			companyLogo,
 			status: statusLabel,
 		}),
 		[
 			doDetails, formValues.date,
 			formValues.vehicle_no, formValues.driver_name,
 			branchLabel, customerLabel, billingToAddress, shippingToAddress, salesOrderLabel,
-			transporterLabel, companyName, statusLabel,
+			transporterLabel, companyName, companyLogo, statusLabel,
 		],
 	);
 

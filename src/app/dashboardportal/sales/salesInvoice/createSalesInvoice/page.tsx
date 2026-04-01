@@ -23,6 +23,7 @@ import useSelectedCompanyCoId from "@/hooks/use-selected-company-coid";
 import { toast } from "@/hooks/use-toast";
 import { useMenuId } from "@/hooks/useMenuId";
 import { useCompanyName } from "@/hooks/useCompanyName";
+import { useCompanyLogo } from "@/hooks/useCompanyLogo";
 
 import { SalesInvoiceHeaderForm } from "./components/SalesInvoiceHeaderForm";
 import { SalesInvoiceFooterForm, SalesInvoiceTotalsDisplay } from "./components/SalesInvoiceFooter";
@@ -89,6 +90,7 @@ function InvoiceTransactionPageContent() {
 
 	const { getMenuId } = useMenuId({ transactionType: "sales-invoice", menuIdFromUrl });
 	const companyName = useCompanyName();
+	const companyLogo = useCompanyLogo(coId);
 
 	const {
 		initialValues, setInitialValues, formValues, setFormValues,
@@ -721,6 +723,7 @@ function InvoiceTransactionPageContent() {
 			ewayBillDate: (formValues.eway_bill_date as string) || invoiceDetails?.ewayBillDate,
 			transactionType: (formValues.type_of_sale as string) || invoiceDetails?.typeOfSale,
 			companyName,
+			companyLogo,
 			companyAddress: (() => {
 				const co = setupData?.company;
 				if (!co) return invoiceDetails?.companyAddress1 ? [invoiceDetails.companyAddress1, invoiceDetails.companyAddress2, invoiceDetails.companyZipcode ? String(invoiceDetails.companyZipcode) : null, invoiceDetails.companyStateName].filter(Boolean).join(", ") : undefined;
@@ -781,7 +784,7 @@ function InvoiceTransactionPageContent() {
 			formValues.invoice_type, formValues.type_of_sale, formValues.sales_order_id, formValues.sales_order_date,
 			formValues.bank_detail_id,
 			branchLabel, branchValue, customerLabel, customerBranchLabel, deliveryOrderLabel,
-			billingToLabel, shippingToLabel, transporterLabel, companyName, statusLabel,
+			billingToLabel, shippingToLabel, transporterLabel, companyName, companyLogo, statusLabel,
 			billingBranchRecord, shippingBranchRecord, selectedDeliveryOrderRecord,
 			setupData,
 		],

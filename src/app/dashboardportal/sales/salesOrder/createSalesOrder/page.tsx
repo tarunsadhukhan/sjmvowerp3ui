@@ -24,6 +24,7 @@ import { toast } from "@/hooks/use-toast";
 import { useSidebarContext } from "@/components/dashboard/sidebarContext";
 import { useMenuId } from "@/hooks/useMenuId";
 import { useCompanyName } from "@/hooks/useCompanyName";
+import { useCompanyLogo } from "@/hooks/useCompanyLogo";
 
 import { SalesOrderHeaderForm } from "./components/SalesOrderHeaderForm";
 import { SalesOrderTotalsDisplay } from "./components/SalesOrderTotalsDisplay";
@@ -98,6 +99,7 @@ function SalesOrderTransactionPageContent() {
 
 	const { getMenuId } = useMenuId({ transactionType: "salesOrder", menuIdFromUrl });
 	const companyName = useCompanyName();
+	const companyLogo = useCompanyLogo(coId);
 
 	const {
 		initialValues,
@@ -615,11 +617,12 @@ function SalesOrderTransactionPageContent() {
 			transporterName: transporterOptions.find((o) => String(o.value) === String(formValues.transporter))?.label ?? soDetails?.transporterName ?? undefined,
 			status: statusChipProps?.label ?? soDetails?.status,
 			companyName,
+			companyLogo,
 		}),
 		[
 			soDetails, formValues.date, formValues.party, formValues.broker, formValues.transporter,
 			branchValue, resolvedBranchOptions, customerOptions, brokerOptions, transporterOptions,
-			statusChipProps?.label, companyName,
+			statusChipProps?.label, companyName, companyLogo,
 		],
 	);
 

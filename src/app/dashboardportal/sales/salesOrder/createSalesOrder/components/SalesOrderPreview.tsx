@@ -12,6 +12,7 @@ type PreviewHeader = {
 	transporterName?: string;
 	status?: string;
 	companyName?: string;
+	companyLogo?: string;
 };
 
 type PreviewItem = {
@@ -87,7 +88,7 @@ export function SalesOrderPreview({ header, items, remarks }: SalesOrderPreviewP
 					hr { border: none; border-top: 1px solid #ddd; margin: 12px 0; }
 					.totals td { font-weight: 700; }
 					.other-qty { font-size: 11px; color: #666; }
-					@media print { body { margin: 10px; } }
+					@media print { @page { size: A4; margin: 10mm; } body { margin: 10px; } }
 				</style>
 			</head>
 			<body>${el.innerHTML}</body>
@@ -102,6 +103,9 @@ export function SalesOrderPreview({ header, items, remarks }: SalesOrderPreviewP
 		<Paper variant="outlined" sx={{ p: 3 }}>
 			<div className="flex justify-between items-start mb-4">
 				<div>
+					{header.companyLogo && (
+						<img src={header.companyLogo} alt="" style={{ maxHeight: 60, maxWidth: 200, marginBottom: 4 }} />
+					)}
 					<Typography variant="h6" fontWeight={700}>
 						{header.companyName || "Company"}
 					</Typography>

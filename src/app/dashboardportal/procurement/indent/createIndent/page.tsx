@@ -27,6 +27,7 @@ import { toast } from "@/hooks/use-toast";
 import useSelectedCompanyCoId from "@/hooks/use-selected-company-coid";
 import { useMenuId } from "@/hooks/useMenuId";
 import type { MuiFormMode } from "@/components/ui/muiform";
+import { useCompanyLogo } from "@/hooks/useCompanyLogo";
 
 // Types
 import type { EditableLineItem, IndentSetupData, ItemGroupCacheEntry } from "./types/indentTypes";
@@ -85,6 +86,7 @@ function IndentTransactionPageContent() {
 
 	const branchOptions = useBranchOptions();
 	const { coId } = useSelectedCompanyCoId();
+	const companyLogo = useCompanyLogo(coId);
 
 	// Resolve menu_id via centralized hook
 	const { getMenuId } = useMenuId({ transactionType: "indent", menuIdFromUrl });
@@ -821,6 +823,7 @@ function IndentTransactionPageContent() {
 		updatedBy: indentDetails?.updatedBy,
 		updatedAt: indentDetails?.updatedAt,
 		companyName: companyName,
+		companyLogo: companyLogo,
 	};
 
 	const { metadata } = useTransactionPreview({

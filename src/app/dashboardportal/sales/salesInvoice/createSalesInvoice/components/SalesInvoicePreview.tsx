@@ -41,6 +41,7 @@ export type InvoicePreviewHeader = {
 	updatedBy?: string;
 	updatedAt?: string;
 	companyName?: string;
+	companyLogo?: string;
 	companyAddress?: string;
 	companyPhone?: string;
 	companyGstin?: string;
@@ -262,7 +263,7 @@ const SalesInvoicePreview: React.FC<InvoicePreviewProps> = ({ header, items, tot
 	<meta charset="utf-8"/>
 	<title>Tax Invoice - ${titleSuffix}</title>
 	<style>
-		@page { margin: 8mm; }
+		@page { size: A4; margin: 8mm; }
 		* { box-sizing: border-box; }
 		body { font-family: Arial, sans-serif; margin: 0; padding: 0; color: #111; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
 	</style>
@@ -277,6 +278,7 @@ const SalesInvoicePreview: React.FC<InvoicePreviewProps> = ({ header, items, tot
 	<table style="width:100%;border-collapse:collapse;border-bottom:1px solid #000;">
 		<tr>
 			<td style="width:50%;border-right:1px solid #000;padding:8px 10px;vertical-align:top;">
+				${h.companyLogo ? `<img src="${h.companyLogo}" style="max-height:60px;max-width:200px;margin-bottom:4px;display:block;" />` : ""}
 				<div style="font-size:13px;font-weight:700;">${h.companyName || "-"}</div>
 				${h.companyAddress ? `<div style="font-size:11px;margin-top:2px;">${h.companyAddress}</div>` : ""}
 				${h.companyPhone ? `<div style="font-size:11px;margin-top:1px;">Phone no. : ${h.companyPhone}</div>` : ""}

@@ -525,6 +525,7 @@ const apiRoutesPortalMasters = {
     SALES_INVOICE_APPROVE: `${API_URL}/salesInvoice/approve_sales_invoice`,
     SALES_INVOICE_REJECT: `${API_URL}/salesInvoice/reject_sales_invoice`,
     SALES_INVOICE_REOPEN: `${API_URL}/salesInvoice/reopen_sales_invoice`,
+    SALES_INVOICE_TRANSPORTER_BRANCHES: `${API_URL}/salesInvoice/get_transporter_branches`,
 
     // HRMS Employee endpoints
     HRMS_EMPLOYEE_LIST: `${API_URL}/hrms/employee_list`,

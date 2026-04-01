@@ -471,3 +471,13 @@ export async function reopenInvoice(invoiceId: string): Promise<StatusChangeResp
   if (!data) throw new Error("Empty response from reopen API");
   return data;
 }
+
+export async function getTransporterBranches(transporterId: number, coId: number): Promise<{ data: Array<{ id: number; gst_no: string; address: string; state_id: number }> }> {
+  const { data, error } = await fetchWithCookie(
+    `${apiRoutesPortalMasters.SALES_INVOICE_TRANSPORTER_BRANCHES}?transporter_id=${transporterId}&co_id=${coId}`,
+    "GET"
+  );
+  if (error) throw new Error(error);
+  if (!data) throw new Error("Empty response from transporter branches API");
+  return data;
+}

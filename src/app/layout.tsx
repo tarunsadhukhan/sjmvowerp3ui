@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { Inter } from "next/font/google";
 import "./globals.css";
 import SidebarCompaniesGuardClient from '@/components/clientside/SidebarCompaniesGuardClient';
+import SubdomainGuard from '@/components/clientside/SubdomainGuard';
 import { AppThemeProvider } from '@/styles/AppThemeProvider';
 
 const inter = Inter({ subsets: ["latin"] });
@@ -34,6 +35,7 @@ export default function RootLayout({
       <body className={`${inter.className}`}>
         {/* <AuthProvider>    */}
           <AppThemeProvider>
+            <SubdomainGuard />
             <SidebarCompaniesGuardClient />
             {children}
           </AppThemeProvider>

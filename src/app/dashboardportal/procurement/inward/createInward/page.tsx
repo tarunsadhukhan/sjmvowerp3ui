@@ -3,10 +3,13 @@
 import React, { Suspense } from "react";
 import { useRouter, useSearchParams, usePathname } from "next/navigation";
 import TransactionWrapper, { type TransactionAction } from "@/components/ui/TransactionWrapper";
+import { Button } from "@/components/ui/button";
 import {
 	useDeferredOptionCache,
 	useTransactionSetup,
 	useTransactionPreview,
+	ItemSelectionDialog,
+	type SelectedItem,
 } from "@/components/ui/transaction";
 import { useBranchOptions } from "@/utils/branchUtils";
 import {
@@ -23,11 +26,11 @@ import { useSidebarContext } from "@/components/dashboard/sidebarContext";
 import type { MuiFormMode } from "@/components/ui/muiform";
 
 // Types
-import type { InwardSetupData, ItemGroupCacheEntry, POLineItem } from "./types/inwardTypes";
+import type { EditableLineItem, InwardSetupData, ItemGroupCacheEntry, POLineItem } from "./types/inwardTypes";
 
 // Utils
 import { EMPTY_SUPPLIERS, EMPTY_ITEM_GROUPS, EMPTY_SETUP_PARAMS } from "./utils/inwardConstants";
-import { buildDefaultFormValues, createBlankLine } from "./utils/inwardFactories";
+import { buildDefaultFormValues, createBlankLine, lineHasAnyData } from "./utils/inwardFactories";
 import { mapInwardSetupResponse, mapItemGroupDetailResponse, mapInwardDetailsToFormValues } from "./utils/inwardMappers";
 
 // Hooks
@@ -140,6 +143,7 @@ function InwardTransactionPageContent() {
 	const [saving, setSaving] = React.useState(false);
 	const [pageError, setPageError] = React.useState<string | null>(null);
 	const [poDialogOpen, setPODialogOpen] = React.useState(false);
+	const [itemDialogOpen, setItemDialogOpen] = React.useState(false);
 
 	// Item group cache
 	const { cache: itemGroupCache, loading: itemGroupLoading, ensure: ensureItemGroupData, reset: resetItemGroupCache } =
@@ -477,6 +481,54 @@ function InwardTransactionPageContent() {
 		[handlePOItemsConfirm]
 	);
 
+	// Handle items from item selection dialog
+	const excludeItemIds = React.useMemo(() => {
+		const ids = new Set<number>();
+		for (const li of lineItems) {
+			if (li.item) {
+				const num = Number(li.item);
+				if (Number.isFinite(num)) ids.add(num);
+			}
+		}
+		return ids;
+	}, [lineItems]);
+
+	const handleItemDialogConfirm = React.useCallback(
+		(items: SelectedItem[]) => {
+			if (mode === "view" || !items.length) return;
+
+			const newLines: EditableLineItem[] = items.map((item) => ({
+				id: crypto.randomUUID?.() ?? String(Date.now() + Math.random()),
+				itemGroup: String(item.item_grp_id),
+				item: String(item.item_id),
+				itemMake: "",
+				quantity: "",
+				uom: String(item.uom_id),
+				remarks: "",
+				hsnCode: item.hsn_code ?? "",
+				taxPercentage: item.tax_percentage ?? undefined,
+			}));
+
+			const groupIds = [...new Set(items.map((item) => String(item.item_grp_id)))];
+			for (const gid of groupIds) {
+				if (!itemGroupCache[gid] && !itemGroupLoading[gid]) {
+					void ensureItemGroupData(gid);
+				}
+			}
+
+			setLineItems((prev) => {
+				const filledLines = prev.filter((line) => lineHasAnyData(line));
+				return [...filledLines, ...newLines, createBlankLine()];
+			});
+
+			toast({
+				title: `Added ${newLines.length} item${newLines.length > 1 ? "s" : ""}`,
+				description: "Fill in quantity and other details.",
+			});
+		},
+		[mode, setLineItems, itemGroupCache, itemGroupLoading, ensureItemGroupData]
+	);
+
 	// Page metadata
 	const pageTitle = React.useMemo(() => {
 		if (mode === "create") {
@@ -617,8 +669,18 @@ function InwardTransactionPageContent() {
 			onRemoveSelected: handleBulkRemoveLines,
 			placeholder: canEdit ? "Select items from a PO to add to this inward." : "No line items available.",
 			selectionColumnWidth: "28px",
+			headerAction: canEdit ? (
+				<Button
+					type="button"
+					size="sm"
+					onClick={() => setItemDialogOpen(true)}
+					disabled={!coId}
+				>
+					Add Items
+				</Button>
+			) : undefined,
 		};
-	}, [showFullForm, lineItems, getLineItemId, canEdit, lineItemColumns, handleBulkRemoveLines]);
+	}, [showFullForm, lineItems, getLineItemId, canEdit, lineItemColumns, handleBulkRemoveLines, coId]);
 
 	return (
 		<TransactionWrapper
@@ -665,6 +727,16 @@ function InwardTransactionPageContent() {
 				onConfirm={handlePOItemsConfirmWrapper}
 				supplierId={formValues.supplier as string}
 				branchId={branchValue || undefined}
+			/>
+
+			<ItemSelectionDialog
+				open={itemDialogOpen}
+				onOpenChange={setItemDialogOpen}
+				coId={coId}
+				onConfirm={handleItemDialogConfirm}
+				filter="purchaseable"
+				excludeItemIds={excludeItemIds}
+				title="Select Items for Inward"
 			/>
 		</TransactionWrapper>
 	);

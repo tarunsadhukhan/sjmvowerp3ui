@@ -330,5 +330,6 @@ export const useSalesInvoiceLineItems = ({
 		handleLineFieldChange, replaceWithDeliveryOrderLines, replaceWithSalesOrderLines,
 		clearImportedLines,
 		mapLineToEditable, filledLineItems, lineItemsValid, itemGroupsFromLineItems,
+		lineHasAnyData,
 	};
 };

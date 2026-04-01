@@ -132,6 +132,7 @@ const apiRoutesPortalMasters = {
     ITEM_MAKE_TABLE: `${API_URL}/itemMaster/item_make_table`,
     ITEM_MAKE_CREATE_SETUP: `${API_URL}/itemMaster/item_make_create_setup`,
     ITEM_MAKE_CREATE: `${API_URL}/itemMaster/item_make_create`,
+    ITEM_SEARCH: `${API_URL}/itemMaster/item_search`,
 
         // Item BOM Master endpoints
     BOM_LIST: `${API_URL}/itemBomMaster/get_bom_list`,

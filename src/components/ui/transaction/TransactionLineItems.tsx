@@ -30,6 +30,8 @@ export type TransactionLineItemsProps<TItem> = {
   selectionColumnWidth?: string;
   removeSelectedLabel?: string;
   className?: string;
+  /** Optional action element rendered in the line items header (e.g. "Add Items" button) */
+  headerAction?: React.ReactNode;
 };
 
 export function TransactionLineItems<TItem>({
@@ -45,6 +47,7 @@ export function TransactionLineItems<TItem>({
   selectionColumnWidth = "48px",
   removeSelectedLabel = "Remove Selected",
   className,
+  headerAction,
 }: TransactionLineItemsProps<TItem>) {
   const allowSelection = selectable ?? canEdit;
 
@@ -100,8 +103,9 @@ export function TransactionLineItems<TItem>({
           <p className="text-base font-semibold text-slate-800">{title}</p>
           {subtitle ? <p className="text-xs text-slate-500">{subtitle}</p> : null}
         </div>
-        {canEdit && allowSelection && onRemoveSelected ? (
-          <div className="flex gap-2 print-hidden">
+        <div className="flex gap-2 print-hidden">
+          {headerAction}
+          {canEdit && allowSelection && onRemoveSelected ? (
             <Button
               type="button"
               variant="destructive"
@@ -111,8 +115,8 @@ export function TransactionLineItems<TItem>({
             >
               {removeSelectedLabel}
             </Button>
-          </div>
-        ) : null}
+          ) : null}
+        </div>
       </div>
 
       <div className="overflow-x-auto" style={{ width: "100%" }}>

@@ -15,3 +15,4 @@ export * from "./ApprovalActionsBar";
 export * from "./buildApprovalTransactionActions";
 export * from "./useRejectDialog";
 export * from "./useUnsavedChanges";
+export * from "./ItemSelectionDialog";

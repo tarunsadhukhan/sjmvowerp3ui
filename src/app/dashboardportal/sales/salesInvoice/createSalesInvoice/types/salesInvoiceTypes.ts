@@ -340,3 +340,91 @@ export type InvoiceSetup2ResponseRaw = {
 	makes?: ItemMakeOptionRaw[];
 	uoms?: ItemUomOptionRaw[];
 };
+
+export type InvoiceFormValues = {
+	branch?: string;
+	date?: string;
+	party?: string;
+	party_branch?: string;
+	delivery_order?: string;
+	billing_to?: string;
+	shipping_to?: string;
+	transporter?: string;
+	vehicle_no?: string;
+	eway_bill_no?: string;
+	eway_bill_date?: string;
+	challan_no?: string;
+	challan_date?: string;
+	invoice_type?: string;
+	footer_note?: string;
+	internal_note?: string;
+	terms_conditions?: string;
+	freight_charges?: string;
+	round_off?: string;
+	due_date?: string;
+	type_of_sale?: string;
+	tax_id?: string;
+	transporter_address?: string;
+	transporter_state_code?: string;
+	transporter_state_name?: string;
+	container_no?: string;
+	contract_no?: string;
+	contract_date?: string;
+	consignment_no?: string;
+	consignment_date?: string;
+	shipping_state_code?: string;
+	intra_inter_state?: string;
+	payment_terms?: string;
+	sales_order_id?: string;
+	sales_order_date?: string;
+	billing_state_code?: string;
+	jute_mr_no?: string;
+	jute_claim_amount?: string;
+	jute_claim_description?: string;
+	jute_mukam_id?: string;
+	govtskg_pcso_no?: string;
+	govtskg_pcso_date?: string;
+	govtskg_admin_office_address?: string;
+	govtskg_destination_rail_head?: string;
+	govtskg_loading_point?: string;
+	govtskg_pack_sheet?: string;
+	govtskg_net_weight?: string;
+	govtskg_total_weight?: string;
+	// Transporter GST fields
+	transporter_branch_id?: number;
+	transporter_gst_no?: string;
+	transporter_doc_no?: string;
+	transporter_doc_date?: string;
+	// Buyer order fields
+	buyer_order_no?: string;
+	buyer_order_date?: string;
+	// e-Invoice fields (manual entry now, portal auto-fill later)
+	irn?: string;
+	ack_no?: string;
+	ack_date?: string;
+	qr_code?: string;
+	// Submission history (read-only)
+	e_invoice_submission_history?: EInvoiceSubmission[];
+	// Line items
+	lineItems?: EditableLineItem[];
+};
+
+export type TransporterBranchRecord = {
+	id: number;
+	gst_no: string;
+	address: string;
+	state_id: number;
+};
+
+export type EInvoiceSubmission = {
+	response_id: number;
+	submission_status: "Draft" | "Submitted" | "Accepted" | "Rejected" | "Error";
+	submitted_date_time: string;
+	irn_from_response?: string;
+	error_message?: string;
+	submitted_by?: number;
+};
+
+export type InvoiceDetails = InvoiceFormValues & {
+	// Details response includes all form values plus computed fields
+};

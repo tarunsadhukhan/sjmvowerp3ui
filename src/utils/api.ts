@@ -573,6 +573,51 @@ const apiRoutesPortalMasters = {
     BANK_DETAILS_CREATE_SETUP: `${API_URL}/bankDetailsMaster/bank_details_create_setup`,
     BANK_DETAILS_CREATE: `${API_URL}/bankDetailsMaster/bank_details_create`,
     BANK_DETAILS_EDIT: `${API_URL}/bankDetailsMaster/bank_details_edit`,
+
+    // =============================================
+    // Accounting Module endpoints
+    // =============================================
+
+    // Setup & Masters
+    ACC_ACTIVATE_COMPANY: `${API_URL}/accounting/activate_company`,
+    ACC_LEDGER_GROUPS: `${API_URL}/accounting/ledger_groups`,
+    ACC_LEDGER_GROUP_CREATE: `${API_URL}/accounting/ledger_groups`,
+    ACC_LEDGERS: `${API_URL}/accounting/ledgers`,
+    ACC_LEDGER_CREATE: `${API_URL}/accounting/ledgers`,
+    ACC_LEDGER_EDIT: `${API_URL}/accounting/ledgers`,
+    ACC_PARTIES_DROPDOWN: `${API_URL}/accounting/parties_dropdown`,
+    ACC_VOUCHER_TYPES: `${API_URL}/accounting/voucher_types`,
+    ACC_FINANCIAL_YEARS: `${API_URL}/accounting/financial_years`,
+    ACC_FINANCIAL_YEAR_CREATE: `${API_URL}/accounting/financial_years`,
+    ACC_ACCOUNT_DETERMINATIONS: `${API_URL}/accounting/account_determinations`,
+    ACC_ACCOUNT_DETERMINATIONS_UPDATE: `${API_URL}/accounting/account_determinations`,
+
+    // Voucher Operations
+    ACC_VOUCHERS: `${API_URL}/accounting/vouchers`,
+    ACC_VOUCHER_CREATE: `${API_URL}/accounting/vouchers`,
+    ACC_VOUCHER_DETAIL: `${API_URL}/accounting/vouchers`,
+    ACC_VOUCHER_OPEN: `${API_URL}/accounting/vouchers`,
+    ACC_VOUCHER_CANCEL: `${API_URL}/accounting/vouchers`,
+    ACC_VOUCHER_SEND_APPROVAL: `${API_URL}/accounting/vouchers`,
+    ACC_VOUCHER_APPROVE: `${API_URL}/accounting/vouchers`,
+    ACC_VOUCHER_REJECT: `${API_URL}/accounting/vouchers`,
+    ACC_VOUCHER_REOPEN: `${API_URL}/accounting/vouchers`,
+    ACC_VOUCHER_REVERSE: `${API_URL}/accounting/vouchers`,
+    ACC_VOUCHER_SETTLE_BILLS: `${API_URL}/accounting/vouchers`,
+
+    // Reports
+    ACC_REPORT_TRIAL_BALANCE: `${API_URL}/accounting/reports/trial_balance`,
+    ACC_REPORT_PROFIT_LOSS: `${API_URL}/accounting/reports/profit_loss`,
+    ACC_REPORT_BALANCE_SHEET: `${API_URL}/accounting/reports/balance_sheet`,
+    ACC_REPORT_LEDGER: `${API_URL}/accounting/reports/ledger_report`,
+    ACC_REPORT_DAY_BOOK: `${API_URL}/accounting/reports/day_book`,
+    ACC_REPORT_CASH_BOOK: `${API_URL}/accounting/reports/cash_book`,
+    ACC_REPORT_PARTY_OUTSTANDING: `${API_URL}/accounting/reports/party_outstanding`,
+    ACC_REPORT_AGEING: `${API_URL}/accounting/reports/ageing_analysis`,
+    ACC_REPORT_GST_SUMMARY: `${API_URL}/accounting/reports/gst_summary`,
+
+    // Opening Balance
+    ACC_OPENING_BILLS_IMPORT: `${API_URL}/accounting/opening_bills/import`,
 };
 
 export { apiRoutes, apiRoutesconsole, apiRoutesPortalMasters };

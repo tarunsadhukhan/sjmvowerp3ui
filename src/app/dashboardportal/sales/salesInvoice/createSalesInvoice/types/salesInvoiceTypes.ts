@@ -427,4 +427,7 @@ export type EInvoiceSubmission = {
 
 export type InvoiceDetails = InvoiceFormValues & {
 	// Details response includes all form values plus computed fields
+	partyName?: string;
+	billingAddress?: string;
+	shippingAddress?: string;
 };

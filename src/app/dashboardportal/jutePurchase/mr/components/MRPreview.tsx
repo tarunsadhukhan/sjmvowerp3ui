@@ -108,6 +108,10 @@ export const MRPreview: React.FC<MRPreviewProps> = ({ header, lineItems, totalAc
 			.text-right { text-align: right; }
 			.text-center { text-align: center; }
 			.print-hidden { display: none !important; }
+			.co-header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 12px; }
+			.co-left, .co-right { min-width: 200px; max-width: 25%; }
+			.co-center { flex: 1; text-align: center; }
+			.co-logo { max-height: 56px; max-width: 180px; object-fit: contain; margin-bottom: 4px; }
 		`;
 		win.document.head.appendChild(s);
 
@@ -142,10 +146,60 @@ export const MRPreview: React.FC<MRPreviewProps> = ({ header, lineItems, totalAc
 			</Stack>
 
 			<Box ref={previewRef} sx={{ p: 2, fontFamily: "Arial, sans-serif", fontSize: "12px" }}>
-				{/* ── Title ── */}
-				<Typography variant="h5" fontWeight={700} textAlign="center" sx={{ mb: 2 }}>
-					Material Receipt
-				</Typography>
+				{/* ── Header: Company Logo & Details + Title + Spacer ── */}
+				<Stack direction="row" justifyContent="space-between" alignItems="center" className="co-header" sx={{ mb: 2 }}>
+					{/* Left: Company Details */}
+					<Box className="co-left" sx={{ textAlign: "left" }}>
+						{header.co_logo && (
+							<Box
+								component="img"
+								src={header.co_logo}
+								alt="Company Logo"
+								className="co-logo"
+								sx={{ maxHeight: 56, maxWidth: 180, objectFit: "contain", mb: 0.5 }}
+							/>
+						)}
+						{header.co_name && (
+							<Typography variant="body2" fontWeight={700} sx={{ mb: 0.5 }}>
+								{header.co_name}
+							</Typography>
+						)}
+						{header.co_address1 && (
+							<Typography variant="caption" display="block" sx={{ mb: 0.25 }}>
+								{header.co_address1}
+							</Typography>
+						)}
+						{header.co_address2 && (
+							<Typography variant="caption" display="block" sx={{ mb: 0.25 }}>
+								{header.co_address2}
+							</Typography>
+						)}
+						{header.co_zipcode && (
+							<Typography variant="caption" display="block" sx={{ mb: 0.5 }}>
+								{String(header.co_zipcode)}
+							</Typography>
+						)}
+						{header.branch_name && (
+							<Typography
+								variant="caption"
+								display="block"
+								sx={{ fontStyle: "italic", color: "text.secondary", mt: 0.5 }}
+							>
+								{header.branch_name}
+							</Typography>
+						)}
+					</Box>
+
+					{/* Center: Title */}
+					<Box className="co-center" sx={{ flex: 1 }}>
+						<Typography variant="h5" fontWeight={700} textAlign="center">
+							Material Receipt
+						</Typography>
+					</Box>
+
+					{/* Right: Spacer */}
+					<Box className="co-right" />
+				</Stack>
 
 				{/* ── Header Fields (two-column key:value pairs) ── */}
 				<Box
@@ -168,8 +222,22 @@ export const MRPreview: React.FC<MRPreviewProps> = ({ header, lineItems, totalAc
 						<tr>
 							<td style={{ fontWeight: 600 }}>M/S</td>
 							<td>:</td>
-							<td colSpan={3}>{header.supplier_name ?? header.party_name ?? "-"}</td>
+							<td colSpan={3}>{header.party_name ?? header.supplier_name ?? "-"}</td>
 						</tr>
+						{header.party_address && (
+							<tr>
+								<td style={{ fontWeight: 600 }}>PARTY ADDRESS</td>
+								<td>:</td>
+								<td colSpan={3}>{header.party_address}</td>
+							</tr>
+						)}
+						{header.party_gst_no && (
+							<tr>
+								<td style={{ fontWeight: 600 }}>PARTY GST NO</td>
+								<td>:</td>
+								<td colSpan={3}>{header.party_gst_no}</td>
+							</tr>
+						)}
 						<tr>
 							<td style={{ fontWeight: 600 }}>PO NO</td>
 							<td>:</td>
@@ -195,7 +263,7 @@ export const MRPreview: React.FC<MRPreviewProps> = ({ header, lineItems, totalAc
 				{/* Mukam */}
 				{header.mukam && (
 					<Typography variant="body2" textAlign="center" sx={{ mb: 1 }}>
-						<strong>EX :</strong> {header.mukam}
+						<strong>Mukam :</strong> {header.mukam}
 					</Typography>
 				)}
 

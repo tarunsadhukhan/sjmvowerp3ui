@@ -21,6 +21,7 @@ import { fetchWithCookie } from "@/utils/apiClient2";
 import { apiRoutesPortalMasters } from "@/utils/api";
 import { toast } from "@/hooks/use-toast";
 import useSelectedCompanyCoId from "@/hooks/use-selected-company-coid";
+import MaterialInspectionPreview from "./components/MaterialInspectionPreview";
 
 /**
  * Editable text cell component that manages its own local state
@@ -557,6 +558,16 @@ function MaterialInspectionEditPageContent() {
 					)}
 				</Stack>
 			</Paper>
+
+			{/* Printable Preview */}
+			{header && lineItems.length > 0 && (
+				<Paper sx={{ p: 3, mt: 3 }}>
+					<Typography variant="h6" fontWeight={600} mb={2}>
+						Printable Preview
+					</Typography>
+					<MaterialInspectionPreview header={header} items={lineItems} />
+				</Paper>
+			)}
 		</Box>
 	);
 }

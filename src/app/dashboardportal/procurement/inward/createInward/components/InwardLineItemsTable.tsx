@@ -65,7 +65,7 @@ export const useInwardLineItemColumns = ({
 							getOptionLabel={(opt) => opt.label}
 							isOptionEqualToValue={(a, b) => a.value === b.value}
 							placeholder={isLoading ? "Loading..." : "Select group"}
-							disabled={isLoading}
+							disabled={isLoading || !!item.poDtlId}
 						/>
 					);
 				},
@@ -92,7 +92,7 @@ export const useInwardLineItemColumns = ({
 							getOptionLabel={(opt) => opt.label}
 							isOptionEqualToValue={(a, b) => a.value === b.value}
 							placeholder="Select item"
-							disabled={!item.itemGroup}
+							disabled={!item.itemGroup || !!item.poDtlId}
 						/>
 					);
 				},
@@ -115,6 +115,7 @@ export const useInwardLineItemColumns = ({
 							value={item.hsnCode || ""}
 							onChange={(e) => handleLineFieldChange(item.id, "hsnCode", e.target.value)}
 							placeholder="HSN Code"
+							InputProps={{ readOnly: !!item.poDtlId }}
 							sx={{ "& .MuiInputBase-input": { padding: "4px 8px", fontSize: "0.875rem" } }}
 							fullWidth
 						/>
@@ -176,7 +177,7 @@ export const useInwardLineItemColumns = ({
 							getOptionLabel={(opt) => opt.label}
 							isOptionEqualToValue={(a, b) => a.value === b.value}
 							placeholder="UOM"
-							disabled={!item.item}
+							disabled={!item.item || !!item.poDtlId}
 						/>
 					);
 				},

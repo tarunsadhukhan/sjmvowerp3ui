@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import {
 	Box,
 	Grid,
@@ -61,9 +61,20 @@ export function SalesInvoiceHeaderForm({
 	onTransporterBranchChange,
 }: SalesInvoiceHeaderFormProps) {
 	const [localFormValues, setLocalFormValues] = useState(formValues);
+	const prevFormValuesJsonRef = useRef<string | null>(null);
 
-	// Sync external formValues with local state
+	// Sync external formValues into local state only when the content actually changes.
+	// Using a ref-based JSON comparison prevents re-renders caused by new object
+	// references when the parent renders with a default `{}` parameter.
 	useEffect(() => {
+		let incoming: string;
+		try {
+			incoming = JSON.stringify(formValues);
+		} catch {
+			return;
+		}
+		if (incoming === prevFormValuesJsonRef.current) return;
+		prevFormValuesJsonRef.current = incoming;
 		setLocalFormValues(formValues);
 	}, [formValues]);
 

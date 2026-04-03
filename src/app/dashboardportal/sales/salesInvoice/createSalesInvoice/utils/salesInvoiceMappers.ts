@@ -411,21 +411,21 @@ export const mapInvoiceDetailsToFormValues = (
 			netWeight?: number;
 			totalWeight?: number;
 		} | null;
-		// New transporter fields
-		transporter_branch_id?: number;
-		transporter_gst_no?: string;
-		transporter_doc_no?: string;
-		transporter_doc_date?: string;
+		// New transporter fields (camelCase from API response)
+		transporterBranchId?: number;
+		transporterGstNo?: string;
+		transporterDocNo?: string;
+		transporterDocDate?: string;
 		// New buyer order fields
-		buyer_order_no?: string;
-		buyer_order_date?: string;
+		buyerOrderNo?: string;
+		buyerOrderDate?: string;
 		// New e-invoice fields
 		irn?: string;
-		ack_no?: string;
-		ack_date?: string;
-		qr_code?: string;
+		ackNo?: string;
+		ackDate?: string;
+		qrCode?: string;
 		// Submission history (read-only from response)
-		e_invoice_submission_history?: unknown[];
+		eInvoiceSubmissionHistory?: unknown[];
 	},
 	defaultValues: Record<string, unknown>,
 ): Record<string, unknown> => ({
@@ -479,21 +479,21 @@ export const mapInvoiceDetailsToFormValues = (
 	govtskg_pack_sheet: details.govtskg?.packSheet != null ? String(details.govtskg.packSheet) : toStringValue(defaultValues.govtskg_pack_sheet),
 	govtskg_net_weight: details.govtskg?.netWeight != null ? String(details.govtskg.netWeight) : toStringValue(defaultValues.govtskg_net_weight),
 	govtskg_total_weight: details.govtskg?.totalWeight != null ? String(details.govtskg.totalWeight) : toStringValue(defaultValues.govtskg_total_weight),
-	// New transporter fields
-	transporter_branch_id: details.transporter_branch_id ?? defaultValues.transporter_branch_id,
-	transporter_gst_no: toStringValue(details.transporter_gst_no ?? defaultValues.transporter_gst_no),
-	transporter_doc_no: toStringValue(details.transporter_doc_no ?? defaultValues.transporter_doc_no),
-	transporter_doc_date: normalizeDate(details.transporter_doc_date) || toStringValue(defaultValues.transporter_doc_date),
+	// New transporter fields — API sends camelCase
+	transporter_branch_id: details.transporterBranchId ?? defaultValues.transporter_branch_id,
+	transporter_gst_no: toStringValue(details.transporterGstNo ?? defaultValues.transporter_gst_no),
+	transporter_doc_no: toStringValue(details.transporterDocNo ?? defaultValues.transporter_doc_no),
+	transporter_doc_date: normalizeDate(details.transporterDocDate) || toStringValue(defaultValues.transporter_doc_date),
 	// New buyer order fields
-	buyer_order_no: toStringValue(details.buyer_order_no ?? defaultValues.buyer_order_no),
-	buyer_order_date: normalizeDate(details.buyer_order_date) || toStringValue(defaultValues.buyer_order_date),
+	buyer_order_no: toStringValue(details.buyerOrderNo ?? defaultValues.buyer_order_no),
+	buyer_order_date: normalizeDate(details.buyerOrderDate) || toStringValue(defaultValues.buyer_order_date),
 	// New e-invoice fields
 	irn: toStringValue(details.irn ?? defaultValues.irn),
-	ack_no: toStringValue(details.ack_no ?? defaultValues.ack_no),
-	ack_date: normalizeDate(details.ack_date) || toStringValue(defaultValues.ack_date),
-	qr_code: toStringValue(details.qr_code ?? defaultValues.qr_code),
+	ack_no: toStringValue(details.ackNo ?? defaultValues.ack_no),
+	ack_date: normalizeDate(details.ackDate) || toStringValue(defaultValues.ack_date),
+	qr_code: toStringValue(details.qrCode ?? defaultValues.qr_code),
 	// Submission history (read-only from response)
-	e_invoice_submission_history: details.e_invoice_submission_history ?? defaultValues.e_invoice_submission_history,
+	e_invoice_submission_history: details.eInvoiceSubmissionHistory ?? defaultValues.e_invoice_submission_history,
 });
 
 export const mapFormValuesToApiPayload = (

@@ -79,4 +79,17 @@ export const buildDefaultFormValues = (skipDate = false) => ({
 	govtskg_pack_sheet: "",
 	govtskg_net_weight: "",
 	govtskg_total_weight: "",
+	// New transporter fields
+	transporter_branch_id: "",
+	transporter_gst_no: "",
+	transporter_doc_no: "",
+	transporter_doc_date: "",
+	// New buyer order fields
+	buyer_order_no: "",
+	buyer_order_date: "",
+	// New e-invoice fields
+	irn: "",
+	ack_no: "",
+	ack_date: "",
+	qr_code: "",
 });

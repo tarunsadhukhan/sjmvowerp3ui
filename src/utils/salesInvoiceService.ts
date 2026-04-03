@@ -147,6 +147,16 @@ export type InvoiceDetails = {
     netWeight?: number;
     totalWeight?: number;
   } | null;
+  transporterBranchId?: number;
+  transporterGstNo?: string;
+  transporterDocNo?: string;
+  transporterDocDate?: string;
+  buyerOrderNo?: string;
+  buyerOrderDate?: string;
+  ackNo?: string;
+  ackDate?: string;
+  qrCode?: string;
+  eInvoiceSubmissionHistory?: unknown[];
   lines: InvoiceLine[];
 };
 

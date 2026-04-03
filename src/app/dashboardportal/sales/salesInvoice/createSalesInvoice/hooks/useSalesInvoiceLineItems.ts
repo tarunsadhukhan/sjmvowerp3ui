@@ -53,7 +53,6 @@ export const useSalesInvoiceLineItems = ({
 		item: line.item ?? "",
 		itemCode: line.itemCode,
 		itemName: line.itemName,
-		fullItemCode: line.fullItemCode,
 		itemMake: line.itemMake ?? "",
 		quantity: line.quantity != null ? String(line.quantity) : "",
 		rate: line.rate != null ? String(line.rate) : "",

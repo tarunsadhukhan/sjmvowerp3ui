@@ -533,7 +533,7 @@ function DOTransactionPageContent() {
 		if (selectedCustomer?.branches) {
 			const branch = selectedCustomer.branches.find((b) => b.id === String(value));
 			if (branch) {
-				const parts = [branch.code, branch.address, branch.stateName].filter(Boolean);
+				const parts = [branch.address, branch.stateName].filter(Boolean);
 				return parts.length > 0 ? parts.join(" — ") : branch.address || String(value);
 			}
 		}
@@ -550,7 +550,7 @@ function DOTransactionPageContent() {
 		if (selectedCustomer?.branches) {
 			const branch = selectedCustomer.branches.find((b) => b.id === String(value));
 			if (branch) {
-				const parts = [branch.code, branch.address, branch.stateName].filter(Boolean);
+				const parts = [branch.address, branch.stateName].filter(Boolean);
 				return parts.length > 0 ? parts.join(" — ") : branch.address || String(value);
 			}
 		}
@@ -696,7 +696,7 @@ function DOTransactionPageContent() {
 	const customerListWarning = React.useMemo(() => {
 		if (setupLoading || pageError) return null;
 		if (mode === "view") return null;
-		if (setupData && customers.length === 0 && (setupData.company || setupData.branches)) {
+		if (setupData && customers.length === 0) {
 			return (
 				<div role="alert" aria-live="assertive" className="bg-yellow-50 border border-yellow-200 rounded-md p-3">
 					<p className="text-sm text-yellow-800">

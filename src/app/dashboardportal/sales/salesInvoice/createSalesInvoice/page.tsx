@@ -646,17 +646,16 @@ function InvoiceTransactionPageContent() {
 		const billingStr = formValues.billing_to != null ? String(formValues.billing_to)
 			: invoiceDetails?.billingTo != null ? String(invoiceDetails.billingTo) : "";
 		if (billingStr && !opts.some((opt) => String(opt.value) === billingStr)) {
-			opts = [...opts, { label: invoiceDetails?.billingAddress ?? billingStr, value: billingStr }];
+			opts = [...opts, { label: billingStr, value: billingStr }];
 		}
 		const shippingStr = formValues.shipping_to != null ? String(formValues.shipping_to)
 			: invoiceDetails?.shippingTo != null ? String(invoiceDetails.shippingTo) : "";
 		if (shippingStr && !opts.some((opt) => String(opt.value) === shippingStr)) {
-			opts = [...opts, { label: invoiceDetails?.shippingAddress ?? shippingStr, value: shippingStr }];
+			opts = [...opts, { label: shippingStr, value: shippingStr }];
 		}
 		return opts;
 	}, [customerBranchOptions, formValues.billing_to, formValues.shipping_to,
-		invoiceDetails?.billingTo, invoiceDetails?.shippingTo,
-		invoiceDetails?.billingAddress, invoiceDetails?.shippingAddress]);
+		invoiceDetails?.billingTo, invoiceDetails?.shippingTo]);
 
 	const bankDetailOptions = React.useMemo<Option[]>(
 		() => (setupData?.bankDetails ?? []).map((b) => ({ label: `${b.bankName} - ${b.accNo}`, value: b.id })),
@@ -762,7 +761,7 @@ function InvoiceTransactionPageContent() {
 		if (fromOptions) return fromOptions;
 		// Otherwise construct from branch record with full address concatenation
 		if (billingBranchRecord) {
-			const parts = [billingBranchRecord.code, billingBranchRecord.address, billingBranchRecord.stateName].filter(Boolean);
+			const parts = [billingBranchRecord.address, billingBranchRecord.stateName].filter(Boolean);
 			return parts.length > 0 ? parts.join(" — ") : billingBranchRecord.address || String(value);
 		}
 		return typeof value === "string" ? value : undefined;
@@ -776,7 +775,7 @@ function InvoiceTransactionPageContent() {
 		if (fromOptions) return fromOptions;
 		// Otherwise construct from branch record with full address concatenation
 		if (shippingBranchRecord) {
-			const parts = [shippingBranchRecord.code, shippingBranchRecord.address, shippingBranchRecord.stateName].filter(Boolean);
+			const parts = [shippingBranchRecord.address, shippingBranchRecord.stateName].filter(Boolean);
 			return parts.length > 0 ? parts.join(" — ") : shippingBranchRecord.address || String(value);
 		}
 		return typeof value === "string" ? value : undefined;
@@ -1105,7 +1104,7 @@ function InvoiceTransactionPageContent() {
 				invoiceTypeId={String(formValues.invoice_type ?? "")}
 				juteFormRef={juteFormRef}
 				formValues={formValues}
-				isView={!canSave || mode === "view"}
+				isView={!canSave}
 			/>
 		</TransactionWrapper>
 

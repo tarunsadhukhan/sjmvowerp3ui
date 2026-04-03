@@ -17,6 +17,7 @@ export type IndentPreviewHeader = {
   updatedBy?: string;
   updatedAt?: string;
   companyName?: string;
+  companyLogo?: string;
 };
 
 export type IndentPreviewItem = {
@@ -138,6 +139,9 @@ const IndentPreview: React.FC<IndentPreviewProps> = ({ header, items, remarks, o
               flexBasis: { md: "25%" },
             }}
           >
+            {header.companyLogo && (
+              <img src={header.companyLogo} alt="" style={{ maxHeight: 60, maxWidth: 200, marginBottom: 4 }} />
+            )}
             <Typography
               variant="body1"
               sx={{

@@ -24,6 +24,7 @@ import useSelectedCompanyCoId from "@/hooks/use-selected-company-coid";
 import { toast } from "@/hooks/use-toast";
 import { useMenuId } from "@/hooks/useMenuId";
 import { useCompanyName } from "@/hooks/useCompanyName";
+import { useCompanyLogo } from "@/hooks/useCompanyLogo";
 
 import { DeliveryOrderHeaderForm } from "./components/DeliveryOrderHeaderForm";
 import { DeliveryOrderFooterForm, DeliveryOrderTotalsDisplay } from "./components/DeliveryOrderFooter";
@@ -89,6 +90,7 @@ function DOTransactionPageContent() {
 	const getMenuIdRef = React.useRef(getMenuId);
 	React.useEffect(() => { getMenuIdRef.current = getMenuId; }, [getMenuId]);
 	const companyName = useCompanyName();
+	const companyLogo = useCompanyLogo(coId);
 
 	const {
 		initialValues, setInitialValues, formValues, setFormValues,
@@ -523,13 +525,37 @@ function DOTransactionPageContent() {
 
 	const billingToLabel = React.useMemo(() => {
 		const value = formValues.billing_to ?? doDetails?.billingTo;
-		return getOptionLabel(customerBranchOptions, value) ?? (typeof value === "string" ? value : undefined);
-	}, [formValues.billing_to, doDetails?.billingTo, customerBranchOptions, getOptionLabel]);
+		if (!value) return undefined;
+		// First try to get from options
+		const fromOptions = getOptionLabel(customerBranchOptions, value);
+		if (fromOptions) return fromOptions;
+		// Otherwise construct from branch record with full address concatenation
+		if (selectedCustomer?.branches) {
+			const branch = selectedCustomer.branches.find((b) => b.id === String(value));
+			if (branch) {
+				const parts = [branch.code, branch.address, branch.stateName].filter(Boolean);
+				return parts.length > 0 ? parts.join(" — ") : branch.address || String(value);
+			}
+		}
+		return typeof value === "string" ? value : undefined;
+	}, [formValues.billing_to, doDetails?.billingTo, customerBranchOptions, getOptionLabel, selectedCustomer]);
 
 	const shippingToLabel = React.useMemo(() => {
 		const value = formValues.shipping_to ?? doDetails?.shippingTo;
-		return getOptionLabel(customerBranchOptions, value) ?? (typeof value === "string" ? value : undefined);
-	}, [formValues.shipping_to, doDetails?.shippingTo, customerBranchOptions, getOptionLabel]);
+		if (!value) return undefined;
+		// First try to get from options
+		const fromOptions = getOptionLabel(customerBranchOptions, value);
+		if (fromOptions) return fromOptions;
+		// Otherwise construct from branch record with full address concatenation
+		if (selectedCustomer?.branches) {
+			const branch = selectedCustomer.branches.find((b) => b.id === String(value));
+			if (branch) {
+				const parts = [branch.code, branch.address, branch.stateName].filter(Boolean);
+				return parts.length > 0 ? parts.join(" — ") : branch.address || String(value);
+			}
+		}
+		return typeof value === "string" ? value : undefined;
+	}, [formValues.shipping_to, doDetails?.shippingTo, customerBranchOptions, getOptionLabel, selectedCustomer]);
 
 	const salesOrderLabel = React.useMemo(() => {
 		const value = formValues.sales_order ?? doDetails?.salesOrder;
@@ -568,13 +594,14 @@ function DOTransactionPageContent() {
 			vehicleNo: (formValues.vehicle_no as string) || doDetails?.vehicleNo,
 			driverName: (formValues.driver_name as string) || doDetails?.driverName,
 			companyName,
+			companyLogo,
 			status: statusLabel,
 		}),
 		[
 			doDetails, formValues.date,
 			formValues.vehicle_no, formValues.driver_name,
 			branchLabel, customerLabel, billingToAddress, shippingToAddress, salesOrderLabel,
-			transporterLabel, companyName, statusLabel,
+			transporterLabel, companyName, companyLogo, statusLabel,
 		],
 	);
 
@@ -665,6 +692,23 @@ function DOTransactionPageContent() {
 		return doDetails?.deliveryOrderNo ? `Delivery Order ${doDetails.deliveryOrderNo}` : "Delivery Order Details";
 	}, [mode, doDetails?.deliveryOrderNo]);
 
+	// Detect empty customer list issue
+	const customerListWarning = React.useMemo(() => {
+		if (setupLoading || pageError) return null;
+		if (mode === "view") return null;
+		if (setupData && customers.length === 0 && (setupData.company || setupData.branches)) {
+			return (
+				<div role="alert" aria-live="assertive" className="bg-yellow-50 border border-yellow-200 rounded-md p-3">
+					<p className="text-sm text-yellow-800">
+						<strong>⚠️ No customers available:</strong> The customer list is empty. This typically occurs when customer party types are not properly configured.
+						Please contact your system administrator to ensure that customer master data with proper party types is set up in the system.
+					</p>
+				</div>
+			);
+		}
+		return null;
+	}, [setupLoading, pageError, mode, setupData, customers.length]);
+
 	return (
 		<>
 		<TransactionWrapper
@@ -674,7 +718,7 @@ function DOTransactionPageContent() {
 			statusChip={statusChipProps}
 			backAction={{ onClick: () => router.push("/dashboardportal/sales/deliveryOrder") }}
 			loading={loading || setupLoading}
-			alerts={pageError ? <div role="alert" aria-live="assertive" className="text-red-600">{pageError}</div> : undefined}
+			alerts={pageError ? <div role="alert" aria-live="assertive" className="text-red-600">{pageError}</div> : customerListWarning}
 			preview={
 				<DeliveryOrderPreview
 					header={previewHeader}

@@ -17,6 +17,7 @@ export type DOPreviewHeader = {
 	driverName?: string;
 	status?: string;
 	companyName?: string;
+	companyLogo?: string;
 };
 
 export type DOPreviewItem = {
@@ -113,13 +114,14 @@ const DeliveryOrderPreview: React.FC<DOPreviewProps> = ({ header, items, totals,
 	<meta charset="utf-8"/>
 	<title>Delivery Order - ${titleSuffix}</title>
 	<style>
-		@page { margin: 12mm; }
+		@page { size: A4; margin: 10mm; }
 		* { box-sizing: border-box; }
 		body { font-family: Arial, sans-serif; margin: 0; padding: 20px; color: #111; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
 		hr { border: none; border-top: 1px solid #ccc; margin: 12px 0; }
 	</style>
 </head>
 <body>
+	${h.companyLogo ? `<img src="${h.companyLogo}" style="max-height:60px;max-width:200px;margin-bottom:4px;display:block;" />` : ""}
 	<div style="font-size:15px;font-weight:700;text-transform:uppercase;">${h.companyName || "-"}</div>
 	<div style="font-size:13px;color:#555;margin-bottom:8px;">${h.branch || ""}</div>
 	<hr/>
@@ -215,6 +217,9 @@ const DeliveryOrderPreview: React.FC<DOPreviewProps> = ({ header, items, totals,
 		<Box sx={{ display: "flex", flexDirection: "column", gap: 2 }}>
 			<Box sx={{ border: "1px solid", borderColor: "divider", borderRadius: 1, p: 3, backgroundColor: "#fff" }}>
 				{/* Company Header */}
+				{header.companyLogo && (
+					<img src={header.companyLogo} alt="" style={{ maxHeight: 60, maxWidth: 200, marginBottom: 4 }} />
+				)}
 				<Typography variant="body1" sx={{ fontWeight: 700, fontSize: "1rem", textTransform: "uppercase" }}>
 					{header.companyName || "-"}
 				</Typography>

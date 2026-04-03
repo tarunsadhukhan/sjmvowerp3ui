@@ -411,6 +411,21 @@ export const mapInvoiceDetailsToFormValues = (
 			netWeight?: number;
 			totalWeight?: number;
 		} | null;
+		// New transporter fields (camelCase from API response)
+		transporterBranchId?: number;
+		transporterGstNo?: string;
+		transporterDocNo?: string;
+		transporterDocDate?: string;
+		// New buyer order fields
+		buyerOrderNo?: string;
+		buyerOrderDate?: string;
+		// New e-invoice fields
+		irn?: string;
+		ackNo?: string;
+		ackDate?: string;
+		qrCode?: string;
+		// Submission history (read-only from response)
+		eInvoiceSubmissionHistory?: unknown[];
 	},
 	defaultValues: Record<string, unknown>,
 ): Record<string, unknown> => ({
@@ -464,4 +479,97 @@ export const mapInvoiceDetailsToFormValues = (
 	govtskg_pack_sheet: details.govtskg?.packSheet != null ? String(details.govtskg.packSheet) : toStringValue(defaultValues.govtskg_pack_sheet),
 	govtskg_net_weight: details.govtskg?.netWeight != null ? String(details.govtskg.netWeight) : toStringValue(defaultValues.govtskg_net_weight),
 	govtskg_total_weight: details.govtskg?.totalWeight != null ? String(details.govtskg.totalWeight) : toStringValue(defaultValues.govtskg_total_weight),
+	// New transporter fields — API sends camelCase
+	transporter_branch_id: details.transporterBranchId ?? defaultValues.transporter_branch_id,
+	transporter_gst_no: toStringValue(details.transporterGstNo ?? defaultValues.transporter_gst_no),
+	transporter_doc_no: toStringValue(details.transporterDocNo ?? defaultValues.transporter_doc_no),
+	transporter_doc_date: normalizeDate(details.transporterDocDate) || toStringValue(defaultValues.transporter_doc_date),
+	// New buyer order fields
+	buyer_order_no: toStringValue(details.buyerOrderNo ?? defaultValues.buyer_order_no),
+	buyer_order_date: normalizeDate(details.buyerOrderDate) || toStringValue(defaultValues.buyer_order_date),
+	// New e-invoice fields
+	irn: toStringValue(details.irn ?? defaultValues.irn),
+	ack_no: toStringValue(details.ackNo ?? defaultValues.ack_no),
+	ack_date: normalizeDate(details.ackDate) || toStringValue(defaultValues.ack_date),
+	qr_code: toStringValue(details.qrCode ?? defaultValues.qr_code),
+	// Submission history (read-only from response)
+	e_invoice_submission_history: details.eInvoiceSubmissionHistory ?? defaultValues.e_invoice_submission_history,
 });
+
+export const mapFormValuesToApiPayload = (
+	formValues: Record<string, unknown>,
+	lineItems?: unknown[],
+): any => {
+	const payload: any = {
+		// Basic fields
+		branch: formValues.branch || null,
+		invoice_date: formValues.date || null,
+		party: formValues.party || null,
+		party_branch: formValues.party_branch || null,
+		delivery_order: formValues.delivery_order || null,
+		billing_to: formValues.billing_to || null,
+		shipping_to: formValues.shipping_to || null,
+		transporter: formValues.transporter || null,
+		vehicle_no: formValues.vehicle_no || null,
+		eway_bill_no: formValues.eway_bill_no || null,
+		eway_bill_date: formValues.eway_bill_date || null,
+		challan_no: formValues.challan_no || null,
+		challan_date: formValues.challan_date || null,
+		invoice_type: formValues.invoice_type || null,
+		footer_note: formValues.footer_note || null,
+		internal_note: formValues.internal_note || null,
+		terms_conditions: formValues.terms_conditions || null,
+		freight_charges: formValues.freight_charges || null,
+		round_off: formValues.round_off || null,
+		due_date: formValues.due_date || null,
+		type_of_sale: formValues.type_of_sale || null,
+		tax_id: formValues.tax_id || null,
+		transporter_address: formValues.transporter_address || null,
+		transporter_state_code: formValues.transporter_state_code || null,
+		transporter_state_name: formValues.transporter_state_name || null,
+		container_no: formValues.container_no || null,
+		contract_no: formValues.contract_no || null,
+		contract_date: formValues.contract_date || null,
+		consignment_no: formValues.consignment_no || null,
+		consignment_date: formValues.consignment_date || null,
+		payment_terms: formValues.payment_terms || null,
+		sales_order_id: formValues.sales_order_id || null,
+		sales_order_date: formValues.sales_order_date || null,
+		billing_state_code: formValues.billing_state_code || null,
+		bank_detail_id: formValues.bank_detail_id || null,
+		shipping_state_code: formValues.shipping_state_code || null,
+		intra_inter_state: formValues.intra_inter_state || null,
+		// Jute fields
+		jute_mr_no: formValues.jute_mr_no || null,
+		jute_claim_amount: formValues.jute_claim_amount || null,
+		jute_claim_description: formValues.jute_claim_description || null,
+		jute_mukam_id: formValues.jute_mukam_id || null,
+		// Govt Sacking fields
+		govtskg_pcso_no: formValues.govtskg_pcso_no || null,
+		govtskg_pcso_date: formValues.govtskg_pcso_date || null,
+		govtskg_admin_office_address: formValues.govtskg_admin_office_address || null,
+		govtskg_destination_rail_head: formValues.govtskg_destination_rail_head || null,
+		govtskg_loading_point: formValues.govtskg_loading_point || null,
+		govtskg_pack_sheet: formValues.govtskg_pack_sheet || null,
+		govtskg_net_weight: formValues.govtskg_net_weight || null,
+		govtskg_total_weight: formValues.govtskg_total_weight || null,
+		// New transporter fields
+		transporter_branch_id: formValues.transporter_branch_id || null,
+		transporter_doc_no: formValues.transporter_doc_no || null,
+		transporter_doc_date: formValues.transporter_doc_date || null,
+		// New buyer order fields
+		buyer_order_no: formValues.buyer_order_no || null,
+		buyer_order_date: formValues.buyer_order_date || null,
+		// New e-invoice fields
+		irn: formValues.irn || null,
+		ack_no: formValues.ack_no || null,
+		ack_date: formValues.ack_date || null,
+		qr_code: formValues.qr_code || null,
+	};
+
+	if (lineItems) {
+		payload.line_items = lineItems;
+	}
+
+	return payload;
+};

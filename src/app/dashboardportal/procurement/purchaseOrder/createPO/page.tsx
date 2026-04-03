@@ -28,6 +28,7 @@ import { toast } from "@/hooks/use-toast";
 import { useSidebarContext } from "@/components/dashboard/sidebarContext";
 import { useMenuId } from "@/hooks/useMenuId";
 import { useCompanyName } from "@/hooks/useCompanyName";
+import { useCompanyLogo } from "@/hooks/useCompanyLogo";
 import { IndentLineItemsDialog, type IndentLineItem } from "../components/IndentLineItemsDialog";
 import { POHeaderForm } from "./components/POHeaderForm";
 import { POFooterForm } from "./components/POFooterForm";
@@ -113,8 +114,9 @@ function POTransactionPageContent() {
   // Use shared menu ID hook
   const { getMenuId } = useMenuId({ transactionType: "po", menuIdFromUrl });
 
-  // Use shared company name hook
+  // Use shared company name/logo hooks
   const companyName = useCompanyName();
+  const companyLogo = useCompanyLogo(coId);
 
   const {
     initialValues,
@@ -827,6 +829,7 @@ function POTransactionPageContent() {
       project: projectLabel,
       expenseType: expenseLabel,
       companyName,
+      companyLogo,
       contactPerson: (formValues.contact_person as string) || poDetails?.contactPerson,
       contactNo: (formValues.contact_no as string) || poDetails?.contactNo,
       status: statusLabel,
@@ -854,6 +857,7 @@ function POTransactionPageContent() {
       projectLabel,
       expenseLabel,
       companyName,
+      companyLogo,
       expectedDate,
       statusLabel,
     ],

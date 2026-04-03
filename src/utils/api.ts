@@ -74,6 +74,9 @@ const apiRoutesconsole = {
     CREATE_CO_SETUP: `${API_URL}/companyAdmin/create_co_setup_data`,
     CREATE_CO: `${API_URL}/companyAdmin/create_co_data`,
     EDIT_CO: `${API_URL}/companyAdmin/edit_co_data`,
+    UPLOAD_CO_LOGO: `${API_URL}/companyAdmin/upload_co_logo`,
+    GET_CO_LOGO: `${API_URL}/companyAdmin/get_co_logo`,
+    DELETE_CO_LOGO: `${API_URL}/companyAdmin/delete_co_logo`,
 
     CO_CONFIG: `${API_URL}/companyAdmin/co_config`,
     EDIT_CO_CONFIG: `${API_URL}/companyAdmin/company_config`,
@@ -523,6 +526,7 @@ const apiRoutesPortalMasters = {
     SALES_INVOICE_APPROVE: `${API_URL}/salesInvoice/approve_sales_invoice`,
     SALES_INVOICE_REJECT: `${API_URL}/salesInvoice/reject_sales_invoice`,
     SALES_INVOICE_REOPEN: `${API_URL}/salesInvoice/reopen_sales_invoice`,
+    SALES_INVOICE_TRANSPORTER_BRANCHES: `${API_URL}/salesInvoice/get_transporter_branches`,
 
     // HRMS Employee endpoints
     HRMS_EMPLOYEE_LIST: `${API_URL}/hrms/employee_list`,

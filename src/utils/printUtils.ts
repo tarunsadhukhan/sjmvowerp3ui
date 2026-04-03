@@ -71,10 +71,12 @@ export function openStyledPrintWindow(
 
   // Default print helpers
   const printHelpers = `
-    @media print { @page { margin: 12mm; } }
-    body { margin: 0; padding: 20px; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
-    table { width: 100%; border-collapse: collapse; }
-    #preview-left-pane { max-width: 25% !important; flex-basis: 25% !important; word-break: break-word; white-space: normal; }
+    @media print {
+      @page { size: A4; margin: 10mm; }
+      body { margin: 0; padding: 20px; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+      table { width: 100%; border-collapse: collapse; }
+      #preview-left-pane { max-width: 25% !important; flex-basis: 25% !important; word-break: break-word; white-space: normal; }
+    }
   `;
 
   printWindow.document.open();

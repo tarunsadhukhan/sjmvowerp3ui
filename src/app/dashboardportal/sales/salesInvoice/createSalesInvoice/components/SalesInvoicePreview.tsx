@@ -3,6 +3,7 @@
 import React, { useRef } from "react";
 import { Box, Stack, Typography } from "@mui/material";
 import { Button } from "@/components/ui/button";
+import { isRawJuteInvoice } from "../utils/salesInvoiceConstants";
 
 export type InvoicePreviewHeader = {
 	invoiceNo?: string;
@@ -41,6 +42,7 @@ export type InvoicePreviewHeader = {
 	updatedBy?: string;
 	updatedAt?: string;
 	companyName?: string;
+	companyLogo?: string;
 	companyAddress?: string;
 	companyPhone?: string;
 	companyGstin?: string;
@@ -58,6 +60,8 @@ export type InvoicePreviewItem = {
 	srNo: number;
 	hsnCode?: string;
 	itemGroup?: string;
+	itemCode?: string;
+	itemGroupPath?: string;
 	item?: string;
 	netWeight?: string | number;
 	quantity?: string | number;
@@ -194,24 +198,49 @@ const SalesInvoicePreview: React.FC<InvoicePreviewProps> = ({ header, items, tot
 
 		const h = header;
 		const hasNetWeight = items.some((it) => it.netWeight !== undefined && it.netWeight !== "");
+		const isRawJute = isRawJuteInvoice(h.invoiceType);
 
 		const itemRowsHtml = items.length
 			? items
 					.map(
-						(item) => `
+						(item) => {
+							const itemCodeDisplay = item.itemCode || "";
+							const itemNameDisplay = item.item || "-";
+							const descriptionContent = `${itemCodeDisplay}<br/><strong>${itemNameDisplay}</strong>${item.remarks && item.remarks !== "-" ? `<br/><em>${item.remarks}</em>` : ""}`;
+
+							if (isRawJute) {
+								// For Raw Jute: Show Qty with UOM below in a single cell
+								return `
 				<tr>
 					<td style="border:1px solid #000;padding:4px 6px;font-size:11px;text-align:center;">${item.srNo}</td>
 					<td style="border:1px solid #000;padding:4px 6px;font-size:11px;text-align:center;">${item.hsnCode || "-"}</td>
-					<td style="border:1px solid #000;padding:4px 6px;font-size:11px;">${item.item || "-"}</td>
+					<td style="border:1px solid #000;padding:4px 6px;font-size:11px;">${descriptionContent}</td>
+					${hasNetWeight ? `<td style="border:1px solid #000;padding:4px 6px;font-size:11px;text-align:right;">${item.netWeight !== undefined && item.netWeight !== "" ? formatAmount(item.netWeight) : "-"}</td>` : ""}
+					<td style="border:1px solid #000;padding:4px 6px;font-size:11px;text-align:right;">
+						<div style="font-weight:600;">${item.quantity ?? "-"}</div>
+						<div style="font-size:10px;color:#555;">${item.uom || "-"}</div>
+					</td>
+					<td style="border:1px solid #000;padding:4px 6px;font-size:11px;text-align:right;">${formatAmount(item.rate)}</td>
+					<td style="border:1px solid #000;padding:4px 6px;font-size:11px;text-align:right;">${formatAmount(item.netAmount)}</td>
+				</tr>`;
+							} else {
+								// For other invoice types: Keep separate Qty and UOM columns
+								return `
+				<tr>
+					<td style="border:1px solid #000;padding:4px 6px;font-size:11px;text-align:center;">${item.srNo}</td>
+					<td style="border:1px solid #000;padding:4px 6px;font-size:11px;text-align:center;">${item.hsnCode || "-"}</td>
+					<td style="border:1px solid #000;padding:4px 6px;font-size:11px;">${descriptionContent}</td>
 					${hasNetWeight ? `<td style="border:1px solid #000;padding:4px 6px;font-size:11px;text-align:right;">${item.netWeight !== undefined && item.netWeight !== "" ? formatAmount(item.netWeight) : "-"}</td>` : ""}
 					<td style="border:1px solid #000;padding:4px 6px;font-size:11px;text-align:right;">${item.quantity ?? "-"}</td>
 					<td style="border:1px solid #000;padding:4px 6px;font-size:11px;text-align:center;">${item.uom || "-"}</td>
 					<td style="border:1px solid #000;padding:4px 6px;font-size:11px;text-align:right;">${formatAmount(item.rate)}</td>
 					<td style="border:1px solid #000;padding:4px 6px;font-size:11px;text-align:right;">${formatAmount(item.netAmount)}</td>
-				</tr>`,
+				</tr>`;
+							}
+						}
 					)
 					.join("")
-			: `<tr><td colspan="${hasNetWeight ? 8 : 7}" style="border:1px solid #000;padding:10px;text-align:center;font-size:11px;">No line items.</td></tr>`;
+			: `<tr><td colspan="${isRawJute ? hasNetWeight ? 7 : 6 : hasNetWeight ? 8 : 7}" style="border:1px solid #000;padding:10px;text-align:center;font-size:11px;">No line items.</td></tr>`;
 
 		const cgstLabel = totals?.cgstPercent ? `CGST@${totals.cgstPercent}%` : "CGST";
 		const sgstLabel = totals?.sgstPercent ? `SGST@${totals.sgstPercent}%` : "SGST";
@@ -256,13 +285,18 @@ const SalesInvoicePreview: React.FC<InvoicePreviewProps> = ({ header, items, tot
 
 		const netWeightTh = hasNetWeight ? `<th style="border:1px solid #000;padding:4px 6px;font-size:10px;background:#f0f0f0;">Net wt.</th>` : "";
 
+		const quantityHeaderHtml = isRawJute
+			? `<th style="border:1px solid #000;padding:4px 6px;font-size:10px;text-align:center;">Quantity<br/>(with UOM)</th>`
+			: `<th style="border:1px solid #000;padding:4px 6px;font-size:10px;text-align:center;">Quantity</th>
+				<th style="border:1px solid #000;padding:4px 6px;font-size:10px;text-align:center;">UOM</th>`;
+
 		const html = `<!DOCTYPE html>
 <html>
 <head>
 	<meta charset="utf-8"/>
 	<title>Tax Invoice - ${titleSuffix}</title>
 	<style>
-		@page { margin: 8mm; }
+		@page { size: A4; margin: 8mm; }
 		* { box-sizing: border-box; }
 		body { font-family: Arial, sans-serif; margin: 0; padding: 0; color: #111; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
 	</style>
@@ -277,6 +311,7 @@ const SalesInvoicePreview: React.FC<InvoicePreviewProps> = ({ header, items, tot
 	<table style="width:100%;border-collapse:collapse;border-bottom:1px solid #000;">
 		<tr>
 			<td style="width:50%;border-right:1px solid #000;padding:8px 10px;vertical-align:top;">
+				${h.companyLogo ? `<img src="${h.companyLogo}" style="max-height:60px;max-width:200px;margin-bottom:4px;display:block;" />` : ""}
 				<div style="font-size:13px;font-weight:700;">${h.companyName || "-"}</div>
 				${h.companyAddress ? `<div style="font-size:11px;margin-top:2px;">${h.companyAddress}</div>` : ""}
 				${h.companyPhone ? `<div style="font-size:11px;margin-top:1px;">Phone no. : ${h.companyPhone}</div>` : ""}
@@ -338,8 +373,7 @@ const SalesInvoicePreview: React.FC<InvoicePreviewProps> = ({ header, items, tot
 				<th style="border:1px solid #000;padding:4px 6px;font-size:10px;text-align:center;">HSN CODE</th>
 				<th style="border:1px solid #000;padding:4px 6px;font-size:10px;text-align:center;">Description &amp; Specification of Goods</th>
 				${netWeightTh}
-				<th style="border:1px solid #000;padding:4px 6px;font-size:10px;text-align:center;">Quantity</th>
-				<th style="border:1px solid #000;padding:4px 6px;font-size:10px;text-align:center;">UOM</th>
+				${quantityHeaderHtml}
 				<th style="border:1px solid #000;padding:4px 6px;font-size:10px;text-align:center;">Rate</th>
 				<th style="border:1px solid #000;padding:4px 6px;font-size:10px;text-align:center;">Value (Rs.)</th>
 			</tr>
@@ -536,7 +570,11 @@ const SalesInvoicePreview: React.FC<InvoicePreviewProps> = ({ header, items, tot
 									<Box component="tr" key={`inv-row-${item.srNo}`}>
 										<Box component="td" sx={{ border: "1px solid", borderColor: "divider", p: "4px 6px", fontSize: 11, textAlign: "center" }}>{item.srNo}</Box>
 										<Box component="td" sx={{ border: "1px solid", borderColor: "divider", p: "4px 6px", fontSize: 11, textAlign: "center" }}>{item.hsnCode || "-"}</Box>
-										<Box component="td" sx={{ border: "1px solid", borderColor: "divider", p: "4px 6px", fontSize: 11 }}>{item.item || "-"}</Box>
+										<Box component="td" sx={{ border: "1px solid", borderColor: "divider", p: "4px 6px", fontSize: 11 }}>
+												<div>{item.itemCode || ""}</div>
+												<div style={{ fontWeight: "bold" }}>{item.item || "-"}</div>
+												{item.remarks && item.remarks !== "-" && <div style={{ fontStyle: "italic", fontSize: "0.9em" }}>{item.remarks}</div>}
+											</Box>
 										{hasNetWeight && <Box component="td" sx={{ border: "1px solid", borderColor: "divider", p: "4px 6px", fontSize: 11, textAlign: "right" }}>{item.netWeight !== undefined && item.netWeight !== "" ? formatAmount(item.netWeight) : "-"}</Box>}
 										<Box component="td" sx={{ border: "1px solid", borderColor: "divider", p: "4px 6px", fontSize: 11, textAlign: "right" }}>{item.quantity ?? "-"}</Box>
 										<Box component="td" sx={{ border: "1px solid", borderColor: "divider", p: "4px 6px", fontSize: 11, textAlign: "center" }}>{item.uom || "-"}</Box>

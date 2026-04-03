@@ -10,6 +10,8 @@ import {
 	useDeferredOptionCache,
 	useTransactionSetup,
 	useTransactionPreview,
+	ItemSelectionDialog,
+	type SelectedItem,
 } from "@/components/ui/transaction";
 import { useBranchOptions } from "@/utils/branchUtils";
 import {
@@ -24,6 +26,7 @@ import { toast } from "@/hooks/use-toast";
 import { useSidebarContext } from "@/components/dashboard/sidebarContext";
 import { useMenuId } from "@/hooks/useMenuId";
 import { useCompanyName } from "@/hooks/useCompanyName";
+import { useCompanyLogo } from "@/hooks/useCompanyLogo";
 
 import { SalesOrderHeaderForm } from "./components/SalesOrderHeaderForm";
 import { SalesOrderTotalsDisplay } from "./components/SalesOrderTotalsDisplay";
@@ -42,7 +45,7 @@ import { useSalesOrderJuteYarnSchema } from "./hooks/useSalesOrderJuteYarnSchema
 import { useSalesOrderFormSubmission } from "./hooks/useSalesOrderFormSubmission";
 import { useSalesOrderApproval } from "./hooks/useSalesOrderApproval";
 import { useSalesOrderLineItems } from "./hooks/useSalesOrderLineItems";
-import type { ItemGroupCacheEntry, SalesOrderSetupData } from "./types/salesOrderTypes";
+import type { EditableLineItem, ItemGroupCacheEntry, SalesOrderSetupData } from "./types/salesOrderTypes";
 
 import { mapItemGroupDetailResponse, mapSalesOrderSetupResponse, mapSalesOrderDetailsToFormValues } from "./utils/salesOrderMappers";
 import { buildDefaultFormValues, createBlankLine } from "./utils/salesOrderFactories";
@@ -98,6 +101,7 @@ function SalesOrderTransactionPageContent() {
 
 	const { getMenuId } = useMenuId({ transactionType: "salesOrder", menuIdFromUrl });
 	const companyName = useCompanyName();
+	const companyLogo = useCompanyLogo(coId);
 
 	const {
 		initialValues,
@@ -312,6 +316,7 @@ function SalesOrderTransactionPageContent() {
 		filledLineItems,
 		lineItemsValid,
 		itemGroupsFromLineItems,
+		lineHasAnyData,
 	} = useSalesOrderLineItems({
 		mode,
 		coConfig,
@@ -339,6 +344,58 @@ function SalesOrderTransactionPageContent() {
 			return [createBlankLine()];
 		});
 	}, [mode, setLineItems]);
+
+	// Item selection dialog
+	const [itemDialogOpen, setItemDialogOpen] = React.useState(false);
+
+	const excludeItemIds = React.useMemo(() => {
+		const ids = new Set<number>();
+		for (const li of lineItems) {
+			if (li.item) {
+				const num = Number(li.item);
+				if (Number.isFinite(num)) ids.add(num);
+			}
+		}
+		return ids;
+	}, [lineItems]);
+
+	const handleItemDialogConfirm = React.useCallback(
+		(items: SelectedItem[]) => {
+			if (mode === "view" || !items.length) return;
+
+			const newLines: EditableLineItem[] = items.map((item) => ({
+				id: crypto.randomUUID?.() ?? String(Date.now() + Math.random()),
+				itemGroup: String(item.item_grp_id),
+				item: String(item.item_id),
+				itemMake: "",
+				hsnCode: item.hsn_code ?? "",
+				quantity: "",
+				rate: "",
+				uom: String(item.uom_id),
+				discountValue: "",
+				remarks: "",
+				taxPercentage: item.tax_percentage ?? undefined,
+			}));
+
+			const groupIds = [...new Set(items.map((i) => String(i.item_grp_id)))];
+			for (const gid of groupIds) {
+				if (!itemGroupCache[gid] && !itemGroupLoading[gid]) {
+					void ensureItemGroupData(gid);
+				}
+			}
+
+			setLineItems((prev) => {
+				const filledLines = prev.filter((line) => lineHasAnyData(line));
+				return [...filledLines, ...newLines, createBlankLine()];
+			});
+
+			toast({
+				title: `Added ${newLines.length} item${newLines.length > 1 ? "s" : ""}`,
+				description: "Fill in quantity, rate and other details.",
+			});
+		},
+		[mode, setLineItems, lineHasAnyData, itemGroupCache, itemGroupLoading, ensureItemGroupData]
+	);
 
 	const suppressTaxRecalcRef = React.useRef(false);
 	const { taxType } = useSalesOrderTaxCalculations({
@@ -615,11 +672,12 @@ function SalesOrderTransactionPageContent() {
 			transporterName: transporterOptions.find((o) => String(o.value) === String(formValues.transporter))?.label ?? soDetails?.transporterName ?? undefined,
 			status: statusChipProps?.label ?? soDetails?.status,
 			companyName,
+			companyLogo,
 		}),
 		[
 			soDetails, formValues.date, formValues.party, formValues.broker, formValues.transporter,
 			branchValue, resolvedBranchOptions, customerOptions, brokerOptions, transporterOptions,
-			statusChipProps?.label, companyName,
+			statusChipProps?.label, companyName, companyLogo,
 		],
 	);
 
@@ -756,6 +814,7 @@ function SalesOrderTransactionPageContent() {
 	}, [mode, soDetails?.salesNo]);
 
 	return (
+		<>
 		<TransactionWrapper
 			title={pageTitle}
 			subtitle={mode === "create" ? "Create a new sales order" : mode === "edit" ? "Edit sales order" : "View sales order details"}
@@ -778,6 +837,16 @@ function SalesOrderTransactionPageContent() {
 				columns: lineItemColumns,
 				placeholder: "Add line items to the sales order",
 				selectionColumnWidth: "28px",
+				headerAction: canEdit ? (
+					<Button
+						type="button"
+						size="sm"
+						onClick={() => setItemDialogOpen(true)}
+						disabled={!coId}
+					>
+						Add Items
+					</Button>
+				) : undefined,
 			}}
 				footer={
 					<div className="space-y-6 pt-4 border-t">
@@ -866,5 +935,16 @@ function SalesOrderTransactionPageContent() {
 				invoiceTypeCode={invoiceTypeCode}
 			/>
 		</TransactionWrapper>
+
+		<ItemSelectionDialog
+			open={itemDialogOpen}
+			onOpenChange={setItemDialogOpen}
+			coId={coId}
+			onConfirm={handleItemDialogConfirm}
+			filter="saleable"
+			excludeItemIds={excludeItemIds}
+			title="Select Items for Sales Order"
+		/>
+		</>
 	);
 }

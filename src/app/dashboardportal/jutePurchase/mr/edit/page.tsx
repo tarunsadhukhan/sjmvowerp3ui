@@ -175,9 +175,29 @@ function JuteMREditPageContent() {
 
 	const handleHeaderChange = React.useCallback(
 		(field: keyof JuteMRHeader, value: string | number | null) => {
-			setHeader((prev) => (prev ? { ...prev, [field]: value } : null));
+			setHeader((prev) => {
+				if (!prev) return null;
+				const updated = { ...prev, [field]: value };
+
+				// When party_branch_id is changed, also update address and gst_no from the selected branch
+				if (field === "party_branch_id") {
+					if (value != null) {
+						const selectedBranch = partyBranchOptions.find((b) => b.party_mst_branch_id === value);
+						if (selectedBranch) {
+							updated.party_address = selectedBranch.address;
+							updated.party_gst_no = selectedBranch.gst_no;
+						}
+					} else {
+						// Clear fields when party branch is deselected
+						updated.party_address = null;
+						updated.party_gst_no = null;
+					}
+				}
+
+				return updated;
+			});
 		},
-		[]
+		[partyBranchOptions]
 	);
 
 	// Build line item columns
@@ -285,10 +305,12 @@ function JuteMREditPageContent() {
 			
 			// Auto-select if only 1 branch and no branch is currently selected
 			if (branches.length === 1 && !currentPartyBranchId) {
-				setHeader((prev) => prev ? { 
-					...prev, 
+				setHeader((prev) => prev ? {
+					...prev,
 					party_branch_id: branches[0].party_mst_branch_id,
-					party_branch_name: branches[0].display 
+					party_branch_name: branches[0].display,
+					party_address: branches[0].address,
+					party_gst_no: branches[0].gst_no
 				} : null);
 			}
 		} catch (err) {

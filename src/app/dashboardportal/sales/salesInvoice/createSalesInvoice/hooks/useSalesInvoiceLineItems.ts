@@ -52,6 +52,7 @@ export const useSalesInvoiceLineItems = ({
 		itemGroup: line.itemGroup ? String(line.itemGroup) : "",
 		item: line.item ?? "",
 		itemCode: line.itemCode,
+		itemName: line.itemName,
 		itemMake: line.itemMake ?? "",
 		quantity: line.quantity != null ? String(line.quantity) : "",
 		rate: line.rate != null ? String(line.rate) : "",
@@ -219,6 +220,8 @@ export const useSalesInvoiceLineItems = ({
 					itemGroup: String(item.item_grp_id),
 					item: String(item.item_id),
 					itemCode: item.item_code,
+					itemName: item.item_name,
+					fullItemCode: item.full_item_code,
 					itemMake: item.item_make_id ? String(item.item_make_id) : "",
 					quantity: String(qty),
 					rate: String(rate),
@@ -265,6 +268,8 @@ export const useSalesInvoiceLineItems = ({
 					itemGroup: String(item.item_grp_id),
 					item: String(item.item_id),
 					itemCode: item.item_code,
+					itemName: item.item_name,
+					fullItemCode: item.full_item_code,
 					itemMake: item.item_make_id ? String(item.item_make_id) : "",
 					quantity: String(qty),
 					rate: String(rate),
@@ -330,5 +335,6 @@ export const useSalesInvoiceLineItems = ({
 		handleLineFieldChange, replaceWithDeliveryOrderLines, replaceWithSalesOrderLines,
 		clearImportedLines,
 		mapLineToEditable, filledLineItems, lineItemsValid, itemGroupsFromLineItems,
+		lineHasAnyData,
 	};
 };

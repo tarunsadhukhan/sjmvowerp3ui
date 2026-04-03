@@ -179,6 +179,7 @@ export type DeliveryOrderLineForInvoice = {
   item_id: number;
   item_code?: string;
   item_name?: string;
+  full_item_code?: string;
   item_grp_id: number;
   item_grp_code?: string;
   item_grp_name?: string;
@@ -203,6 +204,7 @@ export type SalesOrderLineForInvoice = {
   item_id: number;
   item_code?: string;
   item_name?: string;
+  full_item_code?: string;
   item_grp_id: number;
   item_grp_code?: string;
   item_grp_name?: string;

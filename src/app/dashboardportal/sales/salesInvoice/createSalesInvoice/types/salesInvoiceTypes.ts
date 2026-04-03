@@ -104,6 +104,8 @@ export type EditableLineItem = {
 	itemGroup: string;
 	item: string;
 	itemCode?: string;
+	itemName?: string;
+	fullItemCode?: string;
 	itemMake: string;
 	quantity: string;
 	rate: string;

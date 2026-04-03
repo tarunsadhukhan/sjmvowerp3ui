@@ -845,14 +845,7 @@ function InvoiceTransactionPageContent() {
 
 	const previewItems = React.useMemo(() => {
 		return filledLineItems.map((line, index) => {
-			const groupLabel = itemGroups.find((grp) => grp.id === line.itemGroup)?.label ?? line.itemGroup ?? "";
-			const itemLabel = getItemLabel(line.itemGroup, line.item, line.itemCode);
 			const uomLabel = getUomLabel(line.itemGroup, line.item, line.uom);
-			const displayItem = (() => {
-				const parts = [groupLabel, itemLabel].filter(Boolean);
-				if (parts.length > 0) return parts.join(" — ");
-				return line.item || "-";
-			})();
 			const discountType = (() => {
 				if (line.discountType === 1) return "%";
 				if (line.discountType === 2) return "Amt";
@@ -861,8 +854,8 @@ function InvoiceTransactionPageContent() {
 			return {
 				srNo: index + 1,
 				hsnCode: line.hsnCode,
-				itemGroup: groupLabel || undefined,
-				item: displayItem,
+				itemCode: line.fullItemCode || line.itemCode || undefined,
+				item: line.itemName || line.item || "-",
 				netWeight: line.govtskgNetWeight != null ? line.govtskgNetWeight : undefined,
 				quantity: line.quantity || "-",
 				uom: uomLabel,
@@ -873,7 +866,7 @@ function InvoiceTransactionPageContent() {
 				remarks: line.remarks || "-",
 			};
 		});
-	}, [filledLineItems, getItemLabel, getUomLabel, itemGroups]);
+	}, [filledLineItems, getUomLabel, itemGroups]);
 
 	const previewTotals = React.useMemo(
 		() => ({

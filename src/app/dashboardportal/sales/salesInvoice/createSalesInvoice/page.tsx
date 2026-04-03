@@ -9,6 +9,8 @@ import {
 	useDeferredOptionCache,
 	useTransactionSetup,
 	useTransactionPreview,
+	ItemSelectionDialog,
+	type SelectedItem,
 } from "@/components/ui/transaction";
 import { useBranchOptions } from "@/utils/branchUtils";
 import {
@@ -23,6 +25,7 @@ import useSelectedCompanyCoId from "@/hooks/use-selected-company-coid";
 import { toast } from "@/hooks/use-toast";
 import { useMenuId } from "@/hooks/useMenuId";
 import { useCompanyName } from "@/hooks/useCompanyName";
+import { useCompanyLogo } from "@/hooks/useCompanyLogo";
 
 import { SalesInvoiceHeaderForm } from "./components/SalesInvoiceHeaderForm";
 import { SalesInvoiceFooterForm, SalesInvoiceTotalsDisplay } from "./components/SalesInvoiceFooter";
@@ -36,7 +39,7 @@ import { useSalesInvoiceHeaderSchema, useSalesInvoiceTypeSpecificHeaderSchema, u
 import { useSalesInvoiceFormSubmission } from "./hooks/useSalesInvoiceFormSubmission";
 import { useSalesInvoiceApproval } from "./hooks/useSalesInvoiceApproval";
 
-import type { ItemGroupCacheEntry, InvoiceSetupData, Option } from "./types/salesInvoiceTypes";
+import type { EditableLineItem, ItemGroupCacheEntry, InvoiceSetupData, Option } from "./types/salesInvoiceTypes";
 import { mapItemGroupDetailResponse, mapInvoiceSetupResponse, mapInvoiceDetailsToFormValues, buildMukamOptions } from "./utils/salesInvoiceMappers";
 import { calculateInvoiceTotals } from "./utils/salesInvoiceCalculations";
 import { buildDefaultFormValues, createBlankLine } from "./utils/salesInvoiceFactories";
@@ -89,6 +92,7 @@ function InvoiceTransactionPageContent() {
 
 	const { getMenuId } = useMenuId({ transactionType: "sales-invoice", menuIdFromUrl });
 	const companyName = useCompanyName();
+	const companyLogo = useCompanyLogo(coId);
 
 	const {
 		initialValues, setInitialValues, formValues, setFormValues,
@@ -328,6 +332,7 @@ function InvoiceTransactionPageContent() {
 		handleLineFieldChange, replaceWithDeliveryOrderLines, replaceWithSalesOrderLines,
 		clearImportedLines,
 		mapLineToEditable, filledLineItems, lineItemsValid, itemGroupsFromLineItems,
+		lineHasAnyData,
 	} = useSalesInvoiceLineItems({
 		mode,
 		partyState,
@@ -353,16 +358,70 @@ function InvoiceTransactionPageContent() {
 		});
 	}, [mode, setLineItems]);
 
+	// Item selection dialog
+	const [itemDialogOpen, setItemDialogOpen] = React.useState(false);
+
+	const excludeItemIds = React.useMemo(() => {
+		const ids = new Set<number>();
+		for (const li of lineItems) {
+			if (li.item) {
+				const num = Number(li.item);
+				if (Number.isFinite(num)) ids.add(num);
+			}
+		}
+		return ids;
+	}, [lineItems]);
+
+	const handleItemDialogConfirm = React.useCallback(
+		(items: SelectedItem[]) => {
+			if (mode === "view" || !items.length) return;
+
+			const newLines: EditableLineItem[] = items.map((item) => ({
+				id: crypto.randomUUID?.() ?? String(Date.now() + Math.random()),
+				itemGroup: String(item.item_grp_id),
+				item: String(item.item_id),
+				itemMake: "",
+				hsnCode: item.hsn_code ?? "",
+				quantity: "",
+				rate: "",
+				uom: String(item.uom_id),
+				discountValue: "",
+				remarks: "",
+				taxPercentage: item.tax_percentage ?? undefined,
+			}));
+
+			const groupIds = [...new Set(items.map((i) => String(i.item_grp_id)))];
+			for (const gid of groupIds) {
+				if (!itemGroupCache[gid] && !itemGroupLoading[gid]) {
+					void ensureItemGroupData(gid);
+				}
+			}
+
+			setLineItems((prev) => {
+				const filledLines = prev.filter((line) => lineHasAnyData(line));
+				return [...filledLines, ...newLines, createBlankLine()];
+			});
+
+			toast({
+				title: `Added ${newLines.length} item${newLines.length > 1 ? "s" : ""}`,
+				description: "Fill in quantity, rate and other details.",
+			});
+		},
+		[mode, setLineItems, lineHasAnyData, itemGroupCache, itemGroupLoading, ensureItemGroupData]
+	);
+
 	// Auto-fetch lines when delivery order changes
 	React.useEffect(() => {
 		if (mode === "view") return;
 		const doId = formValues.delivery_order ? String(formValues.delivery_order) : "";
 
 		if (!doId) {
+			if (linesLoadedFromInvoiceApiRef.current) return;
 			clearImportedLines();
 			return;
 		}
 
+		linesLoadedFromInvoiceApiRef.current = false;
 		let cancelled = false;
 		setLinesLoading(true);
 		fetchDeliveryOrderLines(doId)
@@ -388,7 +447,9 @@ function InvoiceTransactionPageContent() {
 
 		if (!soId) {
 			if (!formValues.delivery_order) {
-				clearImportedLines();
+				if (!linesLoadedFromInvoiceApiRef.current) {
+					clearImportedLines();
+				}
 			}
 			return;
 		}
@@ -396,6 +457,7 @@ function InvoiceTransactionPageContent() {
 		// DO lines take priority — skip SO fetch if a DO is selected
 		if (formValues.delivery_order) return;
 
+		linesLoadedFromInvoiceApiRef.current = false;
 		let cancelled = false;
 		setLinesLoading(true);
 		fetchSalesOrderLinesForInvoice(soId)
@@ -451,6 +513,7 @@ function InvoiceTransactionPageContent() {
 
 	const lastDetailsKeyRef = React.useRef<string | null>(null);
 	const detailsFetchedRef = React.useRef(false);
+	const linesLoadedFromInvoiceApiRef = React.useRef(false);
 
 	React.useEffect(() => {
 		if (lastDetailsKeyRef.current !== detailsFetchKey) {
@@ -513,6 +576,7 @@ function InvoiceTransactionPageContent() {
 
 				const normalizedLines = (details.lines ?? []).map((line) => mapLineToEditable(line));
 				replaceItems(normalizedLines);
+				linesLoadedFromInvoiceApiRef.current = true;
 
 				setPageError(null);
 			} catch (error) {
@@ -569,6 +633,30 @@ function InvoiceTransactionPageContent() {
 		selectedPartyId,
 	});
 
+	const resolvedCustomerOptions = React.useMemo(() => {
+		const strValue = formValues.party != null ? String(formValues.party)
+			: invoiceDetails?.party != null ? String(invoiceDetails.party) : "";
+		if (!strValue) return customerOptions;
+		if (customerOptions.some((opt) => String(opt.value) === strValue)) return customerOptions;
+		return [...customerOptions, { label: invoiceDetails?.partyName ?? strValue, value: strValue }];
+	}, [customerOptions, formValues.party, invoiceDetails?.party, invoiceDetails?.partyName]);
+
+	const resolvedCustomerBranchOptions = React.useMemo(() => {
+		let opts = customerBranchOptions;
+		const billingStr = formValues.billing_to != null ? String(formValues.billing_to)
+			: invoiceDetails?.billingTo != null ? String(invoiceDetails.billingTo) : "";
+		if (billingStr && !opts.some((opt) => String(opt.value) === billingStr)) {
+			opts = [...opts, { label: billingStr, value: billingStr }];
+		}
+		const shippingStr = formValues.shipping_to != null ? String(formValues.shipping_to)
+			: invoiceDetails?.shippingTo != null ? String(invoiceDetails.shippingTo) : "";
+		if (shippingStr && !opts.some((opt) => String(opt.value) === shippingStr)) {
+			opts = [...opts, { label: shippingStr, value: shippingStr }];
+		}
+		return opts;
+	}, [customerBranchOptions, formValues.billing_to, formValues.shipping_to,
+		invoiceDetails?.billingTo, invoiceDetails?.shippingTo]);
+
 	const bankDetailOptions = React.useMemo<Option[]>(
 		() => (setupData?.bankDetails ?? []).map((b) => ({ label: `${b.bankName} - ${b.accNo}`, value: b.id })),
 		[setupData?.bankDetails],
@@ -576,8 +664,8 @@ function InvoiceTransactionPageContent() {
 
 	const headerSchema = useSalesInvoiceHeaderSchema({
 		branchOptions: resolvedBranchOptions,
-		customerOptions,
-		customerBranchOptions,
+		customerOptions: resolvedCustomerOptions,
+		customerBranchOptions: resolvedCustomerBranchOptions,
 		transporterOptions,
 		brokerOptions,
 		deliveryOrderOptions,
@@ -594,21 +682,6 @@ function InvoiceTransactionPageContent() {
 	const typeSpecificHeaderSchema = useSalesInvoiceTypeSpecificHeaderSchema({ mode, headerFieldsDisabled, mukamOptions, invoiceTypeId: String(formValues.invoice_type ?? "") });
 	const footerSchema = useSalesInvoiceFooterSchema({ mode });
 
-	const canEdit = mode !== "view";
-
-	const lineItemColumns = useInvoiceLineItemColumns({
-		canEdit,
-		itemGroupOptions,
-		getItemGroupLabel,
-		getItemOptions,
-		getItemLabel,
-		getUomOptions,
-		getUomLabel,
-		onFieldChange: handleLineFieldChange,
-		invoiceTypeId: String(formValues.invoice_type ?? ""),
-		getUomConversions,
-	});
-
 	const {
 		approvalLoading, approvalInfo, approvalPermissions, statusChipProps,
 		handleApprove, handleReject, handleOpen, handleCancelDraft,
@@ -623,6 +696,24 @@ function InvoiceTransactionPageContent() {
 		setInvoiceDetails,
 	});
 
+	const canEdit = mode !== "view";
+
+	// Gate editing on approval permissions (follow PO/Indent pattern)
+	const canSave = mode !== "view" && approvalPermissions.canSave !== false;
+
+	const lineItemColumns = useInvoiceLineItemColumns({
+		canEdit: canSave,
+		itemGroupOptions,
+		getItemGroupLabel,
+		getItemOptions,
+		getItemLabel,
+		getUomOptions,
+		getUomLabel,
+		onFieldChange: handleLineFieldChange,
+		invoiceTypeId: String(formValues.invoice_type ?? ""),
+		getUomConversions,
+	});
+
 	const branchLabel = React.useMemo(() => {
 		const value = formValues.branch ?? invoiceDetails?.branch;
 		return getOptionLabel(resolvedBranchOptions, value) ?? (typeof value === "string" ? value : undefined);
@@ -630,23 +721,13 @@ function InvoiceTransactionPageContent() {
 
 	const customerLabel = React.useMemo(() => {
 		const value = formValues.party ?? invoiceDetails?.party;
-		return getOptionLabel(customerOptions, value) ?? (typeof value === "string" ? value : undefined);
-	}, [formValues.party, invoiceDetails?.party, customerOptions, getOptionLabel]);
+		return getOptionLabel(resolvedCustomerOptions, value) ?? (typeof value === "string" ? value : undefined);
+	}, [formValues.party, invoiceDetails?.party, resolvedCustomerOptions, getOptionLabel]);
 
 	const customerBranchLabel = React.useMemo(() => {
 		const value = formValues.party_branch ?? invoiceDetails?.partyBranch;
 		return getOptionLabel(customerBranchOptions, value) ?? (typeof value === "string" ? value : undefined);
 	}, [formValues.party_branch, invoiceDetails?.partyBranch, customerBranchOptions, getOptionLabel]);
-
-	const billingToLabel = React.useMemo(() => {
-		const value = formValues.billing_to ?? invoiceDetails?.billingTo;
-		return getOptionLabel(customerBranchOptions, value) ?? (typeof value === "string" ? value : undefined);
-	}, [formValues.billing_to, invoiceDetails?.billingTo, customerBranchOptions, getOptionLabel]);
-
-	const shippingToLabel = React.useMemo(() => {
-		const value = formValues.shipping_to ?? invoiceDetails?.shippingTo;
-		return getOptionLabel(customerBranchOptions, value) ?? (typeof value === "string" ? value : undefined);
-	}, [formValues.shipping_to, invoiceDetails?.shippingTo, customerBranchOptions, getOptionLabel]);
 
 	const deliveryOrderLabel = React.useMemo(() => {
 		const value = formValues.delivery_order ?? invoiceDetails?.deliveryOrder;
@@ -671,6 +752,34 @@ function InvoiceTransactionPageContent() {
 		if (!id || !selectedCustomer?.branches) return null;
 		return selectedCustomer.branches.find((b) => b.id === id) ?? null;
 	}, [shippingBranchId, invoiceDetails?.shippingTo, selectedCustomer]);
+
+	const billingToLabel = React.useMemo(() => {
+		const value = formValues.billing_to ?? invoiceDetails?.billingTo;
+		if (!value) return undefined;
+		// First try to get from options
+		const fromOptions = getOptionLabel(resolvedCustomerBranchOptions, value);
+		if (fromOptions) return fromOptions;
+		// Otherwise construct from branch record with full address concatenation
+		if (billingBranchRecord) {
+			const parts = [billingBranchRecord.address, billingBranchRecord.stateName].filter(Boolean);
+			return parts.length > 0 ? parts.join(" — ") : billingBranchRecord.address || String(value);
+		}
+		return typeof value === "string" ? value : undefined;
+	}, [formValues.billing_to, invoiceDetails?.billingTo, resolvedCustomerBranchOptions, getOptionLabel, billingBranchRecord]);
+
+	const shippingToLabel = React.useMemo(() => {
+		const value = formValues.shipping_to ?? invoiceDetails?.shippingTo;
+		if (!value) return undefined;
+		// First try to get from options
+		const fromOptions = getOptionLabel(resolvedCustomerBranchOptions, value);
+		if (fromOptions) return fromOptions;
+		// Otherwise construct from branch record with full address concatenation
+		if (shippingBranchRecord) {
+			const parts = [shippingBranchRecord.address, shippingBranchRecord.stateName].filter(Boolean);
+			return parts.length > 0 ? parts.join(" — ") : shippingBranchRecord.address || String(value);
+		}
+		return typeof value === "string" ? value : undefined;
+	}, [formValues.shipping_to, invoiceDetails?.shippingTo, resolvedCustomerBranchOptions, getOptionLabel, shippingBranchRecord]);
 
 	const selectedDeliveryOrderRecord = React.useMemo(() => {
 		const doId = formValues.delivery_order ? String(formValues.delivery_order) : "";
@@ -721,6 +830,7 @@ function InvoiceTransactionPageContent() {
 			ewayBillDate: (formValues.eway_bill_date as string) || invoiceDetails?.ewayBillDate,
 			transactionType: (formValues.type_of_sale as string) || invoiceDetails?.typeOfSale,
 			companyName,
+			companyLogo,
 			companyAddress: (() => {
 				const co = setupData?.company;
 				if (!co) return invoiceDetails?.companyAddress1 ? [invoiceDetails.companyAddress1, invoiceDetails.companyAddress2, invoiceDetails.companyZipcode ? String(invoiceDetails.companyZipcode) : null, invoiceDetails.companyStateName].filter(Boolean).join(", ") : undefined;
@@ -781,7 +891,7 @@ function InvoiceTransactionPageContent() {
 			formValues.invoice_type, formValues.type_of_sale, formValues.sales_order_id, formValues.sales_order_date,
 			formValues.bank_detail_id,
 			branchLabel, branchValue, customerLabel, customerBranchLabel, deliveryOrderLabel,
-			billingToLabel, shippingToLabel, transporterLabel, companyName, statusLabel,
+			billingToLabel, shippingToLabel, transporterLabel, companyName, companyLogo, statusLabel,
 			billingBranchRecord, shippingBranchRecord, selectedDeliveryOrderRecord,
 			setupData,
 		],
@@ -789,14 +899,7 @@ function InvoiceTransactionPageContent() {
 
 	const previewItems = React.useMemo(() => {
 		return filledLineItems.map((line, index) => {
-			const groupLabel = itemGroups.find((grp) => grp.id === line.itemGroup)?.label ?? line.itemGroup ?? "";
-			const itemLabel = getItemLabel(line.itemGroup, line.item, line.itemCode);
 			const uomLabel = getUomLabel(line.itemGroup, line.item, line.uom);
-			const displayItem = (() => {
-				const parts = [groupLabel, itemLabel].filter(Boolean);
-				if (parts.length > 0) return parts.join(" — ");
-				return line.item || "-";
-			})();
 			const discountType = (() => {
 				if (line.discountType === 1) return "%";
 				if (line.discountType === 2) return "Amt";
@@ -805,8 +908,8 @@ function InvoiceTransactionPageContent() {
 			return {
 				srNo: index + 1,
 				hsnCode: line.hsnCode,
-				itemGroup: groupLabel || undefined,
-				item: displayItem,
+				itemCode: line.fullItemCode || line.itemCode || undefined,
+				item: line.itemName || line.item || "-",
 				netWeight: line.govtskgNetWeight != null ? line.govtskgNetWeight : undefined,
 				quantity: line.quantity || "-",
 				uom: uomLabel,
@@ -817,7 +920,7 @@ function InvoiceTransactionPageContent() {
 				remarks: line.remarks || "-",
 			};
 		});
-	}, [filledLineItems, getItemLabel, getUomLabel, itemGroups]);
+	}, [filledLineItems, getUomLabel, itemGroups]);
 
 	const previewTotals = React.useMemo(
 		() => ({
@@ -867,6 +970,7 @@ function InvoiceTransactionPageContent() {
 		isLineItemsReady,
 		requestedId,
 		formValues,
+		approvalPermissions,
 	});
 
 	const primaryActionLabel = mode === "create" ? "Create" : "Save";
@@ -883,11 +987,27 @@ function InvoiceTransactionPageContent() {
 		return invoiceDetails?.invoiceNo ? `Sales Invoice ${invoiceDetails.invoiceNo}` : "Sales Invoice Details";
 	}, [mode, invoiceDetails?.invoiceNo]);
 
-
+	// Detect empty customer list issue
+	const customerListWarning = React.useMemo(() => {
+		if (setupLoading || pageError) return null;
+		if (mode === "view") return null;
+		if (setupData && customers.length === 0 && (setupData.company || setupData.branches)) {
+			return (
+				<div role="alert" aria-live="assertive" className="bg-yellow-50 border border-yellow-200 rounded-md p-3">
+					<p className="text-sm text-yellow-800">
+						<strong>⚠️ No customers available:</strong> The customer list is empty. This typically occurs when customer party types are not properly configured.
+						Please contact your system administrator to ensure that customer master data with proper party types is set up in the system.
+					</p>
+				</div>
+			);
+		}
+		return null;
+	}, [setupLoading, pageError, mode, setupData, customers.length]);
 
 	if (!mounted) return <InvoicePageLoading />;
 
 	return (
+		<>
 		<TransactionWrapper
 			title={pageTitle}
 			subtitle={mode === "create" ? "Create a new sales invoice" : mode === "edit" ? "Edit sales invoice" : "View sales invoice details"}
@@ -895,7 +1015,7 @@ function InvoiceTransactionPageContent() {
 			statusChip={statusChipProps}
 			backAction={{ onClick: () => router.push("/dashboardportal/sales/salesInvoice") }}
 			loading={loading || setupLoading || linesLoading}
-			alerts={pageError ? <div role="alert" aria-live="assertive" className="text-red-600">{pageError}</div> : undefined}
+			alerts={pageError ? <div role="alert" aria-live="assertive" className="text-red-600">{pageError}</div> : customerListWarning}
 			preview={
 				<SalesInvoicePreview
 					header={previewHeader}
@@ -908,10 +1028,20 @@ function InvoiceTransactionPageContent() {
 			lineItems={{
 				items: lineItems,
 				getItemId: (item) => item.id,
-				canEdit,
+				canEdit: canSave,
 				columns: lineItemColumns,
 				placeholder: linesLoading ? "Loading line items..." : "Add line items manually, or select a Delivery Order / Sales Order above to auto-populate",
 				selectionColumnWidth: "28px",
+				headerAction: canEdit ? (
+					<Button
+						type="button"
+						size="sm"
+						onClick={() => setItemDialogOpen(true)}
+						disabled={!coId}
+					>
+						Add Items
+					</Button>
+				) : undefined,
 			}}
 			footer={
 				<div className="space-y-6 pt-4 border-t">
@@ -919,7 +1049,7 @@ function InvoiceTransactionPageContent() {
 						schema={footerSchema}
 						formKey={formKey}
 						initialValues={initialValues}
-						mode={mode}
+						mode={canSave ? mode : "view"}
 						onSubmit={handleFormSubmit}
 						onValuesChange={handleFooterFormValuesChange}
 					/>
@@ -936,10 +1066,26 @@ function InvoiceTransactionPageContent() {
 						onSendForApproval={handleSendForApproval}
 						onViewApprovalLog={handleViewApprovalLog}
 					/>
-					{mode !== "view" ? (
-						<div className="flex justify-end pt-2">
+					{canSave ? (
+						<div className="flex justify-end gap-2 pt-2">
+							<Button
+								type="button"
+								variant="outline"
+								onClick={() => router.replace(`?id=${requestedId}&mode=view&branch_id=${branchIdFromUrl}&menu_id=${menuIdFromUrl}`)}
+							>
+								Cancel
+							</Button>
 							<Button type="button" onClick={handleSaveClick} disabled={saving || setupLoading || !isLineItemsReady}>
 								{saving ? "Processing..." : primaryActionLabel}
+							</Button>
+						</div>
+					) : mode === "view" && approvalPermissions.canSave ? (
+						<div className="flex justify-end pt-2">
+							<Button
+								type="button"
+								onClick={() => router.replace(`?id=${requestedId}&mode=edit&branch_id=${branchIdFromUrl}&menu_id=${menuIdFromUrl}`)}
+							>
+								Edit
 							</Button>
 						</div>
 					) : null}
@@ -950,14 +1096,27 @@ function InvoiceTransactionPageContent() {
 				schema={headerSchema}
 				formKey={formKey}
 				initialValues={initialValues}
-				mode={mode}
+				mode={canSave ? mode : "view"}
 				formRef={formRef}
 				onSubmit={handleFormSubmit}
 				onValuesChange={handleMainFormValuesChange}
 				typeSpecificSchema={typeSpecificHeaderSchema}
 				invoiceTypeId={String(formValues.invoice_type ?? "")}
 				juteFormRef={juteFormRef}
+				formValues={formValues}
+				isView={!canSave}
 			/>
 		</TransactionWrapper>
+
+		<ItemSelectionDialog
+			open={itemDialogOpen}
+			onOpenChange={setItemDialogOpen}
+			coId={coId}
+			onConfirm={handleItemDialogConfirm}
+			filter="saleable"
+			excludeItemIds={excludeItemIds}
+			title="Select Items for Sales Invoice"
+		/>
+		</>
 	);
 }

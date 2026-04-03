@@ -12,6 +12,8 @@ import {
 	useRejectDialog,
 	useUnsavedChanges,
 	AutoResizeTextarea,
+	ItemSelectionDialog,
+	type SelectedItem,
 } from "@/components/ui/transaction";
 import { useBranchOptions } from "@/utils/branchUtils";
 import {
@@ -27,6 +29,7 @@ import { toast } from "@/hooks/use-toast";
 import useSelectedCompanyCoId from "@/hooks/use-selected-company-coid";
 import { useMenuId } from "@/hooks/useMenuId";
 import type { MuiFormMode } from "@/components/ui/muiform";
+import { useCompanyLogo } from "@/hooks/useCompanyLogo";
 
 // Types
 import type { EditableLineItem, IndentSetupData, ItemGroupCacheEntry } from "./types/indentTypes";
@@ -85,6 +88,7 @@ function IndentTransactionPageContent() {
 
 	const branchOptions = useBranchOptions();
 	const { coId } = useSelectedCompanyCoId();
+	const companyLogo = useCompanyLogo(coId);
 
 	// Resolve menu_id via centralized hook
 	const { getMenuId } = useMenuId({ transactionType: "indent", menuIdFromUrl });
@@ -491,6 +495,58 @@ function IndentTransactionPageContent() {
 		return Boolean(indentType && expenseType);
 	}, [formValues.indent_type, formValues.expense_type]);
 
+	// Item selection dialog state
+	const [itemDialogOpen, setItemDialogOpen] = React.useState(false);
+
+	// Set of item IDs already selected in the line items (to exclude from dialog)
+	const excludeItemIds = React.useMemo(() => {
+		const ids = new Set<number>();
+		for (const li of lineItems) {
+			if (li.item) {
+				const num = Number(li.item);
+				if (Number.isFinite(num)) ids.add(num);
+			}
+		}
+		return ids;
+	}, [lineItems]);
+
+	// Handle items confirmed from the item selection dialog
+	const handleItemDialogConfirm = React.useCallback(
+		(items: SelectedItem[]) => {
+			if (mode === "view" || !items.length) return;
+
+			const newLines: EditableLineItem[] = items.map((item) => ({
+				id: crypto.randomUUID?.() ?? String(Date.now() + Math.random()),
+				department: "",
+				itemGroup: String(item.item_grp_id),
+				item: String(item.item_id),
+				itemMake: "",
+				quantity: "",
+				uom: String(item.uom_id),
+				remarks: "",
+			}));
+
+			// Ensure item group caches are loaded for the selected items
+			const groupIds = [...new Set(items.map((item) => String(item.item_grp_id)))];
+			for (const gid of groupIds) {
+				if (!itemGroupCache[gid] && !itemGroupLoading[gid]) {
+					void ensureItemGroupData(gid);
+				}
+			}
+
+			setLineItems((prev) => {
+				const filledLines = prev.filter((line) => lineHasAnyData(line));
+				return [...filledLines, ...newLines, createBlankLine()];
+			});
+
+			toast({
+				title: `Added ${newLines.length} item${newLines.length > 1 ? "s" : ""}`,
+				description: "Fill in quantity and other details for each item.",
+			});
+		},
+		[mode, setLineItems, itemGroupCache, itemGroupLoading, ensureItemGroupData]
+	);
+
 	// Check if any line item has data entered (to lock indent_type and expense_type)
 	const hasLineItemData = React.useMemo(() => {
 		return filledLineItems.length > 0;
@@ -821,6 +877,7 @@ function IndentTransactionPageContent() {
 		updatedBy: indentDetails?.updatedBy,
 		updatedAt: indentDetails?.updatedAt,
 		companyName: companyName,
+		companyLogo: companyLogo,
 	};
 
 	const { metadata } = useTransactionPreview({
@@ -981,6 +1038,16 @@ function IndentTransactionPageContent() {
 						? "Add items to build the indent."
 						: "No line items available.",
 				selectionColumnWidth: "28px",
+				headerAction: canEdit ? (
+					<Button
+						type="button"
+						size="sm"
+						onClick={() => setItemDialogOpen(true)}
+						disabled={!coId}
+					>
+						Add Items
+					</Button>
+				) : undefined,
 			}}
 		>
 			<IndentHeaderForm
@@ -1067,6 +1134,17 @@ function IndentTransactionPageContent() {
 				</DialogFooter>
 			</DialogContent>
 		</Dialog>
+
+		{/* ── Item Selection Dialog ─────────────────────────────────────── */}
+		<ItemSelectionDialog
+			open={itemDialogOpen}
+			onOpenChange={setItemDialogOpen}
+			coId={coId}
+			onConfirm={handleItemDialogConfirm}
+			filter="purchaseable"
+			excludeItemIds={excludeItemIds}
+			title="Select Items for Indent"
+		/>
 
 		{/* ── Reject Confirmation Dialog ────────────────────────────────── */}
 		<Dialog open={rejectDialogOpen} onOpenChange={(open) => { if (!open) handleRejectCancel(); }}>

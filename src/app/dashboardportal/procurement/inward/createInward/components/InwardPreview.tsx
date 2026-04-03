@@ -19,6 +19,7 @@ export type InwardPreviewHeader = {
 	updatedBy?: string;
 	updatedAt?: string;
 	companyName?: string;
+	companyLogo?: string;
 };
 
 export type InwardPreviewItem = {
@@ -102,7 +103,7 @@ const InwardPreview: React.FC<InwardPreviewProps> = ({ header, items, remarks, o
 
 		const helperStyle = printWindow.document.createElement("style");
 		helperStyle.textContent = `
-			@media print { @page { margin: 12mm; } }
+			@media print { @page { size: A4; margin: 10mm; } }
 			body { margin: 0; padding: 20px; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
 			table { width: 100%; border-collapse: collapse; }
 			#preview-left-pane { max-width: 25% !important; flex-basis: 25% !important; word-break: break-word; white-space: normal; }
@@ -155,6 +156,9 @@ const InwardPreview: React.FC<InwardPreviewProps> = ({ header, items, remarks, o
 							flexBasis: { md: "25%" },
 						}}
 					>
+						{header.companyLogo && (
+							<img src={header.companyLogo} alt="" style={{ maxHeight: 60, maxWidth: 200, marginBottom: 4 }} />
+						)}
 						<Typography variant="body1" sx={{ fontWeight: 600, fontSize: "1rem", wordBreak: "break-word", whiteSpace: "normal" }}>
 							{header.companyName || "-"}
 						</Typography>

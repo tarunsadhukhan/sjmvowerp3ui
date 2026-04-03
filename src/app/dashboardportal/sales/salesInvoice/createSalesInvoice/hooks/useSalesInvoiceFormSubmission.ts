@@ -5,6 +5,11 @@ import { createInvoice, updateInvoice, type SaveInvoiceRequest } from "@/utils/s
 import type { EditableLineItem } from "../types/salesInvoiceTypes";
 import { isRawJuteInvoice, isHessianInvoice, isGovtSkgInvoice } from "../utils/salesInvoiceConstants";
 
+type ApprovalPermissions = {
+	canSave?: boolean;
+	[key: string]: unknown;
+};
+
 type Params = {
 	mode: "create" | "edit" | "view";
 	pageError: string | null;
@@ -13,10 +18,11 @@ type Params = {
 	isLineItemsReady: boolean;
 	requestedId: string;
 	formValues: Record<string, unknown>;
+	approvalPermissions?: ApprovalPermissions;
 };
 
 export const useSalesInvoiceFormSubmission = ({
-	mode, pageError, setupError, filledLineItems, isLineItemsReady, requestedId, formValues,
+	mode, pageError, setupError, filledLineItems, isLineItemsReady, requestedId, formValues, approvalPermissions,
 }: Params) => {
 	const [saving, setSaving] = React.useState(false);
 	const router = useRouter();
@@ -24,6 +30,10 @@ export const useSalesInvoiceFormSubmission = ({
 	const handleFormSubmit = React.useCallback(
 		async (values: Record<string, unknown>) => {
 			if (mode === "view" || pageError || setupError) return;
+			if (approvalPermissions?.canSave === false) {
+				toast({ variant: "destructive", title: "Cannot save", description: "This invoice cannot be edited." });
+				return;
+			}
 
 			if (!isLineItemsReady) {
 				toast({ variant: "destructive", title: "Line items incomplete", description: "Add at least one item with valid quantity." });

@@ -20,6 +20,7 @@ export type POPreviewHeader = {
   updatedBy?: string;
   updatedAt?: string;
   companyName?: string;
+  companyLogo?: string;
   contactPerson?: string;
   contactNo?: string;
   taxType?: string;
@@ -193,6 +194,9 @@ const POPreview: React.FC<POPreviewProps> = ({ header, items, totals, additional
               flexBasis: { md: "25%" },
             }}
           >
+            {header.companyLogo && (
+              <img src={header.companyLogo} alt="" style={{ maxHeight: 60, maxWidth: 200, marginBottom: 4 }} />
+            )}
             <Typography variant="body1" sx={{ fontWeight: 600, fontSize: "1rem", wordBreak: "break-word", whiteSpace: "normal" }}>
               {header.companyName || "-"}
             </Typography>

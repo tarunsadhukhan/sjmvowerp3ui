@@ -113,6 +113,7 @@ const HandleCreateEditCo = () => {
         onSubmit={handleSubmit}
         loading={loading}
         isEdit={!!coId}
+        coId={coId}
       />
       <div className="flex justify-end mt-4">
         <Button

@@ -13,6 +13,8 @@ import {
   useRejectDialog,
   useUnsavedChanges,
   AutoResizeTextarea,
+  ItemSelectionDialog,
+  type SelectedItem,
 } from "@/components/ui/transaction";
 import { useBranchOptions } from "@/utils/branchUtils";
 import {
@@ -26,6 +28,7 @@ import { toast } from "@/hooks/use-toast";
 import { useSidebarContext } from "@/components/dashboard/sidebarContext";
 import { useMenuId } from "@/hooks/useMenuId";
 import { useCompanyName } from "@/hooks/useCompanyName";
+import { useCompanyLogo } from "@/hooks/useCompanyLogo";
 import { IndentLineItemsDialog, type IndentLineItem } from "../components/IndentLineItemsDialog";
 import { POHeaderForm } from "./components/POHeaderForm";
 import { POFooterForm } from "./components/POFooterForm";
@@ -111,8 +114,9 @@ function POTransactionPageContent() {
   // Use shared menu ID hook
   const { getMenuId } = useMenuId({ transactionType: "po", menuIdFromUrl });
 
-  // Use shared company name hook
+  // Use shared company name/logo hooks
   const companyName = useCompanyName();
+  const companyLogo = useCompanyLogo(coId);
 
   const {
     initialValues,
@@ -133,6 +137,7 @@ function POTransactionPageContent() {
   const [loading, setLoading] = React.useState<boolean>(mode !== "create");
   const [pageError, setPageError] = React.useState<string | null>(null);
   const [indentDialogOpen, setIndentDialogOpen] = React.useState(false);
+  const [itemDialogOpen, setItemDialogOpen] = React.useState(false);
 
   // Memoize branch value to prevent unnecessary recalculations.
   // In edit/view mode, we prefer the branch id passed from the index page
@@ -574,6 +579,56 @@ function POTransactionPageContent() {
     [handleIndentItemsFromHook, setIndentDialogOpen],
   );
 
+  // Handle items confirmed from the item selection dialog
+  const excludeItemIds = React.useMemo(() => {
+    const ids = new Set<number>();
+    for (const li of lineItems) {
+      if (li.item) {
+        const num = Number(li.item);
+        if (Number.isFinite(num)) ids.add(num);
+      }
+    }
+    return ids;
+  }, [lineItems]);
+
+  const handleItemDialogConfirm = React.useCallback(
+    (items: SelectedItem[]) => {
+      if (mode === "view" || !items.length) return;
+
+      const newLines: EditableLineItem[] = items.map((item) => ({
+        id: crypto.randomUUID?.() ?? String(Date.now() + Math.random()),
+        itemGroup: String(item.item_grp_id),
+        item: String(item.item_id),
+        itemMake: "",
+        quantity: "",
+        rate: "",
+        uom: String(item.uom_id),
+        discountValue: "",
+        remarks: "",
+        hsnCode: item.hsn_code ?? "",
+        taxPercentage: item.tax_percentage ?? undefined,
+      }));
+
+      const groupIds = [...new Set(items.map((item) => String(item.item_grp_id)))];
+      for (const gid of groupIds) {
+        if (!itemGroupCache[gid] && !itemGroupLoading[gid]) {
+          void ensureItemGroupData(gid);
+        }
+      }
+
+      setLineItems((prev) => {
+        const filledLines = prev.filter((line) => lineHasAnyData(line));
+        return [...filledLines, ...newLines, createBlankLine()];
+      });
+
+      toast({
+        title: `Added ${newLines.length} item${newLines.length > 1 ? "s" : ""}`,
+        description: "Fill in quantity, rate and other details.",
+      });
+    },
+    [mode, setLineItems, itemGroupCache, itemGroupLoading, ensureItemGroupData]
+  );
+
   // Line item field handlers and columns
   const {
     supplierOptions,
@@ -774,6 +829,7 @@ function POTransactionPageContent() {
       project: projectLabel,
       expenseType: expenseLabel,
       companyName,
+      companyLogo,
       contactPerson: (formValues.contact_person as string) || poDetails?.contactPerson,
       contactNo: (formValues.contact_no as string) || poDetails?.contactNo,
       status: statusLabel,
@@ -801,6 +857,7 @@ function POTransactionPageContent() {
       projectLabel,
       expenseLabel,
       companyName,
+      companyLogo,
       expectedDate,
       statusLabel,
     ],
@@ -1046,6 +1103,16 @@ function POTransactionPageContent() {
             ? "Add line items by selecting from indent or manually entering items"
             : "Select items from an indent to populate the PO line items",
         selectionColumnWidth: "28px",
+        headerAction: lineItemsCanEdit ? (
+          <Button
+            type="button"
+            size="sm"
+            onClick={() => setItemDialogOpen(true)}
+            disabled={!coId}
+          >
+            Add Items
+          </Button>
+        ) : undefined,
       }}
       footer={
         <div className="space-y-6 pt-4 border-t">
@@ -1091,6 +1158,17 @@ function POTransactionPageContent() {
         poDate={(formValues.date as string) || undefined}
       />
     </TransactionWrapper>
+
+    {/* ── Item Selection Dialog ─────────────────────────────────────── */}
+    <ItemSelectionDialog
+      open={itemDialogOpen}
+      onOpenChange={setItemDialogOpen}
+      coId={coId}
+      onConfirm={handleItemDialogConfirm}
+      filter="purchaseable"
+      excludeItemIds={excludeItemIds}
+      title="Select Items for Purchase Order"
+    />
 
     {/* ── Reject Confirmation Dialog ────────────────────────────────── */}
     <Dialog open={rejectDialogOpen} onOpenChange={(open) => { if (!open) handleRejectCancel(); }}>

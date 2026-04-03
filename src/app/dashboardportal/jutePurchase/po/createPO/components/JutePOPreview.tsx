@@ -58,7 +58,7 @@ export function JutePOPreview({
               .info-label { font-weight: bold; min-width: 120px; }
               .totals { margin-top: 20px; text-align: right; }
               .totals p { margin: 5px 0; }
-              @media print { body { -webkit-print-color-adjust: exact; } }
+              @media print { @page { size: A4; margin: 10mm; } body { -webkit-print-color-adjust: exact; print-color-adjust: exact; } }
             </style>
           </head>
           <body>

@@ -1,4 +1,5 @@
 import React from "react";
+import { getTransporterBranches } from "@/utils/salesInvoiceService";
 import type {
 	CustomerRecord,
 	TransporterRecord,
@@ -10,6 +11,7 @@ import type {
 	ItemGroupRecord,
 	Option,
 	UomConversionEntry,
+	TransporterBranchRecord,
 } from "../types/salesInvoiceTypes";
 
 type Params = {
@@ -22,12 +24,15 @@ type Params = {
 	itemGroupsFromLineItems: ReadonlyArray<ItemGroupRecord>;
 	itemGroupCache?: Partial<Record<string, ItemGroupCacheEntry>>;
 	selectedPartyId?: string;
+	coId?: number;
 };
 
 export const useSalesInvoiceSelectOptions = ({
 	customers, transporters, brokers, approvedDeliveryOrders, approvedSalesOrders, invoiceTypes,
-	itemGroupsFromLineItems, itemGroupCache = {}, selectedPartyId,
+	itemGroupsFromLineItems, itemGroupCache = {}, selectedPartyId, coId,
 }: Params) => {
+	const [transporterBranchOptions, setTransporterBranchOptions] = React.useState<TransporterBranchRecord[]>([]);
+	const [loading, setLoading] = React.useState(false);
 	const customerOptions = React.useMemo<Option[]>(() => {
 		if (!customers?.length) return [];
 		return customers
@@ -149,10 +154,32 @@ export const useSalesInvoiceSelectOptions = ({
 		[],
 	);
 
+	const fetchTransporterBranches = React.useCallback(
+		async (transporterId: number) => {
+			if (!transporterId || !coId) {
+				setTransporterBranchOptions([]);
+				return;
+			}
+
+			try {
+				setLoading(true);
+				const response = await getTransporterBranches(transporterId, coId);
+				setTransporterBranchOptions(response.data || []);
+			} catch (error) {
+				console.error("Failed to fetch transporter branches:", error);
+				setTransporterBranchOptions([]);
+			} finally {
+				setLoading(false);
+			}
+		},
+		[coId],
+	);
+
 	return {
 		customerOptions, customerBranchOptions, transporterOptions, brokerOptions, deliveryOrderOptions, salesOrderOptions,
 		invoiceTypeOptions, itemGroupOptions, getItemGroupLabel,
 		getItemOptions, getMakeOptions, getUomOptions,
 		getItemLabel, getMakeLabel, getUomLabel, getUomConversions, getOptionLabel,
+		transporterBranchOptions, fetchTransporterBranches, loading,
 	};
 };

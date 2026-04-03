@@ -279,5 +279,6 @@ export const useDeliveryOrderLineItems = ({
 		lineItems, setLineItems, replaceItems, removeLineItems,
 		handleLineFieldChange, handleSalesOrderLinesConfirm,
 		mapLineToEditable, filledLineItems, lineItemsValid, itemGroupsFromLineItems,
+		lineHasAnyData,
 	};
 };

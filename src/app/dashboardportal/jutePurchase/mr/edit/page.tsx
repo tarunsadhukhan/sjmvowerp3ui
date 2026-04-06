@@ -378,6 +378,7 @@ function JuteMREditPageContent() {
 					remarks: li.remarks,
 					warehouseId: li.warehouse_id,
 					warehousePath: li.warehouse_path,
+					unitConversion: li.unit_conversion || null,
 				};
 			});
 

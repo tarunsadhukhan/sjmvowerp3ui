@@ -540,6 +540,7 @@ function BillPassEditPageContent() {
 											"Item",
 											"Quality",
 											"Qty",
+											"UOM",
 											"Weight (Kg)",
 											"Rate (Rs/Qntl)",
 											"Claim Rate",
@@ -555,7 +556,7 @@ function BillPassEditPageContent() {
 													color: "white",
 													fontSize: "0.75rem",
 													fontWeight: 600,
-													textAlign: h === "Item" || h === "Quality" ? "left" : "right",
+													textAlign: h === "Item" || h === "Quality" || h === "UOM" ? "left" : "right",
 													borderRight: "1px solid rgba(255,255,255,0.2)",
 												}}
 											>
@@ -579,6 +580,9 @@ function BillPassEditPageContent() {
 											</Box>
 											<Box component="td" sx={{ p: 1, fontSize: "0.75rem", textAlign: "right", borderRight: "1px solid #eee" }}>
 												{line.actual_qty ?? "-"}
+											</Box>
+											<Box component="td" sx={{ p: 1, fontSize: "0.75rem", borderRight: "1px solid #eee" }}>
+												{line.uom ?? "-"}
 											</Box>
 											<Box component="td" sx={{ p: 1, fontSize: "0.75rem", textAlign: "right", borderRight: "1px solid #eee" }}>
 												{formatAmount(line.accepted_weight ?? line.actual_weight)}

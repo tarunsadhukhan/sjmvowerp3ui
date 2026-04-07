@@ -38,6 +38,15 @@ export function useMRLineItems({
 				getTooltip: ({ item }) => item.actualQualityName || undefined,
 			},
 			{
+				id: "unitConversion",
+				header: "UOM",
+				width: "0.6fr",
+				renderCell: ({ item }) => (
+					<span className="text-xs">{item.unitConversion || "-"}</span>
+				),
+				getTooltip: ({ item }) => item.unitConversion || undefined,
+			},
+			{
 				id: "actualQty",
 				header: "Actual Qty",
 				width: "0.9fr",

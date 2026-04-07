@@ -183,6 +183,7 @@ export function useGateEntryFormSchemas({
 					type: "number" as const,
 					required: false,
 					disabled: true, // Always disabled - set from gate entry
+					helperText: "Tare weight entry is done in Gate Entry",
 					grid: { xs: 12, md: 2 },
 					customValidate: (value: unknown, values: Record<string, unknown>) => {
 						const tare = parseFloat(String(value)) || 0;
@@ -220,7 +221,8 @@ export function useGateEntryFormSchemas({
 					label: "Variable Shortage (Kg)",
 					type: "number" as const,
 					required: false,
-					disabled: isViewMode,
+					disabled: true, // Always disabled - set from gate entry
+					helperText: "Variable shortage entry is done in Gate Entry",
 					grid: { xs: 12, md: 2 },
 				},
 				{

@@ -84,6 +84,7 @@ export type JuteMRLineItemAPI = {
 	active: number | null;
 	warehouse_id: number | null;
 	warehouse_path: string | null;
+	unit_conversion: string | null;
 };
 
 // UI line item type used in the MR page
@@ -110,4 +111,5 @@ export type MRLineItem = {
 	remarks: string | null;
 	warehouseId: number | null;
 	warehousePath: string | null;
+	unitConversion: string | null;
 };

@@ -26,6 +26,7 @@ type JuteMRRow = {
 	challan_no: string | null;
 	gate_entry_no: string | null;
 	mukam: string | null;
+	vehicle_no: string | null;
 	mr_weight: number | null;
 	status: string;
 };
@@ -150,6 +151,16 @@ export default function JuteMRIndexPage() {
 				),
 			},
 			{
+				field: "vehicle_no",
+				headerName: "Vehicle No",
+				minWidth: 120,
+				renderCell: (params: GridRenderCellParams<JuteMRRow, string | null>) => (
+					<Typography component="span" variant="body2">
+						{params.value || "-"}
+					</Typography>
+				),
+			},
+			{
 				field: "mr_weight",
 				headerName: "MR Weight",
 				minWidth: 110,
@@ -221,6 +232,7 @@ export default function JuteMRIndexPage() {
 					challan_no: (r.challan_no ?? null) as string | null,
 					gate_entry_no: (r.gate_entry_no ?? null) as string | null,
 					mukam: (r.mukam ?? null) as string | null,
+					vehicle_no: (r.vehicle_no ?? null) as string | null,
 					mr_weight: (r.mr_weight ?? null) as number | null,
 					status: (r.status ?? "Open") as string,
 				};
@@ -297,7 +309,7 @@ export default function JuteMRIndexPage() {
 			search={{
 				value: searchValue,
 				onChange: handleSearchChange,
-				placeholder: "Search by MR number, supplier, party, challan, or vehicle",
+				placeholder: "Search by MR number, supplier, party, challan, vehicle, or gate entry no.",
 				debounceDelayMs: 500,
 			}}
 			onView={handleView}

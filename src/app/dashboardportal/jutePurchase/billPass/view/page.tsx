@@ -131,6 +131,27 @@ const getLineAmount = (line: BillPassLineItem): number => {
 	return weightQnt * rate;
 };
 
+/**
+ * Calculate total amount from line items
+ * Formula: Sum of ((accepted_weight / 100) * rate) for all line items
+ */
+const calculateTotalAmount = (items: BillPassLineItem[]): number => {
+	return items.reduce((sum, line) => sum + getLineAmount(line), 0);
+};
+
+/**
+ * Calculate claim amount from line items
+ * Formula: Sum of ((accepted_weight / 100) * claim_rate)
+ */
+const calculateClaimAmount = (items: BillPassLineItem[]): number => {
+	return items.reduce((sum, line) => {
+		const weightKg = line.accepted_weight ?? line.actual_weight ?? 0;
+		const weightQnt = weightKg / 100;
+		const claimRate = line.claim_rate ?? 0;
+		return sum + weightQnt * claimRate;
+	}, 0);
+};
+
 /** Read-only field display */
 function ReadOnlyField({ label, value }: { label: string; value: string }) {
 	return (
@@ -154,15 +175,15 @@ function BillPassViewPageContent() {
 	const [loading, setLoading] = React.useState(true);
 	const [pageError, setPageError] = React.useState<string | null>(null);
 
-	// Computed financial values
+	// Computed financial values — calculate totals from line items
 	const financials = React.useMemo(() => {
-		const totalAmount = header?.total_amount ?? 0;
-		const claimAmount = header?.claim_amount ?? 0;
+		const totalAmount = lineItems.length > 0 ? calculateTotalAmount(lineItems) : (header?.total_amount ?? 0);
+		const claimAmount = lineItems.length > 0 ? calculateClaimAmount(lineItems) : (header?.claim_amount ?? 0);
 		const roundoff = header?.roundoff ?? 0;
 		const tdsAmount = header?.tds_amount ?? 0;
-		const netTotal = header?.amount ?? totalAmount - claimAmount + roundoff - tdsAmount;
+		const netTotal = totalAmount - claimAmount + roundoff - tdsAmount;
 		return { totalAmount, claimAmount, roundoff, tdsAmount, netTotal };
-	}, [header]);
+	}, [header, lineItems]);
 
 	const loadData = React.useCallback(async () => {
 		if (!coId || !billPassIdParam) return;
@@ -309,6 +330,7 @@ function BillPassViewPageContent() {
 											"Item",
 											"Quality",
 											"Qty",
+											"UOM",
 											"Weight (Kg)",
 											"Rate (Rs/Qntl)",
 											"Claim Rate",
@@ -324,7 +346,7 @@ function BillPassViewPageContent() {
 													color: "white",
 													fontSize: "0.75rem",
 													fontWeight: 600,
-													textAlign: h === "Item" || h === "Quality" ? "left" : "right",
+													textAlign: h === "Item" || h === "Quality" || h === "UOM" ? "left" : "right",
 													borderRight: "1px solid rgba(255,255,255,0.2)",
 												}}
 											>
@@ -348,6 +370,9 @@ function BillPassViewPageContent() {
 											</Box>
 											<Box component="td" sx={{ p: 1, fontSize: "0.75rem", textAlign: "right", borderRight: "1px solid #eee" }}>
 												{line.actual_qty ?? "-"}
+											</Box>
+											<Box component="td" sx={{ p: 1, fontSize: "0.75rem", borderRight: "1px solid #eee" }}>
+												{line.uom ?? "-"}
 											</Box>
 											<Box component="td" sx={{ p: 1, fontSize: "0.75rem", textAlign: "right", borderRight: "1px solid #eee" }}>
 												{formatAmount(line.accepted_weight ?? line.actual_weight)}

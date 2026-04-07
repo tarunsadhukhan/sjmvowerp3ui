@@ -3,7 +3,7 @@
 import * as React from "react";
 import { Suspense } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
-import { Alert, CircularProgress, Box } from "@mui/material";
+import { Alert, CircularProgress, Box, Typography } from "@mui/material";
 import TransactionWrapper from "@/components/ui/TransactionWrapper";
 import { fetchWithCookie } from "@/utils/apiClient2";
 import { apiRoutesPortalMasters } from "@/utils/api";
@@ -172,9 +172,14 @@ function JuteMREditPageContent() {
 	const [partyBranchOptions, setPartyBranchOptions] = React.useState<PartyBranchOption[]>([]);
 	const [partyBranchLoading, setPartyBranchLoading] = React.useState(false);
 	const [partyBranchesLoaded, setPartyBranchesLoaded] = React.useState(false);
+	// Tracks unsaved user edits. Approval actions (Pending/Open/Approve/etc.)
+	// are hidden until isDirty === false to prevent sending stale data to
+	// the approval workflow before Save has persisted the latest changes.
+	const [isDirty, setIsDirty] = React.useState(false);
 
 	const handleHeaderChange = React.useCallback(
 		(field: keyof JuteMRHeader, value: string | number | null) => {
+			setIsDirty(true);
 			setHeader((prev) => {
 				if (!prev) return null;
 				const updated = { ...prev, [field]: value };
@@ -203,6 +208,7 @@ function JuteMREditPageContent() {
 	// Build line item columns
 	const handleLineFieldChange = React.useCallback(
 		(id: string, field: keyof MRLineItem, value: string | number | null) => {
+			setIsDirty(true);
 			setLineItems((prev) =>
 				prev.map((li) => {
 					if (li.id !== id) return li;
@@ -378,6 +384,7 @@ function JuteMREditPageContent() {
 					remarks: li.remarks,
 					warehouseId: li.warehouse_id,
 					warehousePath: li.warehouse_path,
+					unitConversion: li.unit_conversion || null,
 				};
 			});
 
@@ -391,6 +398,9 @@ function JuteMREditPageContent() {
 			} else {
 				setLineItems(mappedLineItems);
 			}
+
+			// Fresh load from server — no unsaved edits.
+			setIsDirty(false);
 		} catch (err) {
 			setPageError(err instanceof Error ? err.message : "Failed to load MR data");
 		} finally {
@@ -573,20 +583,31 @@ function JuteMREditPageContent() {
 				/>
 			}
 			footer={
-				<MRApprovalBar
-					approvalInfo={approvalInfo}
-					permissions={approvalPermissions}
-					loading={approvalLoading}
-					canSetOpen={canSetOpen}
-					canSetPending={canSetPending}
-					partyHasNoBranches={partyHasNoBranches}
-					onOpen={handleOpen}
-					onApprove={handleApprove}
-					onReject={handleReject}
-					onPending={handlePending}
-					onCancel={handleCancel}
-					onViewApprovalLog={handleViewApprovalLog}
-				/>
+				isDirty ? (
+					<Box sx={{ p: 2, borderTop: 1, borderColor: "divider" }}>
+						<Alert severity="info" sx={{ mb: 0 }}>
+							<Typography variant="body2">
+								You have unsaved changes. Press <strong>Save</strong> to enable approval actions
+								(Open / Pending / Approve / Reject / Cancel).
+							</Typography>
+						</Alert>
+					</Box>
+				) : (
+					<MRApprovalBar
+						approvalInfo={approvalInfo}
+						permissions={approvalPermissions}
+						loading={approvalLoading}
+						canSetOpen={canSetOpen}
+						canSetPending={canSetPending}
+						partyHasNoBranches={partyHasNoBranches}
+						onOpen={handleOpen}
+						onApprove={handleApprove}
+						onReject={handleReject}
+						onPending={handlePending}
+						onCancel={handleCancel}
+						onViewApprovalLog={handleViewApprovalLog}
+					/>
+				)
 			}
 		>
 			<Box sx={{ maxHeight: "calc(100vh - 300px)", overflowY: "auto", pr: 1 }}>

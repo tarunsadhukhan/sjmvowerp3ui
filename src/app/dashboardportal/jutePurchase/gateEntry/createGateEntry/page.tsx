@@ -14,7 +14,7 @@
  * - Challan Date (date picker)
  * - Vehicle No (required, text input)
  * - Driver Name (required, text input)
- * - Transporter (required, text input)
+ * - Transporter (optional, text input)
  *
  * Section below (disabled before IN, except Remarks):
  * - Tare Weight (Kg)
@@ -367,10 +367,6 @@ function JuteGateEntryCreatePageContent() {
     if (!formValues.driverName) {
       newErrors.driverName = "Driver Name is required";
     }
-    if (!formValues.transporter) {
-      newErrors.transporter = "Transporter is required";
-    }
-
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
   }, [formValues]);
@@ -732,7 +728,6 @@ function JuteGateEntryCreatePageContent() {
             {/* Transporter */}
             <TextField
               label="Transporter"
-              required
               fullWidth
               value={formValues.transporter}
               onChange={(e) => handleFieldChange("transporter", e.target.value)}

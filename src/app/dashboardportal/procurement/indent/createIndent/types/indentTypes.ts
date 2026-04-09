@@ -66,6 +66,10 @@ export type ItemGroupRecord = {
 export type ItemOption = Option & {
 	defaultUomId?: string;
 	defaultUomLabel?: string;
+	/** Full item code (group prefix + item code) as stored in item_mst. */
+	itemCode?: string;
+	/** Pure item name without group prefix. */
+	itemName?: string;
 };
 
 /**
@@ -76,6 +80,10 @@ export type ItemGroupCacheEntry = {
 	makes: Option[];
 	uomsByItemId: Record<string, Option[]>;
 	itemLabelById: Record<string, string>;
+	/** Full item code keyed by item id (group prefix + item code). */
+	itemCodeById: Record<string, string>;
+	/** Pure item name keyed by item id (no group prefix). */
+	itemNameById: Record<string, string>;
 	makeLabelById: Record<string, string>;
 	uomLabelByItemId: Record<string, Record<string, string>>;
 };
@@ -98,6 +106,10 @@ export type IndentLabelResolvers = {
 	department: (id: string) => string;
 	itemGroup: (id: string) => string;
 	item: (groupId: string, itemId: string) => string;
+	/** Pure item name for display (no group prefix). */
+	itemName: (groupId: string, itemId: string) => string;
+	/** Full item code (group prefix + item code) for display. */
+	itemCode: (groupId: string, itemId: string) => string;
 	itemMake: (groupId: string, makeId: string) => string;
 	uom: (groupId: string, itemId: string, uomId: string) => string;
 };

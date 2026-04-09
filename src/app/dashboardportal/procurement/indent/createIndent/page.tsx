@@ -311,11 +311,8 @@ function IndentTransactionPageContent() {
 		departmentOptions,
 		projectOptions,
 		expenseOptions,
-		itemGroupOptions,
 		getExpenseLabel,
 		getProjectLabel,
-		getItemOptions,
-		getMakeOptions,
 		getUomOptions,
 		labelResolvers,
 	} = useIndentSelectOptions({
@@ -331,9 +328,8 @@ function IndentTransactionPageContent() {
 	// Item validation hook (per-line max qty / FY checks)
 	const {
 		validationMap,
-		currentLogic: validationLogic,
 		validateLine,
-		clearLine: clearLineValidation,
+		validateLineAndReturn,
 		getQuantityError,
 		getLineWarnings,
 		allLinesValid: allLinesValidFn,
@@ -345,19 +341,13 @@ function IndentTransactionPageContent() {
 		indentId: requestedId || undefined,
 	});
 
-	// Wrap line field changes to trigger validation on item selection or qty change
+	// Wrap line field changes so that quantity edits on pre-loaded lines lazily
+	// trigger validation (normal item-add validation flow now runs inside
+	// handleItemDialogConfirm since items are only added via the dialog).
 	const handleLineFieldChangeWithValidation = React.useCallback(
 		(id: string, field: keyof EditableLineItem, rawValue: string) => {
 			handleLineFieldChange(id, field, rawValue);
 
-			// When item changes, trigger validation for the new item
-			if (field === "item" && rawValue) {
-				void validateLine(id, rawValue);
-			}
-			// When itemGroup changes (clears item), clear validation for that line
-			if (field === "itemGroup") {
-				clearLineValidation(id);
-			}
 			// When quantity changes, ensure validation data exists for the line
 			// (handles pre-loaded edit lines that haven't been validated yet)
 			if (field === "quantity") {
@@ -368,12 +358,12 @@ function IndentTransactionPageContent() {
 			}
 
 			// If user modifies a line while a template is active, prompt for rename
-			if (templateSourceName && ["itemGroup", "item", "quantity", "uom", "department", "itemMake"].includes(field)) {
+			if (templateSourceName && ["quantity", "uom", "department"].includes(field)) {
 				setRenameInputValue(templateSourceName);
 				setShowRenameDialog(true);
 			}
 		},
-		[handleLineFieldChange, validateLine, clearLineValidation, templateSourceName, lineItems, validationMap]
+		[handleLineFieldChange, validateLine, templateSourceName, lineItems, validationMap]
 	);
 
 	// ── Template reuse handlers ────────────────────────────────────────
@@ -510,41 +500,186 @@ function IndentTransactionPageContent() {
 		return ids;
 	}, [lineItems]);
 
-	// Handle items confirmed from the item selection dialog
+	// Handle items confirmed from the item selection dialog.
+	// Runs per-item validation against the backend before committing lines to
+	// the table; items that fail (errors, FY duplicate, etc.) are auto-removed
+	// and reported in a toast so the user knows why.
 	const handleItemDialogConfirm = React.useCallback(
-		(items: SelectedItem[]) => {
+		async (items: SelectedItem[]) => {
 			if (mode === "view" || !items.length) return;
 
-			const newLines: EditableLineItem[] = items.map((item) => ({
-				id: crypto.randomUUID?.() ?? String(Date.now() + Math.random()),
-				department: "",
-				itemGroup: String(item.item_grp_id),
-				item: String(item.item_id),
-				itemMake: "",
-				quantity: "",
-				uom: String(item.uom_id),
-				remarks: "",
-			}));
-
-			// Ensure item group caches are loaded for the selected items
-			const groupIds = [...new Set(items.map((item) => String(item.item_grp_id)))];
-			for (const gid of groupIds) {
-				if (!itemGroupCache[gid] && !itemGroupLoading[gid]) {
-					void ensureItemGroupData(gid);
+			try {
+				// Guard: validation requires header fields to be set. If the
+				// user somehow opens the dialog before header is complete,
+				// surface a clear error instead of silently skipping.
+				if (!branchValue) {
+					toast({
+						variant: "destructive",
+						title: "Branch required",
+						description: "Select a branch before adding items.",
+					});
+					return;
 				}
+				if (!String(formValues.expense_type ?? "").trim()) {
+					toast({
+						variant: "destructive",
+						title: "Expense type required",
+						description: "Select an expense type before adding items.",
+					});
+					return;
+				}
+
+				// Build candidate lines paired with their source SelectedItem
+				// for reporting failures by name/code later.
+				const candidates = items.map((item) => ({
+					source: item,
+					line: {
+						id: crypto.randomUUID?.() ?? String(Date.now() + Math.random()),
+						department: "",
+						itemGroup: String(item.item_grp_id),
+						item: String(item.item_id),
+						itemMake: "",
+						quantity: "",
+						uom: String(item.uom_id),
+						remarks: "",
+					} satisfies EditableLineItem,
+				}));
+
+				// Warm the item group caches in the background so
+				// labelResolvers can render item code/name once the fetch
+				// lands.
+				const groupIds = [
+					...new Set(items.map((item) => String(item.item_grp_id))),
+				];
+				for (const gid of groupIds) {
+					if (!itemGroupCache[gid] && !itemGroupLoading[gid]) {
+						void ensureItemGroupData(gid);
+					}
+				}
+
+				// Validate every candidate line in parallel. Each call
+				// updates validationMap as a side effect (so the forcedQty
+				// auto-fill effect still picks up results for passing lines).
+				// `allSettled` so a single unexpected rejection can't poison
+				// the whole batch.
+				console.log("[indent-dialog] handleItemDialogConfirm", {
+					itemCount: candidates.length,
+					candidates: candidates.map((c) => ({
+						lineId: c.line.id,
+						itemId: c.line.item,
+						itemGroupId: c.line.itemGroup,
+					})),
+				});
+				const settled = await Promise.allSettled(
+					candidates.map((c) => validateLineAndReturn(c.line.id, c.line.item))
+				);
+				console.log("[indent-dialog] settled outcomes", settled);
+
+				const passed: EditableLineItem[] = [];
+				const failed: { name: string; reason: string }[] = [];
+
+				candidates.forEach((candidate, idx) => {
+					const result = settled[idx];
+					const displayName =
+						candidate.source.item_name ||
+						candidate.source.full_item_code ||
+						candidate.source.item_code ||
+						String(candidate.source.item_id);
+
+					if (result.status === "rejected") {
+						const reason =
+							result.reason instanceof Error
+								? result.reason.message
+								: "Unexpected validation error";
+						failed.push({ name: displayName, reason });
+						// Log the raw rejection so it's not lost.
+						console.error("[indent] validation rejected for item", {
+							itemId: candidate.line.item,
+							reason: result.reason,
+						});
+						return;
+					}
+
+					const outcome = result.value;
+					if (outcome.status === "ok" || outcome.status === "skipped") {
+						passed.push(candidate.line);
+					} else if (outcome.status === "blocked") {
+						failed.push({ name: displayName, reason: outcome.reason });
+					} else {
+						failed.push({ name: displayName, reason: outcome.message });
+					}
+				});
+
+				console.log("[indent-dialog] partition result", {
+					passedCount: passed.length,
+					failedCount: failed.length,
+					failed,
+				});
+
+				if (passed.length > 0) {
+					setLineItems((prev) => {
+						const filledLines = prev.filter((line) => lineHasAnyData(line));
+						return [...filledLines, ...passed, createBlankLine()];
+					});
+				}
+
+				// Consolidate into a single toast because use-toast enforces
+				// TOAST_LIMIT = 1 (firing two toasts in the same tick clobbers
+				// one of them). Failure takes priority so the user sees why
+				// items were rejected.
+				if (failed.length > 0) {
+					const description = [
+						passed.length > 0
+							? `Added ${passed.length} item${passed.length > 1 ? "s" : ""}. ${failed.length} rejected:`
+							: `None of the selected items could be added:`,
+						...failed.map((f) => `• ${f.name}: ${f.reason}`),
+					].join("\n");
+					toast({
+						variant: "destructive",
+						title:
+							passed.length > 0
+								? `${failed.length} item${failed.length > 1 ? "s" : ""} rejected`
+								: `No items added`,
+						description,
+						duration: 15000,
+					});
+				} else if (passed.length > 0) {
+					toast({
+						title: `Added ${passed.length} item${passed.length > 1 ? "s" : ""}`,
+						description: "Fill in quantity and other details for each item.",
+					});
+				} else {
+					// Safety net: empty on both sides — impossible in normal flow.
+					toast({
+						variant: "destructive",
+						title: "No items added",
+						description:
+							"Validation produced no results. Check your network connection and try again.",
+					});
+				}
+			} catch (err) {
+				const message =
+					err instanceof Error
+						? err.message
+						: "Unexpected error while adding items.";
+				console.error("[indent] handleItemDialogConfirm failed", err);
+				toast({
+					variant: "destructive",
+					title: "Unable to add items",
+					description: message,
+				});
 			}
-
-			setLineItems((prev) => {
-				const filledLines = prev.filter((line) => lineHasAnyData(line));
-				return [...filledLines, ...newLines, createBlankLine()];
-			});
-
-			toast({
-				title: `Added ${newLines.length} item${newLines.length > 1 ? "s" : ""}`,
-				description: "Fill in quantity and other details for each item.",
-			});
 		},
-		[mode, setLineItems, itemGroupCache, itemGroupLoading, ensureItemGroupData]
+		[
+			mode,
+			branchValue,
+			formValues.expense_type,
+			setLineItems,
+			itemGroupCache,
+			itemGroupLoading,
+			ensureItemGroupData,
+			validateLineAndReturn,
+		]
 	);
 
 	// Check if any line item has data entered (to lock indent_type and expense_type)
@@ -612,17 +747,13 @@ function IndentTransactionPageContent() {
 	const lineItemColumns = useIndentLineItemColumns({
 		canEdit,
 		departmentOptions,
-		itemGroupOptions,
 		itemGroupLoading,
 		labelResolvers,
-		getItemOptions,
-		getMakeOptions,
 		getUomOptions,
 		handleLineFieldChange: handleLineFieldChangeWithValidation,
 		validationMap,
 		getQuantityError,
 		getLineWarnings,
-		lineItems,
 	});
 
 	// Auto-validate pre-loaded lines in edit mode so users see qty constraints immediately

@@ -31,7 +31,15 @@ export const useSalesOrderFormSubmission = ({
 
 	const handleFormSubmit = React.useCallback(
 		async (values: Record<string, unknown>) => {
-			if (mode === "view" || pageError || setupError) return;
+			if (mode === "view") return;
+			if (pageError) {
+				toast({ variant: "destructive", title: "Cannot save", description: pageError });
+				return;
+			}
+			if (setupError) {
+				toast({ variant: "destructive", title: "Setup data failed to load", description: setupError });
+				return;
+			}
 
 			if (!isLineItemsReady) {
 				toast({ variant: "destructive", title: "Line items incomplete", description: "Add at least one item with valid quantity and rate." });

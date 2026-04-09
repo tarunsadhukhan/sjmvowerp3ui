@@ -96,7 +96,7 @@ export function useGateEntryFormSchemas({
 					name: "transporter",
 					label: "Transporter",
 					type: "text" as const,
-					required: true,
+					required: false,
 					disabled: isViewMode,
 					grid: { xs: 12, md: 4 },
 				},

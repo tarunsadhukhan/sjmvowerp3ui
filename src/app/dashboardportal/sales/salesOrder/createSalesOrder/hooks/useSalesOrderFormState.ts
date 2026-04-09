@@ -67,7 +67,17 @@ export function useSalesOrderFormState({
 		setFormValues((prev) => {
 			let hasChanges = false;
 			for (const key in values) {
-				if (prev[key] !== values[key]) { hasChanges = true; break; }
+				const next = values[key];
+				const cur = prev[key];
+				if (cur === next) continue;
+				// Treat undefined ↔ "" as equivalent for "empty" field initialization.
+				// This prevents secondary MuiForm mounts (e.g. GovtSKG sub-form) from
+				// looping back into the page state when they emit their initial empty
+				// values via onValuesChange — see SO-GOVT-003.
+				if ((cur === undefined || cur === null) && next === "") continue;
+				if ((next === undefined || next === null) && cur === "") continue;
+				hasChanges = true;
+				break;
 			}
 			return hasChanges ? { ...prev, ...values } : prev;
 		});

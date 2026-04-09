@@ -364,7 +364,13 @@ export async function createSalesOrder(
 }
 
 export async function updateSalesOrder(
-  payload: Partial<SalesOrderDetails> & { id: string; items?: CreateSalesOrderRequest["items"] }
+  payload: Partial<SalesOrderDetails> & {
+    id: string;
+    items?: CreateSalesOrderRequest["items"];
+    jute?: CreateSalesOrderRequest["jute"];
+    govtskg?: CreateSalesOrderRequest["govtskg"];
+    juteyarn?: CreateSalesOrderRequest["juteyarn"];
+  }
 ): Promise<{ message: string; sales_order_id?: number }> {
   if (!payload.id) {
     throw new Error("Sales order ID is required for update");
@@ -394,6 +400,12 @@ export async function updateSalesOrder(
     gross_amount: payload.grossAmount ?? undefined,
     net_amount: payload.netAmount ?? undefined,
     items: payload.items ?? [],
+    // Type-specific header extensions — must be forwarded so the backend
+    // can persist them. Without these, invoice_type=GovtSacking/Jute/JuteYarn
+    // updates silently drop their extension data.
+    jute: payload.jute,
+    govtskg: payload.govtskg,
+    juteyarn: payload.juteyarn,
   };
 
   const { data, error } = await fetchWithCookie<{

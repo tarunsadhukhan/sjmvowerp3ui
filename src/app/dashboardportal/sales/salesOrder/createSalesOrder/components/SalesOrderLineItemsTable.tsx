@@ -428,7 +428,7 @@ export const useSalesOrderLineItemColumns = ({
 			...(isGovtSkgOrder(invoiceTypeCode) ? [
 				{
 					id: "govtskgPackSheet" as const,
-					header: "Pack Sheet",
+					header: "Pack Sheet *",
 					width: "0.7fr",
 					minWidth: "80px",
 					renderCell: ({ item }: { item: EditableLineItem }) =>
@@ -438,7 +438,8 @@ export const useSalesOrderLineItemColumns = ({
 								value={item.govtskgPackSheet ?? ""}
 								onChange={(e) => handleLineFieldChange(item.id, "govtskgPackSheet", e.target.value)}
 								placeholder="0"
-								className="h-8 text-sm"
+								required
+								className={`h-8 text-sm ${!item.govtskgPackSheet ? "border-red-400 focus-visible:ring-red-400" : ""}`}
 							/>
 						) : (
 							<span className="block truncate text-sm">{item.govtskgPackSheet ?? "-"}</span>
@@ -446,7 +447,7 @@ export const useSalesOrderLineItemColumns = ({
 				},
 				{
 					id: "govtskgNetWeight" as const,
-					header: "Net Weight",
+					header: "Net Weight *",
 					width: "0.7fr",
 					minWidth: "80px",
 					renderCell: ({ item }: { item: EditableLineItem }) =>
@@ -456,7 +457,8 @@ export const useSalesOrderLineItemColumns = ({
 								value={item.govtskgNetWeight ?? ""}
 								onChange={(e) => handleLineFieldChange(item.id, "govtskgNetWeight", e.target.value)}
 								placeholder="0"
-								className="h-8 text-sm"
+								required
+								className={`h-8 text-sm ${!item.govtskgNetWeight ? "border-red-400 focus-visible:ring-red-400" : ""}`}
 							/>
 						) : (
 							<span className="block truncate text-sm">{item.govtskgNetWeight ?? "-"}</span>
@@ -464,7 +466,7 @@ export const useSalesOrderLineItemColumns = ({
 				},
 				{
 					id: "govtskgTotalWeight" as const,
-					header: "Total Weight",
+					header: "Total Weight *",
 					width: "0.7fr",
 					minWidth: "80px",
 					renderCell: ({ item }: { item: EditableLineItem }) =>
@@ -474,7 +476,8 @@ export const useSalesOrderLineItemColumns = ({
 								value={item.govtskgTotalWeight ?? ""}
 								onChange={(e) => handleLineFieldChange(item.id, "govtskgTotalWeight", e.target.value)}
 								placeholder="0"
-								className="h-8 text-sm"
+								required
+								className={`h-8 text-sm ${!item.govtskgTotalWeight ? "border-red-400 focus-visible:ring-red-400" : ""}`}
 							/>
 						) : (
 							<span className="block truncate text-sm">{item.govtskgTotalWeight ?? "-"}</span>

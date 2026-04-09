@@ -48,9 +48,18 @@ type InvoiceTotals = {
 type SalesInvoiceTotalsDisplayProps = {
 	totals: InvoiceTotals;
 	showGSTBreakdown: boolean;
+	roundOffInput?: string;
+	onRoundOffChange?: (value: string) => void;
+	roundOffEditable?: boolean;
 };
 
-export function SalesInvoiceTotalsDisplay({ totals, showGSTBreakdown }: SalesInvoiceTotalsDisplayProps) {
+export function SalesInvoiceTotalsDisplay({
+	totals,
+	showGSTBreakdown,
+	roundOffInput,
+	onRoundOffChange,
+	roundOffEditable = false,
+}: SalesInvoiceTotalsDisplayProps) {
 	return (
 		<div className="flex justify-end">
 			<div className="min-w-70 space-y-1">
@@ -89,19 +98,36 @@ export function SalesInvoiceTotalsDisplay({ totals, showGSTBreakdown }: SalesInv
 					</div>
 				)}
 
-				{totals.roundOff !== 0 && (
-					<div className="flex justify-between text-sm">
-						<span className="text-slate-600">Round Off:</span>
-						<span>{formatCurrency(totals.roundOff)}</span>
-					</div>
-				)}
-
 				<div className="border-t border-slate-300 my-1" />
 
-				<div className="flex justify-between text-base font-semibold">
+				<div className="flex justify-between items-center text-base font-semibold">
 					<span>Net Amount:</span>
 					<span className="text-primary">{formatCurrency(totals.netAmount)}</span>
 				</div>
+
+				{roundOffEditable ? (
+					<div className="flex justify-between items-center text-sm pt-1">
+						<label htmlFor="sales-invoice-round-off" className="text-slate-600">
+							Round Off:
+						</label>
+						<input
+							id="sales-invoice-round-off"
+							type="text"
+							inputMode="decimal"
+							value={roundOffInput ?? ""}
+							onChange={(e) => onRoundOffChange?.(e.target.value)}
+							placeholder="0.00"
+							className="w-24 text-right border border-slate-300 rounded px-2 py-1 text-sm focus:outline-none focus:ring-1 focus:ring-primary"
+						/>
+					</div>
+				) : (
+					totals.roundOff !== 0 && (
+						<div className="flex justify-between text-sm pt-1">
+							<span className="text-slate-600">Round Off:</span>
+							<span>{formatCurrency(totals.roundOff)}</span>
+						</div>
+					)
+				)}
 			</div>
 		</div>
 	);

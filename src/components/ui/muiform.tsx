@@ -382,13 +382,13 @@ export const MuiForm = React.forwardRef(function MuiForm(
 						isOptionEqualToValue={(o: Option, v: Option) => String(o.value) === String(v.value)}
 						value={((field.options ?? []) as Option[]).find((o) => String(o.value) === String(value)) ?? null}
 						onChange={(_, newOpt) => handleChange(field.name, (newOpt as Option | null)?.value ?? "")}
-						disableClearable={Boolean(field.required)}
+						disableClearable={requiredBool}
 						disabled={disabled}
 						noOptionsText={"No options"}
 						renderInput={(params) => (
 							<TextField
 								{...params}
-								label={`${field.label}${field.required ? " *" : ""}`}
+								label={`${field.label}${requiredBool ? " *" : ""}`}
 								fullWidth
 								size="small"
 								helperText={errors[field.name] || field.helperText}
@@ -419,7 +419,7 @@ export const MuiForm = React.forwardRef(function MuiForm(
 						renderInput={(params) => (
 							<TextField
 								{...params}
-								label={`${field.label}${field.required ? " *" : ""}`}
+								label={`${field.label}${requiredBool ? " *" : ""}`}
 								fullWidth
 								size="small"
 								helperText={errors[field.name] || field.helperText}

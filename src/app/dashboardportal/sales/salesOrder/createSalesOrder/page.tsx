@@ -141,10 +141,18 @@ function SalesOrderTransactionPageContent() {
 		return [...branchOptions, { label: fallbackLabel, value: branchValue }];
 	}, [branchOptions, branchValue, soDetails?.branch]);
 
+	// SO-GOVT-006: in create mode, fall back to the first sidebar branch when the
+	// user hasn't explicitly picked one yet, so get_sales_order_setup_1 fires on
+	// page mount and the form unblocks. The branch dropdown still lets the user
+	// override afterwards. Edit/view modes always pass branch_id from the URL.
 	const branchIdForSetup = React.useMemo(() => {
-		if (!branchValue || !/^\d+$/.test(branchValue)) return undefined;
-		return branchValue;
-	}, [branchValue]);
+		if (branchValue && /^\d+$/.test(branchValue)) return branchValue;
+		if (mode === "create") {
+			const firstBranch = branchOptions.find((opt) => /^\d+$/.test(String(opt.value)));
+			if (firstBranch) return String(firstBranch.value);
+		}
+		return undefined;
+	}, [branchValue, mode, branchOptions]);
 
 	// Setup params with stable reference
 	const setupParamsRef = React.useRef<typeof EMPTY_SETUP_PARAMS>(EMPTY_SETUP_PARAMS);
@@ -271,14 +279,23 @@ function SalesOrderTransactionPageContent() {
 		return hasGovtskg || hasJute || hasJuteYarn;
 	}, [formValues]);
 
-	// Clear previous type's header fields when invoice type changes
-	const prevInvoiceTypeCodeRef = React.useRef<string>("");
+	// Clear previous type's header fields when invoice type changes.
+	// IMPORTANT: prevInvoiceTypeCodeRef starts as `null` (NOT ""), so the first time
+	// invoiceTypeCode resolves to anything (including the initial "") we just record it
+	// without firing a clear. This prevents an infinite update loop when the user
+	// picks an invoice type for the first time on a freshly loaded page — see
+	// SO-GOVT-003. The ref must be updated AFTER the equality guard so a re-run
+	// triggered by the same code is a no-op (no setState inside the effect).
+	const prevInvoiceTypeCodeRef = React.useRef<string | null>(null);
 	React.useEffect(() => {
 		if (mode === "view") return;
 		const currentCode = invoiceTypeCode;
 		const prevCode = prevInvoiceTypeCodeRef.current;
+		// Guard FIRST, then update the ref. This way a same-value re-run never sets state.
+		if (prevCode === currentCode) return;
 		prevInvoiceTypeCodeRef.current = currentCode;
-		if (!prevCode || prevCode === currentCode) return;
+		// First observation (ref was null) or transitioning from empty: nothing to clear.
+		if (prevCode === null || prevCode === "") return;
 
 		const clearFields: Record<string, string> = {};
 		if (prevCode === "govt_skg") {

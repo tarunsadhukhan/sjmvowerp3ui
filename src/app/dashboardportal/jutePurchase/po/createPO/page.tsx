@@ -499,7 +499,7 @@ function JutePOCreatePageContent() {
         }
 
         if (mode === "create") {
-          const payload = mapFormToCreatePayload(values as unknown as JutePOFormValues, validLines);
+          const payload = mapFormToCreatePayload(values as unknown as JutePOFormValues, validLines, Number(coId));
           const response = await fetchWithCookie(
             `${apiRoutesPortalMasters.JUTE_PO_CREATE}?co_id=${coId}`,
             "POST",

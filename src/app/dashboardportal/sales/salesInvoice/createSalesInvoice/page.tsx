@@ -1053,7 +1053,13 @@ function InvoiceTransactionPageContent() {
 						onSubmit={handleFormSubmit}
 						onValuesChange={handleFooterFormValuesChange}
 					/>
-					<SalesInvoiceTotalsDisplay totals={totals} showGSTBreakdown={Boolean(partyState || shippingState)} />
+					<SalesInvoiceTotalsDisplay
+						totals={totals}
+						showGSTBreakdown={Boolean(partyState || shippingState)}
+						roundOffInput={(formValues.round_off as string) ?? ""}
+						onRoundOffChange={(value) => setFormValues((prev) => ({ ...prev, round_off: value }))}
+						roundOffEditable={canSave}
+					/>
 					<SalesInvoiceApprovalBar
 						approvalInfo={approvalInfo}
 						permissions={approvalPermissions}

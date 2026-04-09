@@ -13,11 +13,11 @@ export const useSalesOrderGovtskgSchema = ({
 	React.useMemo(() => {
 		const disabled = headerFieldsDisabled;
 		const fields: Field[] = [
-			{ name: "govtskg_pcso_no", label: "PCSO No.", type: "text", disabled, grid: { xs: 12, md: 4 } },
-			{ name: "govtskg_pcso_date", label: "PCSO Date", type: "date", disabled, grid: { xs: 12, md: 4 } },
-			{ name: "govtskg_admin_office", label: "Administrative Office Address", type: "textarea", disabled, grid: { xs: 12 } },
-			{ name: "govtskg_rail_head", label: "Destination Rail Head", type: "text", disabled, grid: { xs: 12, md: 4 } },
-			{ name: "govtskg_loading_point", label: "Loading Point", type: "text", disabled, grid: { xs: 12, md: 4 } },
+			{ name: "govtskg_pcso_no", label: "PCSO No.", type: "text", required: true, disabled, grid: { xs: 12, md: 4 } },
+			{ name: "govtskg_pcso_date", label: "PCSO Date", type: "date", required: true, disabled, grid: { xs: 12, md: 4 } },
+			{ name: "govtskg_admin_office", label: "Administrative Office Address", type: "textarea", required: true, disabled, grid: { xs: 12 } },
+			{ name: "govtskg_rail_head", label: "Destination Rail Head", type: "text", required: true, disabled, grid: { xs: 12, md: 4 } },
+			{ name: "govtskg_loading_point", label: "Loading Point", type: "text", required: true, disabled, grid: { xs: 12, md: 4 } },
 		];
 		return { fields } satisfies Schema;
 	}, [mode, headerFieldsDisabled]);

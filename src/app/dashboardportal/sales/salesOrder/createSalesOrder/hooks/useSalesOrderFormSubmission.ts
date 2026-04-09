@@ -38,6 +38,32 @@ export const useSalesOrderFormSubmission = ({
 				return;
 			}
 
+			// Govt Sacking: every line must have pack_sheet, net_weight, total_weight.
+			// We validate before hitting the API so the user gets a field-specific
+			// message instead of a backend round-trip. The backend also enforces this.
+			if (isGovtSkgOrder(invoiceTypeCode)) {
+				const toNum = (v: unknown) => {
+					if (v === null || v === undefined || v === "") return NaN;
+					const n = Number(v);
+					return Number.isFinite(n) ? n : NaN;
+				};
+				const missing: string[] = [];
+				filledLineItems.forEach((li, idx) => {
+					const rowLabel = `Row ${idx + 1}`;
+					if (Number.isNaN(toNum(li.govtskgPackSheet))) missing.push(`${rowLabel}: Pack Sheet`);
+					if (Number.isNaN(toNum(li.govtskgNetWeight))) missing.push(`${rowLabel}: Net Weight`);
+					if (Number.isNaN(toNum(li.govtskgTotalWeight))) missing.push(`${rowLabel}: Total Weight`);
+				});
+				if (missing.length > 0) {
+					toast({
+						variant: "destructive",
+						title: "Govt Sacking line fields required",
+						description: `Please fill: ${missing.join(", ")}`,
+					});
+					return;
+				}
+			}
+
 			const isHessian = isHessianOrder(invoiceTypeCode);
 
 			const itemsPayload: CreateSalesOrderRequest["items"] = filledLineItems.map((item) => ({
@@ -77,9 +103,11 @@ export const useSalesOrderFormSubmission = ({
 					qty_untit_conversion: Number(item.juteQtyUnitConversion) || null,
 				} : undefined,
 				govtskg_dtl: isGovtSkgOrder(invoiceTypeCode) ? {
-					pack_sheet: Number(item.govtskgPackSheet) || null,
-					net_weight: Number(item.govtskgNetWeight) || null,
-					total_weight: Number(item.govtskgTotalWeight) || null,
+					// The pre-submit validator above guarantees these are parseable,
+					// so we use a safe coercion that preserves 0 (unlike `|| null`).
+					pack_sheet: item.govtskgPackSheet != null && item.govtskgPackSheet !== "" ? Number(item.govtskgPackSheet) : null,
+					net_weight: item.govtskgNetWeight != null && item.govtskgNetWeight !== "" ? Number(item.govtskgNetWeight) : null,
+					total_weight: item.govtskgTotalWeight != null && item.govtskgTotalWeight !== "" ? Number(item.govtskgTotalWeight) : null,
 				} : undefined,
 			}));
 
@@ -97,12 +125,15 @@ export const useSalesOrderFormSubmission = ({
 				claim_description: String(values.jute_claim_description ?? formValues.jute_claim_description ?? "") || undefined,
 			} : undefined;
 
+			// Always send all 5 keys (even if empty) so the backend validator can
+			// name the specific missing field rather than complaining the whole
+			// object is missing.
 			const govtskgHeader = isGovtSkgOrder(invoiceTypeCode) ? {
-				pcso_no: String(values.govtskg_pcso_no ?? formValues.govtskg_pcso_no ?? "") || undefined,
-				pcso_date: String(values.govtskg_pcso_date ?? formValues.govtskg_pcso_date ?? "") || undefined,
-				administrative_office_address: String(values.govtskg_admin_office ?? formValues.govtskg_admin_office ?? "") || undefined,
-				destination_rail_head: String(values.govtskg_rail_head ?? formValues.govtskg_rail_head ?? "") || undefined,
-				loading_point: String(values.govtskg_loading_point ?? formValues.govtskg_loading_point ?? "") || undefined,
+				pcso_no: String(values.govtskg_pcso_no ?? formValues.govtskg_pcso_no ?? ""),
+				pcso_date: String(values.govtskg_pcso_date ?? formValues.govtskg_pcso_date ?? ""),
+				administrative_office_address: String(values.govtskg_admin_office ?? formValues.govtskg_admin_office ?? ""),
+				destination_rail_head: String(values.govtskg_rail_head ?? formValues.govtskg_rail_head ?? ""),
+				loading_point: String(values.govtskg_loading_point ?? formValues.govtskg_loading_point ?? ""),
 			} : undefined;
 
 			const juteyarnHeader = isJuteYarnOrder(invoiceTypeCode) ? {
@@ -114,7 +145,7 @@ export const useSalesOrderFormSubmission = ({
 			setSaving(true);
 			try {
 				if (mode === "edit" && requestedId) {
-					const updatePayload = {
+					const updatePayload: Parameters<typeof updateSalesOrder>[0] = {
 						id: requestedId,
 						branch: String(values.branch ?? ""),
 						party: values.party ? String(values.party) : undefined,
@@ -138,10 +169,10 @@ export const useSalesOrderFormSubmission = ({
 						grossAmount,
 						netAmount,
 						items: itemsPayload,
-					} as Parameters<typeof updateSalesOrder>[0];
-					if (juteHeader) (updatePayload as Record<string, unknown>).jute = juteHeader;
-					if (govtskgHeader) (updatePayload as Record<string, unknown>).govtskg = govtskgHeader;
-					if (juteyarnHeader) (updatePayload as Record<string, unknown>).juteyarn = juteyarnHeader;
+						jute: juteHeader,
+						govtskg: govtskgHeader,
+						juteyarn: juteyarnHeader,
+					};
 					await updateSalesOrder(updatePayload);
 					toast({ title: "Sales order updated" });
 					router.replace(`/dashboardportal/sales/salesOrder/createSalesOrder?mode=view&id=${requestedId}`);

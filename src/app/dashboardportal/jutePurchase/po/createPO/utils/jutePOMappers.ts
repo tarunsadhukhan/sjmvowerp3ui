@@ -308,8 +308,9 @@ export const mapFormValuesToCreatePayload = (
 // Alias functions for page.tsx compatibility
 export const mapFormToCreatePayload = (
   formValues: JutePOFormValues,
-  lineItems: JutePOLineItem[]
-) => mapFormValuesToCreatePayload(formValues, lineItems, 0);
+  lineItems: JutePOLineItem[],
+  coId: number
+) => mapFormValuesToCreatePayload(formValues, lineItems, coId);
 
 export const mapFormToUpdatePayload = (
   formValues: JutePOFormValues,

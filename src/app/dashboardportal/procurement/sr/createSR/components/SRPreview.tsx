@@ -173,7 +173,8 @@ export const SRPreview: React.FC<SRPreviewProps> = ({
 						<tr style={{ backgroundColor: "#f5f5f5" }}>
 							<th style={{ border: "1px solid #ddd", padding: "8px" }}>#</th>
 							<th style={{ border: "1px solid #ddd", padding: "8px" }}>PO No.</th>
-							<th style={{ border: "1px solid #ddd", padding: "8px" }}>Item</th>
+							<th style={{ border: "1px solid #ddd", padding: "8px" }}>Item Code</th>
+								<th style={{ border: "1px solid #ddd", padding: "8px" }}>Item</th>
 							<th style={{ border: "1px solid #ddd", padding: "8px" }}>UOM</th>
 							<th style={{ border: "1px solid #ddd", padding: "8px", textAlign: "right" }}>Qty</th>
 							<th style={{ border: "1px solid #ddd", padding: "8px", textAlign: "right" }}>Rate</th>
@@ -193,8 +194,11 @@ export const SRPreview: React.FC<SRPreviewProps> = ({
 								<td style={{ border: "1px solid #ddd", padding: "8px" }}>
 									{item.po_no_formatted || "-"}
 								</td>
+								<td style={{ border: "1px solid #ddd", padding: "8px", fontFamily: "monospace" }}>
+									{item.full_item_code || item.item_code || "-"}
+								</td>
 								<td style={{ border: "1px solid #ddd", padding: "8px" }}>
-									{item.full_item_code || item.item_code || ""}{item.item_name ? ` - ${item.item_name}` : ""}
+									{item.item_name || "-"}
 									{item.accepted_item_make_name && (
 										<span style={{ color: "#666", fontSize: "11px" }}>
 											{" "}({item.accepted_item_make_name})

@@ -28,6 +28,8 @@ export type POPreviewHeader = {
 
 export type POPreviewItem = {
   srNo: number;
+  indentNo?: string;
+  itemCode?: string;
   itemGroup?: string;
   item?: string;
   quantity?: string | number;
@@ -266,11 +268,11 @@ const POPreview: React.FC<POPreviewProps> = ({ header, items, totals, additional
           <Box component="table" sx={{ width: "100%", borderCollapse: "collapse" }}>
             <Box component="thead" sx={{ backgroundColor: "rgba(12,60,96,0.08)" }}>
               <Box component="tr">
-                {["Sr No", "Item", "Qty", "UOM", "Rate", "Disc.", "Disc. Amt", "Amount", "Remarks"].map((col) => (
+                {["Sr No", "Indent No", "Item Code", "Item Name", "Qty", "UOM", "Rate", "Disc.", "Disc. Amt", "Amount", "Remarks"].map((col) => (
                   <Box
                     key={col}
                     component="th"
-                    sx={{ border: "1px solid", borderColor: "divider", p: 1, fontSize: 12, textAlign: col === "Remarks" ? "left" : "center" }}
+                    sx={{ border: "1px solid", borderColor: "divider", p: 1, fontSize: 12, textAlign: col === "Remarks" || col === "Item Name" ? "left" : "center" }}
                   >
                     {col}
                   </Box>
@@ -283,6 +285,12 @@ const POPreview: React.FC<POPreviewProps> = ({ header, items, totals, additional
                   <Box component="tr" key={`po-preview-row-${item.srNo}`}>
                     <Box component="td" sx={{ border: "1px solid", borderColor: "divider", p: 1, fontSize: 12, textAlign: "center" }}>
                       {item.srNo}
+                    </Box>
+                    <Box component="td" sx={{ border: "1px solid", borderColor: "divider", p: 1, fontSize: 12, whiteSpace: "nowrap" }}>
+                      {item.indentNo || "-"}
+                    </Box>
+                    <Box component="td" sx={{ border: "1px solid", borderColor: "divider", p: 1, fontSize: 12, fontFamily: "monospace", whiteSpace: "nowrap" }}>
+                      {item.itemCode || "-"}
                     </Box>
                     <Box component="td" sx={{ border: "1px solid", borderColor: "divider", p: 1, fontSize: 12 }}>
                       {item.item || "-"}
@@ -312,7 +320,7 @@ const POPreview: React.FC<POPreviewProps> = ({ header, items, totals, additional
                 ))
               ) : (
                 <Box component="tr">
-                  <Box component="td" colSpan={9} sx={{ border: "1px solid", borderColor: "divider", p: 2, fontSize: 12, textAlign: "center" }}>
+                  <Box component="td" colSpan={11} sx={{ border: "1px solid", borderColor: "divider", p: 2, fontSize: 12, textAlign: "center" }}>
                     No line items captured yet.
                   </Box>
                 </Box>

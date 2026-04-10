@@ -17,6 +17,7 @@ import { ArrowLeft, CheckCircle, Send, XCircle } from "lucide-react";
 import { DataGrid, type GridColDef, type GridRenderCellParams } from "@mui/x-data-grid";
 import { fetchWithCookie } from "@/utils/apiClient2";
 import { apiRoutesPortalMasters } from "@/utils/api";
+import { openStyledPrintWindow } from "@/utils/printUtils";
 import { toast } from "@/hooks/use-toast";
 import useSelectedCompanyCoId from "@/hooks/use-selected-company-coid";
 
@@ -28,8 +29,9 @@ type DrcrNoteLineItem = {
 	po_no_formatted: string;
 	drcr_note_dtl_id: number;
 	inward_dtl_id: number;
+	item_code: string;
+	full_item_code: string;
 	item_desc: string;
-	item_group_desc: string;
 	uom_name: string;
 	debitnote_type: number;
 	debitnote_type_label: string;
@@ -153,6 +155,7 @@ function DrcrNoteViewPageContent() {
 	const [loading, setLoading] = React.useState(true);
 	const [saving, setSaving] = React.useState(false);
 	const [errorMessage, setErrorMessage] = React.useState<string | null>(null);
+	const previewRef = React.useRef<HTMLDivElement>(null);
 
 	/**
 	 * Fetch DRCR Note data
@@ -212,8 +215,9 @@ function DrcrNoteViewPageContent() {
 				po_no_formatted: item.po_no_formatted ?? "",
 				drcr_note_dtl_id: item.drcr_note_dtl_id ?? 0,
 				inward_dtl_id: item.inward_dtl_id ?? 0,
+				item_code: item.item_code ?? "",
+				full_item_code: item.full_item_code ?? "",
 				item_desc: item.item_name ?? item.item_desc ?? "",
-				item_group_desc: item.item_grp_name ?? item.item_group_desc ?? "",
 				uom_name: item.uom_name ?? "",
 				debitnote_type: item.debitnote_type ?? 0,
 				debitnote_type_label: item.debitnote_type_label ?? "",
@@ -361,10 +365,15 @@ function DrcrNoteViewPageContent() {
 			minWidth: 120,
 		},
 		{
-			field: "item_group_desc",
-			headerName: "Item Group",
+			field: "full_item_code",
+			headerName: "Item Code",
 			flex: 1,
-			minWidth: 120,
+			minWidth: 150,
+			renderCell: (params: GridRenderCellParams<DrcrNoteLineItem, string>) => (
+				<Typography variant="body2" sx={{ fontFamily: "monospace" }}>
+					{params.row.full_item_code || params.row.item_code || "-"}
+				</Typography>
+			),
 		},
 		{
 			field: "item_desc",
@@ -639,6 +648,108 @@ function DrcrNoteViewPageContent() {
 						)}
 					</Stack>
 				</Stack>
+			</Paper>
+
+			{/* Print Preview */}
+			<Paper sx={{ p: 3, mt: 3 }}>
+				<Stack direction="row" justifyContent="space-between" alignItems="center" mb={2}>
+					<Typography variant="subtitle1" fontWeight={600}>
+						Printable Preview
+					</Typography>
+					<Button
+						variant="outlined"
+						size="small"
+						onClick={() => {
+							const content = previewRef.current?.innerHTML || "";
+							const extraCss = `
+								body { font-family: Arial, sans-serif; }
+								table { margin-top: 16px; }
+								th, td { border: 1px solid #ddd; padding: 8px; text-align: left; font-size: 12px; }
+								th { background-color: #f5f5f5; font-weight: 600; }
+							`;
+							const win = openStyledPrintWindow(
+								content,
+								`${header?.adjustment_type_label || "DRCR Note"} - ${header?.note_no || ""}`,
+								extraCss
+							);
+							if (win) {
+								win.focus();
+								setTimeout(() => { win.print(); win.close(); }, 300);
+							}
+						}}
+					>
+						Print
+					</Button>
+				</Stack>
+				<Divider sx={{ mb: 2 }} />
+				<Box ref={previewRef}>
+					<Typography variant="h6" textAlign="center" fontWeight={600} mb={2}>
+						{header?.adjustment_type_label || "DRCR Note"}
+					</Typography>
+
+					<Box sx={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr 1fr", gap: 1, mb: 2, fontSize: "12px" }}>
+						<Box sx={{ display: "flex", gap: 0.5 }}><Typography variant="caption" color="text.secondary">Note No.:</Typography><Typography variant="body2">{header?.note_no || "-"}</Typography></Box>
+						<Box sx={{ display: "flex", gap: 0.5 }}><Typography variant="caption" color="text.secondary">Note Date:</Typography><Typography variant="body2">{formatDate(header?.note_date)}</Typography></Box>
+						<Box sx={{ display: "flex", gap: 0.5 }}><Typography variant="caption" color="text.secondary">GRN No.:</Typography><Typography variant="body2">{header?.inward_no || "-"}</Typography></Box>
+						<Box sx={{ display: "flex", gap: 0.5 }}><Typography variant="caption" color="text.secondary">GRN Date:</Typography><Typography variant="body2">{formatDate(header?.inward_date)}</Typography></Box>
+						<Box sx={{ display: "flex", gap: 0.5 }}><Typography variant="caption" color="text.secondary">Branch:</Typography><Typography variant="body2">{header?.branch_name || "-"}</Typography></Box>
+						<Box sx={{ display: "flex", gap: 0.5 }}><Typography variant="caption" color="text.secondary">Supplier:</Typography><Typography variant="body2">{header?.supplier_name || "-"}</Typography></Box>
+						<Box sx={{ display: "flex", gap: 0.5 }}><Typography variant="caption" color="text.secondary">SR No.:</Typography><Typography variant="body2">{header?.sr_no || "-"}</Typography></Box>
+						<Box sx={{ display: "flex", gap: 0.5 }}><Typography variant="caption" color="text.secondary">SR Date:</Typography><Typography variant="body2">{formatDate(header?.sr_date)}</Typography></Box>
+					</Box>
+
+					{header?.remarks && (
+						<Box sx={{ mb: 2, display: "flex", gap: 0.5 }}>
+							<Typography variant="caption" color="text.secondary">Remarks:</Typography>
+							<Typography variant="body2">{header.remarks}</Typography>
+						</Box>
+					)}
+
+					<Box component="table" sx={{ width: "100%", borderCollapse: "collapse", fontSize: "12px" }}>
+						<thead>
+							<tr style={{ backgroundColor: "#f5f5f5" }}>
+								<th style={{ border: "1px solid #ddd", padding: "8px" }}>#</th>
+								<th style={{ border: "1px solid #ddd", padding: "8px" }}>PO No.</th>
+								<th style={{ border: "1px solid #ddd", padding: "8px" }}>Item Code</th>
+								<th style={{ border: "1px solid #ddd", padding: "8px" }}>Item</th>
+								<th style={{ border: "1px solid #ddd", padding: "8px" }}>UOM</th>
+								<th style={{ border: "1px solid #ddd", padding: "8px" }}>Reason</th>
+								<th style={{ border: "1px solid #ddd", padding: "8px", textAlign: "right" }}>Qty</th>
+								<th style={{ border: "1px solid #ddd", padding: "8px", textAlign: "right" }}>Rate</th>
+								<th style={{ border: "1px solid #ddd", padding: "8px", textAlign: "right" }}>Amount</th>
+							</tr>
+						</thead>
+						<tbody>
+							{lineItems.map((item, idx) => (
+								<tr key={item.id}>
+									<td style={{ border: "1px solid #ddd", padding: "8px" }}>{idx + 1}</td>
+									<td style={{ border: "1px solid #ddd", padding: "8px" }}>{item.po_no_formatted || "-"}</td>
+									<td style={{ border: "1px solid #ddd", padding: "8px", fontFamily: "monospace" }}>{item.full_item_code || item.item_code || "-"}</td>
+									<td style={{ border: "1px solid #ddd", padding: "8px" }}>{item.item_desc || "-"}</td>
+									<td style={{ border: "1px solid #ddd", padding: "8px" }}>{item.uom_name || "-"}</td>
+									<td style={{ border: "1px solid #ddd", padding: "8px" }}>{item.debitnote_type_label || "-"}</td>
+									<td style={{ border: "1px solid #ddd", padding: "8px", textAlign: "right" }}>{item.quantity}</td>
+									<td style={{ border: "1px solid #ddd", padding: "8px", textAlign: "right" }}>{formatCurrency(item.rate)}</td>
+									<td style={{ border: "1px solid #ddd", padding: "8px", textAlign: "right", fontWeight: 600 }}>{formatCurrency(item.quantity * item.rate)}</td>
+								</tr>
+							))}
+						</tbody>
+					</Box>
+
+					<Box sx={{ mt: 2, display: "flex", justifyContent: "flex-end" }}>
+						<Stack spacing={0.5} sx={{ minWidth: 250 }}>
+							<Box display="flex" justifyContent="space-between">
+								<Typography variant="body2">Gross Amount</Typography>
+								<Typography variant="body2">{formatCurrency(header?.gross_amount)}</Typography>
+							</Box>
+							<Divider />
+							<Box display="flex" justifyContent="space-between">
+								<Typography variant="body2" fontWeight={700}>Net Amount</Typography>
+								<Typography variant="body2" fontWeight={700}>{formatCurrency(header?.net_amount)}</Typography>
+							</Box>
+						</Stack>
+					</Box>
+				</Box>
 			</Paper>
 		</Box>
 	);

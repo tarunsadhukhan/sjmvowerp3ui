@@ -108,14 +108,18 @@ export const mapItemGroupDetailResponse = (response: unknown): ItemGroupCacheEnt
 			const id = data?.item_id ?? data?.id;
 			if (!id) return null;
 			const value = String(id);
-			const code = data?.item_code;
-			const name = data?.item_name;
+			const rawCode = data?.full_item_code ?? data?.item_code;
+			const rawName = data?.item_name;
+			const code = rawCode != null ? String(rawCode) : undefined;
+			const name = rawName != null ? String(rawName) : undefined;
 			const labelParts = [code, name].filter(Boolean);
 			return {
 				value,
 				label: labelParts.length ? labelParts.join(" — ") : value,
 				defaultUomId: data?.uom_id != null ? String(data.uom_id) : undefined,
 				defaultUomLabel: data?.uom_name ? String(data.uom_name) : undefined,
+				itemCode: code,
+				itemName: name,
 			} satisfies ItemOption;
 		})
 		.filter(Boolean) as ItemOption[];
@@ -168,8 +172,12 @@ export const mapItemGroupDetailResponse = (response: unknown): ItemGroupCacheEnt
 	});
 
 	const itemLabelById: Record<string, string> = {};
+	const itemCodeById: Record<string, string> = {};
+	const itemNameById: Record<string, string> = {};
 	items.forEach((item) => {
 		itemLabelById[item.value] = item.label;
+		if (item.itemCode) itemCodeById[item.value] = item.itemCode;
+		if (item.itemName) itemNameById[item.value] = item.itemName;
 	});
 
 	const makeLabelById: Record<string, string> = {};
@@ -182,6 +190,8 @@ export const mapItemGroupDetailResponse = (response: unknown): ItemGroupCacheEnt
 		makes,
 		uomsByItemId,
 		itemLabelById,
+		itemCodeById,
+		itemNameById,
 		makeLabelById,
 		uomLabelByItemId,
 	} satisfies ItemGroupCacheEntry;

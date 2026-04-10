@@ -179,7 +179,8 @@ export function TransactionLineItems<TItem>({
                   ) : null}
                   {columns.map((column) => {
                     const content = column.renderCell({ item, index, canEdit });
-                    const tooltipContent = column.getTooltip?.({ item, index, canEdit })?.trim();
+                    const rawTooltip = column.getTooltip?.({ item, index, canEdit });
+                    const tooltipContent = typeof rawTooltip === 'string' ? rawTooltip.trim() : undefined;
                     const node = React.isValidElement(content) ? content : <span>{content}</span>;
                     
                     // Always wrap in the same structure to prevent focus loss when tooltip content changes

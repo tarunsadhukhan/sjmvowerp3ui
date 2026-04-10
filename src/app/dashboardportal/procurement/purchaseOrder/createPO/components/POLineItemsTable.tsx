@@ -15,9 +15,6 @@ const DISCOUNT_MODE_OPTIONS: Option[] = [
 
 type UsePOLineItemColumnsParams = {
   canEdit: boolean;
-  itemGroupOptions: Option[];
-  getItemGroupLabel: (groupId: string) => string;
-  getItemOptions: (groupId: string) => Option[];
   getItemLabel: (groupId: string, itemId: string, itemCode?: string) => string;
   getUomOptions: (groupId: string, itemId: string) => Option[];
   getUomLabel: (groupId: string, itemId: string, uomId: string) => string;
@@ -26,14 +23,22 @@ type UsePOLineItemColumnsParams = {
 };
 
 /**
+ * Splits a "code — name" label into its parts. Mirrors the logic used in
+ * the preview pane so the line items table and the preview agree on what
+ * counts as the item's display name.
+ */
+const splitItemLabel = (label: string): { code: string; name: string } => {
+  const idx = label.indexOf(" — ");
+  if (idx < 0) return { code: label, name: label };
+  return { code: label.substring(0, idx), name: label.substring(idx + 3) };
+};
+
+/**
  * Builds the TransactionLineColumn array used by the PO line items grid.
  * Separated so the heavy render logic stays out of page.tsx.
  */
 export const usePOLineItemColumns = ({
   canEdit,
-  itemGroupOptions,
-  getItemGroupLabel,
-  getItemOptions,
   getItemLabel,
   getUomOptions,
   getUomLabel,
@@ -43,51 +48,44 @@ export const usePOLineItemColumns = ({
   React.useMemo(
     () => [
       {
-        id: "itemGroup",
-        header: "Item Group",
-        width: "1.5fr",
-        minWidth: "163px",
-        renderCell: ({ item }) => {
-          const label = getItemGroupLabel(item.itemGroup);
-          if (!canEdit) {
-            return <span className="block truncate text-sm">{label || "-"}</span>;
-          }
-          const value = itemGroupOptions.find((o) => o.value === item.itemGroup) ?? null;
-          return (
-            <SearchableSelect<Option>
-              options={itemGroupOptions}
-              value={value}
-              onChange={(next) => onFieldChange(item.id, "itemGroup", next?.value ?? "")}
-              getOptionLabel={(o) => o.label}
-              isOptionEqualToValue={(a, b) => a.value === b.value}
-              placeholder="Select group"
-            />
-          );
-        },
-        getTooltip: ({ item }) => getItemGroupLabel(item.itemGroup) || undefined,
+        id: "indentNo",
+        header: "Indent No",
+        width: "0.9fr",
+        minWidth: "100px",
+        renderCell: ({ item }) => (
+          <span className="block truncate text-sm font-mono text-slate-700">{item.indentNo || "-"}</span>
+        ),
+        getTooltip: ({ item }) => item.indentNo || undefined,
       },
       {
-        id: "item",
-        header: "Item",
-        width: "2.25fr",
-        minWidth: "225px",
+        id: "itemCode",
+        header: "Item Code",
+        width: "1.3fr",
+        minWidth: "140px",
         renderCell: ({ item }) => {
-          const label = getItemLabel(item.itemGroup, item.item, item.itemCode);
-          if (!canEdit) {
-            return <span className="block truncate text-sm">{label}</span>;
-          }
-          const options = getItemOptions(item.itemGroup);
-          const value = options.find((o) => o.value === item.item) ?? null;
+          const cachedLabel = getItemLabel(item.itemGroup, item.item, item.itemCode);
+          const code = item.itemCode || splitItemLabel(cachedLabel).code || "-";
+          return <span className="block truncate text-sm font-mono text-slate-700">{code}</span>;
+        },
+        getTooltip: ({ item }) => {
+          const cachedLabel = getItemLabel(item.itemGroup, item.item, item.itemCode);
+          return item.itemCode || splitItemLabel(cachedLabel).code || undefined;
+        },
+      },
+      {
+        id: "itemName",
+        header: "Item Name",
+        width: "2fr",
+        minWidth: "200px",
+        renderCell: ({ item }) => {
+          const cachedLabel = getItemLabel(item.itemGroup, item.item, item.itemCode);
+          const { code, name } = splitItemLabel(cachedLabel);
+          // If the cached label collapses to just the code (no " — " separator),
+          // fall back to the raw label so we don't show a redundant code twice.
+          const displayName = name && name !== code ? name : cachedLabel || "-";
           return (
             <div className="flex flex-col gap-0.5 w-full">
-              <SearchableSelect<Option>
-                options={options}
-                value={value}
-                onChange={(next) => onFieldChange(item.id, "item", next?.value ?? "")}
-                getOptionLabel={(o) => o.label}
-                isOptionEqualToValue={(a, b) => a.value === b.value}
-                placeholder="Select item"
-              />
+              <span className="block truncate text-sm text-slate-700">{displayName}</span>
               {item.rowError && (
                 <p className="text-xs text-red-600 leading-tight">{item.rowError}</p>
               )}
@@ -97,7 +95,11 @@ export const usePOLineItemColumns = ({
             </div>
           );
         },
-        getTooltip: ({ item }) => getItemLabel(item.itemGroup, item.item, item.itemCode) || undefined,
+        getTooltip: ({ item }) => {
+          const cachedLabel = getItemLabel(item.itemGroup, item.item, item.itemCode);
+          const { code, name } = splitItemLabel(cachedLabel);
+          return name && name !== code ? name : cachedLabel || undefined;
+        },
       },
       {
         id: "hsnCode",
@@ -315,7 +317,7 @@ export const usePOLineItemColumns = ({
         getTooltip: ({ item }) => (item.amount ? `Amount: ${item.amount.toFixed(2)}` : undefined),
       },
     ],
-    [canEdit, itemGroupOptions, getItemGroupLabel, getItemOptions, getItemLabel, getUomOptions, getUomLabel, onFieldChange, getLastPurchaseInfo],
+    [canEdit, getItemLabel, getUomOptions, getUomLabel, onFieldChange, getLastPurchaseInfo],
   );
 
 /**

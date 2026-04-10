@@ -4,7 +4,7 @@ import { Input } from "@/components/ui/input";
 import type { TransactionLineColumn } from "@/components/ui/transaction";
 import type { EditableLineItem, Option, UomConversionEntry } from "../types/salesOrderTypes";
 import { computeConvertedRate } from "@/utils/uomConversion";
-import { isHessianOrder, isJuteOrder, isGovtSkgOrder } from "../utils/salesOrderConstants";
+import { isHessianOrder, isJuteOrder } from "../utils/salesOrderConstants";
 
 type UseSalesOrderLineItemColumnsParams = {
 	canEdit: boolean;
@@ -422,65 +422,6 @@ export const useSalesOrderLineItemColumns = ({
 							/>
 						) : (
 							<span className="block truncate text-sm">{item.juteQtyUnitConversion ?? "-"}</span>
-						),
-				},
-			] as TransactionLineColumn<EditableLineItem>[] : []),
-			...(isGovtSkgOrder(invoiceTypeCode) ? [
-				{
-					id: "govtskgPackSheet" as const,
-					header: "Pack Sheet *",
-					width: "0.7fr",
-					minWidth: "80px",
-					renderCell: ({ item }: { item: EditableLineItem }) =>
-						canEdit ? (
-							<Input
-								type="text"
-								value={item.govtskgPackSheet ?? ""}
-								onChange={(e) => handleLineFieldChange(item.id, "govtskgPackSheet", e.target.value)}
-								placeholder="0"
-								required
-								className={`h-8 text-sm ${!item.govtskgPackSheet ? "border-red-400 focus-visible:ring-red-400" : ""}`}
-							/>
-						) : (
-							<span className="block truncate text-sm">{item.govtskgPackSheet ?? "-"}</span>
-						),
-				},
-				{
-					id: "govtskgNetWeight" as const,
-					header: "Net Weight *",
-					width: "0.7fr",
-					minWidth: "80px",
-					renderCell: ({ item }: { item: EditableLineItem }) =>
-						canEdit ? (
-							<Input
-								type="text"
-								value={item.govtskgNetWeight ?? ""}
-								onChange={(e) => handleLineFieldChange(item.id, "govtskgNetWeight", e.target.value)}
-								placeholder="0"
-								required
-								className={`h-8 text-sm ${!item.govtskgNetWeight ? "border-red-400 focus-visible:ring-red-400" : ""}`}
-							/>
-						) : (
-							<span className="block truncate text-sm">{item.govtskgNetWeight ?? "-"}</span>
-						),
-				},
-				{
-					id: "govtskgTotalWeight" as const,
-					header: "Total Weight *",
-					width: "0.7fr",
-					minWidth: "80px",
-					renderCell: ({ item }: { item: EditableLineItem }) =>
-						canEdit ? (
-							<Input
-								type="text"
-								value={item.govtskgTotalWeight ?? ""}
-								onChange={(e) => handleLineFieldChange(item.id, "govtskgTotalWeight", e.target.value)}
-								placeholder="0"
-								required
-								className={`h-8 text-sm ${!item.govtskgTotalWeight ? "border-red-400 focus-visible:ring-red-400" : ""}`}
-							/>
-						) : (
-							<span className="block truncate text-sm">{item.govtskgTotalWeight ?? "-"}</span>
 						),
 				},
 			] as TransactionLineColumn<EditableLineItem>[] : []),

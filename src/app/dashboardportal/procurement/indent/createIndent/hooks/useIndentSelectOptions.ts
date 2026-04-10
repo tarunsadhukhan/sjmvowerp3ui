@@ -122,6 +122,22 @@ export const useIndentSelectOptions = ({
 		[itemGroupCache]
 	);
 
+	const getItemNameLabel = React.useCallback(
+		(groupId: string, itemId: string) => {
+			if (!groupId || !itemId) return "-";
+			return itemGroupCache[groupId]?.itemNameById[itemId] ?? itemId;
+		},
+		[itemGroupCache]
+	);
+
+	const getItemCodeLabel = React.useCallback(
+		(groupId: string, itemId: string) => {
+			if (!groupId || !itemId) return "-";
+			return itemGroupCache[groupId]?.itemCodeById[itemId] ?? itemId;
+		},
+		[itemGroupCache]
+	);
+
 	const getItemMakeLabel = React.useCallback(
 		(groupId: string, makeId: string) => {
 			if (!groupId || !makeId) return "-";
@@ -150,10 +166,12 @@ export const useIndentSelectOptions = ({
 			department: getDepartmentLabel,
 			itemGroup: getItemGroupLabel,
 			item: getItemLabel,
+			itemName: getItemNameLabel,
+			itemCode: getItemCodeLabel,
 			itemMake: getItemMakeLabel,
 			uom: getUomLabel,
 		}),
-		[getDepartmentLabel, getItemGroupLabel, getItemLabel, getItemMakeLabel, getUomLabel]
+		[getDepartmentLabel, getItemGroupLabel, getItemLabel, getItemNameLabel, getItemCodeLabel, getItemMakeLabel, getUomLabel]
 	);
 
 	return {

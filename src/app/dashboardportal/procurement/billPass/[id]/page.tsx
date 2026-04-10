@@ -49,9 +49,9 @@ type DrcrLineWithNote = BillPassDRCRLine & { note_type: number; note_type_name: 
 
 function InfoField({ label, value }: { label: string; value: React.ReactNode }) {
   return (
-    <Box>
-      <Typography variant="caption" color="text.secondary" sx={{ display: "block", mb: 0.25 }}>
-        {label}
+    <Box sx={{ display: "flex", gap: 0.5, alignItems: "baseline" }}>
+      <Typography variant="caption" color="text.secondary" sx={{ whiteSpace: "nowrap" }}>
+        {label}:
       </Typography>
       <Typography variant="body2" fontWeight={500}>
         {value || "-"}
@@ -116,7 +116,7 @@ function DrcrInlineRows({ lines }: { lines: DrcrLineWithNote[] }) {
               borderLeftColor: isDebit ? "error.main" : "success.main",
             }}
           >
-            <Box component="td" colSpan={4} sx={{ p: 0.75, pl: 4, fontSize: "0.7rem" }}>
+            <Box component="td" colSpan={5} sx={{ p: 0.75, pl: 4, fontSize: "0.7rem" }}>
               <Chip
                 label={isDebit ? "DEBIT" : "CREDIT"}
                 size="small"
@@ -407,7 +407,7 @@ export default function BillPassViewPage() {
               <Box component="table" sx={{ width: "100%", borderCollapse: "collapse" }}>
                 <Box component="thead" sx={{ bgcolor: "primary.main" }}>
                   <Box component="tr">
-                    {["PO No.", "Item", "Make", "UOM", "Qty", "PO Rate", "Accepted Rate", "Amount", "Tax", "Total"].map(
+                    {["PO No.", "Item Code", "Item", "Make", "UOM", "Qty", "PO Rate", "Accepted Rate", "Amount", "Tax", "Total"].map(
                       (h) => (
                         <Box
                           key={h}
@@ -417,7 +417,7 @@ export default function BillPassViewPage() {
                             color: "white",
                             fontSize: "0.75rem",
                             fontWeight: 600,
-                            textAlign: ["PO No.", "Item", "Make", "UOM"].includes(h) ? "left" : "right",
+                            textAlign: ["PO No.", "Item Code", "Item", "Make", "UOM"].includes(h) ? "left" : "right",
                             whiteSpace: "nowrap",
                           }}
                         >
@@ -455,11 +455,13 @@ export default function BillPassViewPage() {
                             </Typography>
                           </Box>
                           <Box component="td" sx={{ p: 1, fontSize: "0.75rem" }}>
-                            <Typography variant="caption" fontWeight={600} display="block">
-                              {line.item_name}
+                            <Typography variant="caption" sx={{ fontFamily: "monospace" }}>
+                              {line.full_item_code || line.item_code || "-"}
                             </Typography>
-                            <Typography variant="caption" color="text.secondary">
-                              {line.item_code}
+                          </Box>
+                          <Box component="td" sx={{ p: 1, fontSize: "0.75rem" }}>
+                            <Typography variant="caption" fontWeight={600}>
+                              {line.item_name || "-"}
                             </Typography>
                           </Box>
                           <Box component="td" sx={{ p: 1, fontSize: "0.75rem" }}>
@@ -497,7 +499,7 @@ export default function BillPassViewPage() {
                           >
                             <Box
                               component="td"
-                              colSpan={9}
+                              colSpan={10}
                               sx={{ p: 0.75, pl: 4, fontSize: "0.7rem", textAlign: "right", fontWeight: 600 }}
                             >
                               Line Net Payable:

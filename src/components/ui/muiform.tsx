@@ -337,7 +337,7 @@ export const MuiForm = React.forwardRef(function MuiForm(
 						<Typography variant="caption" color="text.secondary">
 							{field.label}
 						</Typography>
-						<Typography variant="body1">{displayValue(field, value)}</Typography>
+						<Typography variant="body2" sx={{ fontWeight: 500 }}>{displayValue(field, value)}</Typography>
 					</Box>
 				) : field.type === "text" || field.type === "number" || field.type === "date" || field.type === "time" ? (
 					<TextField
@@ -429,37 +429,46 @@ export const MuiForm = React.forwardRef(function MuiForm(
 						)}
 					/>
 				) : field.type === "custom" && typeof field.render === "function" ? (
-					<Box>
-						{field.label && (
-							<Typography variant="subtitle2" sx={{ mb: 1 }} color="text.secondary">
+					mode === "view" ? (
+						<Box>
+							<Typography variant="caption" color="text.secondary">
 								{field.label}
 							</Typography>
-						)}
-						{field.render({
-							value,
-							values,
-							onChange: (val) => handleChange(field.name, val),
-							setValue,
-							disabled,
-							mode,
-						})}
-						{(errors[field.name] || field.helperText) && (
-							<Typography
-								variant="caption"
-								sx={{ display: "block", mt: 0.5 }}
-								color={errors[field.name] ? "error" : "text.secondary"}
-							>
-								{errors[field.name] || field.helperText}
-							</Typography>
-						)}
-					</Box>
+							<Typography variant="body2" sx={{ fontWeight: 500 }}>{displayValue(field, value)}</Typography>
+						</Box>
+					) : (
+						<Box>
+							{field.label && (
+								<Typography variant="subtitle2" sx={{ mb: 1 }} color="text.secondary">
+									{field.label}
+								</Typography>
+							)}
+							{field.render({
+								value,
+								values,
+								onChange: (val) => handleChange(field.name, val),
+								setValue,
+								disabled,
+								mode,
+							})}
+							{(errors[field.name] || field.helperText) && (
+								<Typography
+									variant="caption"
+									sx={{ display: "block", mt: 0.5 }}
+									color={errors[field.name] ? "error" : "text.secondary"}
+								>
+									{errors[field.name] || field.helperText}
+								</Typography>
+							)}
+						</Box>
+					)
 				) : (
 					// Fallback render as text
 					<Box>
 						<Typography variant="caption" color="text.secondary">
 							{field.label}
 						</Typography>
-						<Typography variant="body1">{displayValue(field, value)}</Typography>
+						<Typography variant="body2" sx={{ fontWeight: 500 }}>{displayValue(field, value)}</Typography>
 					</Box>
 				)}
 					</Box>

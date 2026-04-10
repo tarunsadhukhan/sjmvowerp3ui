@@ -40,8 +40,8 @@ type IndentPreviewProps = {
 };
 
 const FieldRow = ({ label, value }: { label: string; value?: React.ReactNode }) => (
-  <Stack direction="column" spacing={0.25} sx={{ minWidth: 0 }}>
-    <Typography variant="caption" color="text.secondary" sx={{ fontSize: "0.75rem" }}>
+  <Stack direction="row" spacing={0.5} sx={{ minWidth: 0, alignItems: "baseline" }}>
+    <Typography variant="caption" color="text.secondary" sx={{ fontSize: "0.75rem", whiteSpace: "nowrap" }}>
       {label}:
     </Typography>
     <Typography variant="body2" sx={{ fontWeight: 400, fontSize: "0.875rem" }}>

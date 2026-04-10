@@ -57,7 +57,7 @@ import type { EditableLineItem, ItemGroupCacheEntry, POAdditionalChargeRaw, POSe
 
 import { mapItemGroupDetailResponse, mapPOSetupResponse, mapPODetailsToFormValues } from "./utils/poMappers";
 import { calculateExpectedDate, calculateTotals } from "./utils/poCalculations";
-import { buildDefaultFormValues, createBlankLine } from "./utils/poFactories";
+import { buildDefaultFormValues } from "./utils/poFactories";
 import {
   EMPTY_BRANCH_ADDRESSES,
   EMPTY_BROKERS,
@@ -322,20 +322,6 @@ function POTransactionPageContent() {
     indiaGst: Boolean(coConfig?.india_gst),
   });
 
-  const initialLineSeededRef = React.useRef(false);
-  React.useEffect(() => {
-    if (!manualEntryAllowed || mode !== "create") {
-      initialLineSeededRef.current = false;
-      return;
-    }
-    if (initialLineSeededRef.current) return;
-    setLineItems((prev) => {
-      if (prev.length) return prev;
-      initialLineSeededRef.current = true;
-      return [createBlankLine()];
-    });
-  }, [manualEntryAllowed, mode, setLineItems, createBlankLine]);
-
   const { taxType } = usePOTaxCalculations({
     mode,
     coConfig,
@@ -593,12 +579,21 @@ function POTransactionPageContent() {
 
   const handleItemDialogConfirm = React.useCallback(
     (items: SelectedItem[]) => {
-      if (mode === "view" || !items.length) return;
+      if (mode === "view") return;
+      if (!items.length) {
+        toast({
+          variant: "destructive",
+          title: "No items added",
+          description: "Selected items are already on this purchase order.",
+        });
+        return;
+      }
 
       const newLines: EditableLineItem[] = items.map((item) => ({
         id: crypto.randomUUID?.() ?? String(Date.now() + Math.random()),
         itemGroup: String(item.item_grp_id),
         item: String(item.item_id),
+        itemCode: item.full_item_code || item.item_code,
         itemMake: "",
         quantity: "",
         rate: "",
@@ -618,7 +613,24 @@ function POTransactionPageContent() {
 
       setLineItems((prev) => {
         const filledLines = prev.filter((line) => lineHasAnyData(line));
-        return [...filledLines, ...newLines, createBlankLine()];
+        return [...filledLines, ...newLines];
+      });
+
+      // Run PO validation against the newly added lines so min/max PO qty,
+      // MOQ multiples, and any blocking errors get populated. Errors surface
+      // both inline (rowError) and as a destructive toast via the callback.
+      revalidateLoadedLines(newLines, {
+        branchId: branchIdForSetup ?? undefined,
+        coId: coId ?? undefined,
+        expenseTypeId: formValues.expense_type ? String(formValues.expense_type) : undefined,
+        poType: String(formValues.po_type ?? "Regular"),
+        onValidationError: (line, errors) => {
+          toast({
+            variant: "destructive",
+            title: "Item validation failed",
+            description: `${line.itemCode || "Item"}: ${errors.join(" ")}`,
+          });
+        },
       });
 
       toast({
@@ -626,7 +638,18 @@ function POTransactionPageContent() {
         description: "Fill in quantity, rate and other details.",
       });
     },
-    [mode, setLineItems, itemGroupCache, itemGroupLoading, ensureItemGroupData]
+    [
+      mode,
+      setLineItems,
+      itemGroupCache,
+      itemGroupLoading,
+      ensureItemGroupData,
+      revalidateLoadedLines,
+      branchIdForSetup,
+      coId,
+      formValues.expense_type,
+      formValues.po_type,
+    ]
   );
 
   // Line item field handlers and columns
@@ -637,11 +660,8 @@ function POTransactionPageContent() {
     branchAddressOptions,
     projectOptions,
     expenseOptions,
-    itemGroupOptions,
-    getItemOptions,
     getMakeOptions,
     getUomOptions,
-    getItemGroupLabel,
     getItemLabel,
     getMakeLabel,
     getUomLabel,
@@ -769,9 +789,6 @@ function POTransactionPageContent() {
 
   const lineItemColumns = usePOLineItemColumns({
     canEdit: lineItemsCanEdit,
-    itemGroupOptions,
-    getItemGroupLabel,
-    getItemOptions,
     getItemLabel,
     getUomOptions,
     getUomLabel,
@@ -1103,7 +1120,7 @@ function POTransactionPageContent() {
             ? "Add line items by selecting from indent or manually entering items"
             : "Select items from an indent to populate the PO line items",
         selectionColumnWidth: "28px",
-        headerAction: lineItemsCanEdit ? (
+        headerAction: lineItemsCanEdit && manualEntryAllowed ? (
           <Button
             type="button"
             size="sm"

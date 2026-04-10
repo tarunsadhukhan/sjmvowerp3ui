@@ -46,32 +46,6 @@ export const useSalesOrderFormSubmission = ({
 				return;
 			}
 
-			// Govt Sacking: every line must have pack_sheet, net_weight, total_weight.
-			// We validate before hitting the API so the user gets a field-specific
-			// message instead of a backend round-trip. The backend also enforces this.
-			if (isGovtSkgOrder(invoiceTypeCode)) {
-				const toNum = (v: unknown) => {
-					if (v === null || v === undefined || v === "") return NaN;
-					const n = Number(v);
-					return Number.isFinite(n) ? n : NaN;
-				};
-				const missing: string[] = [];
-				filledLineItems.forEach((li, idx) => {
-					const rowLabel = `Row ${idx + 1}`;
-					if (Number.isNaN(toNum(li.govtskgPackSheet))) missing.push(`${rowLabel}: Pack Sheet`);
-					if (Number.isNaN(toNum(li.govtskgNetWeight))) missing.push(`${rowLabel}: Net Weight`);
-					if (Number.isNaN(toNum(li.govtskgTotalWeight))) missing.push(`${rowLabel}: Total Weight`);
-				});
-				if (missing.length > 0) {
-					toast({
-						variant: "destructive",
-						title: "Govt Sacking line fields required",
-						description: `Please fill: ${missing.join(", ")}`,
-					});
-					return;
-				}
-			}
-
 			const isHessian = isHessianOrder(invoiceTypeCode);
 
 			const itemsPayload: CreateSalesOrderRequest["items"] = filledLineItems.map((item) => ({

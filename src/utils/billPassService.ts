@@ -53,6 +53,7 @@ export type BillPassSRLine = {
   item_id: number;
   item_name: string;
   item_code: string;
+  full_item_code?: string;
   hsn_code?: string;
   item_group_name: string;
   accepted_make_name: string;

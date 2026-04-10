@@ -21,7 +21,7 @@ type InspectionLineItem = {
 	id: string;
 	po_no_formatted: string;
 	inward_dtl_id: number;
-	item_group_desc: string;
+	full_item_code: string;
 	item_desc: string;
 	make_desc: string;
 	uom_name: string;
@@ -158,7 +158,7 @@ const MaterialInspectionPreview: React.FC<MaterialInspectionPreviewProps> = ({ h
 								{[
 									"Sr No",
 									"PO No.",
-									"Item Group",
+									"Item Code",
 									"Item",
 									"Make",
 									"UOM",
@@ -222,7 +222,7 @@ const MaterialInspectionPreview: React.FC<MaterialInspectionPreviewProps> = ({ h
 												textAlign: "left",
 											}}
 										>
-											{item.item_group_desc || "-"}
+											{item.full_item_code || "-"}
 										</Box>
 										<Box
 											component="td"

@@ -11,8 +11,43 @@ type UseInwardLineItemsParams = {
 	ensureItemGroupData: (groupId: string) => void;
 };
 
+export type POItemsConfirmResult = {
+	addedCount: number;
+	duplicateCount: number;
+	skippedNoPendingCount: number;
+};
+
+/**
+ * Compute a row-level validation error for the given line.
+ * Returns undefined when the row is valid.
+ */
+const computeRowError = (line: EditableLineItem): string | undefined => {
+	if (!line.item) return undefined; // blank row — ignored
+	const qty = Number(line.quantity);
+	if (!line.quantity || !Number.isFinite(qty) || qty <= 0) {
+		return "Quantity must be greater than zero";
+	}
+	if (!line.uom) {
+		return "UOM is required";
+	}
+	if (line.poDtlId && line.orderedQty != null) {
+		const pending = line.orderedQty - (line.receivedQty ?? 0);
+		if (qty > pending) {
+			return `Cannot exceed pending PO qty (${pending})`;
+		}
+	}
+	return undefined;
+};
+
 /**
  * Hook to manage line items for the Inward transaction page.
+ *
+ * Items can only be added through the Add Items dialog or Select from PO
+ * dialog — there is no inline item entry. This hook exposes:
+ *   - handleLineFieldChange for editing hsn/qty/uom/remarks
+ *   - handlePOItemsConfirm to merge PO-selected rows (returns counts for toasts)
+ *   - filledLineItems / lineItemsValid for submission gating
+ *   - hasRowErrors / firstRowError for the form's validation summary
  */
 export const useInwardLineItems = ({
 	mode,
@@ -29,7 +64,8 @@ export const useInwardLineItems = ({
 		createBlankItem: createBlankLine,
 		hasData: lineHasAnyData,
 		getItemId: (item) => item.id,
-		maintainTrailingBlank: mode !== "view",
+		// Dialog-only entry — never append a trailing blank row.
+		maintainTrailingBlank: false,
 	});
 
 	/**
@@ -63,67 +99,54 @@ export const useInwardLineItems = ({
 	);
 
 	/**
-	 * Handle field change in a line item.
+	 * Handle a field change in a line item. Only editable fields flow through
+	 * this handler: hsnCode, quantity, uom, remarks. itemGroup / item are
+	 * no longer editable (dialog-only entry), so those branches are absent.
 	 */
 	const handleLineFieldChange = React.useCallback(
 		(id: string, field: keyof EditableLineItem, rawValue: string) => {
 			if (mode === "view") return;
 
-			// Cascade logic for item group change
-			if (field === "itemGroup") {
-				setLineItems((prev) =>
-					prev.map((item) =>
-						item.id === id
-							? { ...item, itemGroup: rawValue, item: "", itemMake: "", uom: "" }
-							: item
-					)
-				);
-				if (rawValue && !itemGroupCache[rawValue] && !itemGroupLoading[rawValue]) {
-					ensureItemGroupData(rawValue);
-				}
-				return;
-			}
-
-			// Item change → auto-select default UOM
-			if (field === "item") {
-				setLineItems((prev) =>
-					prev.map((item) => {
-						if (item.id !== id) return item;
-						const cache = itemGroupCache[item.itemGroup ?? ""];
-						const itemOption = cache?.items.find((opt) => opt.value === rawValue);
-						const defaultUom = itemOption?.defaultUomId ?? "";
-						const taxPct = itemOption?.taxPercentage;
-						return {
-							...item,
-							item: rawValue,
-							uom: defaultUom,
-							taxPercentage: taxPct,
-						};
-					})
-				);
-				return;
-			}
-
-			// Generic field update
 			setLineItems((prev) =>
-				prev.map((item) => (item.id === id ? { ...item, [field]: rawValue } : item))
+				prev.map((item) => {
+					if (item.id !== id) return item;
+					const next = { ...item, [field]: rawValue };
+					// Recompute row error whenever quantity or uom changes
+					if (field === "quantity" || field === "uom") {
+						next.rowError = computeRowError(next);
+					}
+					return next;
+				})
 			);
 		},
-		[mode, setLineItems, itemGroupCache, itemGroupLoading, ensureItemGroupData]
+		[mode, setLineItems]
 	);
 
 	/**
 	 * Handle confirmation of PO line items selection.
+	 * Returns counts so the caller can surface toasts for skipped rows.
 	 */
 	const handlePOItemsConfirm = React.useCallback(
-		(selectedItems: POLineItem[]) => {
-			const newLines: EditableLineItem[] = selectedItems.map((poItem) => {
+		(selectedItems: POLineItem[]): POItemsConfirmResult => {
+			let duplicateCount = 0;
+			let skippedNoPendingCount = 0;
+
+			const newLines: EditableLineItem[] = [];
+			selectedItems.forEach((poItem) => {
+				const pending =
+					poItem.pending_qty ??
+					(poItem.ordered_qty ?? 0) - (poItem.received_qty ?? 0);
+				if (pending <= 0) {
+					skippedNoPendingCount += 1;
+					return;
+				}
+
 				const itemGroupId = String(poItem.item_grp_id ?? "");
 				if (itemGroupId && !itemGroupCache[itemGroupId] && !itemGroupLoading[itemGroupId]) {
 					ensureItemGroupData(itemGroupId);
 				}
 
-				return {
+				newLines.push({
 					id: generateLineId(),
 					poDtlId: String(poItem.po_dtl_id),
 					poNo: poItem.po_no,
@@ -133,26 +156,37 @@ export const useInwardLineItems = ({
 					itemMake: poItem.item_make_id ? String(poItem.item_make_id) : "",
 					orderedQty: poItem.ordered_qty,
 					receivedQty: poItem.received_qty,
-					quantity: String(poItem.pending_qty ?? poItem.ordered_qty - (poItem.received_qty ?? 0)),
+					quantity: String(pending),
 					uom: String(poItem.uom_id ?? ""),
 					remarks: poItem.remarks ?? "",
 					taxPercentage: poItem.tax_percentage,
 					hsnCode: poItem.hsn_code ?? undefined,
-				};
+				});
 			});
 
-			// Merge with existing lines (avoid duplicates by poDtlId)
+			let uniqueNewLines: EditableLineItem[] = [];
 			setLineItems((prev) => {
 				const existingPoDtlIds = new Set(
 					prev.filter((line) => line.poDtlId).map((line) => line.poDtlId)
 				);
-				const uniqueNewLines = newLines.filter(
-					(line) => !line.poDtlId || !existingPoDtlIds.has(line.poDtlId)
-				);
-				// Remove blank lines and add new ones
+				uniqueNewLines = newLines.filter((line) => {
+					if (line.poDtlId && existingPoDtlIds.has(line.poDtlId)) {
+						duplicateCount += 1;
+						return false;
+					}
+					return true;
+				});
+				// Stamp row errors (e.g. future min-qty edits) and merge.
+				uniqueNewLines = uniqueNewLines.map((l) => ({ ...l, rowError: computeRowError(l) }));
 				const filledPrev = prev.filter(lineHasAnyData);
 				return [...filledPrev, ...uniqueNewLines];
 			});
+
+			return {
+				addedCount: uniqueNewLines.length,
+				duplicateCount,
+				skippedNoPendingCount,
+			};
 		},
 		[setLineItems, itemGroupCache, itemGroupLoading, ensureItemGroupData]
 	);
@@ -163,14 +197,26 @@ export const useInwardLineItems = ({
 		[lineItems]
 	);
 
+	// Row-level error summary
+	const hasRowErrors = React.useMemo(
+		() => filledLineItems.some((l) => !!l.rowError),
+		[filledLineItems]
+	);
+
+	const firstRowError = React.useMemo(
+		() => filledLineItems.find((l) => !!l.rowError)?.rowError,
+		[filledLineItems]
+	);
+
 	// Check if line items are valid for submission
 	const lineItemsValid = React.useMemo(() => {
 		if (filledLineItems.length === 0) return false;
+		if (hasRowErrors) return false;
 		return filledLineItems.every((line) => {
 			const qty = Number(line.quantity);
 			return Boolean(line.item && line.uom && Number.isFinite(qty) && qty > 0);
 		});
-	}, [filledLineItems]);
+	}, [filledLineItems, hasRowErrors]);
 
 	return {
 		lineItems,
@@ -182,5 +228,8 @@ export const useInwardLineItems = ({
 		handlePOItemsConfirm,
 		filledLineItems,
 		lineItemsValid,
+		hasRowErrors,
+		firstRowError,
+		computeRowError,
 	};
 };

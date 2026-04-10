@@ -31,37 +31,19 @@ export const useSalesOrderFormSubmission = ({
 
 	const handleFormSubmit = React.useCallback(
 		async (values: Record<string, unknown>) => {
-			if (mode === "view" || pageError || setupError) return;
+			if (mode === "view") return;
+			if (pageError) {
+				toast({ variant: "destructive", title: "Cannot save", description: pageError });
+				return;
+			}
+			if (setupError) {
+				toast({ variant: "destructive", title: "Setup data failed to load", description: setupError });
+				return;
+			}
 
 			if (!isLineItemsReady) {
 				toast({ variant: "destructive", title: "Line items incomplete", description: "Add at least one item with valid quantity and rate." });
 				return;
-			}
-
-			// Govt Sacking: every line must have pack_sheet, net_weight, total_weight.
-			// We validate before hitting the API so the user gets a field-specific
-			// message instead of a backend round-trip. The backend also enforces this.
-			if (isGovtSkgOrder(invoiceTypeCode)) {
-				const toNum = (v: unknown) => {
-					if (v === null || v === undefined || v === "") return NaN;
-					const n = Number(v);
-					return Number.isFinite(n) ? n : NaN;
-				};
-				const missing: string[] = [];
-				filledLineItems.forEach((li, idx) => {
-					const rowLabel = `Row ${idx + 1}`;
-					if (Number.isNaN(toNum(li.govtskgPackSheet))) missing.push(`${rowLabel}: Pack Sheet`);
-					if (Number.isNaN(toNum(li.govtskgNetWeight))) missing.push(`${rowLabel}: Net Weight`);
-					if (Number.isNaN(toNum(li.govtskgTotalWeight))) missing.push(`${rowLabel}: Total Weight`);
-				});
-				if (missing.length > 0) {
-					toast({
-						variant: "destructive",
-						title: "Govt Sacking line fields required",
-						description: `Please fill: ${missing.join(", ")}`,
-					});
-					return;
-				}
 			}
 
 			const isHessian = isHessianOrder(invoiceTypeCode);

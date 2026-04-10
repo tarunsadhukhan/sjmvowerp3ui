@@ -549,7 +549,6 @@ function JuteGateEntryCreatePageContent() {
 			"entryDate",
 			"vehicleNo",
 			"driverName",
-			"transporter",
 			"grossWeight",
 		] as const;
 

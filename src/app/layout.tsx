@@ -4,6 +4,7 @@ import "./globals.css";
 import SidebarCompaniesGuardClient from '@/components/clientside/SidebarCompaniesGuardClient';
 import SubdomainGuard from '@/components/clientside/SubdomainGuard';
 import { AppThemeProvider } from '@/styles/AppThemeProvider';
+import { Toaster } from '@/components/ui/toaster';
 
 const inter = Inter({ subsets: ["latin"] });
 /* 
@@ -38,6 +39,7 @@ export default function RootLayout({
             <SubdomainGuard />
             <SidebarCompaniesGuardClient />
             {children}
+            <Toaster />
           </AppThemeProvider>
          {/* </AuthProvider>  */}
       </body>

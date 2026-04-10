@@ -106,35 +106,28 @@ export const useSRLineItemColumns = ({
 				getTooltip: ({ item }) => item.po_no_formatted || undefined,
 			},
 			{
-				id: "item_grp_name",
-				header: "Item Group",
+				id: "item_code",
+				header: "Item Code",
 				width: "1.2fr",
 				minWidth: "150px",
 				renderCell: ({ item }) => (
-					<Typography variant="body2" noWrap title={item.item_grp_name || undefined}>
-						{item.item_grp_name || "-"}
+					<Typography variant="body2" noWrap sx={{ fontFamily: "monospace" }} title={item.full_item_code || item.item_code || undefined}>
+						{item.full_item_code || item.item_code || "-"}
 					</Typography>
 				),
-				getTooltip: ({ item }) => item.item_grp_name || undefined,
+				getTooltip: ({ item }) => item.full_item_code || item.item_code || undefined,
 			},
 			{
 				id: "item_name",
 				header: "Item",
 				width: "1.8fr",
 				minWidth: "200px",
-				renderCell: ({ item }) => {
-					const code = item.full_item_code || item.item_code || "";
-					const displayText = code && item.item_name ? `${code} - ${item.item_name}` : item.item_name || code || "-";
-					return (
-						<Typography variant="body2" noWrap title={displayText}>
-							{displayText}
-						</Typography>
-					);
-				},
-				getTooltip: ({ item }) => {
-					const code = item.full_item_code || item.item_code;
-					return code && item.item_name ? `${code} - ${item.item_name}` : item.item_name || code || undefined;
-				},
+				renderCell: ({ item }) => (
+					<Typography variant="body2" noWrap title={item.item_name || undefined}>
+						{item.item_name || "-"}
+					</Typography>
+				),
+				getTooltip: ({ item }) => item.item_name || undefined,
 			},
 			{
 				id: "accepted_item_make_name",

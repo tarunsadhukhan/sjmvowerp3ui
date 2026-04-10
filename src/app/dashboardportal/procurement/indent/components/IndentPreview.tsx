@@ -23,10 +23,6 @@ export type IndentPreviewHeader = {
 export type IndentPreviewItem = {
   srNo: number;
   department?: string;
-  itemGroup?: string;
-  itemGroupCode?: string;
-  itemGroupName?: string;
-  item?: string;
   itemCode?: string;
   itemName?: string;
   itemMake?: string;
@@ -44,8 +40,8 @@ type IndentPreviewProps = {
 };
 
 const FieldRow = ({ label, value }: { label: string; value?: React.ReactNode }) => (
-  <Stack direction="column" spacing={0.25} sx={{ minWidth: 0 }}>
-    <Typography variant="caption" color="text.secondary" sx={{ fontSize: "0.75rem" }}>
+  <Stack direction="row" spacing={0.5} sx={{ minWidth: 0, alignItems: "baseline" }}>
+    <Typography variant="caption" color="text.secondary" sx={{ fontSize: "0.75rem", whiteSpace: "nowrap" }}>
       {label}:
     </Typography>
     <Typography variant="body2" sx={{ fontWeight: 400, fontSize: "0.875rem" }}>
@@ -249,61 +245,7 @@ const IndentPreview: React.FC<IndentPreviewProps> = ({ header, items, remarks, o
             </Box>
             <Box component="tbody">
               {items.length ? (
-                items.map((item) => {
-                  // Format item as [Item Group Code] Item Code - Item Group Name - Item Name
-                  const formattedItem = (() => {
-                    // Helper to extract code and name from a label
-                    const extractCodeAndName = (label: string | undefined) => {
-                      if (!label) return { code: undefined, name: undefined };
-                      const separator = label.includes(" — ") ? " — " : label.includes(" - ") ? " - " : null;
-                      if (separator) {
-                        const parts = label.split(separator);
-                        return {
-                          code: parts[0]?.trim(),
-                          name: parts[1]?.trim(),
-                        };
-                      }
-                      return { code: label.trim(), name: undefined };
-                    };
-
-                    // Get codes and names
-                    const groupData = extractCodeAndName(item.itemGroup);
-                    const itemData = extractCodeAndName(item.item);
-
-                    const groupCode = item.itemGroupCode || groupData.code;
-                    const itemCode = item.itemCode || itemData.code;
-                    const groupName = item.itemGroupName || groupData.name;
-                    const itemName = item.itemName || itemData.name;
-
-                    // Build the formatted string
-                    const parts: string[] = [];
-
-                    // Add codes in brackets
-                    if (groupCode && itemCode) {
-                      parts.push(`[${groupCode}] ${itemCode}`);
-                    } else if (groupCode) {
-                      parts.push(`[${groupCode}]`);
-                    } else if (itemCode) {
-                      parts.push(itemCode);
-                    }
-
-                    // Add names if available
-                    if (groupName) {
-                      parts.push(groupName);
-                    }
-                    if (itemName) {
-                      parts.push(itemName);
-                    }
-
-                    // Join with " - " separator
-                    if (parts.length > 0) {
-                      return parts.join(" - ");
-                    }
-
-                    return item.item || "-";
-                  })();
-
-                  return (
+                items.map((item) => (
                     <Box component="tr" key={`preview-row-${item.srNo}`}>
                       <Box component="td" sx={{ border: "1px solid", borderColor: "divider", p: 1, fontSize: 12 }}>
                         {item.srNo}
@@ -312,7 +254,14 @@ const IndentPreview: React.FC<IndentPreviewProps> = ({ header, items, remarks, o
                         {item.department || "-"}
                       </Box>
                       <Box component="td" sx={{ border: "1px solid", borderColor: "divider", p: 1, fontSize: 12 }}>
-                        {formattedItem}
+                        {item.itemCode && item.itemCode !== "-" ? (
+                          <>
+                            <span style={{ fontFamily: "monospace" }}>{item.itemCode}</span>
+                            {item.itemName && item.itemName !== "-" ? ` — ${item.itemName}` : ""}
+                          </>
+                        ) : (
+                          item.itemName || "-"
+                        )}
                       </Box>
                       <Box component="td" sx={{ border: "1px solid", borderColor: "divider", p: 1, fontSize: 12 }}>
                         {item.itemMake || "-"}
@@ -327,8 +276,7 @@ const IndentPreview: React.FC<IndentPreviewProps> = ({ header, items, remarks, o
                         {item.remarks || "-"}
                       </Box>
                     </Box>
-                  );
-                })
+                  ))
               ) : (
                 <Box component="tr">
                   <Box component="td" colSpan={7} sx={{ border: "1px solid", borderColor: "divider", p: 2, fontSize: 12, textAlign: "center" }}>

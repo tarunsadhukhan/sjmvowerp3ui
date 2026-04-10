@@ -69,7 +69,7 @@ export const usePOLineItems = ({
 		createBlankItem: createBlankLine,
 		hasData: lineHasAnyData,
 		getItemId: (item) => item.id,
-		maintainTrailingBlank: allowManualEntry,
+		maintainTrailingBlank: false,
 	});
 
 	const indentItemGroupInfoRef = React.useRef<Map<string, { code?: string; name?: string }>>(new Map());
@@ -516,6 +516,12 @@ export const usePOLineItems = ({
 				coId?: string;
 				expenseTypeId?: string;
 				poType?: string;
+				/**
+				 * Optional callback fired when the backend returns blocking errors
+				 * for a line. Used by the dialog-add flow to surface a toast so
+				 * the user knows why a freshly added row is invalid.
+				 */
+				onValidationError?: (line: EditableLineItem, errors: string[]) => void;
 			},
 		) => {
 			if (mode === "view") return;
@@ -524,6 +530,7 @@ export const usePOLineItems = ({
 			const resolvedCoId = overrideParams?.coId ?? coId;
 			const resolvedExpenseTypeId = overrideParams?.expenseTypeId ?? expenseTypeId;
 			const resolvedPoType = overrideParams?.poType ?? poType ?? "Regular";
+			const onValidationError = overrideParams?.onValidationError;
 
 			lines.forEach((line) => {
 				if (!line.item) return;
@@ -579,6 +586,7 @@ export const usePOLineItems = ({
 									if (l.id !== line.id) return l;
 									const update: Partial<EditableLineItem> = {
 										validationLogic: result.validation_logic,
+										rowError: result.errors.length ? result.errors.join(" ") : undefined,
 										rowWarning: result.warnings.length ? result.warnings.join(" ") : undefined,
 										minOrderQty: result.min_order_qty ?? undefined,
 									};
@@ -591,6 +599,9 @@ export const usePOLineItems = ({
 									return { ...l, ...update };
 								}),
 							);
+							if (result.errors.length && onValidationError) {
+								onValidationError(line, result.errors);
+							}
 						} catch {
 							// Silently ignore — do not block editing
 						}

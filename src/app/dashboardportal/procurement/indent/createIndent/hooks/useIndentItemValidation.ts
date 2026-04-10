@@ -5,6 +5,17 @@ import { validateItemForIndent } from "@/utils/indentService";
 
 type ValidationMap = Record<string, LineItemValidationState>;
 
+/**
+ * Outcome of a single line validation, returned to callers that need to make
+ * synchronous decisions (e.g. the Add Items dialog confirm flow, which uses
+ * this to auto-remove lines that fail validation).
+ */
+export type ValidateLineOutcome =
+	| { status: "skipped" }
+	| { status: "ok"; result: ItemValidationResult }
+	| { status: "blocked"; result: ItemValidationResult; reason: string }
+	| { status: "error"; message: string };
+
 type UseIndentItemValidationParams = {
 	branchId: string;
 	indentType: string;
@@ -54,14 +65,31 @@ export function useIndentItemValidation({
 	}, []);
 
 	/**
-	 * Trigger validation for a specific line after item selection.
-	 * For Logic 3 (no validation) this is a no-op.
+	 * Trigger validation for a specific line after item selection and return
+	 * a synchronous outcome describing whether the item passed. Also updates
+	 * `validationMap` as a side effect so existing consumers keep working.
+	 *
+	 * For Logic 3 (no validation) returns `{ status: "skipped" }`.
 	 */
-	const validateLine = React.useCallback(
-		async (lineId: string, itemId: string) => {
+	const validateLineAndReturn = React.useCallback(
+		async (lineId: string, itemId: string): Promise<ValidateLineOutcome> => {
+			console.log("[indent-validate] validateLineAndReturn called", {
+				lineId,
+				itemId,
+				currentLogic,
+				branchId,
+				indentType,
+				expenseTypeId,
+			});
 			if (currentLogic === 3 || !branchId || !itemId || !expenseTypeId) {
+				console.log("[indent-validate] skipping — early exit", {
+					logic3: currentLogic === 3,
+					noBranch: !branchId,
+					noItem: !itemId,
+					noExpense: !expenseTypeId,
+				});
 				clearLine(lineId);
-				return;
+				return { status: "skipped" };
 			}
 
 			// Set loading
@@ -103,15 +131,51 @@ export function useIndentItemValidation({
 					...prev,
 					[lineId]: { loading: false, result: mapped, error: null },
 				}));
+
+				console.log("[indent-validate] API result", {
+					lineId,
+					itemId,
+					apiResult,
+					mappedErrors: mapped.errors,
+					mappedWarnings: mapped.warnings,
+				});
+
+				// Decide pass/fail without a user-entered quantity — we're
+				// validating at item-add time, not quantity-change time.
+				if (mapped.errors.length > 0) {
+					console.log("[indent-validate] BLOCKED", { lineId, reason: mapped.errors[0] });
+					return { status: "blocked", result: mapped, reason: mapped.errors[0] };
+				}
+				if (mapped.validationLogic === 2 && mapped.fyDuplicateIndentNo != null) {
+					return {
+						status: "blocked",
+						result: mapped,
+						reason: `An open indent already exists for this item in the current FY (Indent #${mapped.fyDuplicateIndentNo}).`,
+					};
+				}
+				console.log("[indent-validate] OK", { lineId });
+				return { status: "ok", result: mapped };
 			} catch (err) {
 				const msg = err instanceof Error ? err.message : "Validation failed";
 				setValidationMap((prev) => ({
 					...prev,
 					[lineId]: { loading: false, result: null, error: msg },
 				}));
+				return { status: "error", message: msg };
 			}
 		},
 		[currentLogic, branchId, indentType, expenseTypeId, indentId, clearLine]
+	);
+
+	/**
+	 * Fire-and-forget variant used by existing call sites (edit-mode preload
+	 * and in-row field change handlers) that don't need the synchronous outcome.
+	 */
+	const validateLine = React.useCallback(
+		async (lineId: string, itemId: string): Promise<void> => {
+			await validateLineAndReturn(lineId, itemId);
+		},
+		[validateLineAndReturn]
 	);
 
 	/**
@@ -189,6 +253,7 @@ export function useIndentItemValidation({
 		validationMap,
 		currentLogic,
 		validateLine,
+		validateLineAndReturn,
 		clearLine,
 		clearAll,
 		getQuantityError,

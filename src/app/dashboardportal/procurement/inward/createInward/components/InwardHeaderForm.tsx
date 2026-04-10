@@ -16,6 +16,7 @@ type InwardHeaderFormProps = {
 	showPOButton?: boolean;
 	onPOSelect?: () => void;
 	poButtonDisabled?: boolean;
+	poRequired?: boolean;
 };
 
 export const InwardHeaderForm: React.FC<InwardHeaderFormProps> = ({
@@ -29,6 +30,7 @@ export const InwardHeaderForm: React.FC<InwardHeaderFormProps> = ({
 	showPOButton = false,
 	onPOSelect,
 	poButtonDisabled = false,
+	poRequired = false,
 }) => {
 	return (
 		<div className="space-y-4">
@@ -44,12 +46,22 @@ export const InwardHeaderForm: React.FC<InwardHeaderFormProps> = ({
 				hideSubmit
 			/>
 			{showPOButton && onPOSelect && (
-				<div className="flex justify-end">
+				<div className="flex items-center justify-end gap-3">
+					{poRequired ? (
+						<span className="text-xs text-muted-foreground">
+							PO-required mode: items can only be added from an existing PO.
+						</span>
+					) : null}
 					<Button
 						type="button"
 						variant="outline"
 						onClick={onPOSelect}
 						disabled={poButtonDisabled}
+						title={
+							poButtonDisabled
+								? "Select supplier first to add items from PO"
+								: undefined
+						}
 					>
 						<FileText className="mr-2 h-4 w-4" />
 						Select from PO

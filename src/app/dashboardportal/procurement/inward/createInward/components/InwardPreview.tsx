@@ -25,7 +25,7 @@ export type InwardPreviewHeader = {
 export type InwardPreviewItem = {
 	srNo: number;
 	poNo?: string;
-	itemGroup?: string;
+	itemCode?: string;
 	item?: string;
 	quantity?: string | number;
 	uom?: string;
@@ -227,7 +227,7 @@ const InwardPreview: React.FC<InwardPreviewProps> = ({ header, items, remarks, o
 					<Box component="table" sx={{ width: "100%", borderCollapse: "collapse" }}>
 						<Box component="thead" sx={{ backgroundColor: "rgba(12,60,96,0.08)" }}>
 							<Box component="tr">
-								{["Sr No", "PO No.", "Item", "Qty", "UOM", "Remarks"].map((col) => (
+								{["Sr No", "PO No.", "Item Code", "Item", "Qty", "UOM", "Remarks"].map((col) => (
 									<Box
 										key={col}
 										component="th"
@@ -248,6 +248,9 @@ const InwardPreview: React.FC<InwardPreviewProps> = ({ header, items, remarks, o
 										<Box component="td" sx={{ border: "1px solid", borderColor: "divider", p: 1, fontSize: 12, textAlign: "center" }}>
 											{item.poNo || "-"}
 										</Box>
+										<Box component="td" sx={{ border: "1px solid", borderColor: "divider", p: 1, fontSize: 12, fontFamily: "monospace" }}>
+											{item.itemCode || "-"}
+										</Box>
 										<Box component="td" sx={{ border: "1px solid", borderColor: "divider", p: 1, fontSize: 12 }}>
 											{item.item || "-"}
 										</Box>
@@ -264,7 +267,7 @@ const InwardPreview: React.FC<InwardPreviewProps> = ({ header, items, remarks, o
 								))
 							) : (
 								<Box component="tr">
-									<Box component="td" colSpan={6} sx={{ border: "1px solid", borderColor: "divider", p: 2, fontSize: 12, textAlign: "center" }}>
+									<Box component="td" colSpan={7} sx={{ border: "1px solid", borderColor: "divider", p: 2, fontSize: 12, textAlign: "center" }}>
 										No line items captured yet.
 									</Box>
 								</Box>

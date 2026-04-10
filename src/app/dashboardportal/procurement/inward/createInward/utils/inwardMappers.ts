@@ -132,6 +132,10 @@ export const mapInwardSetupResponse = (response: unknown): InwardSetupData => {
 		itemGroups: mapItemGroupRecords((result?.item_groups as ItemGroupRecordRaw[]) ?? []),
 		coConfig: {
 			india_gst: typeof result?.co_config?.india_gst === "number" ? result.co_config.india_gst : undefined,
+			po_required:
+				result?.co_config?.po_required != null && result.co_config.po_required !== ""
+					? Number(result.co_config.po_required)
+					: undefined,
 		},
 	};
 };

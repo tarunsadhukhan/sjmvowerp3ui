@@ -136,11 +136,19 @@ export const useSalesOrderSelectOptions = ({
 		[itemGroupCache],
 	);
 
+	const getItemFullCode = React.useCallback(
+		(groupId: string, itemId: string): string | undefined => {
+			if (!groupId || !itemId) return undefined;
+			return itemGroupCache[groupId]?.itemFullCodeById?.[itemId];
+		},
+		[itemGroupCache],
+	);
+
 	return {
 		customerOptions, customerBranchOptions,
 		brokerOptions, transporterOptions, quotationOptions,
 		invoiceTypeOptions, branchAddressOptions, itemGroupOptions,
 		getItemGroupLabel, getItemOptions, getMakeOptions, getUomOptions,
-		getItemLabel, getMakeLabel, getUomLabel, getUomConversions,
+		getItemLabel, getMakeLabel, getUomLabel, getUomConversions, getItemFullCode,
 	};
 };

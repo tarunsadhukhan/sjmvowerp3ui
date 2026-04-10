@@ -6,6 +6,7 @@ import type { SalesOrderLine } from "@/utils/salesOrderService";
 import type { EditableLineItem, ItemGroupCacheEntry, ItemGroupRecord } from "../types/salesOrderTypes";
 import { createBlankLine } from "../utils/salesOrderFactories";
 import { computeHessianFields } from "../utils/hessianCalculations";
+import { isGovtSkgOrder } from "../utils/salesOrderConstants";
 
 export const lineHasAnyData = (line: EditableLineItem) =>
 	Boolean(line.itemGroup || line.item || line.itemMake || line.quantity || line.rate || line.uom || line.remarks);
@@ -58,7 +59,7 @@ export const useSalesOrderLineItems = ({
 		createBlankItem: createBlankLine,
 		hasData: lineHasAnyData,
 		getItemId: (item) => item.id,
-		maintainTrailingBlank: true,
+		maintainTrailingBlank: false,
 	});
 
 	// Store in refs to keep calculateLineTax stable across renders
@@ -99,6 +100,7 @@ export const useSalesOrderLineItems = ({
 	}, []);
 
 	const isHessian = invoiceTypeCode === "hessian";
+	const isGovtSkg = isGovtSkgOrder(invoiceTypeCode);
 
 	/**
 	 * Resolve the effective qty rounding for a line item.
@@ -134,11 +136,14 @@ export const useSalesOrderLineItems = ({
 	);
 
 	/**
-	 * Look up the Bales-per-MT conversion factor for an item.
-	 * Returns the relation_value from uom_item_map_mst where the
-	 * selected UOM (rate UOM / default UOM) is the "from" side (MT)
-	 * and the "to" side is Bales.
-	 * Convention: relation_value = bales per MT, e.g. 5 => 1 MT = 5 Bales.
+	 * Look up the conversion factor for an item given its billing/default UOM.
+	 * Returns the relation_value from uom_item_map_mst.
+	 *
+	 * Checks both directions:
+	 * - If billing UOM is mapFrom: relation_value = other UOM per billing UOM
+	 *   (e.g. for hessian: MT→Bales, factor = bales per MT)
+	 *   (e.g. for govt skg: 100pcs→Bales, factor = bales per 100pcs)
+	 * - If billing UOM is mapTo: 1/relation_value gives the inverse
 	 */
 	const getConversionFactor = React.useCallback(
 		(groupId: string, itemId: string, selectedUomId: string): number | undefined => {
@@ -146,11 +151,50 @@ export const useSalesOrderLineItems = ({
 			if (!cache) return undefined;
 			const conversions = cache.uomConversionsByItemId[itemId];
 			if (!conversions?.length) return undefined;
-			// Find a conversion where the selected UOM is the mapFrom (i.e. MT)
-			// and relation_value gives bales per MT
+			// Prefer: billing UOM is the mapFrom side
 			for (const conv of conversions) {
 				if (conv.mapFromId === selectedUomId && conv.relationValue > 0) {
 					return conv.relationValue;
+				}
+			}
+			// Fallback: billing UOM is the mapTo side — invert the factor
+			for (const conv of conversions) {
+				if (conv.mapToId === selectedUomId && conv.relationValue > 0) {
+					return 1 / conv.relationValue;
+				}
+			}
+			return undefined;
+		},
+		[itemGroupCache],
+	);
+
+	/**
+	 * Look up the bales conversion for a govt sacking item.
+	 * Finds the UOM mapping where mapToName contains "bale" (case-insensitive),
+	 * returns { factor, balesUomId } or undefined.
+	 *
+	 * If a known balesUomId is provided, uses that for an exact match first.
+	 */
+	const getGovtSkgBalesConversion = React.useCallback(
+		(groupId: string, itemId: string, billingUomId: string, knownBalesUomId?: string): { factor: number; balesUomId: string } | undefined => {
+			const cache = itemGroupCache[groupId];
+			if (!cache) return undefined;
+			const conversions = cache.uomConversionsByItemId[itemId];
+			if (!conversions?.length) return undefined;
+
+			// If we already know the bales UOM ID, find that exact conversion
+			if (knownBalesUomId) {
+				for (const conv of conversions) {
+					if (conv.mapFromId === billingUomId && conv.mapToId === knownBalesUomId && conv.relationValue > 0) {
+						return { factor: conv.relationValue, balesUomId: conv.mapToId };
+					}
+				}
+			}
+
+			// Otherwise find by name: look for "bale" in the target UOM name
+			for (const conv of conversions) {
+				if (conv.mapFromId === billingUomId && conv.relationValue > 0 && conv.mapToName.toLowerCase().includes("bale")) {
+					return { factor: conv.relationValue, balesUomId: conv.mapToId };
 				}
 			}
 			return undefined;
@@ -164,7 +208,12 @@ export const useSalesOrderLineItems = ({
 	 */
 	const applyHessianToLine = React.useCallback(
 		(line: EditableLineItem): EditableLineItem => {
-			const convFactor = line.conversionFactor || 0;
+			// Lazily resolve conversion factor from cache if not already set
+			let convFactor = line.conversionFactor || 0;
+			if (!convFactor && line.itemGroup && line.item && line.uom) {
+				convFactor = getConversionFactor(line.itemGroup, line.item, line.uom) || 0;
+				if (convFactor) line = { ...line, conversionFactor: convFactor };
+			}
 			if (!convFactor) return line;
 
 			const qtyBales = Number(line.qtyBales) || 0;
@@ -197,7 +246,7 @@ export const useSalesOrderLineItems = ({
 				taxAmount: tax.total,
 			};
 		},
-		[brokeragePercent, calculateLineAmount, calculateLineTax],
+		[brokeragePercent, calculateLineAmount, calculateLineTax, getConversionFactor],
 	);
 
 	const mapLineToEditable = React.useCallback((line: SalesOrderLine): EditableLineItem => {
@@ -213,6 +262,7 @@ export const useSalesOrderLineItems = ({
 			hsnCode: line.hsnCode,
 			itemGroup: groupId,
 			item: itemId,
+			fullItemCode: line.full_item_code ? String(line.full_item_code) : undefined,
 			itemMake: line.itemMake ?? "",
 			quantity: line.quantity != null ? String(line.quantity) : "",
 			rate: line.rate != null ? String(line.rate) : "",
@@ -327,6 +377,14 @@ export const useSalesOrderLineItems = ({
 							updated.quantity = "";
 							updated.rate = "";
 						}
+						// In govt_skg mode, resolve the bales conversion factor
+						if (isGovtSkg && value && nextUom) {
+							const balesConv = getGovtSkgBalesConversion(item.itemGroup, value, nextUom);
+							updated.govtskgConversionFactor = balesConv?.factor;
+							updated.govtskgBalesUomId = balesConv?.balesUomId;
+							// Reset govt skg bales field — user must re-enter after item change
+							updated.govtskgQtyBales = "";
+						}
 						return updated;
 					});
 				});
@@ -341,6 +399,82 @@ export const useSalesOrderLineItems = ({
 						if (item.id !== id) return item;
 						const updated = { ...item, [field]: sanitized };
 						return applyHessianToLine(updated);
+					}),
+				);
+				return;
+			}
+
+			// --- Govt SKG bales field ---
+			if (isGovtSkg && field === "govtskgQtyBales") {
+				const sanitized = value.replace(/[^0-9.]/g, "");
+				setLineItems((prev) =>
+					prev.map((item) => {
+						if (item.id !== id) return item;
+						// Lazily resolve bales conversion from cache if not already set
+						let convFactor = item.govtskgConversionFactor || 0;
+						let balesUomId = item.govtskgBalesUomId;
+						if (!convFactor && item.itemGroup && item.item && item.uom) {
+							const balesConv = getGovtSkgBalesConversion(item.itemGroup, item.item, item.uom, balesUomId);
+							convFactor = balesConv?.factor || 0;
+							balesUomId = balesConv?.balesUomId || balesUomId;
+						}
+						const bales = Number(sanitized) || 0;
+						const quantity = convFactor > 0 ? bales / convFactor : 0;
+						const rate = Number(item.rate) || 0;
+						const amount = quantity * rate;
+						const tax = calculateLineTax(amount, item.taxPercentage || 0);
+						return {
+							...item,
+							govtskgConversionFactor: convFactor || item.govtskgConversionFactor,
+							govtskgBalesUomId: balesUomId,
+							govtskgQtyBales: sanitized,
+							quantity: String(quantity),
+							amount,
+							igstAmount: tax.igst,
+							cgstAmount: tax.cgst,
+							sgstAmount: tax.sgst,
+							taxAmount: tax.total,
+						};
+					}),
+				);
+				return;
+			}
+
+			// --- Govt SKG rate change: recalculate using bales-converted qty ---
+			if (isGovtSkg && field === "rate" && id) {
+				const sanitized = value.replace(/[^0-9.]/g, "");
+				setLineItems((prev) =>
+					prev.map((item) => {
+						if (item.id !== id) return item;
+						const updated = { ...item, rate: sanitized };
+						// If bales were entered, recalculate from bales
+						if (item.govtskgQtyBales && Number(item.govtskgQtyBales)) {
+							let convFactor = item.govtskgConversionFactor || 0;
+							let balesUomId = item.govtskgBalesUomId;
+							if (!convFactor && item.itemGroup && item.item && item.uom) {
+								const balesConv = getGovtSkgBalesConversion(item.itemGroup, item.item, item.uom, balesUomId);
+								convFactor = balesConv?.factor || 0;
+								balesUomId = balesConv?.balesUomId || balesUomId;
+							}
+							const bales = Number(item.govtskgQtyBales) || 0;
+							const quantity = convFactor > 0 ? bales / convFactor : 0;
+							const rate = Number(sanitized) || 0;
+							const amount = quantity * rate;
+							const tax = calculateLineTax(amount, item.taxPercentage || 0);
+							return {
+								...updated,
+								govtskgConversionFactor: convFactor || item.govtskgConversionFactor,
+								govtskgBalesUomId: balesUomId,
+								quantity: String(quantity),
+								amount,
+								igstAmount: tax.igst,
+								cgstAmount: tax.cgst,
+								sgstAmount: tax.sgst,
+								taxAmount: tax.total,
+							};
+						}
+						// No bales entered yet — just store rate, no amount calc
+						return updated;
 					}),
 				);
 				return;
@@ -452,7 +586,7 @@ export const useSalesOrderLineItems = ({
 				prev.map((item) => (item.id === id ? { ...item, [field]: value } as EditableLineItem : item)),
 			);
 		},
-		[mode, setLineItems, itemGroupCache, itemGroupLoading, ensureItemGroupData, isHessian, getConversionFactor, applyHessianToLine, calculateLineTax, calculateLineAmount, resolveQtyRounding, resolveRateRounding, roundTo],
+		[mode, setLineItems, itemGroupCache, itemGroupLoading, ensureItemGroupData, isHessian, isGovtSkg, getConversionFactor, getGovtSkgBalesConversion, applyHessianToLine, calculateLineTax, calculateLineAmount, resolveQtyRounding, resolveRateRounding, roundTo],
 	);
 
 	const handleQuotationItemsConfirm = React.useCallback(
@@ -511,6 +645,53 @@ export const useSalesOrderLineItems = ({
 		});
 		return Array.from(groups.values());
 	}, [itemGroupCache, itemGroups, lineItems]);
+
+	// --- Resolve conversion factors once cache loads ---
+	// Items added from dialog don't have conversion factors until the setup_2 API returns.
+	// This effect patches lines once the cache is available.
+	React.useEffect(() => {
+		if (!isGovtSkg && !isHessian) return;
+		if (mode === "view") return;
+
+		setLineItems((prev) => {
+			let changed = false;
+			const next = prev.map((line) => {
+				// Govt SKG: resolve missing bales conversion factor and recalculate
+				if (isGovtSkg && !line.govtskgConversionFactor && line.itemGroup && line.item && line.uom) {
+					const balesConv = getGovtSkgBalesConversion(line.itemGroup, line.item, line.uom, line.govtskgBalesUomId);
+					if (balesConv) {
+						changed = true;
+						const bales = Number(line.govtskgQtyBales) || 0;
+						const quantity = bales > 0 ? bales / balesConv.factor : 0;
+						const rate = Number(line.rate) || 0;
+						const amount = quantity * rate;
+						const tax = calculateLineTax(amount, line.taxPercentage || 0);
+						return {
+							...line,
+							govtskgConversionFactor: balesConv.factor,
+							govtskgBalesUomId: balesConv.balesUomId,
+							quantity: bales > 0 ? String(quantity) : line.quantity,
+							amount: bales > 0 && rate > 0 ? amount : line.amount,
+							igstAmount: bales > 0 && rate > 0 ? tax.igst : line.igstAmount,
+							cgstAmount: bales > 0 && rate > 0 ? tax.cgst : line.cgstAmount,
+							sgstAmount: bales > 0 && rate > 0 ? tax.sgst : line.sgstAmount,
+							taxAmount: bales > 0 && rate > 0 ? tax.total : line.taxAmount,
+						};
+					}
+				}
+				// Hessian: resolve missing conversion factor and recalculate
+				if (isHessian && !line.conversionFactor && line.itemGroup && line.item && line.uom) {
+					const convFactor = getConversionFactor(line.itemGroup, line.item, line.uom);
+					if (convFactor) {
+						changed = true;
+						return applyHessianToLine({ ...line, conversionFactor: convFactor });
+					}
+				}
+				return line;
+			});
+			return changed ? next : prev;
+		});
+	}, [isGovtSkg, isHessian, mode, itemGroupCache, setLineItems, getGovtSkgBalesConversion, getConversionFactor, calculateLineTax, applyHessianToLine]);
 
 	// --- Hessian brokerage reactivity ---
 	// When broker_commission_percent changes in the header, recalculate all hessian line items.

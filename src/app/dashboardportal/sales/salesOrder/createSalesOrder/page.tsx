@@ -59,6 +59,7 @@ import {
 	EMPTY_SETUP_PARAMS,
 	EMPTY_TRANSPORTERS,
 	isHessianOrder,
+	isGovtSkgOrder,
 } from "./utils/salesOrderConstants";
 
 function SOPageLoading() {
@@ -198,9 +199,9 @@ function SalesOrderTransactionPageContent() {
 	const branchAddresses = setupData?.branchAddresses ?? EMPTY_BRANCH_ADDRESSES;
 
 	const chargeOptions = React.useMemo(() => {
-		const raw = (setupData as Record<string, unknown> | undefined)?.additionalChargesMaster;
-		if (!Array.isArray(raw)) return [];
-		return raw.map((c: Record<string, unknown>) => ({
+		const raw = setupData?.additionalChargesMaster;
+		if (!Array.isArray(raw) || !raw.length) return [];
+		return raw.map((c) => ({
 			value: String(c.additional_charges_id ?? ""),
 			label: String(c.additional_charges_name ?? ""),
 			defaultValue: c.default_value != null ? Number(c.default_value) : undefined,
@@ -392,6 +393,7 @@ function SalesOrderTransactionPageContent() {
 				discountValue: "",
 				remarks: "",
 				taxPercentage: item.tax_percentage ?? undefined,
+			fullItemCode: item.full_item_code || undefined,
 			}));
 
 			const groupIds = [...new Set(items.map((i) => String(i.item_grp_id)))];
@@ -610,6 +612,7 @@ function SalesOrderTransactionPageContent() {
 		getUomOptions,
 		getUomConversions,
 		getItemLabel,
+		getItemFullCode,
 		getUomLabel,
 	} = useSalesOrderSelectOptions({
 		customers,
@@ -700,11 +703,16 @@ function SalesOrderTransactionPageContent() {
 
 	const previewItems = React.useMemo(() => {
 		const isHessian = isHessianOrder(invoiceTypeCode);
+		const isGovtSkg = isGovtSkgOrder(invoiceTypeCode);
 		return filledLineItems.map((line, index) => {
-			const groupLabel = getItemGroupLabel(line.itemGroup);
 			const itemLabel = getItemLabel(line.itemGroup, line.item);
-			// Concatenate item group label + item label (each already has code — name)
-			const fullItemName = [groupLabel, itemLabel].filter((p) => p && p !== "-").join("\n") || "-";
+			const fullCode = line.fullItemCode || getItemFullCode(line.itemGroup, line.item);
+			// Extract item name from the label (part after " — " if present)
+			const namePart = itemLabel.includes(" — ") ? itemLabel.split(" — ").slice(1).join(" — ") : "";
+			// Use full item code with item name, or fall back to the item label as-is
+			const fullItemName = fullCode
+				? (namePart ? `${fullCode} — ${namePart}` : fullCode)
+				: (itemLabel || "-");
 
 			const uomOptions = getUomOptions(line.itemGroup, line.item);
 			const uomLabel = uomOptions.find((opt) => opt.value === line.uom)?.label ?? line.uom ?? "";
@@ -714,11 +722,13 @@ function SalesOrderTransactionPageContent() {
 				? Number(rawQty).toFixed(qtyRounding) : (rawQty || "-");
 			const qtyDisplay = `${formattedQty} ${uomLabel}`.trim();
 
-			// Hessian: show bales qty as other qty
+			// Hessian / Govt Sacking: show bales qty as other qty
 			let otherQtyDisplay: string | undefined;
 			if (isHessian && line.qtyBales && Number(line.qtyBales)) {
 				otherQtyDisplay = `${line.qtyBales} Bales`;
-			} else if (!isHessian) {
+			} else if (isGovtSkg && line.govtskgQtyBales && Number(line.govtskgQtyBales)) {
+				otherQtyDisplay = `${line.govtskgQtyBales} Bales`;
+			} else if (!isHessian && !isGovtSkg) {
 				// For non-hessian, show converted qty if available
 				const conversions = getUomConversions?.(line.itemGroup, line.item);
 				if (conversions?.length && rawQty && Number(rawQty) && line.uom) {
@@ -761,7 +771,7 @@ function SalesOrderTransactionPageContent() {
 				total: ((line.amount ?? 0) + (line.taxAmount ?? 0)) || "-",
 			};
 		});
-	}, [filledLineItems, getItemLabel, getItemGroupLabel, getUomOptions, getUomConversions, invoiceTypeCode]);
+	}, [filledLineItems, getItemLabel, getItemFullCode, getUomOptions, getUomConversions, invoiceTypeCode]);
 
 	const previewRemarks = React.useMemo(() => {
 		return (formValues.internal_note as string) || soDetails?.internalNote || (formValues.footer_note as string) || soDetails?.footerNote || "";
@@ -854,6 +864,7 @@ function SalesOrderTransactionPageContent() {
 				columns: lineItemColumns,
 				placeholder: "Add line items to the sales order",
 				selectionColumnWidth: "28px",
+				onRemoveSelected: canEdit ? removeLineItems : undefined,
 				headerAction: canEdit ? (
 					<Button
 						type="button"

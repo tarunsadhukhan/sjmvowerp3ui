@@ -4,7 +4,7 @@ import { Input } from "@/components/ui/input";
 import type { TransactionLineColumn } from "@/components/ui/transaction";
 import type { EditableLineItem, Option, UomConversionEntry } from "../types/salesOrderTypes";
 import { computeConvertedRate } from "@/utils/uomConversion";
-import { isHessianOrder, isJuteOrder } from "../utils/salesOrderConstants";
+import { isHessianOrder, isGovtSkgOrder, isJuteOrder } from "../utils/salesOrderConstants";
 
 type UseSalesOrderLineItemColumnsParams = {
 	canEdit: boolean;
@@ -40,20 +40,7 @@ export const useSalesOrderLineItemColumns = ({
 				minWidth: "163px",
 				renderCell: ({ item }) => {
 					const label = getItemGroupLabel(item.itemGroup);
-					if (!canEdit) {
-						return <span className="block truncate text-sm">{label || "-"}</span>;
-					}
-					const value = itemGroupOptions.find((o) => o.value === item.itemGroup) ?? null;
-					return (
-						<SearchableSelect<Option>
-							options={itemGroupOptions}
-							value={value}
-							onChange={(next) => handleLineFieldChange(item.id, "itemGroup", next?.value ?? "")}
-							getOptionLabel={(o) => o.label}
-							isOptionEqualToValue={(a, b) => a.value === b.value}
-							placeholder="Select group"
-						/>
-					);
+					return <span className="block truncate text-sm">{label || "-"}</span>;
 				},
 				getTooltip: ({ item }) => getItemGroupLabel(item.itemGroup) || undefined,
 			},
@@ -65,20 +52,7 @@ export const useSalesOrderLineItemColumns = ({
 				renderCell: ({ item }) => {
 					const options = getItemOptions(item.itemGroup);
 					const label = options.find((o) => o.value === item.item)?.label ?? item.item ?? "-";
-					if (!canEdit) {
-						return <span className="block truncate text-sm">{label}</span>;
-					}
-					const value = options.find((o) => o.value === item.item) ?? null;
-					return (
-						<SearchableSelect<Option>
-							options={options}
-							value={value}
-							onChange={(next) => handleLineFieldChange(item.id, "item", next?.value ?? "")}
-							getOptionLabel={(o) => o.label}
-							isOptionEqualToValue={(a, b) => a.value === b.value}
-							placeholder="Select item"
-						/>
-					);
+					return <span className="block truncate text-sm">{label}</span>;
 				},
 			},
 			{
@@ -112,17 +86,31 @@ export const useSalesOrderLineItemColumns = ({
 				minWidth: "80px",
 				renderCell: ({ item }) => {
 					const isHessian = isHessianOrder(invoiceTypeCode);
+					const isGovtSkg = isGovtSkgOrder(invoiceTypeCode);
 					// Hessian: qty input is bales, show MT annotation
-					const displayValue = isHessian ? (item.qtyBales ?? "") : item.quantity;
-					const fieldKey: keyof EditableLineItem = isHessian ? "qtyBales" : "quantity";
+					// Govt Skg: qty input is bales, show per 100 pcs annotation
+					const displayValue = isHessian
+						? (item.qtyBales ?? "")
+						: isGovtSkg
+							? (item.govtskgQtyBales ?? "")
+							: item.quantity;
+					const fieldKey: keyof EditableLineItem = isHessian
+						? "qtyBales"
+						: isGovtSkg
+							? "govtskgQtyBales"
+							: "quantity";
 					const qtyRounding = item.qtyRounding;
 					const mtAnnotation = isHessian && item.quantity && Number(item.quantity)
 						? `\u2248 ${Number(item.quantity).toFixed(qtyRounding ?? 4)} MT`
 						: null;
-					// Show rounded display for non-hessian when rounding is set
-					const formattedQty = !isHessian && displayValue && qtyRounding != null && Number(displayValue)
+					const govtSkgAnnotation = isGovtSkg && item.quantity && Number(item.quantity)
+						? `= ${Number(item.quantity).toFixed(qtyRounding ?? 2)} per 100 pcs`
+						: null;
+					// Show rounded display for non-special types when rounding is set
+					const formattedQty = !isHessian && !isGovtSkg && displayValue && qtyRounding != null && Number(displayValue)
 						? Number(displayValue).toFixed(qtyRounding)
 						: displayValue;
+					const annotation = mtAnnotation || govtSkgAnnotation;
 
 					if (canEdit) {
 						return (
@@ -131,12 +119,12 @@ export const useSalesOrderLineItemColumns = ({
 									type="text"
 									value={displayValue}
 									onChange={(e) => handleLineFieldChange(item.id, fieldKey, e.target.value)}
-									placeholder={isHessian ? "Bales" : "0"}
+									placeholder={isHessian || isGovtSkg ? "Bales" : "0"}
 									className="h-8 text-sm"
 								/>
-								{mtAnnotation ? (
+								{annotation ? (
 									<span className="text-[11px] text-muted-foreground leading-tight truncate">
-										{mtAnnotation}
+										{annotation}
 									</span>
 								) : null}
 							</div>
@@ -146,9 +134,9 @@ export const useSalesOrderLineItemColumns = ({
 					return (
 						<div className="flex flex-col gap-0.5">
 							<span className="block truncate text-sm">{formattedQty || "-"}</span>
-							{mtAnnotation ? (
+							{annotation ? (
 								<span className="text-[11px] text-muted-foreground leading-tight truncate">
-									{mtAnnotation}
+									{annotation}
 								</span>
 							) : null}
 						</div>
@@ -156,10 +144,13 @@ export const useSalesOrderLineItemColumns = ({
 				},
 				getTooltip: ({ item }) => {
 					const isHessian = isHessianOrder(invoiceTypeCode);
+					const isGovtSkg = isGovtSkgOrder(invoiceTypeCode);
 					const parts: string[] = [];
 					if (isHessian && item.qtyBales) parts.push(`Bales: ${item.qtyBales}`);
 					if (isHessian && item.quantity) parts.push(`\u2248 ${item.quantity} MT`);
-					if (!isHessian && item.quantity) parts.push(`Quantity: ${item.quantity}`);
+					if (isGovtSkg && item.govtskgQtyBales) parts.push(`Bales: ${item.govtskgQtyBales}`);
+					if (isGovtSkg && item.quantity) parts.push(`Qty: ${item.quantity} per 100 pcs`);
+					if (!isHessian && !isGovtSkg && item.quantity) parts.push(`Quantity: ${item.quantity}`);
 					return parts.length ? parts.join("\n") : undefined;
 				},
 			},
@@ -310,10 +301,22 @@ export const useSalesOrderLineItemColumns = ({
 				header: "GST",
 				width: "0.7fr",
 				minWidth: "80px",
-				renderCell: ({ item }) => (
-					<span className="block truncate text-sm">{item.taxAmount != null ? item.taxAmount.toFixed(2) : "-"}</span>
-				),
-				getTooltip: ({ item }) => (item.taxAmount ? `GST: ${item.taxAmount.toFixed(2)}` : undefined),
+				renderCell: ({ item }) => {
+					const hasTax = item.taxAmount != null && item.taxAmount > 0;
+					if (item.taxPercentage != null && hasTax) {
+						return <span className="block truncate text-sm">{item.taxPercentage}% = {item.taxAmount!.toFixed(2)}</span>;
+					}
+					if (item.taxPercentage != null) {
+						return <span className="block truncate text-sm">{item.taxPercentage}%</span>;
+					}
+					return <span className="block truncate text-sm">{hasTax ? item.taxAmount!.toFixed(2) : "-"}</span>;
+				},
+				getTooltip: ({ item }) => {
+					const parts: string[] = [];
+					if (item.taxPercentage != null) parts.push(`Tax: ${item.taxPercentage}%`);
+					if (item.taxAmount != null && item.taxAmount > 0) parts.push(`GST: ${item.taxAmount.toFixed(2)}`);
+					return parts.length ? parts.join("\n") : undefined;
+				},
 			},
 			{
 				id: "remarks",

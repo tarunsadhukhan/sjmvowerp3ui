@@ -197,6 +197,15 @@ export const mapInvoiceTypeRecords = (records: unknown[]): InvoiceTypeRecord[] =
 export const mapSalesOrderSetupResponse = (response: unknown): SalesOrderSetupData => {
 	try {
 		const result = response as SalesOrderSetup1ResponseRaw;
+		const additionalChargesRaw = result?.additional_charges_master;
+		const additionalChargesMaster = Array.isArray(additionalChargesRaw)
+			? additionalChargesRaw.map((c: Record<string, unknown>) => ({
+				additional_charges_id: Number(c.additional_charges_id ?? 0),
+				additional_charges_name: String(c.additional_charges_name ?? ""),
+				default_value: c.default_value != null ? Number(c.default_value) : null,
+			}))
+			: [];
+
 		return {
 			customers: mapCustomerRecords(result?.customers ?? []),
 			brokers: mapBrokerRecords(result?.brokers ?? []),
@@ -206,6 +215,7 @@ export const mapSalesOrderSetupResponse = (response: unknown): SalesOrderSetupDa
 			branchAddresses: mapBranchAddressRecords(result?.branches ?? []),
 			invoiceTypes: mapInvoiceTypeRecords(result?.invoice_types ?? []),
 			coConfig: result?.co_config as SalesOrderSetupData["coConfig"],
+			additionalChargesMaster,
 		} satisfies SalesOrderSetupData;
 	} catch (error) {
 		console.error("Failed to map sales order setup response", error);
@@ -247,6 +257,7 @@ export const mapItemGroupDetailResponse = (response: unknown): ItemGroupCacheEnt
 				taxPercentage: data?.tax_percentage != null ? Number(data.tax_percentage) : undefined,
 				uomRounding: data?.uom_rounding != null ? Number(data.uom_rounding) : undefined,
 				rateRounding: data?.rate_rounding != null ? Number(data.rate_rounding) : undefined,
+				fullItemCode: data?.full_item_code ? String(data.full_item_code) : undefined,
 			};
 		})
 		.filter(Boolean) as ItemOption[];
@@ -337,12 +348,16 @@ export const mapItemGroupDetailResponse = (response: unknown): ItemGroupCacheEnt
 	});
 
 	const itemLabelById: Record<string, string> = {};
-	items.forEach((item) => { itemLabelById[item.value] = item.label; });
+	const itemFullCodeById: Record<string, string> = {};
+	items.forEach((item) => {
+		itemLabelById[item.value] = item.label;
+		if (item.fullItemCode) itemFullCodeById[item.value] = item.fullItemCode;
+	});
 
 	const makeLabelById: Record<string, string> = {};
 	makes.forEach((make) => { makeLabelById[make.value] = make.label; });
 
-	return { groupLabel, items, makes, uomsByItemId, itemLabelById, makeLabelById, uomLabelByItemId, itemRateById, itemTaxById, uomConversionsByItemId, itemUomRoundingById, itemRateRoundingById };
+	return { groupLabel, items, makes, uomsByItemId, itemLabelById, makeLabelById, uomLabelByItemId, itemRateById, itemTaxById, uomConversionsByItemId, itemUomRoundingById, itemRateRoundingById, itemFullCodeById };
 };
 
 // ---------------------------------------------------------------------------

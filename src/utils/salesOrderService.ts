@@ -60,6 +60,7 @@ export type SalesOrderLine = {
   hessian?: SalesOrderLineHessian | null;
   juteDtl?: SalesOrderLineJuteDtl | null;
   govtskgDtl?: SalesOrderLineGovtSkgDtl | null;
+  full_item_code?: string;
 };
 
 export type ApprovalActionPermissions = {

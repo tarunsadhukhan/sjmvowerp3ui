@@ -947,37 +947,16 @@ function IndentTransactionPageContent() {
 
 	const previewItems = React.useMemo(
 		() =>
-			filledLineItems.map((item, index) => {
-				const extractCodeAndName = (label: string | undefined) => {
-					if (!label) return { code: undefined, name: undefined };
-					const separator = label.includes(" — ") ? " — " : label.includes(" - ") ? " - " : null;
-					if (separator) {
-						const parts = label.split(separator);
-						return { code: parts[0]?.trim(), name: parts[1]?.trim() };
-					}
-					return { code: label.trim(), name: undefined };
-				};
-
-				const groupLabel = item.itemGroup ? labelResolvers.itemGroup(item.itemGroup) : undefined;
-				const groupData = extractCodeAndName(groupLabel);
-				const itemLabel = item.itemGroup && item.item ? labelResolvers.item(item.itemGroup, item.item) : undefined;
-				const itemData = extractCodeAndName(itemLabel);
-
-				return {
-					srNo: index + 1,
-					department: labelResolvers.department(item.department),
-					itemGroup: labelResolvers.itemGroup(item.itemGroup),
-					itemGroupCode: groupData.code,
-					itemGroupName: groupData.name,
-					item: labelResolvers.item(item.itemGroup, item.item),
-					itemCode: itemData.code,
-					itemName: itemData.name,
-					itemMake: labelResolvers.itemMake(item.itemGroup, item.itemMake),
-					quantity: item.quantity || "-",
-					uom: labelResolvers.uom(item.itemGroup, item.item, item.uom),
-					remarks: item.remarks || "-",
-				};
-			}),
+			filledLineItems.map((item, index) => ({
+				srNo: index + 1,
+				department: labelResolvers.department(item.department),
+				itemCode: labelResolvers.itemCode(item.itemGroup, item.item),
+				itemName: labelResolvers.itemName(item.itemGroup, item.item),
+				itemMake: labelResolvers.itemMake(item.itemGroup, item.itemMake),
+				quantity: item.quantity || "-",
+				uom: labelResolvers.uom(item.itemGroup, item.item, item.uom),
+				remarks: item.remarks || "-",
+			})),
 		[filledLineItems, labelResolvers]
 	);
 

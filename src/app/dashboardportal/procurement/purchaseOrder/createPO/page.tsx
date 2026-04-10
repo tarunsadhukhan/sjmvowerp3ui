@@ -881,28 +881,13 @@ function POTransactionPageContent() {
   );
 
   const previewItems = React.useMemo(() => {
-    /** Split a "code — name" label into its two parts. */
-    const splitLabel = (label: string): { code: string; name: string } => {
-      const idx = label.indexOf(" — ");
-      if (idx < 0) return { code: label, name: "" };
-      return { code: label.substring(0, idx), name: label.substring(idx + 3) };
-    };
-
     return filledLineItems.map((line, index) => {
-      const groupLabel = itemGroups.find((grp) => grp.id === line.itemGroup)?.label ?? line.itemGroup ?? "";
       const itemLabel = getItemLabel(line.itemGroup, line.item, line.itemCode);
+      // Extract item name only (after " — " separator)
+      const sepIdx = itemLabel.indexOf(" — ");
+      const itemName = sepIdx >= 0 ? itemLabel.substring(sepIdx + 3) : itemLabel;
       const uomOptions = getUomOptions(line.itemGroup, line.item);
       const uomLabel = uomOptions.find((opt) => opt.value === line.uom)?.label ?? line.uom ?? "-";
-      const displayItem = (() => {
-        const grp = splitLabel(groupLabel);
-        const itm = splitLabel(itemLabel);
-        // Build "grpCode-itemCode — grpName-itemName"
-        const codePart = [grp.code, itm.code].filter(Boolean).join("-");
-        const namePart = [grp.name, itm.name].filter(Boolean).join("-");
-        const parts = [codePart, namePart].filter(Boolean);
-        if (parts.length > 0) return parts.join(" — ");
-        return line.item || "-";
-      })();
       // Discount type label
       const discountType = (() => {
         if (line.discountMode === DISCOUNT_MODE.PERCENTAGE) return "%";
@@ -911,8 +896,9 @@ function POTransactionPageContent() {
       })();
       return {
         srNo: index + 1,
-        itemGroup: groupLabel || undefined,
-        item: displayItem,
+        indentNo: line.indentNo || undefined,
+        itemCode: line.itemCode || "-",
+        item: itemName || "-",
         quantity: line.quantity || "-",
         uom: uomLabel,
         rate: line.rate,
@@ -923,7 +909,7 @@ function POTransactionPageContent() {
         remarks: line.remarks || "-",
       };
     });
-  }, [filledLineItems, getItemLabel, getUomOptions, itemGroups]);
+  }, [filledLineItems, getItemLabel, getUomOptions]);
 
   const previewTotals = React.useMemo(
     () => {

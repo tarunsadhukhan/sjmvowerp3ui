@@ -16,6 +16,7 @@ type UseSalesOrderLineItemColumnsParams = {
 	getUomOptions: (groupId: string, itemId: string) => Option[];
 	getUomConversions?: (groupId: string, itemId: string) => UomConversionEntry[] | undefined;
 	getItemGroupLabel: (groupId: string) => string;
+	getItemFullCode?: (groupId: string, itemId: string) => string | undefined;
 	handleLineFieldChange: (id: string, field: keyof EditableLineItem, value: string | number) => void;
 };
 
@@ -29,20 +30,21 @@ export const useSalesOrderLineItemColumns = ({
 	getUomOptions,
 	getUomConversions,
 	getItemGroupLabel,
+	getItemFullCode,
 	handleLineFieldChange,
 }: UseSalesOrderLineItemColumnsParams): TransactionLineColumn<EditableLineItem>[] =>
 	React.useMemo(
 		() => [
 			{
-				id: "itemGroup",
-				header: "Item Group",
+				id: "itemCode",
+				header: "Item Code",
 				width: "1.5fr",
 				minWidth: "163px",
 				renderCell: ({ item }) => {
-					const label = getItemGroupLabel(item.itemGroup);
-					return <span className="block truncate text-sm">{label || "-"}</span>;
+					const code = item.fullItemCode || getItemFullCode?.(item.itemGroup, item.item) || "-";
+					return <span className="block truncate text-sm">{code}</span>;
 				},
-				getTooltip: ({ item }) => getItemGroupLabel(item.itemGroup) || undefined,
+				getTooltip: ({ item }) => item.fullItemCode || getItemFullCode?.(item.itemGroup, item.item) || undefined,
 			},
 			{
 				id: "item",
@@ -429,5 +431,5 @@ export const useSalesOrderLineItemColumns = ({
 				},
 			] as TransactionLineColumn<EditableLineItem>[] : []),
 		],
-		[canEdit, invoiceTypeCode, itemGroupOptions, itemGroupLoading, getItemOptions, getMakeOptions, getUomOptions, getUomConversions, getItemGroupLabel, handleLineFieldChange],
+		[canEdit, invoiceTypeCode, itemGroupOptions, itemGroupLoading, getItemOptions, getMakeOptions, getUomOptions, getUomConversions, getItemGroupLabel, getItemFullCode, handleLineFieldChange],
 	);

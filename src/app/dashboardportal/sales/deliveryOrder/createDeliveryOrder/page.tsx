@@ -2,14 +2,26 @@
 
 import React, { Suspense } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
-import TransactionWrapper from "@/components/ui/TransactionWrapper";
+import TransactionWrapper, { type TransactionAction } from "@/components/ui/TransactionWrapper";
 import { Button } from "@/components/ui/button";
+import {
+	Dialog,
+	DialogContent,
+	DialogDescription,
+	DialogFooter,
+	DialogHeader,
+	DialogTitle,
+} from "@/components/ui/dialog";
 import type { MuiFormMode } from "@/components/ui/muiform";
 import {
 	useDeferredOptionCache,
 	useTransactionSetup,
 	useTransactionPreview,
 	ItemSelectionDialog,
+	buildApprovalTransactionActions,
+	useRejectDialog,
+	useUnsavedChanges,
+	AutoResizeTextarea,
 	type SelectedItem,
 } from "@/components/ui/transaction";
 import { useBranchOptions } from "@/utils/branchUtils";
@@ -28,7 +40,6 @@ import { useCompanyLogo } from "@/hooks/useCompanyLogo";
 
 import { DeliveryOrderHeaderForm } from "./components/DeliveryOrderHeaderForm";
 import { DeliveryOrderFooterForm, DeliveryOrderTotalsDisplay } from "./components/DeliveryOrderFooter";
-import { DeliveryOrderApprovalBar } from "./components/DeliveryOrderApprovalBar";
 import DeliveryOrderPreview from "./components/DeliveryOrderPreview";
 import { useDOLineItemColumns } from "./components/DeliveryOrderLineItemsTable";
 import { DOSalesOrderExtensionDisplay } from "./components/DOSalesOrderExtensionDisplay";
@@ -235,6 +246,35 @@ function DOTransactionPageContent() {
 		});
 	}, [mode, setLineItems]);
 
+	// Unsaved changes tracking for unified action bar
+	const getComparableLineData = React.useCallback(
+		(item: EditableLineItem) => ({
+			itemGroup: item.itemGroup,
+			item: item.item,
+			itemMake: item.itemMake,
+			hsnCode: item.hsnCode,
+			quantity: item.quantity,
+			rate: item.rate,
+			uom: item.uom,
+			discountType: item.discountType,
+			remarks: item.remarks,
+			taxPercentage: item.taxPercentage,
+		}),
+		[],
+	);
+
+	const comparableLineItems = React.useMemo(
+		() => lineItems.filter(lineHasAnyData),
+		[lineItems, lineHasAnyData],
+	);
+
+	const { hasUnsavedChanges, resetBaseline, setBaseline } = useUnsavedChanges({
+		formValues,
+		lineItems: comparableLineItems,
+		getComparableLineData,
+		enabled: mode !== "create",
+	});
+
 	// Item selection dialog
 	const [itemDialogOpen, setItemDialogOpen] = React.useState(false);
 
@@ -257,11 +297,14 @@ function DOTransactionPageContent() {
 				id: crypto.randomUUID?.() ?? String(Date.now() + Math.random()),
 				itemGroup: String(item.item_grp_id),
 				item: String(item.item_id),
+				itemCode: item.full_item_code || item.item_code || "",
+				itemName: item.item_name || "",
 				itemMake: "",
 				hsnCode: item.hsn_code ?? "",
 				quantity: "",
 				rate: "",
 				uom: String(item.uom_id),
+				uomName: item.uom_name || undefined,
 				discountValue: "",
 				remarks: "",
 				taxPercentage: item.tax_percentage ?? undefined,
@@ -295,9 +338,9 @@ function DOTransactionPageContent() {
 	);
 
 	// Refs for callbacks used inside the fetch effect — avoids including them in deps
-	const fetchCallbacksRef = React.useRef({ setInitialValues, setFormValues, bumpFormKey, replaceItems, mapLineToEditable });
+	const fetchCallbacksRef = React.useRef({ setInitialValues, setFormValues, bumpFormKey, replaceItems, mapLineToEditable, setBaseline, lineHasAnyData });
 	React.useEffect(() => {
-		fetchCallbacksRef.current = { setInitialValues, setFormValues, bumpFormKey, replaceItems, mapLineToEditable };
+		fetchCallbacksRef.current = { setInitialValues, setFormValues, bumpFormKey, replaceItems, mapLineToEditable, setBaseline, lineHasAnyData };
 	});
 	const branchValueRef = React.useRef(branchValue);
 	React.useEffect(() => { branchValueRef.current = branchValue; }, [branchValue]);
@@ -353,13 +396,16 @@ function DOTransactionPageContent() {
 					setLockedBranchId(resolvedBranchValue);
 				}
 
-				const { setInitialValues: setInit, setFormValues: setForm, bumpFormKey: bump, replaceItems: replace, mapLineToEditable: mapLine } = fetchCallbacksRef.current;
+				const { setInitialValues: setInit, setFormValues: setForm, bumpFormKey: bump, replaceItems: replace, mapLineToEditable: mapLine, setBaseline: setBase, lineHasAnyData: hasData } = fetchCallbacksRef.current;
 				setInit(nextValues);
 				setForm(nextValues);
 				bump();
 
 				const normalizedLines = (details.lines ?? []).map((line) => mapLine(line));
 				replace(normalizedLines);
+
+				const baselineLines = normalizedLines.filter(hasData);
+				setBase(nextValues, baselineLines);
 
 				setPageError(null);
 			} catch (error) {
@@ -450,9 +496,9 @@ function DOTransactionPageContent() {
 
 	const {
 		customerOptions, customerBranchOptions, transporterOptions, brokerOptions, salesOrderOptions,
-		invoiceTypeOptions, itemGroupOptions, getItemGroupLabel,
+		invoiceTypeOptions,
 		getItemOptions, getMakeOptions, getUomOptions,
-		getItemLabel, getMakeLabel, getUomLabel, getUomConversions, getOptionLabel,
+		getMakeLabel, getUomLabel, getUomConversions, getOptionLabel,
 	} = useDeliveryOrderSelectOptions({
 		customers,
 		transporters,
@@ -483,13 +529,11 @@ function DOTransactionPageContent() {
 
 	const lineItemColumns = useDOLineItemColumns({
 		canEdit,
-		itemGroupOptions,
-		getItemGroupLabel,
 		getItemOptions,
-		getItemLabel,
+		getMakeOptions,
 		getUomOptions,
 		getUomLabel,
-		onFieldChange: handleLineFieldChange,
+		handleLineFieldChange,
 		invoiceTypeId: String(formValues.invoice_type ?? ""),
 		getUomConversions,
 	});
@@ -507,6 +551,19 @@ function DOTransactionPageContent() {
 		getMenuId,
 		setDODetails,
 	});
+
+	// Reset unsaved-changes baseline after approval actions refresh doDetails
+	React.useEffect(() => {
+		if (!doDetails || mode === "create") return;
+		const timer = setTimeout(() => resetBaseline(), 0);
+		return () => clearTimeout(timer);
+	}, [doDetails, mode, resetBaseline]);
+
+	// Reject dialog for approval workflow
+	const {
+		rejectDialogOpen, rejectReason, setRejectReason,
+		openRejectDialog, handleRejectConfirm, handleRejectCancel,
+	} = useRejectDialog(handleReject);
 
 	const branchLabel = React.useMemo(() => {
 		const value = formValues.branch ?? doDetails?.branch;
@@ -607,33 +664,18 @@ function DOTransactionPageContent() {
 
 	const previewItems = React.useMemo(() => {
 		return filledLineItems.map((line, index) => {
-			const groupLabel = itemGroups.find((grp) => grp.id === line.itemGroup)?.label ?? line.itemGroup ?? "";
-			const itemLabel = getItemLabel(line.itemGroup, line.item, line.itemCode);
-			const uomLabel = getUomLabel(line.itemGroup, line.item, line.uom);
-			const displayItem = (() => {
-				const parts = [groupLabel, itemLabel].filter(Boolean);
-				if (parts.length > 0) return parts.join(" — ");
-				return line.item || "-";
-			})();
-			const discountType = (() => {
-				if (line.discountType === 1) return "%";
-				if (line.discountType === 2) return "Amt";
-				return "";
-			})();
+			const itemOptions = getItemOptions(line.itemGroup);
+			const itemLabel = itemOptions.find((o) => o.value === line.item)?.label ?? line.itemName ?? "-";
+			const uomLabel = getUomLabel(line.itemGroup, line.item, line.uom, line.uomName);
 			return {
 				srNo: index + 1,
-				itemGroup: groupLabel || undefined,
-				item: displayItem,
+				itemCode: line.itemCode || "-",
+				item: itemLabel,
 				quantity: line.quantity || "-",
 				uom: uomLabel,
-				rate: line.rate,
-				discountType,
-				discountAmount: typeof line.discountAmount === "number" ? line.discountAmount : "",
-				netAmount: typeof line.netAmount === "number" ? line.netAmount : "",
-				remarks: line.remarks || "-",
 			};
 		});
-	}, [filledLineItems, getItemLabel, getUomLabel, itemGroups]);
+	}, [filledLineItems, getItemOptions, getUomLabel]);
 
 	const previewTotals = React.useMemo(
 		() => ({
@@ -678,11 +720,51 @@ function DOTransactionPageContent() {
 		formValues,
 	});
 
-	const primaryActionLabel = mode === "create" ? "Create" : "Save";
-	const handleSaveClick = React.useCallback(() => {
-		if (!formRef.current?.submit) return;
-		void formRef.current.submit();
-	}, [formRef]);
+	// Unified primary actions for TransactionWrapper
+	const primaryActions = React.useMemo<TransactionAction[] | undefined>(() => {
+		if (pageError || setupError) return undefined;
+
+		if (mode === "create") {
+			return [{
+				label: "Create Delivery Order",
+				onClick: () => formRef.current?.submit(),
+				disabled: saving || !isLineItemsReady || setupLoading,
+				loading: saving,
+			}];
+		}
+
+		if (!doDetails) return undefined;
+
+		if (mode === "edit" && approvalPermissions.canSave && hasUnsavedChanges) {
+			return [{
+				label: "Save Changes",
+				onClick: () => formRef.current?.submit(),
+				disabled: saving || !isLineItemsReady || setupLoading,
+				loading: saving,
+			}];
+		}
+
+		const approvalActions = buildApprovalTransactionActions({
+			approvalInfo,
+			permissions: approvalPermissions,
+			handlers: {
+				onOpen: handleOpen,
+				onCancelDraft: handleCancelDraft,
+				onReopen: handleReopen,
+				onSendForApproval: handleSendForApproval,
+				onApprove: handleApprove,
+				onReject: openRejectDialog,
+				onViewApprovalLog: handleViewApprovalLog,
+			},
+			loading: approvalLoading,
+			disabled: saving || loading || setupLoading,
+		});
+
+		return approvalActions.length ? approvalActions : undefined;
+	}, [pageError, setupError, mode, doDetails, saving, isLineItemsReady, setupLoading,
+		approvalPermissions, hasUnsavedChanges, approvalInfo, handleOpen, handleCancelDraft,
+		handleReopen, handleSendForApproval, handleApprove, openRejectDialog,
+		handleViewApprovalLog, approvalLoading, loading, formRef]);
 
 	const pageTitle = React.useMemo(() => {
 		if (mode === "create") return "Create Delivery Order";
@@ -717,6 +799,8 @@ function DOTransactionPageContent() {
 			metadata={metadata}
 			statusChip={statusChipProps}
 			backAction={{ onClick: () => router.push("/dashboardportal/sales/deliveryOrder") }}
+			primaryActions={primaryActions}
+			actionsAfterFooter
 			loading={loading || setupLoading}
 			alerts={pageError ? <div role="alert" aria-live="assertive" className="text-red-600">{pageError}</div> : customerListWarning}
 			preview={
@@ -756,25 +840,6 @@ function DOTransactionPageContent() {
 						onValuesChange={handleFooterFormValuesChange}
 					/>
 					<DeliveryOrderTotalsDisplay totals={totals} showGSTBreakdown={Boolean(partyState || shippingState)} />
-					<DeliveryOrderApprovalBar
-						approvalInfo={approvalInfo}
-						permissions={approvalPermissions}
-						loading={approvalLoading}
-						onApprove={handleApprove}
-						onReject={handleReject}
-						onOpen={handleOpen}
-						onCancelDraft={handleCancelDraft}
-						onReopen={handleReopen}
-						onSendForApproval={handleSendForApproval}
-						onViewApprovalLog={handleViewApprovalLog}
-					/>
-					{mode !== "view" ? (
-						<div className="flex justify-end pt-2">
-							<Button type="button" onClick={handleSaveClick} disabled={saving || setupLoading || !isLineItemsReady}>
-								{saving ? "Processing..." : primaryActionLabel}
-							</Button>
-						</div>
-					) : null}
 				</div>
 			}
 		>
@@ -803,6 +868,35 @@ function DOTransactionPageContent() {
 			excludeItemIds={excludeItemIds}
 			title="Select Items for Delivery Order"
 		/>
+
+		<Dialog open={rejectDialogOpen} onOpenChange={(open) => { if (!open) handleRejectCancel(); }}>
+			<DialogContent className="sm:max-w-125">
+				<DialogHeader>
+					<DialogTitle>Reject Delivery Order</DialogTitle>
+					<DialogDescription>Please provide a reason for rejecting this delivery order.</DialogDescription>
+				</DialogHeader>
+				<div className="space-y-4 py-4">
+					<div className="space-y-2">
+						<label htmlFor="reject-reason" className="text-sm font-medium leading-none">
+							Rejection Reason *
+						</label>
+						<AutoResizeTextarea
+							id="reject-reason"
+							placeholder="Enter rejection reason..."
+							value={rejectReason}
+							onChange={(e) => setRejectReason(e.target.value)}
+							className="min-h-20 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
+							minHeight={80}
+							maxHeight={200}
+						/>
+					</div>
+				</div>
+				<DialogFooter>
+					<Button variant="outline" onClick={handleRejectCancel}>Cancel</Button>
+					<Button variant="destructive" onClick={handleRejectConfirm} disabled={!rejectReason.trim()}>Reject</Button>
+				</DialogFooter>
+			</DialogContent>
+		</Dialog>
 		</>
 	);
 }

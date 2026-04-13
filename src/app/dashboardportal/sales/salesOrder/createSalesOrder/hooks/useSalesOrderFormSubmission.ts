@@ -120,6 +120,7 @@ export const useSalesOrderFormSubmission = ({
 				administrative_office_address: String(values.govtskg_admin_office ?? formValues.govtskg_admin_office ?? ""),
 				destination_rail_head: String(values.govtskg_rail_head ?? formValues.govtskg_rail_head ?? ""),
 				loading_point: String(values.govtskg_loading_point ?? formValues.govtskg_loading_point ?? ""),
+				mode_of_transport: String(values.govtskg_mode_of_transport ?? formValues.govtskg_mode_of_transport ?? "") || undefined,
 			} : undefined;
 
 			const juteyarnHeader = isJuteYarnOrder(invoiceTypeCode) ? {

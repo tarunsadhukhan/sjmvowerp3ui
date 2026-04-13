@@ -117,6 +117,15 @@ export type SalesOrderSetupData = {
 		quotation_required?: number | boolean;
 	};
 	additionalChargesMaster: AdditionalChargeMasterRecord[];
+	transportChargeRates: TransportChargeRateRecord[];
+};
+
+export type TransportChargeRateRecord = {
+	id: number;
+	mode_of_transport: string;
+	additional_charges_id: number;
+	rate_per_100pcs: number;
+	co_id: number | null;
 };
 
 // ---------------------------------------------------------------------------

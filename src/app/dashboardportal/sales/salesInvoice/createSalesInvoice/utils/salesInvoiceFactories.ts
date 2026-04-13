@@ -73,6 +73,7 @@ export const buildDefaultFormValues = (skipDate = false) => ({
 	jute_mukam_id: "",
 	govtskg_pcso_no: "",
 	govtskg_pcso_date: "",
+	govtskg_mode_of_transport: "",
 	govtskg_admin_office_address: "",
 	govtskg_destination_rail_head: "",
 	govtskg_loading_point: "",

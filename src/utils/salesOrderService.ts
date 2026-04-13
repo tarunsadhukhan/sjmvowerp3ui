@@ -61,6 +61,7 @@ export type SalesOrderLine = {
   juteDtl?: SalesOrderLineJuteDtl | null;
   govtskgDtl?: SalesOrderLineGovtSkgDtl | null;
   full_item_code?: string;
+  fullItemCode?: string;
 };
 
 export type ApprovalActionPermissions = {

@@ -180,9 +180,9 @@ export default function BomTreeEditor({ open, onClose, item, onSnackbar }: BomTr
 
   const rootItemId = selectedRootItem?.item_id ?? item?.item_id;
   const rootLabel = selectedRootItem
-    ? `${selectedRootItem.item_code} — ${selectedRootItem.item_name}`
+    ? `${selectedRootItem.full_item_code || selectedRootItem.item_code} — ${selectedRootItem.item_name}`
     : item
-    ? `${item.item_code} — ${item.item_name}`
+    ? `${item.full_item_code || item.item_code} — ${item.item_name}`
     : "";
 
   return (
@@ -199,7 +199,7 @@ export default function BomTreeEditor({ open, onClose, item, onSnackbar }: BomTr
               </Typography>
               <Autocomplete
                 options={itemOptions}
-                getOptionLabel={(opt: ItemOption) => `${opt.item_code} — ${opt.item_name}`}
+                getOptionLabel={(opt: ItemOption) => `${opt.full_item_code || opt.item_code} — ${opt.item_name}`}
                 value={null}
                 inputValue={itemSearchValue}
                 onChange={(_, newValue) => handleSelectRootItem(newValue)}

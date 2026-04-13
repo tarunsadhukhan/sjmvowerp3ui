@@ -94,6 +94,7 @@ export type SalesOrderLine = {
   sales_order_dtl_id: number;
   item_id: number;
   item_code?: string;
+  full_item_code?: string;
   item_name?: string;
   item_grp_id: number;
   item_grp_code?: string;

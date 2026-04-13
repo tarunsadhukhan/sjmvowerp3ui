@@ -280,7 +280,7 @@ function CostSheetEditorPage() {
           </Button>
           <Box>
             <Typography variant="h6" fontWeight={700} sx={{ lineHeight: 1.2 }}>
-              {header?.item_code} &mdash; {header?.item_name}
+              {header?.full_item_code || header?.item_code} &mdash; {header?.item_name}
             </Typography>
             <Stack direction="row" spacing={1} alignItems="center" sx={{ mt: 0.25 }}>
               <Typography sx={{ fontSize: "0.8rem", color: "#666" }}>

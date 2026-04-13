@@ -20,6 +20,7 @@ import {
 	fetchDeliveryOrderLines,
 	fetchSalesOrderLinesForInvoice,
 	type InvoiceDetails,
+	type SoExtensionData,
 } from "@/utils/salesInvoiceService";
 import useSelectedCompanyCoId from "@/hooks/use-selected-company-coid";
 import { toast } from "@/hooks/use-toast";
@@ -53,7 +54,10 @@ import {
 	EMPTY_INVOICE_TYPES,
 	EMPTY_SETUP_PARAMS,
 	isRawJuteInvoice,
+	isGovtSkgInvoice,
 } from "./utils/salesInvoiceConstants";
+import { AdditionalChargesSection, type AdditionalChargeRow } from "../../salesOrder/createSalesOrder/components/AdditionalChargesSection";
+import { computeGovtskgTransportCharges, mergeTransportCharges } from "../../utils/govtskgTransportCharges";
 
 function InvoicePageLoading() {
 	return (
@@ -104,6 +108,7 @@ function InvoiceTransactionPageContent() {
 	const [loading, setLoading] = React.useState<boolean>(mode !== "create");
 	const [pageError, setPageError] = React.useState<string | null>(null);
 	const [linesLoading, setLinesLoading] = React.useState(false);
+	const [additionalCharges, setAdditionalCharges] = React.useState<AdditionalChargeRow[]>([]);
 
 	const branchValue = React.useMemo(() => {
 		if (lockedBranchId) return lockedBranchId;
@@ -410,6 +415,50 @@ function InvoiceTransactionPageContent() {
 		[mode, setLineItems, lineHasAnyData, itemGroupCache, itemGroupLoading, ensureItemGroupData]
 	);
 
+	// Helper: apply SO extension data (govtskg header + additional charges) from a lines response
+	const applySoExtensionData = React.useCallback((ext: SoExtensionData) => {
+		if (ext.so_govtskg) {
+			const g = ext.so_govtskg;
+			const govtUpdates: Record<string, unknown> = {};
+			if (g.pcso_no) govtUpdates.govtskg_pcso_no = g.pcso_no;
+			if (g.pcso_date) govtUpdates.govtskg_pcso_date = g.pcso_date;
+			if (g.mode_of_transport) govtUpdates.govtskg_mode_of_transport = g.mode_of_transport;
+			if (g.administrative_office_address) govtUpdates.govtskg_admin_office_address = g.administrative_office_address;
+			if (g.destination_rail_head) govtUpdates.govtskg_destination_rail_head = g.destination_rail_head;
+			if (g.loading_point) govtUpdates.govtskg_loading_point = g.loading_point;
+
+			if (Object.keys(govtUpdates).length > 0) {
+				for (const [key, value] of Object.entries(govtUpdates)) {
+					formRef.current?.setValue(key, value);
+				}
+				setFormValues((prev) => ({ ...prev, ...govtUpdates }));
+			}
+		}
+
+		if (ext.so_additional_charges && ext.so_additional_charges.length > 0) {
+			const mappedCharges: AdditionalChargeRow[] = ext.so_additional_charges.map((c, idx) => ({
+				id: `so-charge-${idx}`,
+				additionalChargesId: String(c.additional_charges_id ?? ""),
+				chargeName: String(c.additional_charges_name ?? ""),
+				qty: String(c.qty ?? ""),
+				rate: String(c.rate ?? ""),
+				netAmount: String(c.net_amount ?? ""),
+				remarks: c.remarks ?? "",
+				taxPct: "",
+				gst: (c.gst_total != null) ? {
+					igstAmount: c.igst_amount ?? 0,
+					igstPercent: c.igst_percent ?? 0,
+					cgstAmount: c.cgst_amount ?? 0,
+					cgstPercent: c.cgst_percent ?? 0,
+					sgstAmount: c.sgst_amount ?? 0,
+					sgstPercent: c.sgst_percent ?? 0,
+					gstTotal: c.gst_total ?? 0,
+				} : undefined,
+			}));
+			setAdditionalCharges(mappedCharges);
+		}
+	}, [formRef, setFormValues, setAdditionalCharges]);
+
 	// Auto-fetch lines when delivery order changes
 	React.useEffect(() => {
 		if (mode === "view") return;
@@ -428,6 +477,7 @@ function InvoiceTransactionPageContent() {
 			.then((response) => {
 				if (cancelled) return;
 				replaceWithDeliveryOrderLines(response.data || []);
+				applySoExtensionData(response);
 			})
 			.catch((error) => {
 				if (!cancelled) {
@@ -438,7 +488,7 @@ function InvoiceTransactionPageContent() {
 			.finally(() => { if (!cancelled) setLinesLoading(false); });
 
 		return () => { cancelled = true; };
-	}, [formValues.delivery_order, mode, replaceWithDeliveryOrderLines, clearImportedLines]);
+	}, [formValues.delivery_order, mode, replaceWithDeliveryOrderLines, clearImportedLines, applySoExtensionData]);
 
 	// Auto-fetch lines when sales order changes (only if no DO is selected)
 	React.useEffect(() => {
@@ -464,6 +514,7 @@ function InvoiceTransactionPageContent() {
 			.then((response) => {
 				if (cancelled) return;
 				replaceWithSalesOrderLines(response.data || []);
+				applySoExtensionData(response);
 			})
 			.catch((error) => {
 				if (!cancelled) {
@@ -474,7 +525,7 @@ function InvoiceTransactionPageContent() {
 			.finally(() => { if (!cancelled) setLinesLoading(false); });
 
 		return () => { cancelled = true; };
-	}, [formValues.sales_order_id, formValues.delivery_order, mode, replaceWithSalesOrderLines, clearImportedLines]);
+	}, [formValues.sales_order_id, formValues.delivery_order, mode, replaceWithSalesOrderLines, clearImportedLines, applySoExtensionData]);
 
 	const juteFormRef = React.useRef<{ submit: () => Promise<void>; isDirty: () => boolean; setValue: (name: string, value: unknown) => void } | null>(null);
 
@@ -499,11 +550,47 @@ function InvoiceTransactionPageContent() {
 		juteFormRef.current?.setValue("jute_claim_amount", rounded);
 	}, [filledLineItems, formValues.invoice_type, mode, setFormValues]);
 
+	// Additional charges options from setup data
+	const chargeOptions = React.useMemo(() => {
+		const raw = setupData?.additionalChargesMaster;
+		if (!Array.isArray(raw) || !raw.length) return [];
+		return raw.map((c) => ({
+			value: String(c.additional_charges_id ?? ""),
+			label: String(c.additional_charges_name ?? ""),
+			defaultValue: c.default_value != null ? Number(c.default_value) : undefined,
+		}));
+	}, [setupData]);
+
+	// Auto-populate additional charges when Govt Sacking transport mode or line qty changes
+	const invoiceTypeId = String(formValues.invoice_type ?? "");
+	React.useEffect(() => {
+		const mode_val = String(formValues.govtskg_mode_of_transport ?? "");
+		if (!mode_val || !isGovtSkgInvoice(invoiceTypeId)) return;
+
+		const totalQty = filledLineItems.reduce((sum, li) => sum + (Number(li.quantity) || 0), 0);
+		if (totalQty <= 0) return;
+
+		const rates = setupData?.transportChargeRates ?? [];
+		if (!rates.length) return;
+
+		const lineTaxPct = filledLineItems[0]?.taxPercentage;
+		const computed = computeGovtskgTransportCharges(mode_val, totalQty, rates, chargeOptions, lineTaxPct, partyState, shippingState);
+		setAdditionalCharges((prev) => mergeTransportCharges(prev, computed, mode_val));
+	}, [formValues.govtskg_mode_of_transport, filledLineItems, invoiceTypeId, setupData?.transportChargeRates, chargeOptions, partyState, shippingState]);
+
+	const additionalChargesTotal = React.useMemo(
+		() => additionalCharges.reduce((sum, c) => sum + (parseFloat(c.netAmount) || 0) + (c.gst?.gstTotal ?? 0), 0),
+		[additionalCharges],
+	);
+
 	const freightCharges = Number(formValues.freight_charges) || 0;
 	const roundOff = Number(formValues.round_off) || 0;
 	const totals = React.useMemo(
-		() => calculateInvoiceTotals(filledLineItems, freightCharges, roundOff),
-		[filledLineItems, freightCharges, roundOff],
+		() => {
+			const base = calculateInvoiceTotals(filledLineItems, freightCharges, roundOff);
+			return { ...base, netAmount: base.netAmount + additionalChargesTotal, additionalChargesTotal };
+		},
+		[filledLineItems, freightCharges, roundOff, additionalChargesTotal],
 	);
 
 	const detailsFetchKey = React.useMemo(
@@ -577,6 +664,30 @@ function InvoiceTransactionPageContent() {
 				const normalizedLines = (details.lines ?? []).map((line) => mapLineToEditable(line));
 				replaceItems(normalizedLines);
 				linesLoadedFromInvoiceApiRef.current = true;
+
+				// Load additional charges from invoice details
+				const rawCharges = (details as Record<string, unknown>).additionalCharges;
+				if (Array.isArray(rawCharges) && rawCharges.length > 0) {
+					setAdditionalCharges(rawCharges.map((c: Record<string, unknown>, i: number) => ({
+						id: `loaded_${i}`,
+						additionalChargesId: String(c.additional_charges_id ?? ""),
+						chargeName: String(c.additional_charges_name ?? ""),
+						qty: c.qty != null ? String(c.qty) : "1",
+						rate: c.rate != null ? String(c.rate) : "",
+						netAmount: c.net_amount != null ? String(c.net_amount) : "",
+						remarks: String(c.remarks ?? ""),
+						taxPct: "",
+						gst: c.gst_total != null ? {
+							igstAmount: Number(c.igst_amount) || undefined,
+							igstPercent: Number(c.igst_percent) || undefined,
+							cgstAmount: Number(c.cgst_amount) || undefined,
+							cgstPercent: Number(c.cgst_percent) || undefined,
+							sgstAmount: Number(c.sgst_amount) || undefined,
+							sgstPercent: Number(c.sgst_percent) || undefined,
+							gstTotal: Number(c.gst_total) || undefined,
+						} : undefined,
+					})));
+				}
 
 				setPageError(null);
 			} catch (error) {
@@ -971,6 +1082,7 @@ function InvoiceTransactionPageContent() {
 		requestedId,
 		formValues,
 		approvalPermissions,
+		additionalCharges,
 	});
 
 	const primaryActionLabel = mode === "create" ? "Create" : "Save";
@@ -1052,6 +1164,15 @@ function InvoiceTransactionPageContent() {
 						mode={canSave ? mode : "view"}
 						onSubmit={handleFormSubmit}
 						onValuesChange={handleFooterFormValuesChange}
+					/>
+					<AdditionalChargesSection
+						charges={additionalCharges}
+						chargeOptions={chargeOptions}
+						onChange={setAdditionalCharges}
+						disabled={!canSave}
+						billingToState={partyState}
+						shippingToState={shippingState}
+						indiaGst={true}
 					/>
 					<SalesInvoiceTotalsDisplay
 						totals={totals}

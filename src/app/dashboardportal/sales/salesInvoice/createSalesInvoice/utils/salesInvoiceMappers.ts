@@ -205,6 +205,24 @@ export const mapBankDetailRecords = (records: unknown[]): BankDetailRecord[] =>
 export const mapInvoiceSetupResponse = (response: unknown): InvoiceSetupData => {
 	try {
 		const result = response as InvoiceSetup1ResponseRaw;
+		const additionalChargesRaw = (result as Record<string, unknown>)?.additional_charges_master;
+		const additionalChargesMaster = Array.isArray(additionalChargesRaw)
+			? additionalChargesRaw.map((c: Record<string, unknown>) => ({
+				additional_charges_id: Number(c.additional_charges_id ?? 0),
+				additional_charges_name: String(c.additional_charges_name ?? ""),
+				default_value: c.default_value != null ? Number(c.default_value) : null,
+			}))
+			: [];
+		const transportChargeRatesRaw = (result as Record<string, unknown>)?.transport_charge_rates;
+		const transportChargeRates = Array.isArray(transportChargeRatesRaw)
+			? transportChargeRatesRaw.map((r: Record<string, unknown>) => ({
+				id: Number(r.id ?? 0),
+				mode_of_transport: String(r.mode_of_transport ?? ""),
+				additional_charges_id: Number(r.additional_charges_id ?? 0),
+				rate_per_100pcs: Number(r.rate_per_100pcs ?? 0),
+				co_id: r.co_id != null ? Number(r.co_id) : null,
+			}))
+			: [];
 		return {
 			customers: mapCustomerRecords(result?.customers ?? []),
 			transporters: mapTransporterRecords(result?.transporters ?? []),
@@ -217,6 +235,8 @@ export const mapInvoiceSetupResponse = (response: unknown): InvoiceSetupData => 
 			branches: (result?.branches as InvoiceSetupData["branches"]) ?? [],
 			bankDetails: mapBankDetailRecords((result?.bank_details as unknown[]) ?? []),
 			company: result?.company ?? undefined,
+			additionalChargesMaster,
+			transportChargeRates,
 		} satisfies InvoiceSetupData;
 	} catch (error) {
 		console.error("Failed to map invoice setup response", error);
@@ -242,12 +262,10 @@ export const mapItemGroupDetailResponse = (response: unknown): ItemGroupCacheEnt
 			const id = data?.item_id ?? data?.id;
 			if (!id) return null;
 			const value = String(id);
-			const code = data?.item_code;
 			const name = data?.item_name;
-			const labelParts = [code, name].filter(Boolean);
 			return {
 				value,
-				label: labelParts.length ? labelParts.join(" — ") : value,
+				label: name || value,
 				defaultUomId: data?.uom_id != null ? String(data.uom_id) : undefined,
 				defaultUomLabel: data?.uom_name ? String(data.uom_name) : undefined,
 				defaultRate: data?.rate != null ? Number(data.rate) : undefined,
@@ -407,6 +425,7 @@ export const mapInvoiceDetailsToFormValues = (
 			administrativeOfficeAddress?: string;
 			destinationRailHead?: string;
 			loadingPoint?: string;
+			modeOfTransport?: string;
 			packSheet?: number;
 			netWeight?: number;
 			totalWeight?: number;
@@ -476,6 +495,7 @@ export const mapInvoiceDetailsToFormValues = (
 	govtskg_admin_office_address: toStringValue(details.govtskg?.administrativeOfficeAddress ?? defaultValues.govtskg_admin_office_address),
 	govtskg_destination_rail_head: toStringValue(details.govtskg?.destinationRailHead ?? defaultValues.govtskg_destination_rail_head),
 	govtskg_loading_point: toStringValue(details.govtskg?.loadingPoint ?? defaultValues.govtskg_loading_point),
+	govtskg_mode_of_transport: toStringValue(details.govtskg?.modeOfTransport ?? defaultValues.govtskg_mode_of_transport),
 	govtskg_pack_sheet: details.govtskg?.packSheet != null ? String(details.govtskg.packSheet) : toStringValue(defaultValues.govtskg_pack_sheet),
 	govtskg_net_weight: details.govtskg?.netWeight != null ? String(details.govtskg.netWeight) : toStringValue(defaultValues.govtskg_net_weight),
 	govtskg_total_weight: details.govtskg?.totalWeight != null ? String(details.govtskg.totalWeight) : toStringValue(defaultValues.govtskg_total_weight),

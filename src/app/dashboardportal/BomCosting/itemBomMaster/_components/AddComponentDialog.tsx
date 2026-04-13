@@ -159,7 +159,7 @@ export default function AddComponentDialog({
           {!isEditMode ? (
             <Autocomplete
               options={itemOptions}
-              getOptionLabel={(opt: ItemOption) => `${opt.item_code} — ${opt.item_name}`}
+              getOptionLabel={(opt: ItemOption) => `${opt.full_item_code || opt.item_code} — ${opt.item_name}`}
               value={selectedItem}
               inputValue={itemSearchValue}
               onChange={(_, newValue) => {
@@ -179,7 +179,7 @@ export default function AddComponentDialog({
           ) : (
             <TextField
               label="Item"
-              value={editNode ? `${editNode.child_item_code} — ${editNode.child_item_name}` : ""}
+              value={editNode ? `${editNode.child_full_item_code || editNode.child_item_code} — ${editNode.child_item_name}` : ""}
               size="small"
               disabled
             />

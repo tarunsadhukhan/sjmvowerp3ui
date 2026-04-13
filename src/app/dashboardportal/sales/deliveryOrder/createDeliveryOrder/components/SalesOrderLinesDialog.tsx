@@ -134,7 +134,7 @@ export function SalesOrderLinesDialog({
 											/>
 											<div className="flex-1 grid grid-cols-12 gap-2 text-sm">
 												<div className="col-span-3">
-													<div className="font-medium">{item.item_code || "-"}</div>
+													<div className="font-medium">{item.full_item_code || item.item_code || "-"}</div>
 													<div className="text-muted-foreground text-xs">{item.item_name || "-"}</div>
 												</div>
 												<div className="col-span-2">

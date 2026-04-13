@@ -189,6 +189,22 @@ export type InvoiceSetupData = {
 	}>;
 	bankDetails?: BankDetailRecord[];
 	company?: CompanyRecord;
+	additionalChargesMaster: AdditionalChargeMasterRecord[];
+	transportChargeRates: TransportChargeRateRecord[];
+};
+
+export type AdditionalChargeMasterRecord = {
+	additional_charges_id: number;
+	additional_charges_name: string;
+	default_value: number | null;
+};
+
+export type TransportChargeRateRecord = {
+	id: number;
+	mode_of_transport: string;
+	additional_charges_id: number;
+	rate_per_100pcs: number;
+	co_id: number | null;
 };
 
 export type CustomerBranchRecordRaw = {

@@ -262,7 +262,7 @@ export const useSalesOrderLineItems = ({
 			hsnCode: line.hsnCode,
 			itemGroup: groupId,
 			item: itemId,
-			fullItemCode: line.full_item_code ? String(line.full_item_code) : undefined,
+			fullItemCode: line.fullItemCode ? String(line.fullItemCode) : (line.full_item_code ? String(line.full_item_code) : undefined),
 			itemMake: line.itemMake ?? "",
 			quantity: line.quantity != null ? String(line.quantity) : "",
 			rate: line.rate != null ? String(line.rate) : "",
@@ -651,7 +651,6 @@ export const useSalesOrderLineItems = ({
 	// This effect patches lines once the cache is available.
 	React.useEffect(() => {
 		if (!isGovtSkg && !isHessian) return;
-		if (mode === "view") return;
 
 		setLineItems((prev) => {
 			let changed = false;
@@ -697,7 +696,7 @@ export const useSalesOrderLineItems = ({
 			});
 			return changed ? next : prev;
 		});
-	}, [isGovtSkg, isHessian, mode, itemGroupCache, setLineItems, getGovtSkgBalesConversion, getConversionFactor, calculateLineTax, applyHessianToLine]);
+	}, [isGovtSkg, isHessian, itemGroupCache, setLineItems, getGovtSkgBalesConversion, getConversionFactor, calculateLineTax, applyHessianToLine]);
 
 	// --- Hessian brokerage reactivity ---
 	// When broker_commission_percent changes in the header, recalculate all hessian line items.

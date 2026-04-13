@@ -50,10 +50,12 @@ export const useDeliveryOrderLineItems = ({
 		itemGroup: line.itemGroup ? String(line.itemGroup) : "",
 		item: line.item ?? "",
 		itemCode: line.itemCode,
+		itemName: line.itemName,
 		itemMake: line.itemMake ?? "",
 		quantity: line.quantity != null ? String(line.quantity) : "",
 		rate: line.rate != null ? String(line.rate) : "",
 		uom: line.uom ?? "",
+		uomName: line.uomName,
 		discountType: line.discountType,
 		discountedRate: line.discountedRate,
 		discountAmount: line.discountAmount,
@@ -94,7 +96,7 @@ export const useDeliveryOrderLineItems = ({
 			if (field === "itemGroup") {
 				setLineItems((prev) =>
 					prev.map((item) =>
-						item.id === id ? { ...item, itemGroup: value, item: "", itemMake: "", uom: "", rate: "", hsnCode: "" } : item,
+						item.id === id ? { ...item, itemGroup: value, item: "", itemMake: "", uom: "", uomName: undefined, rate: "", hsnCode: "" } : item,
 					),
 				);
 				if (value && !itemGroupCache[value] && !itemGroupLoading[value]) void ensureItemGroupData(value);
@@ -180,7 +182,12 @@ export const useDeliveryOrderLineItems = ({
 			}
 
 			setLineItems((prev) =>
-				prev.map((item) => (item.id === id ? { ...item, [field]: value } as EditableLineItem : item)),
+				prev.map((item) => {
+					if (item.id !== id) return item;
+					const update: Partial<EditableLineItem> = { [field]: value };
+					if (field === "uom") update.uomName = undefined;
+					return { ...item, ...update } as EditableLineItem;
+				}),
 			);
 		},
 		[mode, setLineItems, itemGroupCache, itemGroupLoading, ensureItemGroupData, recalcLine, isHessian, partyState, shippingState],
@@ -219,11 +226,13 @@ export const useDeliveryOrderLineItems = ({
 						hsnCode: item.hsn_code || "",
 						itemGroup: String(item.item_grp_id),
 						item: String(item.item_id),
-						itemCode: item.item_code,
+						itemCode: item.full_item_code || item.item_code,
+						itemName: item.item_name,
 						itemMake: item.item_make_id ? String(item.item_make_id) : "",
 						quantity: String(qty),
 						rate: String(rate),
 						uom: String(item.uom_id),
+						uomName: item.uom_name,
 						discountType: item.discount_type,
 						discountedRate: item.discounted_rate,
 						discountAmount: item.discount_amount,

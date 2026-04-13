@@ -72,6 +72,7 @@ import {
 	isHessianOrder,
 	isGovtSkgOrder,
 } from "./utils/salesOrderConstants";
+import { computeGovtskgTransportCharges, mergeTransportCharges } from "../../utils/govtskgTransportCharges";
 
 function SOPageLoading() {
 	return (
@@ -285,7 +286,7 @@ function SalesOrderTransactionPageContent() {
 	// Lock invoice type dropdown when type-specific header fields have data
 	const hasTypeSpecificHeaderData = React.useMemo(() => {
 		const v = formValues;
-		const hasGovtskg = !!(v.govtskg_pcso_no || v.govtskg_pcso_date || v.govtskg_admin_office || v.govtskg_rail_head || v.govtskg_loading_point);
+		const hasGovtskg = !!(v.govtskg_pcso_no || v.govtskg_pcso_date || v.govtskg_admin_office || v.govtskg_rail_head || v.govtskg_loading_point || v.govtskg_mode_of_transport);
 		const hasJute = !!(v.jute_mr_no || v.jute_mukam_id || v.jute_claim_amount || v.jute_claim_description);
 		const hasJuteYarn = !!(v.juteyarn_pcso_no || v.juteyarn_container_no || v.juteyarn_customer_ref_no);
 		return hasGovtskg || hasJute || hasJuteYarn;
@@ -311,7 +312,7 @@ function SalesOrderTransactionPageContent() {
 
 		const clearFields: Record<string, string> = {};
 		if (prevCode === "govt_skg") {
-			Object.assign(clearFields, { govtskg_pcso_no: "", govtskg_pcso_date: "", govtskg_admin_office: "", govtskg_rail_head: "", govtskg_loading_point: "" });
+			Object.assign(clearFields, { govtskg_pcso_no: "", govtskg_pcso_date: "", govtskg_admin_office: "", govtskg_rail_head: "", govtskg_loading_point: "", govtskg_mode_of_transport: "" });
 		} else if (prevCode === "jute") {
 			Object.assign(clearFields, { jute_mr_no: "", jute_mukam_id: "", jute_claim_amount: "", jute_claim_description: "" });
 		} else if (prevCode === "jute_yarn") {
@@ -464,6 +465,22 @@ function SalesOrderTransactionPageContent() {
 		setLineItems,
 		suppressRef: suppressTaxRecalcRef,
 	});
+
+	// Auto-populate additional charges when Govt Sacking transport mode or line qty changes
+	React.useEffect(() => {
+		const mode = String(formValues.govtskg_mode_of_transport ?? "");
+		if (!mode || !isGovtSkgOrder(invoiceTypeCode)) return;
+
+		const totalQty = filledLineItems.reduce((sum, li) => sum + (Number(li.quantity) || 0), 0);
+		if (totalQty <= 0) return;
+
+		const rates = setupData?.transportChargeRates ?? [];
+		if (!rates.length) return;
+
+		const lineTaxPct = filledLineItems[0]?.taxPercentage;
+		const computed = computeGovtskgTransportCharges(mode, totalQty, rates, chargeOptions, lineTaxPct, billingToState, shippingToState);
+		setAdditionalCharges((prev) => mergeTransportCharges(prev, computed, mode));
+	}, [formValues.govtskg_mode_of_transport, filledLineItems, invoiceTypeCode, setupData?.transportChargeRates, chargeOptions, billingToState, shippingToState]);
 
 	// Calculate totals
 	const additionalChargesTotal = React.useMemo(
@@ -718,6 +735,7 @@ function SalesOrderTransactionPageContent() {
 		getUomOptions,
 		getUomConversions,
 		getItemGroupLabel,
+		getItemFullCode,
 		handleLineFieldChange,
 	});
 
@@ -785,13 +803,7 @@ function SalesOrderTransactionPageContent() {
 		const isGovtSkg = isGovtSkgOrder(invoiceTypeCode);
 		return filledLineItems.map((line, index) => {
 			const itemLabel = getItemLabel(line.itemGroup, line.item);
-			const fullCode = line.fullItemCode || getItemFullCode(line.itemGroup, line.item);
-			// Extract item name from the label (part after " — " if present)
-			const namePart = itemLabel.includes(" — ") ? itemLabel.split(" — ").slice(1).join(" — ") : "";
-			// Use full item code with item name, or fall back to the item label as-is
-			const fullItemName = fullCode
-				? (namePart ? `${fullCode} — ${namePart}` : fullCode)
-				: (itemLabel || "-");
+			const fullItemName = itemLabel || "-";
 
 			const uomOptions = getUomOptions(line.itemGroup, line.item);
 			const uomLabel = uomOptions.find((opt) => opt.value === line.uom)?.label ?? line.uom ?? "";
@@ -850,7 +862,7 @@ function SalesOrderTransactionPageContent() {
 				total: ((line.amount ?? 0) + (line.taxAmount ?? 0)) || "-",
 			};
 		});
-	}, [filledLineItems, getItemLabel, getItemFullCode, getUomOptions, getUomConversions, invoiceTypeCode]);
+	}, [filledLineItems, getItemLabel, getUomOptions, getUomConversions, invoiceTypeCode]);
 
 	const previewRemarks = React.useMemo(() => {
 		return (formValues.internal_note as string) || soDetails?.internalNote || (formValues.footer_note as string) || soDetails?.footerNote || "";
@@ -1004,6 +1016,7 @@ function SalesOrderTransactionPageContent() {
 			statusChip={statusChipProps}
 			backAction={{ onClick: () => router.push("/dashboardportal/sales/salesOrder") }}
 			primaryActions={primaryActions}
+			actionsAfterFooter
 			loading={loading || setupLoading}
 			alerts={pageError ? <div role="alert" aria-live="assertive" className="text-red-600">{pageError}</div> : undefined}
 			preview={

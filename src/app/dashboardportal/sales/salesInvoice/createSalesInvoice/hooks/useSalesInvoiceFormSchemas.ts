@@ -98,15 +98,21 @@ export const useSalesInvoiceTypeSpecificHeaderSchema = ({
 		}
 
 		if (isGovtSkgInvoice(invoiceTypeId)) {
+			const viewOnly = mode === "view";
 			const fields: Field[] = [
-				{ name: "govtskg_pcso_no", label: "PCSO No.", type: "text", disabled, grid: { xs: 12, md: 3 } },
-				{ name: "govtskg_pcso_date", label: "PCSO Date", type: "date", disabled, grid: { xs: 12, md: 3 } },
-				{ name: "govtskg_admin_office_address", label: "Admin Office Address", type: "textarea", disabled, grid: { xs: 12, md: 6 } },
-				{ name: "govtskg_destination_rail_head", label: "Destination Rail Head", type: "text", disabled, grid: { xs: 12, md: 3 } },
-				{ name: "govtskg_loading_point", label: "Loading Point", type: "text", disabled, grid: { xs: 12, md: 3 } },
-				{ name: "govtskg_pack_sheet", label: "Pack Sheet", type: "text", disabled, grid: { xs: 12, md: 2 } },
-				{ name: "govtskg_net_weight", label: "Net Weight", type: "text", disabled, grid: { xs: 12, md: 2 } },
-				{ name: "govtskg_total_weight", label: "Total Weight", type: "text", disabled, grid: { xs: 12, md: 2 } },
+				{ name: "govtskg_pcso_no", label: "PCSO No.", type: "text", disabled: viewOnly, grid: { xs: 12, md: 3 } },
+				{ name: "govtskg_pcso_date", label: "PCSO Date", type: "date", disabled: viewOnly, grid: { xs: 12, md: 3 } },
+				{ name: "govtskg_mode_of_transport", label: "Mode of Transport", type: "select", disabled: viewOnly, grid: { xs: 12, md: 3 }, options: [
+					{ value: "CONCOR", label: "CONCOR" },
+					{ value: "RAIL", label: "RAIL" },
+					{ value: "ROAD", label: "ROAD" },
+				] },
+				{ name: "govtskg_admin_office_address", label: "Admin Office Address", type: "textarea", disabled: viewOnly, grid: { xs: 12, md: 6 } },
+				{ name: "govtskg_destination_rail_head", label: "Destination Rail Head", type: "text", disabled: viewOnly, grid: { xs: 12, md: 3 } },
+				{ name: "govtskg_loading_point", label: "Loading Point", type: "text", disabled: viewOnly, grid: { xs: 12, md: 3 } },
+				{ name: "govtskg_pack_sheet", label: "Pack Sheet", type: "text", disabled: viewOnly, grid: { xs: 12, md: 2 } },
+				{ name: "govtskg_net_weight", label: "Net Weight", type: "text", disabled: viewOnly, grid: { xs: 12, md: 2 } },
+				{ name: "govtskg_total_weight", label: "Total Weight", type: "text", disabled: viewOnly, grid: { xs: 12, md: 2 } },
 			];
 			return { fields } satisfies Schema;
 		}

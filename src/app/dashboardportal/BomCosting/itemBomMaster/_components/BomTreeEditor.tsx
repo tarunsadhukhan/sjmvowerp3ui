@@ -23,7 +23,7 @@ import { BomTreeItem, ItemOption, getCoId } from "./types";
 type BomTreeEditorProps = {
   open: boolean;
   onClose: () => void;
-  item: { item_id: number; item_code: string; item_name: string } | null;
+  item: { item_id: number; item_code: string; full_item_code?: string; item_name: string } | null;
   onSnackbar: (message: string, severity: "success" | "error") => void;
 };
 

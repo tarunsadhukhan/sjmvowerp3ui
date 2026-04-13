@@ -400,6 +400,8 @@ export const mapSalesOrderDetailsToFormValues = (
 		transporter?: unknown;
 		deliveryTerms?: string | null;
 		paymentTerms?: string | null;
+		buyerOrderNo?: string | null;
+		buyerOrderDate?: string | null;
 		deliveryDays?: number | null;
 		freightCharges?: number | null;
 		footerNote?: string | null;
@@ -444,6 +446,8 @@ export const mapSalesOrderDetailsToFormValues = (
 	transporter: toStringValue(details.transporter ?? defaultValues.transporter),
 	delivery_terms: toStringValue(details.deliveryTerms ?? defaultValues.delivery_terms),
 	payment_terms: toStringValue(details.paymentTerms ?? defaultValues.payment_terms),
+	buyer_order_no: toStringValue(details.buyerOrderNo ?? defaultValues.buyer_order_no),
+	buyer_order_date: normalizeDate(details.buyerOrderDate) || toStringValue(defaultValues.buyer_order_date),
 	delivery_days: details.deliveryDays != null
 		? String(details.deliveryDays)
 		: toStringValue(defaultValues.delivery_days),

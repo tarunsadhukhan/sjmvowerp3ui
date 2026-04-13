@@ -180,6 +180,8 @@ export const mapApprovedSalesOrders = (records: unknown[]): ApprovedSalesOrderRe
 				billingToId: data?.billing_to_id,
 				shippingToId: data?.shipping_to_id,
 				transporterId: data?.transporter_id,
+				buyerOrderNo: data?.buyer_order_no,
+				buyerOrderDate: data?.buyer_order_date,
 			} satisfies ApprovedSalesOrderRecord;
 		})
 		.filter(Boolean) as ApprovedSalesOrderRecord[];

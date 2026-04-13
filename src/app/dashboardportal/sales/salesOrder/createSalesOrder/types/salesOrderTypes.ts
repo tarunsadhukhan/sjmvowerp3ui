@@ -312,6 +312,7 @@ export type SalesOrderSetup1ResponseRaw = {
 	co_config?: Record<string, unknown>;
 	branches?: Array<Record<string, unknown>>;
 	additional_charges_master?: Array<Record<string, unknown>>;
+	transport_charge_rates?: Array<Record<string, unknown>>;
 };
 
 export type SalesOrderSetup2ResponseRaw = {

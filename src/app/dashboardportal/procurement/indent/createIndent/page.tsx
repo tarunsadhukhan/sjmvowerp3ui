@@ -313,6 +313,7 @@ function IndentTransactionPageContent() {
 		expenseOptions,
 		getExpenseLabel,
 		getProjectLabel,
+		getMakeOptions,
 		getUomOptions,
 		labelResolvers,
 	} = useIndentSelectOptions({
@@ -749,6 +750,7 @@ function IndentTransactionPageContent() {
 		departmentOptions,
 		itemGroupLoading,
 		labelResolvers,
+		getMakeOptions,
 		getUomOptions,
 		handleLineFieldChange: handleLineFieldChangeWithValidation,
 		validationMap,

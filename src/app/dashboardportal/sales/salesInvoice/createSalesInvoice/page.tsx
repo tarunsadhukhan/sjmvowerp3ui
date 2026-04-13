@@ -306,6 +306,8 @@ function InvoiceTransactionPageContent() {
 		if (soRecord.brokerId) updates.broker = String(soRecord.brokerId);
 		if (soRecord.transporterId) updates.transporter = String(soRecord.transporterId);
 		if (soRecord.invoiceType) updates.invoice_type = String(soRecord.invoiceType);
+		if (soRecord.buyerOrderNo) updates.buyer_order_no = soRecord.buyerOrderNo;
+		if (soRecord.buyerOrderDate) updates.buyer_order_date = soRecord.buyerOrderDate;
 		if (Object.keys(updates).length === 0) return;
 		for (const [key, value] of Object.entries(updates)) {
 			formRef.current?.setValue(key, value);

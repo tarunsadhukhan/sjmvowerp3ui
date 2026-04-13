@@ -38,16 +38,10 @@ export const useSalesInvoiceHeaderSchema = ({
 			{ name: "delivery_order", label: "Delivery Order", type: "select", options: deliveryOrderOptions, disabled: headerFieldsDisabled || deliveryOrderDisabled, grid: { xs: 12, md: 4 } },
 			{ name: "sales_order_id", label: "Sales Order", type: "select", options: salesOrderOptions, disabled: headerFieldsDisabled || salesOrderDisabled, grid: { xs: 12, md: 4 } },
 			{ name: "sales_order_date", label: "Sales Order Date", type: "date", disabled: true, grid: { xs: 12, md: 4 } },
-			{ name: "buyer_order_no", label: "Buyer's Order No.", type: "text", required: false, disabled: isView, placeholder: "Customer's PO / Order reference", grid: { xs: 12, md: 4 } },
-			{ name: "buyer_order_date", label: "Buyer's Order Date", type: "date", required: false, disabled: isView, grid: { xs: 12, md: 4 } },
 			{ name: "payment_terms", label: "Payment Terms (Days)", type: "text", disabled: headerFieldsDisabled, grid: { xs: 12, md: 4 } },
 			{ name: "billing_to", label: "Billing To", type: "select", options: customerBranchOptions, disabled: headerFieldsDisabled, grid: { xs: 12, md: 4 } },
 			{ name: "shipping_to", label: "Shipping To", type: "select", options: customerBranchOptions, disabled: headerFieldsDisabled, grid: { xs: 12, md: 4 } },
 			{ name: "transporter", label: "Transporter", type: "select", options: transporterOptions, disabled: headerFieldsDisabled, grid: { xs: 12, md: 4 } },
-			{ name: "transporter_branch_id", label: "Transporter Branch", type: "select", required: false, disabled: isView, options: [], grid: { xs: 12, md: 4 } },
-			{ name: "transporter_gst_no", label: "Transporter GSTIN", type: "text", required: false, disabled: true, grid: { xs: 12, md: 4 } },
-			{ name: "transporter_doc_no", label: "Transporter Doc No.", type: "text", required: false, disabled: isView, placeholder: "LR No. / Bill of Lading / RR No.", grid: { xs: 12, md: 4 } },
-			{ name: "transporter_doc_date", label: "Transporter Doc Date", type: "date", required: false, disabled: isView, grid: { xs: 12, md: 4 } },
 			{ name: "vehicle_no", label: "Vehicle No.", type: "text", disabled: headerFieldsDisabled, grid: { xs: 12, md: 4 } },
 			{ name: "challan_no", label: "Challan No.", type: "text", disabled: headerFieldsDisabled, grid: { xs: 12, md: 4 } },
 			{ name: "challan_date", label: "Challan Date", type: "date", disabled: headerFieldsDisabled, grid: { xs: 12, md: 4 } },
@@ -65,10 +59,6 @@ export const useSalesInvoiceHeaderSchema = ({
 			{ name: "consignment_no", label: "Consignment No.", type: "text", disabled: headerFieldsDisabled, grid: { xs: 12, md: 4 } },
 			{ name: "consignment_date", label: "Consignment Date", type: "date", disabled: headerFieldsDisabled, grid: { xs: 12, md: 4 } },
 			{ name: "bank_detail_id", label: "Bank Account", type: "select", options: bankDetailOptions, disabled: headerFieldsDisabled, grid: { xs: 12, md: 4 } },
-			{ name: "irn", label: "IRN", type: "text", required: false, disabled: isView, placeholder: "Invoice Reference Number from GST portal", grid: { xs: 12, md: 4 } },
-			{ name: "ack_no", label: "Ack No.", type: "text", required: false, disabled: isView, placeholder: "Acknowledgement number from portal", grid: { xs: 12, md: 4 } },
-			{ name: "ack_date", label: "Ack Date", type: "date", required: false, disabled: isView, grid: { xs: 12, md: 4 } },
-			{ name: "qr_code", label: "QR Code", type: "textarea", required: false, disabled: isView, placeholder: "Base64 encoded QR code or URL from portal", minRows: 3, grid: { xs: 12 } },
 		];
 		return { fields } satisfies Schema;
 	}, [branchOptions, customerOptions, customerBranchOptions, transporterOptions, brokerOptions, deliveryOrderOptions, salesOrderOptions, invoiceTypeOptions, bankDetailOptions, mode, headerFieldsDisabled, salesOrderDisabled, deliveryOrderDisabled]);

@@ -22,6 +22,7 @@ type EditNode = {
   uom_name: string;
   child_item_id: number;
   child_item_code: string;
+  child_full_item_code?: string;
   child_item_name: string;
   sequence_no: number;
 };

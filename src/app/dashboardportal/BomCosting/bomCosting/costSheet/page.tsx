@@ -35,6 +35,7 @@ type Header = {
   bom_hdr_id: number;
   item_id: number;
   item_code: string;
+  full_item_code?: string;
   item_name: string;
   bom_version: number;
   version_label: string | null;

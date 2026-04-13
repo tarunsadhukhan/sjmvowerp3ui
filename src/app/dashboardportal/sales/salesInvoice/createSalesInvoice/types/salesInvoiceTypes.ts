@@ -64,6 +64,8 @@ export type ApprovedSalesOrderRecord = {
 	billingToId?: number;
 	shippingToId?: number;
 	transporterId?: number;
+	buyerOrderNo?: string;
+	buyerOrderDate?: string;
 };
 
 export type InvoiceTypeRecord = {
@@ -282,6 +284,8 @@ export type ApprovedSalesOrderRecordRaw = {
 	billing_to_id?: number;
 	shipping_to_id?: number;
 	transporter_id?: number;
+	buyer_order_no?: string;
+	buyer_order_date?: string;
 };
 
 export type InvoiceTypeRecordRaw = {

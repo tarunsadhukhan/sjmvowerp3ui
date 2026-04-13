@@ -97,7 +97,11 @@ export const useSalesOrderFormSubmission = ({
 			const grossAmount = filledLineItems.reduce((sum, li) => sum + (li.amount ?? 0), 0);
 			const totalTax = filledLineItems.reduce((sum, li) => sum + (li.taxAmount ?? 0), 0);
 			const freightCharges = values.freight_charges ? Number(values.freight_charges) : 0;
-			const netAmount = grossAmount + totalTax + freightCharges;
+			const additionalChargesTotal = Array.isArray(values.additional_charges)
+				? (values.additional_charges as Array<{ net_amount?: number; gst?: { gst_total?: number } }>).reduce(
+					(sum, c) => sum + (c.net_amount ?? 0) + (c.gst?.gst_total ?? 0), 0)
+				: 0;
+			const netAmount = grossAmount + totalTax + freightCharges + additionalChargesTotal;
 
 			// Build header-level extension data conditionally
 			const juteHeader = isJuteOrder(invoiceTypeCode) ? {
@@ -154,6 +158,7 @@ export const useSalesOrderFormSubmission = ({
 						jute: juteHeader,
 						govtskg: govtskgHeader,
 						juteyarn: juteyarnHeader,
+						additional_charges: values.additional_charges as CreateSalesOrderRequest["additional_charges"],
 					};
 					await updateSalesOrder(updatePayload);
 					toast({ title: "Sales order updated" });
@@ -186,6 +191,7 @@ export const useSalesOrderFormSubmission = ({
 					if (juteHeader) payload.jute = juteHeader;
 					if (govtskgHeader) payload.govtskg = govtskgHeader;
 					if (juteyarnHeader) payload.juteyarn = juteyarnHeader;
+					if (values.additional_charges) payload.additional_charges = values.additional_charges as CreateSalesOrderRequest["additional_charges"];
 					const result = await createSalesOrder(payload);
 					toast({ title: result?.message ?? "Sales order created" });
 					const newId = result?.sales_order_id;

@@ -661,7 +661,12 @@ export const useSalesOrderLineItems = ({
 					const balesConv = getGovtSkgBalesConversion(line.itemGroup, line.item, line.uom, line.govtskgBalesUomId);
 					if (balesConv) {
 						changed = true;
-						const bales = Number(line.govtskgQtyBales) || 0;
+						let bales = Number(line.govtskgQtyBales) || 0;
+						// Reverse-calculate bales from stored quantity when loading an existing order
+						// (qty is saved in pricing units e.g. 100 pcs; bales = qty * conversionFactor)
+						if (bales === 0 && Number(line.quantity) > 0) {
+							bales = Number(line.quantity) * balesConv.factor;
+						}
 						const quantity = bales > 0 ? bales / balesConv.factor : 0;
 						const rate = Number(line.rate) || 0;
 						const amount = quantity * rate;
@@ -670,6 +675,7 @@ export const useSalesOrderLineItems = ({
 							...line,
 							govtskgConversionFactor: balesConv.factor,
 							govtskgBalesUomId: balesConv.balesUomId,
+							govtskgQtyBales: bales > 0 ? String(bales) : line.govtskgQtyBales,
 							quantity: bales > 0 ? String(quantity) : line.quantity,
 							amount: bales > 0 && rate > 0 ? amount : line.amount,
 							igstAmount: bales > 0 && rate > 0 ? tax.igst : line.igstAmount,

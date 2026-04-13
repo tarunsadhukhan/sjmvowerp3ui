@@ -233,6 +233,23 @@ export type CreateSalesOrderRequest = {
     container_no?: string;
     customer_ref_no?: string;
   };
+  additional_charges?: Array<{
+    additional_charges_id: string;
+    charge_name?: string;
+    qty: number;
+    rate: number;
+    net_amount: number;
+    remarks?: string;
+    gst?: {
+      igst_amount?: number;
+      igst_percent?: number;
+      cgst_amount?: number;
+      cgst_percent?: number;
+      sgst_amount?: number;
+      sgst_percent?: number;
+      gst_total?: number;
+    };
+  }>;
 };
 
 export type CreateSalesOrderResponse = {
@@ -371,6 +388,7 @@ export async function updateSalesOrder(
     jute?: CreateSalesOrderRequest["jute"];
     govtskg?: CreateSalesOrderRequest["govtskg"];
     juteyarn?: CreateSalesOrderRequest["juteyarn"];
+    additional_charges?: CreateSalesOrderRequest["additional_charges"];
   }
 ): Promise<{ message: string; sales_order_id?: number }> {
   if (!payload.id) {
@@ -407,6 +425,7 @@ export async function updateSalesOrder(
     jute: payload.jute,
     govtskg: payload.govtskg,
     juteyarn: payload.juteyarn,
+    additional_charges: payload.additional_charges,
   };
 
   const { data, error } = await fetchWithCookie<{

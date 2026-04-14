@@ -157,7 +157,7 @@ export const mapItemGroupDetailResponse = (response: unknown): ItemGroupCacheEnt
 		const id = item?.item_id ?? item?.id;
 		const code = item?.item_code ?? "";
 		const name = item?.item_name ?? "";
-		const label = code && name ? `${code} — ${name}` : code || name || String(id ?? "");
+		const label = name || code || String(id ?? "");
 		const defaultRate = item?.rate != null ? Number(item.rate) : undefined;
 		const taxPct = item?.tax_percentage != null ? Number(item.tax_percentage) : undefined;
 		return {

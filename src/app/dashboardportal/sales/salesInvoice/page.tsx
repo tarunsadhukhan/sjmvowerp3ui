@@ -7,6 +7,7 @@ import { fetchWithCookie } from "@/utils/apiClient2";
 import { apiRoutesPortalMasters } from "@/utils/api";
 import IndexWrapper from "@/components/ui/IndexWrapper";
 import { useRouter } from "next/navigation";
+import { useSidebarContext } from "@/components/dashboard/sidebarContext";
 
 type InvoiceRow = {
 	id: string | number;
@@ -19,6 +20,7 @@ type InvoiceRow = {
 	branch_name: string;
 	delivery_order_no: string | null;
 	status: string;
+	status_id?: number | null;
 };
 
 const formatDate = (value?: string) => {
@@ -53,6 +55,7 @@ const formatCurrency = (value: number | null | undefined) => {
 
 export default function SalesInvoiceIndexPage() {
 	const router = useRouter();
+	const { selectedBranches } = useSidebarContext();
 	const [rows, setRows] = React.useState<InvoiceRow[]>([]);
 	const [totalRows, setTotalRows] = React.useState(0);
 	const [loading, setLoading] = React.useState(false);
@@ -146,6 +149,7 @@ export default function SalesInvoiceIndexPage() {
 				limit: String(paginationModel.pageSize),
 			});
 			if (co_id) query.set("co_id", co_id);
+			if (selectedBranches.length === 1) query.set("branch_id", String(selectedBranches[0]));
 			const trimmedSearch = searchValue.trim();
 			if (trimmedSearch) query.set("search", trimmedSearch);
 
@@ -171,6 +175,7 @@ export default function SalesInvoiceIndexPage() {
 					branch_name: row.branch_name ?? "",
 					delivery_order_no: row.delivery_order_no ?? row.do_no ?? null,
 					status: row.status ?? row.status_name ?? "Draft",
+					status_id: row.status_id ?? row.statusId ?? null,
 				};
 			});
 
@@ -185,7 +190,7 @@ export default function SalesInvoiceIndexPage() {
 		} finally {
 			setLoading(false);
 		}
-	}, [paginationModel.page, paginationModel.pageSize, searchValue]);
+	}, [paginationModel.page, paginationModel.pageSize, searchValue, selectedBranches]);
 
 	React.useEffect(() => {
 		fetchInvoices();
@@ -240,6 +245,7 @@ export default function SalesInvoiceIndexPage() {
 			createAction={{ onClick: handleCreateInvoice, label: "Create Invoice" }}
 			onView={handleView}
 			onEdit={handleEdit}
+			isRowEditable={(row) => Number(row.status_id) !== 3}
 		>
 			{errorMessage ? (
 				<Alert severity="error" sx={{ mt: 2 }}>

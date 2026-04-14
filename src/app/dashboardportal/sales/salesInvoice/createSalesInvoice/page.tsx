@@ -417,24 +417,29 @@ function InvoiceTransactionPageContent() {
 		[mode, setLineItems, lineHasAnyData, itemGroupCache, itemGroupLoading, ensureItemGroupData]
 	);
 
-	// Helper: apply SO extension data (govtskg header + additional charges) from a lines response
-	const applySoExtensionData = React.useCallback((ext: SoExtensionData) => {
-		if (ext.so_govtskg) {
-			const g = ext.so_govtskg;
-			const govtUpdates: Record<string, unknown> = {};
-			if (g.pcso_no) govtUpdates.govtskg_pcso_no = g.pcso_no;
-			if (g.pcso_date) govtUpdates.govtskg_pcso_date = g.pcso_date;
-			if (g.mode_of_transport) govtUpdates.govtskg_mode_of_transport = g.mode_of_transport;
-			if (g.administrative_office_address) govtUpdates.govtskg_admin_office_address = g.administrative_office_address;
-			if (g.destination_rail_head) govtUpdates.govtskg_destination_rail_head = g.destination_rail_head;
-			if (g.loading_point) govtUpdates.govtskg_loading_point = g.loading_point;
+	// Govtskg fields live inside a nested MuiForm bound to juteFormRef, so populating
+	// them requires calling setValue on juteFormRef (not the main formRef). Because
+	// that nested form is conditionally rendered on invoice_type, its ref may be null
+	// at the moment the API response arrives — stash the payload and retry until mounted.
+	const juteFormRef = React.useRef<{ submit: () => Promise<void>; isDirty: () => boolean; setValue: (name: string, value: unknown) => void } | null>(null);
+	const pendingGovtSkgRef = React.useRef<NonNullable<SoExtensionData["so_govtskg"]> | null>(null);
+	const [pendingGovtSkgTick, setPendingGovtSkgTick] = React.useState(0);
 
-			if (Object.keys(govtUpdates).length > 0) {
-				for (const [key, value] of Object.entries(govtUpdates)) {
-					formRef.current?.setValue(key, value);
-				}
-				setFormValues((prev) => ({ ...prev, ...govtUpdates }));
-			}
+	// Helper: apply SO extension data (invoice_type + govtskg header + additional charges) from a lines response
+	const applySoExtensionData = React.useCallback((ext: SoExtensionData) => {
+		// 1. Align invoice_type first so the govtskg schema registers its fields
+		if (ext.invoice_type != null) {
+			const nextType = String(ext.invoice_type);
+			formRef.current?.setValue("invoice_type", nextType);
+			setFormValues((prev) => (
+				String(prev.invoice_type ?? "") === nextType ? prev : { ...prev, invoice_type: nextType }
+			));
+		}
+
+		// 2. Queue the govtskg payload — the effect below applies it once fields are registered
+		if (ext.so_govtskg) {
+			pendingGovtSkgRef.current = ext.so_govtskg;
+			setPendingGovtSkgTick((t) => t + 1);
 		}
 
 		if (ext.so_additional_charges && ext.so_additional_charges.length > 0) {
@@ -460,6 +465,52 @@ function InvoiceTransactionPageContent() {
 			setAdditionalCharges(mappedCharges);
 		}
 	}, [formRef, setFormValues, setAdditionalCharges]);
+
+	// Drain pending govtskg payload once invoice_type resolves to Govt Sacking AND
+	// the nested MuiForm (juteFormRef) has mounted. If the nested form isn't ready yet,
+	// retry on the next frame until it is.
+	React.useEffect(() => {
+		if (mode === "view") return;
+		const g = pendingGovtSkgRef.current;
+		if (!g) return;
+		if (!isGovtSkgInvoice(String(formValues.invoice_type ?? ""))) return;
+
+		const govtUpdates: Record<string, unknown> = {};
+		if (g.pcso_no) govtUpdates.govtskg_pcso_no = g.pcso_no;
+		if (g.pcso_date) govtUpdates.govtskg_pcso_date = g.pcso_date;
+		if (g.mode_of_transport) govtUpdates.govtskg_mode_of_transport = g.mode_of_transport;
+		if (g.administrative_office_address) govtUpdates.govtskg_admin_office_address = g.administrative_office_address;
+		if (g.destination_rail_head) govtUpdates.govtskg_destination_rail_head = g.destination_rail_head;
+		if (g.loading_point) govtUpdates.govtskg_loading_point = g.loading_point;
+
+		if (Object.keys(govtUpdates).length === 0) {
+			pendingGovtSkgRef.current = null;
+			return;
+		}
+
+		let cancelled = false;
+		let attempts = 0;
+		const maxAttempts = 30; // ~500ms budget for the nested MuiForm to mount
+
+		const tryApply = () => {
+			if (cancelled) return;
+			const ref = juteFormRef.current;
+			if (!ref) {
+				if (++attempts < maxAttempts) {
+					requestAnimationFrame(tryApply);
+				}
+				return;
+			}
+			for (const [key, value] of Object.entries(govtUpdates)) {
+				ref.setValue(key, value);
+			}
+			setFormValues((prev) => ({ ...prev, ...govtUpdates }));
+			pendingGovtSkgRef.current = null;
+		};
+
+		tryApply();
+		return () => { cancelled = true; };
+	}, [formValues.invoice_type, pendingGovtSkgTick, mode, setFormValues]);
 
 	// Auto-fetch lines when delivery order changes
 	React.useEffect(() => {
@@ -528,8 +579,6 @@ function InvoiceTransactionPageContent() {
 
 		return () => { cancelled = true; };
 	}, [formValues.sales_order_id, formValues.delivery_order, mode, replaceWithSalesOrderLines, clearImportedLines, applySoExtensionData]);
-
-	const juteFormRef = React.useRef<{ submit: () => Promise<void>; isDirty: () => boolean; setValue: (name: string, value: unknown) => void } | null>(null);
 
 	// Auto-sum header claim amount from line item claim amounts for Raw Jute invoices
 	React.useEffect(() => {

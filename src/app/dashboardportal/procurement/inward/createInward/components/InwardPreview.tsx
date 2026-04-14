@@ -3,6 +3,7 @@
 import React, { useRef } from "react";
 import { Box, Divider, Stack, Typography } from "@mui/material";
 import { Button } from "@/components/ui/button";
+import { openStyledPrintWindow } from "@/utils/printUtils";
 
 export type InwardPreviewHeader = {
 	inwardNo?: string;
@@ -41,11 +42,11 @@ type InwardPreviewProps = {
 };
 
 const FieldRow = ({ label, value }: { label: string; value?: React.ReactNode }) => (
-	<Stack direction="column" spacing={0.25} sx={{ minWidth: 0 }}>
-		<Typography variant="caption" color="text.secondary" sx={{ fontSize: "0.75rem" }}>
+	<Stack direction="row" spacing={0.5} alignItems="flex-start" sx={{ minWidth: 0 }}>
+		<Typography variant="caption" color="text.secondary" sx={{ fontSize: "0.75rem", whiteSpace: "nowrap", flexShrink: 0 }}>
 			{label}:
 		</Typography>
-		<Typography variant="body2" sx={{ fontWeight: 400, fontSize: "0.875rem" }}>
+		<Typography variant="body2" sx={{ fontWeight: 400, fontSize: "0.875rem", wordBreak: "break-word" }}>
 			{value ?? "-"}
 		</Typography>
 	</Stack>
@@ -86,33 +87,7 @@ const InwardPreview: React.FC<InwardPreviewProps> = ({ header, items, remarks, o
 
 	const buildPrintableWindow = (titleSuffix: string) => {
 		const printContent = previewRef.current?.innerHTML || "";
-		const printWindow = window.open("", "_blank");
-		if (!printWindow) {
-			alert("Please allow popups to continue.");
-			return null;
-		}
-
-		printWindow.document.open();
-		printWindow.document.write(`<!DOCTYPE html><html><head><title>Inward - ${titleSuffix}</title></head><body><div id="print-root"></div></body></html>`);
-		printWindow.document.close();
-
-		const styleNodes = document.querySelectorAll("style, link[rel=\"stylesheet\"]");
-		styleNodes.forEach((node) => {
-			printWindow.document.head.appendChild(node.cloneNode(true));
-		});
-
-		const helperStyle = printWindow.document.createElement("style");
-		helperStyle.textContent = `
-			@media print { @page { size: A4; margin: 10mm; } }
-			body { margin: 0; padding: 20px; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
-			table { width: 100%; border-collapse: collapse; }
-			#preview-left-pane { max-width: 25% !important; flex-basis: 25% !important; word-break: break-word; white-space: normal; }
-		`;
-		printWindow.document.head.appendChild(helperStyle);
-
-		const root = printWindow.document.getElementById("print-root");
-		if (root) root.innerHTML = printContent;
-		return printWindow;
+		return openStyledPrintWindow(printContent, `Inward - ${titleSuffix}`);
 	};
 
 	const handlePrint = () => {

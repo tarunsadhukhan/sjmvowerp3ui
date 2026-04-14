@@ -7,6 +7,7 @@ import { fetchWithCookie } from "@/utils/apiClient2";
 import { apiRoutesPortalMasters } from "@/utils/api";
 import IndexWrapper from "@/components/ui/IndexWrapper";
 import { useRouter } from "next/navigation";
+import { useSidebarContext } from "@/components/dashboard/sidebarContext";
 
 type SORow = {
 	id: string | number;
@@ -19,6 +20,7 @@ type SORow = {
 	branch_name: string;
 	quotation_no: string | null;
 	status: string;
+	status_id?: number | null;
 };
 
 const formatDate = (value?: string) => {
@@ -57,6 +59,7 @@ const formatCurrency = (value: number | null | undefined) => {
 
 export default function SalesOrderIndexPage() {
 	const router = useRouter();
+	const { selectedBranches } = useSidebarContext();
 	const [rows, setRows] = React.useState<SORow[]>([]);
 	const [totalRows, setTotalRows] = React.useState(0);
 	const [loading, setLoading] = React.useState(false);
@@ -150,6 +153,7 @@ export default function SalesOrderIndexPage() {
 				limit: String(paginationModel.pageSize),
 			});
 			if (co_id) query.set("co_id", co_id);
+			if (selectedBranches.length === 1) query.set("branch_id", String(selectedBranches[0]));
 			const trimmedSearch = searchValue.trim();
 			if (trimmedSearch) query.set("search", trimmedSearch);
 
@@ -175,6 +179,7 @@ export default function SalesOrderIndexPage() {
 					branch_name: row.branch_name ?? row.branchName ?? row.branch ?? "",
 					quotation_no: row.quotation_no ?? row.quotationNo ?? null,
 					status: row.status ?? row.status_name ?? row.current_status ?? "Pending",
+					status_id: row.status_id ?? row.statusId ?? null,
 				};
 			});
 
@@ -189,7 +194,7 @@ export default function SalesOrderIndexPage() {
 		} finally {
 			setLoading(false);
 		}
-	}, [paginationModel.page, paginationModel.pageSize, searchValue]);
+	}, [paginationModel.page, paginationModel.pageSize, searchValue, selectedBranches]);
 
 	React.useEffect(() => {
 		fetchSalesOrders();
@@ -244,6 +249,7 @@ export default function SalesOrderIndexPage() {
 			createAction={{ onClick: handleCreateSO, label: "Create Sales Order" }}
 			onView={handleView}
 			onEdit={handleEdit}
+			isRowEditable={(row) => Number(row.status_id) !== 3}
 		>
 			{errorMessage ? (
 				<Alert severity="error" sx={{ mt: 2 }}>

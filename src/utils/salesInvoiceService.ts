@@ -205,6 +205,7 @@ export type DeliveryOrderLineForInvoice = {
 
 /** SO extension data returned inline by both DO-lines and SO-lines endpoints. */
 export type SoExtensionData = {
+  invoice_type?: number | null;
   so_govtskg?: {
     pcso_no?: string | null;
     pcso_date?: string | null;

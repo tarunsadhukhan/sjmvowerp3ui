@@ -74,11 +74,11 @@ type POPreviewProps = {
 };
 
 const FieldRow = ({ label, value }: { label: string; value?: React.ReactNode }) => (
-  <Stack direction="column" spacing={0.25} sx={{ minWidth: 0 }}>
-    <Typography variant="caption" color="text.secondary" sx={{ fontSize: "0.75rem" }}>
+  <Stack direction="row" spacing={0.5} alignItems="flex-start" sx={{ minWidth: 0 }}>
+    <Typography variant="caption" color="text.secondary" sx={{ fontSize: "0.75rem", whiteSpace: "nowrap", flexShrink: 0 }}>
       {label}:
     </Typography>
-    <Typography variant="body2" sx={{ fontWeight: 400, fontSize: "0.875rem" }}>
+    <Typography variant="body2" sx={{ fontWeight: 400, fontSize: "0.875rem", wordBreak: "break-word" }}>
       {value ?? "-"}
     </Typography>
   </Stack>

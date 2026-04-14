@@ -7,6 +7,7 @@ import { fetchWithCookie } from "@/utils/apiClient2";
 import { apiRoutesPortalMasters } from "@/utils/api";
 import IndexWrapper from "@/components/ui/IndexWrapper";
 import { useRouter } from "next/navigation";
+import { useSidebarContext } from "@/components/dashboard/sidebarContext";
 
 type DORow = {
 	id: string | number;
@@ -19,6 +20,7 @@ type DORow = {
 	net_amount: number | null;
 	branch_name: string;
 	status: string;
+	status_id?: number | null;
 };
 
 const formatDate = (value?: string) => {
@@ -53,6 +55,7 @@ const formatCurrency = (value: number | null | undefined) => {
 
 export default function DeliveryOrderIndexPage() {
 	const router = useRouter();
+	const { selectedBranches } = useSidebarContext();
 	const [rows, setRows] = React.useState<DORow[]>([]);
 	const [totalRows, setTotalRows] = React.useState(0);
 	const [loading, setLoading] = React.useState(false);
@@ -145,6 +148,7 @@ export default function DeliveryOrderIndexPage() {
 				limit: String(paginationModel.pageSize),
 			});
 			if (co_id) query.set("co_id", co_id);
+			if (selectedBranches.length === 1) query.set("branch_id", String(selectedBranches[0]));
 			const trimmedSearch = searchValue.trim();
 			if (trimmedSearch) query.set("search", trimmedSearch);
 
@@ -171,6 +175,7 @@ export default function DeliveryOrderIndexPage() {
 					net_amount: row.net_amount ?? row.total_amount ?? null,
 					branch_name: row.branch_name ?? "",
 					status: row.status ?? row.status_name ?? "Draft",
+					status_id: row.status_id ?? row.statusId ?? null,
 				};
 			});
 
@@ -185,7 +190,7 @@ export default function DeliveryOrderIndexPage() {
 		} finally {
 			setLoading(false);
 		}
-	}, [paginationModel.page, paginationModel.pageSize, searchValue]);
+	}, [paginationModel.page, paginationModel.pageSize, searchValue, selectedBranches]);
 
 	React.useEffect(() => {
 		fetchDOs();
@@ -240,6 +245,7 @@ export default function DeliveryOrderIndexPage() {
 			createAction={{ onClick: handleCreateDO, label: "Create Delivery Order" }}
 			onView={handleView}
 			onEdit={handleEdit}
+			isRowEditable={(row) => Number(row.status_id) !== 3}
 		>
 			{errorMessage ? (
 				<Alert severity="error" sx={{ mt: 2 }}>

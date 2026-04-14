@@ -115,9 +115,9 @@ export const useDeliveryOrderSelectOptions = ({
 	);
 
 	const getUomLabel = React.useCallback(
-		(groupId: string, itemId: string, uomId: string): string => {
-			if (!groupId || !itemId || !uomId) return "-";
-			return itemGroupCache[groupId]?.uomLabelByItemId[itemId]?.[uomId] ?? uomId;
+		(groupId: string, itemId: string, uomId: string, fallbackName?: string): string => {
+			if (!groupId || !itemId || !uomId) return fallbackName || "-";
+			return itemGroupCache[groupId]?.uomLabelByItemId[itemId]?.[uomId] ?? fallbackName ?? uomId;
 		},
 		[itemGroupCache],
 	);

@@ -13,6 +13,7 @@ type BomCostingRow = {
   bom_hdr_id: number;
   item_id: number;
   item_code: string;
+  full_item_code?: string;
   item_name: string;
   bom_version: number;
   version_label: string | null;
@@ -27,6 +28,7 @@ type BomCostingRow = {
 type ItemOption = {
   item_id: number;
   item_code: string;
+  full_item_code?: string;
   item_name: string;
   label: string;
 };
@@ -90,7 +92,7 @@ export default function BomCostingListPage() {
         setItemOptions(
           data.items.map((i: any) => ({
             ...i,
-            label: `${i.item_code} - ${i.item_name}`,
+            label: `${i.full_item_code || i.item_code} - ${i.item_name}`,
           }))
         );
       }
@@ -145,7 +147,9 @@ export default function BomCostingListPage() {
 
   const columns = useMemo<GridColDef<BomCostingRow>[]>(
     () => [
-      { field: "item_code", headerName: "Item Code", flex: 0.8, minWidth: 100 },
+      { field: "full_item_code", headerName: "Item Code", flex: 1, minWidth: 180,
+        valueGetter: (_value: string, row: BomCostingRow) => row.full_item_code || row.item_code || "-",
+      },
       { field: "item_name", headerName: "Item Name", flex: 1.5, minWidth: 180 },
       { field: "bom_version", headerName: "Ver", flex: 0.3, minWidth: 50, type: "number" },
       { field: "version_label", headerName: "Label", flex: 0.6, minWidth: 80 },

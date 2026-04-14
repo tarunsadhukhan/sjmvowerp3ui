@@ -97,7 +97,11 @@ export const useSalesOrderFormSubmission = ({
 			const grossAmount = filledLineItems.reduce((sum, li) => sum + (li.amount ?? 0), 0);
 			const totalTax = filledLineItems.reduce((sum, li) => sum + (li.taxAmount ?? 0), 0);
 			const freightCharges = values.freight_charges ? Number(values.freight_charges) : 0;
-			const netAmount = grossAmount + totalTax + freightCharges;
+			const additionalChargesTotal = Array.isArray(values.additional_charges)
+				? (values.additional_charges as Array<{ net_amount?: number; gst?: { gst_total?: number } }>).reduce(
+					(sum, c) => sum + (c.net_amount ?? 0) + (c.gst?.gst_total ?? 0), 0)
+				: 0;
+			const netAmount = grossAmount + totalTax + freightCharges + additionalChargesTotal;
 
 			// Build header-level extension data conditionally
 			const juteHeader = isJuteOrder(invoiceTypeCode) ? {
@@ -116,6 +120,7 @@ export const useSalesOrderFormSubmission = ({
 				administrative_office_address: String(values.govtskg_admin_office ?? formValues.govtskg_admin_office ?? ""),
 				destination_rail_head: String(values.govtskg_rail_head ?? formValues.govtskg_rail_head ?? ""),
 				loading_point: String(values.govtskg_loading_point ?? formValues.govtskg_loading_point ?? ""),
+				mode_of_transport: String(values.govtskg_mode_of_transport ?? formValues.govtskg_mode_of_transport ?? "") || undefined,
 			} : undefined;
 
 			const juteyarnHeader = isJuteYarnOrder(invoiceTypeCode) ? {
@@ -143,6 +148,8 @@ export const useSalesOrderFormSubmission = ({
 						transporter: values.transporter ? String(values.transporter) : undefined,
 						deliveryTerms: values.delivery_terms ? String(values.delivery_terms) : undefined,
 						paymentTerms: values.payment_terms ? String(values.payment_terms) : undefined,
+						buyerOrderNo: values.buyer_order_no ? String(values.buyer_order_no) : undefined,
+						buyerOrderDate: values.buyer_order_date ? String(values.buyer_order_date) : undefined,
 						deliveryDays: values.delivery_days ? Number(values.delivery_days) : undefined,
 						freightCharges: freightCharges || undefined,
 						footerNote: values.footer_note ? String(values.footer_note) : undefined,
@@ -154,6 +161,7 @@ export const useSalesOrderFormSubmission = ({
 						jute: juteHeader,
 						govtskg: govtskgHeader,
 						juteyarn: juteyarnHeader,
+						additional_charges: values.additional_charges as CreateSalesOrderRequest["additional_charges"],
 					};
 					await updateSalesOrder(updatePayload);
 					toast({ title: "Sales order updated" });
@@ -174,6 +182,8 @@ export const useSalesOrderFormSubmission = ({
 						expiry_date: values.expiry_date ? String(values.expiry_date) : undefined,
 						delivery_terms: values.delivery_terms ? String(values.delivery_terms) : undefined,
 						payment_terms: values.payment_terms ? String(values.payment_terms) : undefined,
+						buyer_order_no: values.buyer_order_no ? String(values.buyer_order_no) : undefined,
+						buyer_order_date: values.buyer_order_date ? String(values.buyer_order_date) : undefined,
 						delivery_days: values.delivery_days ? Number(values.delivery_days) : undefined,
 						freight_charges: freightCharges || undefined,
 						footer_note: values.footer_note ? String(values.footer_note) : undefined,
@@ -186,6 +196,7 @@ export const useSalesOrderFormSubmission = ({
 					if (juteHeader) payload.jute = juteHeader;
 					if (govtskgHeader) payload.govtskg = govtskgHeader;
 					if (juteyarnHeader) payload.juteyarn = juteyarnHeader;
+					if (values.additional_charges) payload.additional_charges = values.additional_charges as CreateSalesOrderRequest["additional_charges"];
 					const result = await createSalesOrder(payload);
 					toast({ title: result?.message ?? "Sales order created" });
 					const newId = result?.sales_order_id;

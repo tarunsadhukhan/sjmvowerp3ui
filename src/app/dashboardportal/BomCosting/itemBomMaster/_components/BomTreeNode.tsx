@@ -70,7 +70,7 @@ export default function BomTreeNode({
             <BoxIcon size={16} style={{ marginRight: 8, flexShrink: 0, color: "#666" }} />
           )}
           <Typography variant="body2" noWrap sx={{ fontWeight: hasChildren ? 600 : 400, mr: 1, flexShrink: 0 }}>
-            {node.child_item_code}
+            {node.child_full_item_code || node.child_item_code}
           </Typography>
           <Typography variant="body2" color="text.secondary" noWrap sx={{ overflow: "hidden", textOverflow: "ellipsis" }}>
             {node.child_item_name}

@@ -53,6 +53,7 @@ export const useSalesInvoiceLineItems = ({
 		item: line.item ?? "",
 		itemCode: line.itemCode,
 		itemName: line.itemName,
+		fullItemCode: line.fullItemCode ?? line.itemCode,
 		itemMake: line.itemMake ?? "",
 		quantity: line.quantity != null ? String(line.quantity) : "",
 		rate: line.rate != null ? String(line.rate) : "",
@@ -234,6 +235,9 @@ export const useSalesInvoiceLineItems = ({
 					remarks: item.remarks || "",
 					taxPercentage: item.tax_percentage,
 					...tax,
+					govtskgPackSheet: item.govtskg_pack_sheet != null ? Number(item.govtskg_pack_sheet) : undefined,
+					govtskgNetWeight: item.govtskg_net_weight != null ? Number(item.govtskg_net_weight) : undefined,
+					govtskgTotalWeight: item.govtskg_total_weight != null ? Number(item.govtskg_total_weight) : undefined,
 				};
 			});
 

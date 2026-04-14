@@ -7,6 +7,7 @@ import { fetchWithCookie } from "@/utils/apiClient2";
 import { apiRoutesPortalMasters } from "@/utils/api";
 import IndexWrapper from "@/components/ui/IndexWrapper";
 import { useRouter } from "next/navigation";
+import { useSidebarContext } from "@/components/dashboard/sidebarContext";
 
 type QuotationRow = {
 	id: string | number;
@@ -18,6 +19,7 @@ type QuotationRow = {
 	branch_id?: string | number;
 	branch_name: string;
 	status: string;
+	status_id?: number | null;
 };
 
 const formatDate = (value?: string) => {
@@ -56,6 +58,7 @@ const formatCurrency = (value: number | null | undefined) => {
 
 export default function SalesQuotationIndexPage() {
 	const router = useRouter();
+	const { selectedBranches } = useSidebarContext();
 	const [rows, setRows] = React.useState<QuotationRow[]>([]);
 	const [totalRows, setTotalRows] = React.useState(0);
 	const [loading, setLoading] = React.useState(false);
@@ -138,6 +141,7 @@ export default function SalesQuotationIndexPage() {
 				limit: String(paginationModel.pageSize),
 			});
 			if (co_id) query.set("co_id", co_id);
+			if (selectedBranches.length === 1) query.set("branch_id", String(selectedBranches[0]));
 			const trimmedSearch = searchValue.trim();
 			if (trimmedSearch) query.set("search", trimmedSearch);
 
@@ -162,6 +166,7 @@ export default function SalesQuotationIndexPage() {
 					branch_id: row.branch_id ?? undefined,
 					branch_name: row.branch_name ?? "",
 					status: row.status_name ?? row.status ?? "Pending",
+					status_id: row.status_id ?? row.statusId ?? null,
 				};
 			});
 
@@ -176,7 +181,7 @@ export default function SalesQuotationIndexPage() {
 		} finally {
 			setLoading(false);
 		}
-	}, [paginationModel.page, paginationModel.pageSize, searchValue]);
+	}, [paginationModel.page, paginationModel.pageSize, searchValue, selectedBranches]);
 
 	React.useEffect(() => {
 		fetchQuotations();
@@ -231,6 +236,7 @@ export default function SalesQuotationIndexPage() {
 			createAction={{ onClick: handleCreateQuotation, label: "Create Quotation" }}
 			onView={handleView}
 			onEdit={handleEdit}
+			isRowEditable={(row) => Number(row.status_id) !== 3}
 		>
 			{errorMessage ? (
 				<Alert severity="error" sx={{ mt: 2 }}>

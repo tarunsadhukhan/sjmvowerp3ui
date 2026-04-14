@@ -10,6 +10,23 @@ type ApprovalPermissions = {
 	[key: string]: unknown;
 };
 
+type AdditionalChargePayload = {
+	additional_charges_id: string;
+	qty: number;
+	rate: number;
+	net_amount: number;
+	remarks?: string;
+	gst?: {
+		igst_amount?: number;
+		igst_percent?: number;
+		cgst_amount?: number;
+		cgst_percent?: number;
+		sgst_amount?: number;
+		sgst_percent?: number;
+		gst_total?: number;
+	};
+};
+
 type Params = {
 	mode: "create" | "edit" | "view";
 	pageError: string | null;
@@ -19,10 +36,26 @@ type Params = {
 	requestedId: string;
 	formValues: Record<string, unknown>;
 	approvalPermissions?: ApprovalPermissions;
+	additionalCharges?: ReadonlyArray<{
+		additionalChargesId: string;
+		qty: string;
+		rate: string;
+		netAmount: string;
+		remarks: string;
+		gst?: {
+			igstAmount?: number;
+			igstPercent?: number;
+			cgstAmount?: number;
+			cgstPercent?: number;
+			sgstAmount?: number;
+			sgstPercent?: number;
+			gstTotal?: number;
+		};
+	}>;
 };
 
 export const useSalesInvoiceFormSubmission = ({
-	mode, pageError, setupError, filledLineItems, isLineItemsReady, requestedId, formValues, approvalPermissions,
+	mode, pageError, setupError, filledLineItems, isLineItemsReady, requestedId, formValues, approvalPermissions, additionalCharges,
 }: Params) => {
 	const [saving, setSaving] = React.useState(false);
 	const router = useRouter();
@@ -101,7 +134,10 @@ export const useSalesInvoiceFormSubmission = ({
 			const roundOff = Number(values.round_off ?? formValues.round_off) || 0;
 			const grossAmount = filledLineItems.reduce((sum, l) => sum + (l.netAmount || 0), 0);
 			const totalGST = filledLineItems.reduce((sum, l) => sum + (l.gstTotal || 0), 0);
-			const netAmount = grossAmount + totalGST + freightCharges + roundOff;
+			const addlChargesTotal = (additionalCharges ?? []).reduce(
+				(sum, c) => sum + (parseFloat(c.netAmount) || 0) + (c.gst?.gstTotal ?? 0), 0,
+			);
+			const netAmount = grossAmount + totalGST + freightCharges + roundOff + addlChargesTotal;
 
 			const payload: SaveInvoiceRequest = {
 				branch: String(values.branch ?? formValues.branch ?? ""),
@@ -161,10 +197,33 @@ export const useSalesInvoiceFormSubmission = ({
 					administrative_office_address: String(values.govtskg_admin_office_address ?? formValues.govtskg_admin_office_address ?? "") || undefined,
 					destination_rail_head: String(values.govtskg_destination_rail_head ?? formValues.govtskg_destination_rail_head ?? "") || undefined,
 					loading_point: String(values.govtskg_loading_point ?? formValues.govtskg_loading_point ?? "") || undefined,
+					mode_of_transport: String(values.govtskg_mode_of_transport ?? formValues.govtskg_mode_of_transport ?? "") || undefined,
 					pack_sheet: Number(values.govtskg_pack_sheet ?? formValues.govtskg_pack_sheet) || undefined,
 					net_weight: Number(values.govtskg_net_weight ?? formValues.govtskg_net_weight) || undefined,
 					total_weight: Number(values.govtskg_total_weight ?? formValues.govtskg_total_weight) || undefined,
 				};
+			}
+
+			// Add additional charges to payload
+			if (additionalCharges && additionalCharges.length > 0) {
+				payload.additional_charges = additionalCharges
+					.filter((c) => c.additionalChargesId && (parseFloat(c.netAmount) || 0) > 0)
+					.map((c) => ({
+						additional_charges_id: c.additionalChargesId,
+						qty: parseFloat(c.qty) || 0,
+						rate: parseFloat(c.rate) || 0,
+						net_amount: parseFloat(c.netAmount) || 0,
+						remarks: c.remarks || undefined,
+						gst: c.gst ? {
+							igst_amount: c.gst.igstAmount,
+							igst_percent: c.gst.igstPercent,
+							cgst_amount: c.gst.cgstAmount,
+							cgst_percent: c.gst.cgstPercent,
+							sgst_amount: c.gst.sgstAmount,
+							sgst_percent: c.gst.sgstPercent,
+							gst_total: c.gst.gstTotal,
+						} : undefined,
+					}));
 			}
 
 			setSaving(true);

@@ -30,10 +30,21 @@ type PreviewItem = {
 	total: number | string;
 };
 
+type PreviewAdditionalCharge = {
+	chargeName: string;
+	qty: number;
+	rate: number;
+	netAmount: number;
+	taxAmount: number;
+	total: number;
+};
+
 type SalesOrderPreviewProps = {
 	header: PreviewHeader;
 	items: PreviewItem[];
 	remarks?: string;
+	additionalCharges?: PreviewAdditionalCharge[];
+	freightCharges?: number;
 };
 
 const formatCurrency = (value: number | string | undefined) => {
@@ -49,10 +60,10 @@ const toNum = (v: number | string | undefined): number => {
 	return isNaN(n) ? 0 : n;
 };
 
-export function SalesOrderPreview({ header, items, remarks }: SalesOrderPreviewProps) {
+export function SalesOrderPreview({ header, items, remarks, additionalCharges, freightCharges }: SalesOrderPreviewProps) {
 	const printRef = React.useRef<HTMLDivElement>(null);
 
-	const totals = React.useMemo(() => {
+	const lineItemTotals = React.useMemo(() => {
 		let amount = 0;
 		let gst = 0;
 		let total = 0;
@@ -63,6 +74,21 @@ export function SalesOrderPreview({ header, items, remarks }: SalesOrderPreviewP
 		}
 		return { amount, gst, total };
 	}, [items]);
+
+	const addlChargeTotals = React.useMemo(() => {
+		if (!additionalCharges?.length) return { netAmount: 0, taxAmount: 0, total: 0 };
+		let netAmount = 0;
+		let taxAmount = 0;
+		let total = 0;
+		for (const c of additionalCharges) {
+			netAmount += c.netAmount;
+			taxAmount += c.taxAmount;
+			total += c.total;
+		}
+		return { netAmount, taxAmount, total };
+	}, [additionalCharges]);
+
+	const grandTotal = lineItemTotals.total + addlChargeTotals.total + (freightCharges ?? 0);
 
 	const handlePrint = React.useCallback(() => {
 		const el = printRef.current;
@@ -88,6 +114,11 @@ export function SalesOrderPreview({ header, items, remarks }: SalesOrderPreviewP
 					hr { border: none; border-top: 1px solid #ddd; margin: 12px 0; }
 					.totals td { font-weight: 700; }
 					.other-qty { font-size: 11px; color: #666; }
+					.summary-table { margin-top: 16px; width: auto; margin-left: auto; }
+					.summary-table td { border: none; padding: 4px 12px; font-size: 13px; }
+					.summary-table td.label { text-align: right; color: #666; }
+					.summary-table td.value { text-align: right; font-weight: 600; }
+					.summary-table tr.grand-total td { font-size: 14px; font-weight: 700; border-top: 2px solid #333; padding-top: 8px; }
 					@media print { @page { size: A4; margin: 10mm; } body { margin: 10px; } }
 				</style>
 			</head>
@@ -98,6 +129,9 @@ export function SalesOrderPreview({ header, items, remarks }: SalesOrderPreviewP
 		printWindow.focus();
 		setTimeout(() => { printWindow.print(); printWindow.close(); }, 250);
 	}, [header.salesNo]);
+
+	const hasAddlCharges = additionalCharges && additionalCharges.length > 0;
+	const hasFreight = (freightCharges ?? 0) > 0;
 
 	return (
 		<Paper variant="outlined" sx={{ p: 3 }}>
@@ -208,15 +242,80 @@ export function SalesOrderPreview({ header, items, remarks }: SalesOrderPreviewP
 									</tr>
 								))}
 								<tr style={{ fontWeight: 700 }}>
-									<td colSpan={4} style={{ border: "1px solid #ddd", padding: 8, fontSize: 13, textAlign: "right" }}>Total</td>
-									<td style={{ border: "1px solid #ddd", padding: 8, fontSize: 13, textAlign: "right" }}>{formatCurrency(totals.amount)}</td>
-									<td style={{ border: "1px solid #ddd", padding: 8, fontSize: 13, textAlign: "right" }}>{formatCurrency(totals.gst)}</td>
-									<td style={{ border: "1px solid #ddd", padding: 8, fontSize: 13, textAlign: "right" }}>{formatCurrency(totals.total)}</td>
+									<td colSpan={4} style={{ border: "1px solid #ddd", padding: 8, fontSize: 13, textAlign: "right" }}>Line Items Total</td>
+									<td style={{ border: "1px solid #ddd", padding: 8, fontSize: 13, textAlign: "right" }}>{formatCurrency(lineItemTotals.amount)}</td>
+									<td style={{ border: "1px solid #ddd", padding: 8, fontSize: 13, textAlign: "right" }}>{formatCurrency(lineItemTotals.gst)}</td>
+									<td style={{ border: "1px solid #ddd", padding: 8, fontSize: 13, textAlign: "right" }}>{formatCurrency(lineItemTotals.total)}</td>
 								</tr>
 							</tbody>
 						</table>
 					</>
 				)}
+
+				{hasAddlCharges && (
+					<>
+						<hr />
+						<div style={{ fontWeight: 600, fontSize: 14, marginBottom: 4 }}>Additional Charges</div>
+						<table style={{ width: "100%", borderCollapse: "collapse" }}>
+							<thead>
+								<tr>
+									<th style={{ border: "1px solid #ddd", padding: 8, fontSize: 13, background: "#f5f5f5", textAlign: "left" }}>#</th>
+									<th style={{ border: "1px solid #ddd", padding: 8, fontSize: 13, background: "#f5f5f5", textAlign: "left" }}>Charge</th>
+									<th style={{ border: "1px solid #ddd", padding: 8, fontSize: 13, background: "#f5f5f5", textAlign: "right" }}>Qty</th>
+									<th style={{ border: "1px solid #ddd", padding: 8, fontSize: 13, background: "#f5f5f5", textAlign: "right" }}>Rate</th>
+									<th style={{ border: "1px solid #ddd", padding: 8, fontSize: 13, background: "#f5f5f5", textAlign: "right" }}>Amount</th>
+									<th style={{ border: "1px solid #ddd", padding: 8, fontSize: 13, background: "#f5f5f5", textAlign: "right" }}>GST</th>
+									<th style={{ border: "1px solid #ddd", padding: 8, fontSize: 13, background: "#f5f5f5", textAlign: "right" }}>Total</th>
+								</tr>
+							</thead>
+							<tbody>
+								{additionalCharges!.map((c, i) => (
+									<tr key={i}>
+										<td style={{ border: "1px solid #ddd", padding: 8, fontSize: 13 }}>{i + 1}</td>
+										<td style={{ border: "1px solid #ddd", padding: 8, fontSize: 13 }}>{c.chargeName}</td>
+										<td style={{ border: "1px solid #ddd", padding: 8, fontSize: 13, textAlign: "right" }}>{c.qty}</td>
+										<td style={{ border: "1px solid #ddd", padding: 8, fontSize: 13, textAlign: "right" }}>{formatCurrency(c.rate)}</td>
+										<td style={{ border: "1px solid #ddd", padding: 8, fontSize: 13, textAlign: "right" }}>{formatCurrency(c.netAmount)}</td>
+										<td style={{ border: "1px solid #ddd", padding: 8, fontSize: 13, textAlign: "right" }}>{formatCurrency(c.taxAmount)}</td>
+										<td style={{ border: "1px solid #ddd", padding: 8, fontSize: 13, textAlign: "right" }}>{formatCurrency(c.total)}</td>
+									</tr>
+								))}
+								<tr style={{ fontWeight: 700 }}>
+									<td colSpan={4} style={{ border: "1px solid #ddd", padding: 8, fontSize: 13, textAlign: "right" }}>Additional Charges Total</td>
+									<td style={{ border: "1px solid #ddd", padding: 8, fontSize: 13, textAlign: "right" }}>{formatCurrency(addlChargeTotals.netAmount)}</td>
+									<td style={{ border: "1px solid #ddd", padding: 8, fontSize: 13, textAlign: "right" }}>{formatCurrency(addlChargeTotals.taxAmount)}</td>
+									<td style={{ border: "1px solid #ddd", padding: 8, fontSize: 13, textAlign: "right" }}>{formatCurrency(addlChargeTotals.total)}</td>
+								</tr>
+							</tbody>
+						</table>
+					</>
+				)}
+
+				{/* Summary */}
+				<table className="summary-table" style={{ marginTop: 16, width: "auto", marginLeft: "auto", borderCollapse: "collapse" }}>
+					<tbody>
+						<tr>
+							<td className="label" style={{ border: "none", padding: "4px 12px", fontSize: 13, textAlign: "right", color: "#666" }}>Line Items Total</td>
+							<td className="value" style={{ border: "none", padding: "4px 12px", fontSize: 13, textAlign: "right", fontWeight: 600 }}>{formatCurrency(lineItemTotals.total)}</td>
+						</tr>
+						{hasAddlCharges && (
+							<tr>
+								<td className="label" style={{ border: "none", padding: "4px 12px", fontSize: 13, textAlign: "right", color: "#666" }}>Additional Charges</td>
+								<td className="value" style={{ border: "none", padding: "4px 12px", fontSize: 13, textAlign: "right", fontWeight: 600 }}>{formatCurrency(addlChargeTotals.total)}</td>
+							</tr>
+						)}
+						{hasFreight && (
+							<tr>
+								<td className="label" style={{ border: "none", padding: "4px 12px", fontSize: 13, textAlign: "right", color: "#666" }}>Freight Charges</td>
+								<td className="value" style={{ border: "none", padding: "4px 12px", fontSize: 13, textAlign: "right", fontWeight: 600 }}>{formatCurrency(freightCharges)}</td>
+							</tr>
+						)}
+						<tr className="grand-total">
+							<td style={{ border: "none", padding: "8px 12px", fontSize: 14, textAlign: "right", fontWeight: 700, borderTop: "2px solid #333", paddingTop: 8 }}>Grand Total</td>
+							<td style={{ border: "none", padding: "8px 12px", fontSize: 14, textAlign: "right", fontWeight: 700, borderTop: "2px solid #333", paddingTop: 8 }}>{formatCurrency(grandTotal)}</td>
+						</tr>
+					</tbody>
+				</table>
 
 				{remarks && (
 					<>
@@ -305,20 +404,99 @@ export function SalesOrderPreview({ header, items, remarks }: SalesOrderPreviewP
 							))}
 							<TableRow>
 								<TableCell colSpan={4} align="right">
-									<Typography variant="body2" fontWeight={700}>Total</Typography>
+									<Typography variant="body2" fontWeight={700}>Line Items Total</Typography>
 								</TableCell>
 								<TableCell align="right">
-									<Typography variant="body2" fontWeight={700}>{formatCurrency(totals.amount)}</Typography>
+									<Typography variant="body2" fontWeight={700}>{formatCurrency(lineItemTotals.amount)}</Typography>
 								</TableCell>
 								<TableCell align="right">
-									<Typography variant="body2" fontWeight={700}>{formatCurrency(totals.gst)}</Typography>
+									<Typography variant="body2" fontWeight={700}>{formatCurrency(lineItemTotals.gst)}</Typography>
 								</TableCell>
 								<TableCell align="right">
-									<Typography variant="body2" fontWeight={700}>{formatCurrency(totals.total)}</Typography>
+									<Typography variant="body2" fontWeight={700}>{formatCurrency(lineItemTotals.total)}</Typography>
 								</TableCell>
 							</TableRow>
 						</TableBody>
 					</Table>
+				</>
+			)}
+
+			{hasAddlCharges && (
+				<>
+					<Divider sx={{ my: 2 }} />
+					<Typography variant="subtitle2" sx={{ mb: 1 }}>Additional Charges</Typography>
+					<Table size="small">
+						<TableHead>
+							<TableRow>
+								<TableCell>#</TableCell>
+								<TableCell>Charge</TableCell>
+								<TableCell align="right">Qty</TableCell>
+								<TableCell align="right">Rate</TableCell>
+								<TableCell align="right">Amount</TableCell>
+								<TableCell align="right">GST</TableCell>
+								<TableCell align="right">Total</TableCell>
+							</TableRow>
+						</TableHead>
+						<TableBody>
+							{additionalCharges!.map((c, i) => (
+								<TableRow key={i}>
+									<TableCell>{i + 1}</TableCell>
+									<TableCell>{c.chargeName}</TableCell>
+									<TableCell align="right">{c.qty}</TableCell>
+									<TableCell align="right">{formatCurrency(c.rate)}</TableCell>
+									<TableCell align="right">{formatCurrency(c.netAmount)}</TableCell>
+									<TableCell align="right">{formatCurrency(c.taxAmount)}</TableCell>
+									<TableCell align="right">{formatCurrency(c.total)}</TableCell>
+								</TableRow>
+							))}
+							<TableRow>
+								<TableCell colSpan={4} align="right">
+									<Typography variant="body2" fontWeight={700}>Additional Charges Total</Typography>
+								</TableCell>
+								<TableCell align="right">
+									<Typography variant="body2" fontWeight={700}>{formatCurrency(addlChargeTotals.netAmount)}</Typography>
+								</TableCell>
+								<TableCell align="right">
+									<Typography variant="body2" fontWeight={700}>{formatCurrency(addlChargeTotals.taxAmount)}</Typography>
+								</TableCell>
+								<TableCell align="right">
+									<Typography variant="body2" fontWeight={700}>{formatCurrency(addlChargeTotals.total)}</Typography>
+								</TableCell>
+							</TableRow>
+						</TableBody>
+					</Table>
+				</>
+			)}
+
+			{/* Grand Total Summary */}
+			{(hasAddlCharges || hasFreight) && (
+				<>
+					<Divider sx={{ my: 2 }} />
+					<div className="flex justify-end">
+						<div className="space-y-1" style={{ minWidth: 280 }}>
+							<div className="flex justify-between text-sm">
+								<Typography variant="body2" color="text.secondary">Line Items Total</Typography>
+								<Typography variant="body2">{formatCurrency(lineItemTotals.total)}</Typography>
+							</div>
+							{hasAddlCharges && (
+								<div className="flex justify-between text-sm">
+									<Typography variant="body2" color="text.secondary">Additional Charges</Typography>
+									<Typography variant="body2">{formatCurrency(addlChargeTotals.total)}</Typography>
+								</div>
+							)}
+							{hasFreight && (
+								<div className="flex justify-between text-sm">
+									<Typography variant="body2" color="text.secondary">Freight Charges</Typography>
+									<Typography variant="body2">{formatCurrency(freightCharges)}</Typography>
+								</div>
+							)}
+							<Divider />
+							<div className="flex justify-between">
+								<Typography variant="subtitle2">Grand Total</Typography>
+								<Typography variant="subtitle2">{formatCurrency(grandTotal)}</Typography>
+							</div>
+						</div>
+					</div>
 				</>
 			)}
 

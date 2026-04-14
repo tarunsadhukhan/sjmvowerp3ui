@@ -32,6 +32,8 @@ export const buildDefaultFormValues = (): Record<string, unknown> => ({
 	transporter: "",
 	delivery_terms: "",
 	payment_terms: "",
+	buyer_order_no: "",
+	buyer_order_date: "",
 	delivery_days: "",
 	freight_charges: "",
 	footer_note: "",

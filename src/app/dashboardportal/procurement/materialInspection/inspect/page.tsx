@@ -47,12 +47,14 @@ const EditableTextCell: React.FC<{
 			value={localValue}
 			disabled={disabled}
 			placeholder={placeholder}
-			onChange={(e) => setLocalValue(e.target.value)}
+			onChange={(e) => setLocalValue(e.target.value.slice(0, 150))}
 			onBlur={() => {
 				if (localValue !== initialValue) {
 					onCommit(localValue);
 				}
 			}}
+			onKeyDown={(e) => e.stopPropagation()}
+			inputProps={{ maxLength: 150 }}
 			sx={{ width: "100%" }}
 		/>
 	);
@@ -278,7 +280,8 @@ function MaterialInspectionEditPageContent() {
 			const lineItemsPayload = lineItems.map((item) => ({
 				inward_dtl_id: item.inward_dtl_id,
 				rejected_qty: item.rejected_qty,
-				rejection_reason: item.rejection_reason,
+				approved_qty: item.approved_qty,
+				reasons: item.rejection_reason,
 				accepted_item_make_id: item.accepted_item_make_id,
 			}));
 

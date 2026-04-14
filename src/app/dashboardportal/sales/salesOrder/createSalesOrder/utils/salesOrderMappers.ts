@@ -197,6 +197,26 @@ export const mapInvoiceTypeRecords = (records: unknown[]): InvoiceTypeRecord[] =
 export const mapSalesOrderSetupResponse = (response: unknown): SalesOrderSetupData => {
 	try {
 		const result = response as SalesOrderSetup1ResponseRaw;
+		const additionalChargesRaw = result?.additional_charges_master;
+		const additionalChargesMaster = Array.isArray(additionalChargesRaw)
+			? additionalChargesRaw.map((c: Record<string, unknown>) => ({
+				additional_charges_id: Number(c.additional_charges_id ?? 0),
+				additional_charges_name: String(c.additional_charges_name ?? ""),
+				default_value: c.default_value != null ? Number(c.default_value) : null,
+			}))
+			: [];
+
+		const transportChargeRatesRaw = result?.transport_charge_rates;
+		const transportChargeRates = Array.isArray(transportChargeRatesRaw)
+			? transportChargeRatesRaw.map((r: Record<string, unknown>) => ({
+				id: Number(r.id ?? 0),
+				mode_of_transport: String(r.mode_of_transport ?? ""),
+				additional_charges_id: Number(r.additional_charges_id ?? 0),
+				rate_per_100pcs: Number(r.rate_per_100pcs ?? 0),
+				co_id: r.co_id != null ? Number(r.co_id) : null,
+			}))
+			: [];
+
 		return {
 			customers: mapCustomerRecords(result?.customers ?? []),
 			brokers: mapBrokerRecords(result?.brokers ?? []),
@@ -206,6 +226,8 @@ export const mapSalesOrderSetupResponse = (response: unknown): SalesOrderSetupDa
 			branchAddresses: mapBranchAddressRecords(result?.branches ?? []),
 			invoiceTypes: mapInvoiceTypeRecords(result?.invoice_types ?? []),
 			coConfig: result?.co_config as SalesOrderSetupData["coConfig"],
+			additionalChargesMaster,
+			transportChargeRates,
 		} satisfies SalesOrderSetupData;
 	} catch (error) {
 		console.error("Failed to map sales order setup response", error);
@@ -235,18 +257,17 @@ export const mapItemGroupDetailResponse = (response: unknown): ItemGroupCacheEnt
 			const id = data?.item_id ?? data?.id;
 			if (!id) return null;
 			const value = String(id);
-			const code = data?.item_code;
 			const name = data?.item_name;
-			const labelParts = [code, name].filter(Boolean);
 			return {
 				value,
-				label: labelParts.length ? labelParts.join(" — ") : value,
+				label: name || value,
 				defaultUomId: data?.uom_id != null ? String(data.uom_id) : undefined,
 				defaultUomLabel: data?.uom_name ? String(data.uom_name) : undefined,
 				defaultRate: data?.rate != null ? Number(data.rate) : undefined,
 				taxPercentage: data?.tax_percentage != null ? Number(data.tax_percentage) : undefined,
 				uomRounding: data?.uom_rounding != null ? Number(data.uom_rounding) : undefined,
 				rateRounding: data?.rate_rounding != null ? Number(data.rate_rounding) : undefined,
+				fullItemCode: data?.full_item_code ? String(data.full_item_code) : undefined,
 			};
 		})
 		.filter(Boolean) as ItemOption[];
@@ -337,12 +358,16 @@ export const mapItemGroupDetailResponse = (response: unknown): ItemGroupCacheEnt
 	});
 
 	const itemLabelById: Record<string, string> = {};
-	items.forEach((item) => { itemLabelById[item.value] = item.label; });
+	const itemFullCodeById: Record<string, string> = {};
+	items.forEach((item) => {
+		itemLabelById[item.value] = item.label;
+		if (item.fullItemCode) itemFullCodeById[item.value] = item.fullItemCode;
+	});
 
 	const makeLabelById: Record<string, string> = {};
 	makes.forEach((make) => { makeLabelById[make.value] = make.label; });
 
-	return { groupLabel, items, makes, uomsByItemId, itemLabelById, makeLabelById, uomLabelByItemId, itemRateById, itemTaxById, uomConversionsByItemId, itemUomRoundingById, itemRateRoundingById };
+	return { groupLabel, items, makes, uomsByItemId, itemLabelById, makeLabelById, uomLabelByItemId, itemRateById, itemTaxById, uomConversionsByItemId, itemUomRoundingById, itemRateRoundingById, itemFullCodeById };
 };
 
 // ---------------------------------------------------------------------------
@@ -375,6 +400,8 @@ export const mapSalesOrderDetailsToFormValues = (
 		transporter?: unknown;
 		deliveryTerms?: string | null;
 		paymentTerms?: string | null;
+		buyerOrderNo?: string | null;
+		buyerOrderDate?: string | null;
 		deliveryDays?: number | null;
 		freightCharges?: number | null;
 		footerNote?: string | null;
@@ -392,6 +419,7 @@ export const mapSalesOrderDetailsToFormValues = (
 			administrative_office_address?: string | null;
 			destination_rail_head?: string | null;
 			loading_point?: string | null;
+			mode_of_transport?: string | null;
 		} | null;
 		juteyarn?: {
 			pcso_no?: string | null;
@@ -418,6 +446,8 @@ export const mapSalesOrderDetailsToFormValues = (
 	transporter: toStringValue(details.transporter ?? defaultValues.transporter),
 	delivery_terms: toStringValue(details.deliveryTerms ?? defaultValues.delivery_terms),
 	payment_terms: toStringValue(details.paymentTerms ?? defaultValues.payment_terms),
+	buyer_order_no: toStringValue(details.buyerOrderNo ?? defaultValues.buyer_order_no),
+	buyer_order_date: normalizeDate(details.buyerOrderDate) || toStringValue(defaultValues.buyer_order_date),
 	delivery_days: details.deliveryDays != null
 		? String(details.deliveryDays)
 		: toStringValue(defaultValues.delivery_days),
@@ -438,6 +468,7 @@ export const mapSalesOrderDetailsToFormValues = (
 	govtskg_admin_office: details.govtskg?.administrative_office_address ?? "",
 	govtskg_rail_head: details.govtskg?.destination_rail_head ?? "",
 	govtskg_loading_point: details.govtskg?.loading_point ?? "",
+	govtskg_mode_of_transport: details.govtskg?.mode_of_transport ?? "",
 	// Jute Yarn header
 	juteyarn_pcso_no: details.juteyarn?.pcso_no ?? "",
 	juteyarn_container_no: details.juteyarn?.container_no ?? "",

@@ -12,6 +12,7 @@ export type InvoiceLine = {
   item?: string;
   itemName?: string;
   itemCode?: string;
+  fullItemCode?: string;
   itemMake?: string;
   quantity?: number | string;
   rate?: number | string;
@@ -197,6 +198,38 @@ export type DeliveryOrderLineForInvoice = {
   total_amount?: number;
   remarks?: string;
   tax_percentage?: number;
+  govtskg_pack_sheet?: string | null;
+  govtskg_net_weight?: number | null;
+  govtskg_total_weight?: number | null;
+};
+
+/** SO extension data returned inline by both DO-lines and SO-lines endpoints. */
+export type SoExtensionData = {
+  invoice_type?: number | null;
+  so_govtskg?: {
+    pcso_no?: string | null;
+    pcso_date?: string | null;
+    mode_of_transport?: string | null;
+    administrative_office_address?: string | null;
+    destination_rail_head?: string | null;
+    loading_point?: string | null;
+  };
+  so_additional_charges?: Array<{
+    sales_order_additional_id: number;
+    additional_charges_id: number;
+    additional_charges_name?: string;
+    qty?: number;
+    rate?: number;
+    net_amount?: number;
+    remarks?: string;
+    igst_amount?: number;
+    igst_percent?: number;
+    cgst_amount?: number;
+    cgst_percent?: number;
+    sgst_amount?: number;
+    sgst_percent?: number;
+    gst_total?: number;
+  }>;
 };
 
 export type SalesOrderLineForInvoice = {
@@ -278,10 +311,27 @@ export type CreateInvoiceRequest = {
     administrative_office_address?: string;
     destination_rail_head?: string;
     loading_point?: string;
+    mode_of_transport?: string;
     pack_sheet?: number;
     net_weight?: number;
     total_weight?: number;
   };
+  additional_charges?: Array<{
+    additional_charges_id: string;
+    qty: number;
+    rate: number;
+    net_amount: number;
+    remarks?: string;
+    gst?: {
+      igst_amount?: number;
+      igst_percent?: number;
+      cgst_amount?: number;
+      cgst_percent?: number;
+      sgst_amount?: number;
+      sgst_percent?: number;
+      gst_total?: number;
+    };
+  }>;
   items: Array<{
     item: string;
     item_make?: string;
@@ -367,9 +417,12 @@ export async function fetchInvoiceSetup2(itemGroupId: string): Promise<InvoiceSe
   return data;
 }
 
-export async function fetchDeliveryOrderLines(deliveryOrderId: string): Promise<{ data: DeliveryOrderLineForInvoice[] }> {
+type DOLinesResponse = { data: DeliveryOrderLineForInvoice[] } & SoExtensionData;
+type SOLinesResponse = { data: SalesOrderLineForInvoice[] } & SoExtensionData;
+
+export async function fetchDeliveryOrderLines(deliveryOrderId: string): Promise<DOLinesResponse> {
   const query = new URLSearchParams({ sales_delivery_order_id: deliveryOrderId });
-  const { data, error } = await fetchWithCookie<{ data: DeliveryOrderLineForInvoice[] }>(
+  const { data, error } = await fetchWithCookie<DOLinesResponse>(
     `${apiRoutesPortalMasters.SALES_INVOICE_DELIVERY_ORDER_LINES}?${query.toString()}`,
     "GET"
   );
@@ -378,9 +431,9 @@ export async function fetchDeliveryOrderLines(deliveryOrderId: string): Promise<
   return data;
 }
 
-export async function fetchSalesOrderLinesForInvoice(salesOrderId: string): Promise<{ data: SalesOrderLineForInvoice[] }> {
+export async function fetchSalesOrderLinesForInvoice(salesOrderId: string): Promise<SOLinesResponse> {
   const query = new URLSearchParams({ sales_order_id: salesOrderId });
-  const { data, error } = await fetchWithCookie<{ data: SalesOrderLineForInvoice[] }>(
+  const { data, error } = await fetchWithCookie<SOLinesResponse>(
     `${apiRoutesPortalMasters.SALES_INVOICE_SALES_ORDER_LINES}?${query.toString()}`,
     "GET"
   );

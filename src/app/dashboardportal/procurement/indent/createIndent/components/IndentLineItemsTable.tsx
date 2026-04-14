@@ -9,6 +9,7 @@ type UseIndentLineItemColumnsParams = {
 	departmentOptions: readonly Option[];
 	itemGroupLoading: Partial<Record<string, boolean>>;
 	labelResolvers: IndentLabelResolvers;
+	getMakeOptions: (groupId: string) => Option[];
 	getUomOptions: (groupId: string, itemId: string) => Option[];
 	handleLineFieldChange: (id: string, field: keyof EditableLineItem, value: string) => void;
 	/** Per-line validation map from useIndentItemValidation */
@@ -76,6 +77,7 @@ export const useIndentLineItemColumns = ({
 	departmentOptions,
 	itemGroupLoading,
 	labelResolvers,
+	getMakeOptions,
 	getUomOptions,
 	handleLineFieldChange,
 	validationMap,
@@ -188,11 +190,33 @@ export const useIndentLineItemColumns = ({
 				header: "Item Make",
 				width: "1.1fr",
 				minWidth: "110px",
-				renderCell: ({ item }) => (
-					<span className="block truncate text-sm text-slate-700">
-						{labelResolvers.itemMake(item.itemGroup, item.itemMake)}
-					</span>
-				),
+				renderCell: ({ item }) => {
+					if (!canEdit) {
+						return (
+							<span className="block truncate text-sm text-slate-700">
+								{labelResolvers.itemMake(item.itemGroup, item.itemMake)}
+							</span>
+						);
+					}
+
+					const options = getMakeOptions(item.itemGroup);
+					const value = options.find((option) => option.value === item.itemMake) ?? null;
+					const waitingForGroup = Boolean(item.itemGroup) && itemGroupLoading[item.itemGroup];
+
+					return (
+						<SearchableSelect<Option>
+							options={options}
+							value={value}
+							onChange={(next) => handleLineFieldChange(item.id, "itemMake", next?.value ?? "")}
+							getOptionLabel={(option) => option.label}
+							isOptionEqualToValue={(option, valueOption) => option.value === valueOption.value}
+							placeholder={waitingForGroup ? "Loading..." : options.length ? "Search make" : "No makes"}
+							disabled={!item.itemGroup || waitingForGroup}
+							loading={waitingForGroup}
+							noOptionsText={waitingForGroup ? "Loading..." : "No options"}
+						/>
+					);
+				},
 				getTooltip: ({ item }) => {
 					const label = labelResolvers.itemMake(item.itemGroup, item.itemMake);
 					return label && label !== "-" ? label : undefined;
@@ -317,6 +341,7 @@ export const useIndentLineItemColumns = ({
 			adjustTextareaHeight,
 			canEdit,
 			departmentOptions,
+			getMakeOptions,
 			getUomOptions,
 			handleLineFieldChange,
 			labelResolvers,

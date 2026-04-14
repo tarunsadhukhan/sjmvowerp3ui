@@ -116,9 +116,9 @@ export const useSalesInvoiceSelectOptions = ({
 	);
 
 	const getItemLabel = React.useCallback(
-		(groupId: string, itemId: string, itemCode?: string): string => {
-			if (!groupId || !itemId) return itemCode || "-";
-			return itemGroupCache[groupId]?.itemLabelById[itemId] ?? itemCode ?? itemId;
+		(groupId: string, itemId: string, fallbackName?: string): string => {
+			if (!groupId || !itemId) return fallbackName || "-";
+			return itemGroupCache[groupId]?.itemLabelById[itemId] ?? fallbackName ?? itemId;
 		},
 		[itemGroupCache],
 	);

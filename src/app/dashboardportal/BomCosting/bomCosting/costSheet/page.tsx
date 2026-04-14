@@ -35,6 +35,7 @@ type Header = {
   bom_hdr_id: number;
   item_id: number;
   item_code: string;
+  full_item_code?: string;
   item_name: string;
   bom_version: number;
   version_label: string | null;
@@ -280,7 +281,7 @@ function CostSheetEditorPage() {
           </Button>
           <Box>
             <Typography variant="h6" fontWeight={700} sx={{ lineHeight: 1.2 }}>
-              {header?.item_code} &mdash; {header?.item_name}
+              {header?.full_item_code || header?.item_code} &mdash; {header?.item_name}
             </Typography>
             <Stack direction="row" spacing={1} alignItems="center" sx={{ mt: 0.25 }}>
               <Typography sx={{ fontSize: "0.8rem", color: "#666" }}>

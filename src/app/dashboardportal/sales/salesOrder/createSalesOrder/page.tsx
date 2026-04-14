@@ -3,13 +3,25 @@
 import React, { Suspense } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { TextField } from "@mui/material";
-import TransactionWrapper from "@/components/ui/TransactionWrapper";
+import TransactionWrapper, { type TransactionAction } from "@/components/ui/TransactionWrapper";
 import { Button } from "@/components/ui/button";
+import {
+	Dialog,
+	DialogContent,
+	DialogHeader,
+	DialogFooter,
+	DialogTitle,
+	DialogDescription,
+} from "@/components/ui/dialog";
 import type { MuiFormMode } from "@/components/ui/muiform";
 import {
 	useDeferredOptionCache,
 	useTransactionSetup,
 	useTransactionPreview,
+	buildApprovalTransactionActions,
+	useRejectDialog,
+	useUnsavedChanges,
+	AutoResizeTextarea,
 	ItemSelectionDialog,
 	type SelectedItem,
 } from "@/components/ui/transaction";
@@ -30,7 +42,6 @@ import { useCompanyLogo } from "@/hooks/useCompanyLogo";
 
 import { SalesOrderHeaderForm } from "./components/SalesOrderHeaderForm";
 import { SalesOrderTotalsDisplay } from "./components/SalesOrderTotalsDisplay";
-import { SalesOrderApprovalBar } from "./components/SalesOrderApprovalBar";
 import SalesOrderPreview from "./components/SalesOrderPreview";
 import { useSalesOrderLineItemColumns } from "./components/SalesOrderLineItemsTable";
 import { AdditionalChargesSection, type AdditionalChargeRow } from "./components/AdditionalChargesSection";
@@ -59,7 +70,9 @@ import {
 	EMPTY_SETUP_PARAMS,
 	EMPTY_TRANSPORTERS,
 	isHessianOrder,
+	isGovtSkgOrder,
 } from "./utils/salesOrderConstants";
+import { computeGovtskgTransportCharges, mergeTransportCharges } from "../../utils/govtskgTransportCharges";
 
 function SOPageLoading() {
 	return (
@@ -198,9 +211,9 @@ function SalesOrderTransactionPageContent() {
 	const branchAddresses = setupData?.branchAddresses ?? EMPTY_BRANCH_ADDRESSES;
 
 	const chargeOptions = React.useMemo(() => {
-		const raw = (setupData as Record<string, unknown> | undefined)?.additionalChargesMaster;
-		if (!Array.isArray(raw)) return [];
-		return raw.map((c: Record<string, unknown>) => ({
+		const raw = setupData?.additionalChargesMaster;
+		if (!Array.isArray(raw) || !raw.length) return [];
+		return raw.map((c) => ({
 			value: String(c.additional_charges_id ?? ""),
 			label: String(c.additional_charges_name ?? ""),
 			defaultValue: c.default_value != null ? Number(c.default_value) : undefined,
@@ -273,7 +286,7 @@ function SalesOrderTransactionPageContent() {
 	// Lock invoice type dropdown when type-specific header fields have data
 	const hasTypeSpecificHeaderData = React.useMemo(() => {
 		const v = formValues;
-		const hasGovtskg = !!(v.govtskg_pcso_no || v.govtskg_pcso_date || v.govtskg_admin_office || v.govtskg_rail_head || v.govtskg_loading_point);
+		const hasGovtskg = !!(v.govtskg_pcso_no || v.govtskg_pcso_date || v.govtskg_admin_office || v.govtskg_rail_head || v.govtskg_loading_point || v.govtskg_mode_of_transport);
 		const hasJute = !!(v.jute_mr_no || v.jute_mukam_id || v.jute_claim_amount || v.jute_claim_description);
 		const hasJuteYarn = !!(v.juteyarn_pcso_no || v.juteyarn_container_no || v.juteyarn_customer_ref_no);
 		return hasGovtskg || hasJute || hasJuteYarn;
@@ -299,7 +312,7 @@ function SalesOrderTransactionPageContent() {
 
 		const clearFields: Record<string, string> = {};
 		if (prevCode === "govt_skg") {
-			Object.assign(clearFields, { govtskg_pcso_no: "", govtskg_pcso_date: "", govtskg_admin_office: "", govtskg_rail_head: "", govtskg_loading_point: "" });
+			Object.assign(clearFields, { govtskg_pcso_no: "", govtskg_pcso_date: "", govtskg_admin_office: "", govtskg_rail_head: "", govtskg_loading_point: "", govtskg_mode_of_transport: "" });
 		} else if (prevCode === "jute") {
 			Object.assign(clearFields, { jute_mr_no: "", jute_mukam_id: "", jute_claim_amount: "", jute_claim_description: "" });
 		} else if (prevCode === "jute_yarn") {
@@ -347,6 +360,34 @@ function SalesOrderTransactionPageContent() {
 		brokeragePercent: formValues.broker_commission_percent ? Number(formValues.broker_commission_percent) : undefined,
 	});
 
+	// Unsaved changes detection for unified action bar
+	const getComparableLineData = React.useCallback(
+		(item: EditableLineItem) => ({
+			itemGroup: item.itemGroup,
+			item: item.item,
+			itemMake: item.itemMake,
+			quantity: item.quantity,
+			rate: item.rate,
+			uom: item.uom,
+			discountValue: item.discountValue,
+			remarks: item.remarks,
+			hsnCode: item.hsnCode,
+		}),
+		[],
+	);
+
+	const comparableLineItems = React.useMemo(
+		() => lineItems.filter(lineHasAnyData),
+		[lineItems],
+	);
+
+	const { hasUnsavedChanges, resetBaseline, setBaseline } = useUnsavedChanges({
+		formValues,
+		lineItems: comparableLineItems,
+		getComparableLineData,
+		enabled: mode !== "create",
+	});
+
 	// Seed an initial blank line in create mode
 	const initialLineSeededRef = React.useRef(false);
 	React.useEffect(() => {
@@ -392,6 +433,7 @@ function SalesOrderTransactionPageContent() {
 				discountValue: "",
 				remarks: "",
 				taxPercentage: item.tax_percentage ?? undefined,
+			fullItemCode: item.full_item_code || undefined,
 			}));
 
 			const groupIds = [...new Set(items.map((i) => String(i.item_grp_id)))];
@@ -424,9 +466,25 @@ function SalesOrderTransactionPageContent() {
 		suppressRef: suppressTaxRecalcRef,
 	});
 
+	// Auto-populate additional charges when Govt Sacking transport mode or line qty changes
+	React.useEffect(() => {
+		const mode = String(formValues.govtskg_mode_of_transport ?? "");
+		if (!mode || !isGovtSkgOrder(invoiceTypeCode)) return;
+
+		const totalQty = filledLineItems.reduce((sum, li) => sum + (Number(li.quantity) || 0), 0);
+		if (totalQty <= 0) return;
+
+		const rates = setupData?.transportChargeRates ?? [];
+		if (!rates.length) return;
+
+		const lineTaxPct = filledLineItems[0]?.taxPercentage;
+		const computed = computeGovtskgTransportCharges(mode, totalQty, rates, chargeOptions, lineTaxPct, billingToState, shippingToState);
+		setAdditionalCharges((prev) => mergeTransportCharges(prev, computed, mode));
+	}, [formValues.govtskg_mode_of_transport, filledLineItems, invoiceTypeCode, setupData?.transportChargeRates, chargeOptions, billingToState, shippingToState]);
+
 	// Calculate totals
 	const additionalChargesTotal = React.useMemo(
-		() => additionalCharges.reduce((sum, c) => sum + (parseFloat(c.netAmount) || 0), 0),
+		() => additionalCharges.reduce((sum, c) => sum + (parseFloat(c.netAmount) || 0) + (c.gst?.gstTotal ?? 0), 0),
 		[additionalCharges],
 	);
 
@@ -535,20 +593,42 @@ function SalesOrderTransactionPageContent() {
 		const rawCharges = (soDetails as Record<string, unknown>).additionalCharges;
 		if (Array.isArray(rawCharges) && rawCharges.length > 0) {
 			setAdditionalCharges(
-				rawCharges.map((ch: Record<string, unknown>, idx: number) => ({
-					id: `charge_loaded_${idx}`,
-					additionalChargesId: String(ch.additional_charges_id ?? ch.additionalChargesId ?? ""),
-					chargeName: String(ch.additional_charges_name ?? ch.chargeName ?? ""),
-					qty: String(ch.qty ?? "1"),
-					rate: String(ch.rate ?? ""),
-					netAmount: String(ch.net_amount ?? ch.netAmount ?? ""),
-					remarks: String(ch.remarks ?? ""),
-					gst: ch.gst != null ? (ch.gst as AdditionalChargeRow["gst"]) : undefined,
-				})),
+				rawCharges.map((ch: Record<string, unknown>, idx: number) => {
+					// Backend returns flat GST fields (igst_amount, cgst_amount, etc.),
+					// not a nested gst object.
+					const gstTotal = Number(ch.gst_total ?? 0);
+					const igstPercent = Number(ch.igst_percent ?? 0);
+					const cgstPercent = Number(ch.cgst_percent ?? 0);
+					const sgstPercent = Number(ch.sgst_percent ?? 0);
+					// Derive tax_pct: IGST% or CGST% + SGST% (whichever is non-zero)
+					const taxPct = igstPercent > 0 ? igstPercent : cgstPercent + sgstPercent;
+					return {
+						id: `charge_loaded_${idx}`,
+						additionalChargesId: String(ch.additional_charges_id ?? ch.additionalChargesId ?? ""),
+						chargeName: String(ch.additional_charges_name ?? ch.chargeName ?? ""),
+						qty: String(ch.qty ?? "1"),
+						rate: String(ch.rate ?? ""),
+						netAmount: String(ch.net_amount ?? ch.netAmount ?? ""),
+						remarks: String(ch.remarks ?? ""),
+						taxPct: taxPct > 0 ? String(taxPct) : "",
+						gst: gstTotal > 0 ? {
+							igstAmount: Number(ch.igst_amount ?? 0),
+							igstPercent,
+							cgstAmount: Number(ch.cgst_amount ?? 0),
+							cgstPercent,
+							sgstAmount: Number(ch.sgst_amount ?? 0),
+							sgstPercent,
+							gstTotal,
+						} : undefined,
+					};
+				}),
 			);
 		} else {
 			setAdditionalCharges([]);
 		}
+
+		// Set baseline for unsaved changes detection
+		setBaseline(nextValues, normalizedLines.filter(lineHasAnyData));
 
 		return () => { formPopulatedRef.current = false; };
 	}, [
@@ -556,6 +636,7 @@ function SalesOrderTransactionPageContent() {
 		setInitialValues, setFormValues, bumpFormKey,
 		replaceItems, mapLineToEditable,
 		branchIdFromUrl, branchValue,
+		setBaseline, lineHasAnyData,
 	]);
 
 	// Pre-load item group data for existing line items
@@ -610,6 +691,7 @@ function SalesOrderTransactionPageContent() {
 		getUomOptions,
 		getUomConversions,
 		getItemLabel,
+		getItemFullCode,
 		getUomLabel,
 	} = useSalesOrderSelectOptions({
 		customers,
@@ -653,6 +735,7 @@ function SalesOrderTransactionPageContent() {
 		getUomOptions,
 		getUomConversions,
 		getItemGroupLabel,
+		getItemFullCode,
 		handleLineFieldChange,
 	});
 
@@ -678,6 +761,23 @@ function SalesOrderTransactionPageContent() {
 		setDetails: setSODetails,
 	});
 
+	// Reject dialog hook
+	const {
+		rejectDialogOpen,
+		rejectReason,
+		setRejectReason,
+		openRejectDialog,
+		handleRejectConfirm,
+		handleRejectCancel,
+	} = useRejectDialog(handleReject);
+
+	// Reset baseline when soDetails changes (initial load or post-approval refresh)
+	React.useEffect(() => {
+		if (!soDetails || mode === "create") return;
+		const timer = setTimeout(() => resetBaseline(), 0);
+		return () => clearTimeout(timer);
+	}, [soDetails, mode, resetBaseline]);
+
 	// Preview data
 	const previewHeader = React.useMemo(
 		() => ({
@@ -700,11 +800,10 @@ function SalesOrderTransactionPageContent() {
 
 	const previewItems = React.useMemo(() => {
 		const isHessian = isHessianOrder(invoiceTypeCode);
+		const isGovtSkg = isGovtSkgOrder(invoiceTypeCode);
 		return filledLineItems.map((line, index) => {
-			const groupLabel = getItemGroupLabel(line.itemGroup);
 			const itemLabel = getItemLabel(line.itemGroup, line.item);
-			// Concatenate item group label + item label (each already has code — name)
-			const fullItemName = [groupLabel, itemLabel].filter((p) => p && p !== "-").join("\n") || "-";
+			const fullItemName = itemLabel || "-";
 
 			const uomOptions = getUomOptions(line.itemGroup, line.item);
 			const uomLabel = uomOptions.find((opt) => opt.value === line.uom)?.label ?? line.uom ?? "";
@@ -714,11 +813,13 @@ function SalesOrderTransactionPageContent() {
 				? Number(rawQty).toFixed(qtyRounding) : (rawQty || "-");
 			const qtyDisplay = `${formattedQty} ${uomLabel}`.trim();
 
-			// Hessian: show bales qty as other qty
+			// Hessian / Govt Sacking: show bales qty as other qty
 			let otherQtyDisplay: string | undefined;
 			if (isHessian && line.qtyBales && Number(line.qtyBales)) {
 				otherQtyDisplay = `${line.qtyBales} Bales`;
-			} else if (!isHessian) {
+			} else if (isGovtSkg && line.govtskgQtyBales && Number(line.govtskgQtyBales)) {
+				otherQtyDisplay = `${line.govtskgQtyBales} Bales`;
+			} else if (!isHessian && !isGovtSkg) {
 				// For non-hessian, show converted qty if available
 				const conversions = getUomConversions?.(line.itemGroup, line.item);
 				if (conversions?.length && rawQty && Number(rawQty) && line.uom) {
@@ -761,11 +862,28 @@ function SalesOrderTransactionPageContent() {
 				total: ((line.amount ?? 0) + (line.taxAmount ?? 0)) || "-",
 			};
 		});
-	}, [filledLineItems, getItemLabel, getItemGroupLabel, getUomOptions, getUomConversions, invoiceTypeCode]);
+	}, [filledLineItems, getItemLabel, getUomOptions, getUomConversions, invoiceTypeCode]);
 
 	const previewRemarks = React.useMemo(() => {
 		return (formValues.internal_note as string) || soDetails?.internalNote || (formValues.footer_note as string) || soDetails?.footerNote || "";
 	}, [formValues.internal_note, formValues.footer_note, soDetails?.internalNote, soDetails?.footerNote]);
+
+	const previewAdditionalCharges = React.useMemo(() => {
+		return additionalCharges
+			.filter((c) => c.additionalChargesId)
+			.map((c) => {
+				const netAmount = parseFloat(c.netAmount) || 0;
+				const taxAmount = c.gst?.gstTotal ?? 0;
+				return {
+					chargeName: c.chargeName || "-",
+					qty: parseFloat(c.qty) || 1,
+					rate: parseFloat(c.rate) || 0,
+					netAmount,
+					taxAmount,
+					total: netAmount + taxAmount,
+				};
+			});
+	}, [additionalCharges]);
 
 	const { metadata } = useTransactionPreview({
 		header: previewHeader,
@@ -791,11 +909,62 @@ function SalesOrderTransactionPageContent() {
 		invoiceTypeCode,
 	});
 
-	const primaryActionLabel = mode === "create" ? "Create" : "Save";
-	const handleSaveClick = React.useCallback(() => {
-		if (!formRef.current?.submit) return;
-		void formRef.current.submit();
-	}, [formRef]);
+	// Unified primary actions — shows Create, Save, or Approval buttons in the same location
+	const primaryActions = React.useMemo<TransactionAction[] | undefined>(() => {
+		if (pageError || setupError) return undefined;
+
+		// Create mode → Create button
+		if (mode === "create") {
+			return [
+				{
+					label: "Create Sales Order",
+					onClick: () => formRef.current?.submit(),
+					disabled: saving || !lineItemsValid || setupLoading,
+					loading: saving,
+				},
+			];
+		}
+
+		// No SO details yet (still loading)
+		if (!soDetails) return undefined;
+
+		// Edit mode with unsaved changes → Save button
+		if (mode === "edit" && approvalPermissions.canSave && hasUnsavedChanges) {
+			return [
+				{
+					label: "Save Changes",
+					onClick: () => formRef.current?.submit(),
+					disabled: saving || !lineItemsValid || setupLoading,
+					loading: saving,
+				},
+			];
+		}
+
+		// View mode, or edit mode without unsaved changes → Approval buttons
+		const approvalActions = buildApprovalTransactionActions({
+			approvalInfo,
+			permissions: approvalPermissions,
+			handlers: {
+				onOpen: handleOpen,
+				onCancelDraft: handleCancelDraft,
+				onReopen: handleReopen,
+				onSendForApproval: handleSendForApproval,
+				onApprove: handleApprove,
+				onReject: openRejectDialog,
+				onViewApprovalLog: handleViewApprovalLog,
+			},
+			loading: approvalLoading,
+			disabled: saving || loading || setupLoading,
+		});
+
+		return approvalActions.length ? approvalActions : undefined;
+	}, [
+		mode, pageError, setupError, saving, lineItemsValid, setupLoading,
+		formRef, soDetails, approvalPermissions, hasUnsavedChanges,
+		approvalInfo, approvalLoading, loading,
+		handleOpen, handleCancelDraft, handleReopen, handleSendForApproval,
+		handleApprove, openRejectDialog, handleViewApprovalLog,
+	]);
 
 	// Wrap submit to inject notes fields and additional charges (rendered outside MuiForm) into the submitted values
 	const handleFormSubmitWithNotes = React.useCallback(
@@ -814,7 +983,15 @@ function SalesOrderTransactionPageContent() {
 						rate: parseFloat(c.rate) || 0,
 						net_amount: parseFloat(c.netAmount) || 0,
 						remarks: c.remarks || "",
-						gst: c.gst,
+						gst: c.gst ? {
+							igst_amount: c.gst.igstAmount ?? 0,
+							igst_percent: c.gst.igstPercent ?? 0,
+							cgst_amount: c.gst.cgstAmount ?? 0,
+							cgst_percent: c.gst.cgstPercent ?? 0,
+							sgst_amount: c.gst.sgstAmount ?? 0,
+							sgst_percent: c.gst.sgstPercent ?? 0,
+							gst_total: c.gst.gstTotal ?? 0,
+						} : undefined,
 					})),
 			};
 			await handleFormSubmit(merged);
@@ -838,6 +1015,8 @@ function SalesOrderTransactionPageContent() {
 			metadata={metadata}
 			statusChip={statusChipProps}
 			backAction={{ onClick: () => router.push("/dashboardportal/sales/salesOrder") }}
+			primaryActions={primaryActions}
+			actionsAfterFooter
 			loading={loading || setupLoading}
 			alerts={pageError ? <div role="alert" aria-live="assertive" className="text-red-600">{pageError}</div> : undefined}
 			preview={
@@ -845,6 +1024,8 @@ function SalesOrderTransactionPageContent() {
 					header={previewHeader}
 					items={previewItems}
 					remarks={previewRemarks}
+					additionalCharges={previewAdditionalCharges}
+					freightCharges={Number(formValues.freight_charges) || 0}
 				/>
 			}
 			lineItems={{
@@ -854,6 +1035,7 @@ function SalesOrderTransactionPageContent() {
 				columns: lineItemColumns,
 				placeholder: "Add line items to the sales order",
 				selectionColumnWidth: "28px",
+				onRemoveSelected: canEdit ? removeLineItems : undefined,
 				headerAction: canEdit ? (
 					<Button
 						type="button"
@@ -872,6 +1054,9 @@ function SalesOrderTransactionPageContent() {
 							chargeOptions={chargeOptions}
 							onChange={setAdditionalCharges}
 							disabled={mode === "view"}
+							billingToState={billingToState}
+							shippingToState={shippingToState}
+							indiaGst={Boolean(coConfig?.india_gst)}
 						/>
 						<SalesOrderTotalsDisplay
 							grossAmount={totals.grossAmount}
@@ -913,25 +1098,6 @@ function SalesOrderTransactionPageContent() {
 								disabled={mode === "view"}
 							/>
 						</div>
-						<SalesOrderApprovalBar
-							approvalInfo={approvalInfo}
-							permissions={approvalPermissions}
-							loading={approvalLoading}
-							onApprove={handleApprove}
-							onReject={handleReject}
-							onOpen={handleOpen}
-							onCancelDraft={handleCancelDraft}
-							onReopen={handleReopen}
-							onSendForApproval={handleSendForApproval}
-							onViewApprovalLog={handleViewApprovalLog}
-						/>
-						{mode !== "view" ? (
-							<div className="flex justify-end pt-2">
-								<Button type="button" onClick={handleSaveClick} disabled={saving || setupLoading || !isLineItemsReady}>
-									{saving ? "Processing..." : primaryActionLabel}
-								</Button>
-							</div>
-						) : null}
 					</div>
 				}
 		>
@@ -962,6 +1128,35 @@ function SalesOrderTransactionPageContent() {
 			excludeItemIds={excludeItemIds}
 			title="Select Items for Sales Order"
 		/>
+
+		<Dialog open={rejectDialogOpen} onOpenChange={(open) => { if (!open) handleRejectCancel(); }}>
+			<DialogContent className="sm:max-w-125">
+				<DialogHeader>
+					<DialogTitle>Reject Sales Order</DialogTitle>
+					<DialogDescription>Please provide a reason for rejecting this sales order.</DialogDescription>
+				</DialogHeader>
+				<div className="space-y-4 py-4">
+					<div className="space-y-2">
+						<label htmlFor="reject-reason" className="text-sm font-medium leading-none">
+							Rejection Reason *
+						</label>
+						<AutoResizeTextarea
+							id="reject-reason"
+							placeholder="Enter rejection reason..."
+							value={rejectReason}
+							onChange={(e) => setRejectReason(e.target.value)}
+							className="min-h-20 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
+							minHeight={80}
+							maxHeight={200}
+						/>
+					</div>
+				</div>
+				<DialogFooter>
+					<Button variant="outline" onClick={handleRejectCancel}>Cancel</Button>
+					<Button variant="destructive" onClick={handleRejectConfirm} disabled={!rejectReason.trim()}>Reject</Button>
+				</DialogFooter>
+			</DialogContent>
+		</Dialog>
 		</>
 	);
 }

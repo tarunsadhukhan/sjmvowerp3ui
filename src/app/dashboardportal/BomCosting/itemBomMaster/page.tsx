@@ -14,6 +14,7 @@ type BomItem = {
   id: number;
   item_id: number;
   item_code: string;
+  full_item_code?: string;
   item_name: string;
   item_group_name: string;
   component_count: number;
@@ -95,7 +96,9 @@ export default function ItemBomMasterPage() {
   };
 
   const columns = useMemo<GridColDef<BomItem>[]>(() => ([
-    { field: "item_code", headerName: "Item Code", flex: 0.8, minWidth: 110 },
+    { field: "full_item_code", headerName: "Item Code", flex: 1, minWidth: 180,
+      valueGetter: (_value: string, row: BomItem) => row.full_item_code || row.item_code || "-",
+    },
     { field: "item_name", headerName: "Item Name", flex: 1.5, minWidth: 180 },
     { field: "item_group_name", headerName: "Item Group", flex: 1, minWidth: 140 },
     { field: "component_count", headerName: "Components", flex: 0.5, minWidth: 90, type: "number" },

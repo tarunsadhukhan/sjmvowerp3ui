@@ -29,12 +29,6 @@ export function SalesOrderTotalsDisplay({
 					<Typography variant="body2" color="text.secondary">Gross Amount</Typography>
 					<Typography variant="body2">{formatCurrency(grossAmount)}</Typography>
 				</div>
-				<div className="flex justify-between">
-					<Typography variant="body2" color="text.secondary">
-						Total GST{taxType ? ` (${taxType})` : ""}
-					</Typography>
-					<Typography variant="body2">{formatCurrency(totalTax)}</Typography>
-				</div>
 				{freightCharges > 0 && (
 					<div className="flex justify-between">
 						<Typography variant="body2" color="text.secondary">Freight Charges</Typography>
@@ -47,6 +41,12 @@ export function SalesOrderTotalsDisplay({
 						<Typography variant="body2">{formatCurrency(additionalChargesTotal!)}</Typography>
 					</div>
 				)}
+				<div className="flex justify-between">
+					<Typography variant="body2" color="text.secondary">
+						Total GST{taxType ? ` (${taxType})` : ""}
+					</Typography>
+					<Typography variant="body2">{formatCurrency(totalTax)}</Typography>
+				</div>
 				<Divider sx={{ my: 1 }} />
 				<div className="flex justify-between">
 					<Typography variant="body2" fontWeight={700}>Net Amount</Typography>

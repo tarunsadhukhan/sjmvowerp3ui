@@ -14,6 +14,7 @@ export type AdditionalChargeRow = {
 	rate: string;
 	netAmount: string;
 	remarks: string;
+	taxPct: string;
 	gst?: {
 		igstAmount?: number;
 		igstPercent?: number;
@@ -36,16 +37,67 @@ type Props = {
 	chargeOptions: ChargeOption[];
 	onChange: (charges: AdditionalChargeRow[]) => void;
 	disabled?: boolean;
+	/** Billing-to party state name (for IGST vs CGST/SGST determination) */
+	billingToState?: string;
+	/** Shipping-to party state name */
+	shippingToState?: string;
+	/** Whether India GST is enabled for this company */
+	indiaGst?: boolean;
 };
 
 let nextId = 1;
 const genId = () => `charge_${Date.now()}_${nextId++}`;
+
+/**
+ * Calculate GST split based on billing/shipping state comparison.
+ * Same state → CGST + SGST (split 50/50), different state → IGST.
+ */
+const calculateChargeGst = (
+	netAmount: number,
+	taxPct: number,
+	billingToState: string | undefined,
+	shippingToState: string | undefined,
+	indiaGst: boolean,
+): AdditionalChargeRow["gst"] => {
+	if (!indiaGst || !taxPct || taxPct <= 0 || !netAmount) {
+		return { igstAmount: 0, igstPercent: 0, cgstAmount: 0, cgstPercent: 0, sgstAmount: 0, sgstPercent: 0, gstTotal: 0 };
+	}
+
+	const taxAmount = (netAmount * taxPct) / 100;
+
+	if (billingToState && shippingToState && billingToState === shippingToState) {
+		const halfTax = Number((taxAmount / 2).toFixed(2));
+		const halfPct = Number((taxPct / 2).toFixed(2));
+		return {
+			igstAmount: 0,
+			igstPercent: 0,
+			cgstAmount: halfTax,
+			cgstPercent: halfPct,
+			sgstAmount: halfTax,
+			sgstPercent: halfPct,
+			gstTotal: Number(taxAmount.toFixed(2)),
+		};
+	}
+
+	return {
+		igstAmount: Number(taxAmount.toFixed(2)),
+		igstPercent: taxPct,
+		cgstAmount: 0,
+		cgstPercent: 0,
+		sgstAmount: 0,
+		sgstPercent: 0,
+		gstTotal: Number(taxAmount.toFixed(2)),
+	};
+};
 
 export const AdditionalChargesSection: React.FC<Props> = ({
 	charges,
 	chargeOptions,
 	onChange,
 	disabled = false,
+	billingToState,
+	shippingToState,
+	indiaGst = false,
 }) => {
 	const handleAdd = () => {
 		onChange([
@@ -58,6 +110,7 @@ export const AdditionalChargesSection: React.FC<Props> = ({
 				rate: "",
 				netAmount: "",
 				remarks: "",
+				taxPct: "",
 			},
 		]);
 	};
@@ -66,16 +119,25 @@ export const AdditionalChargesSection: React.FC<Props> = ({
 		onChange(charges.filter((c) => c.id !== id));
 	};
 
+	const recalcGst = (row: AdditionalChargeRow): AdditionalChargeRow => {
+		const netAmt = parseFloat(row.netAmount) || 0;
+		const pct = parseFloat(row.taxPct) || 0;
+		return { ...row, gst: calculateChargeGst(netAmt, pct, billingToState, shippingToState, indiaGst) };
+	};
+
 	const handleFieldChange = (id: string, field: keyof AdditionalChargeRow, value: string) => {
 		onChange(
 			charges.map((c) => {
 				if (c.id !== id) return c;
-				const updated = { ...c, [field]: value };
+				let updated = { ...c, [field]: value };
 
-				// Auto-select charge name when additionalChargesId changes
+				// Auto-select charge name + default tax % when charge type changes
 				if (field === "additionalChargesId") {
 					const opt = chargeOptions.find((o) => o.value === value);
 					updated.chargeName = opt?.label ?? "";
+					if (opt?.defaultValue != null) {
+						updated.taxPct = String(opt.defaultValue);
+					}
 				}
 
 				// Auto-calculate net amount
@@ -85,17 +147,46 @@ export const AdditionalChargesSection: React.FC<Props> = ({
 					updated.netAmount = (qty * rate).toFixed(2);
 				}
 
+				// Recalculate GST when amount or tax % changes
+				if (field === "qty" || field === "rate" || field === "taxPct" || field === "additionalChargesId") {
+					updated = recalcGst(updated);
+				}
+
 				return updated;
 			}),
 		);
 	};
 
+	// Recalculate GST for all charges when billing/shipping state changes
+	const prevBillingRef = React.useRef(billingToState);
+	const prevShippingRef = React.useRef(shippingToState);
+	React.useEffect(() => {
+		if (prevBillingRef.current === billingToState && prevShippingRef.current === shippingToState) return;
+		prevBillingRef.current = billingToState;
+		prevShippingRef.current = shippingToState;
+		if (charges.length === 0) return;
+		onChange(charges.map((c) => recalcGst(c)));
+		// eslint-disable-next-line react-hooks/exhaustive-deps
+	}, [billingToState, shippingToState]);
+
 	const total = charges.reduce((sum, c) => sum + (parseFloat(c.netAmount) || 0), 0);
+	const totalTax = charges.reduce((sum, c) => sum + (c.gst?.gstTotal ?? 0), 0);
 
 	const chargeSelectOptions = React.useMemo(
 		() => chargeOptions.map((opt) => ({ value: opt.value, label: opt.label })),
 		[chargeOptions],
 	);
+
+	const showTax = indiaGst;
+
+	// Grid columns: Charge Type, Qty, Rate, Amount, Tax%, Tax Amt, Remarks, [Remove]
+	const gridCols = showTax
+		? disabled
+			? "2fr 0.7fr 1fr 1fr 0.7fr 1fr 1.5fr"
+			: "2fr 0.7fr 1fr 1fr 0.7fr 1fr 1.5fr 36px"
+		: disabled
+			? "2fr 0.8fr 1fr 1fr 1.5fr"
+			: "2fr 0.8fr 1fr 1fr 1.5fr 36px";
 
 	return (
 		<Paper variant="outlined" sx={{ p: 2 }}>
@@ -113,12 +204,14 @@ export const AdditionalChargesSection: React.FC<Props> = ({
 					{/* Header row */}
 					<div
 						className="grid gap-2 text-xs font-medium text-muted-foreground pb-1 border-b"
-						style={{ gridTemplateColumns: disabled ? "2fr 0.8fr 1fr 1fr 1.5fr" : "2fr 0.8fr 1fr 1fr 1.5fr 36px" }}
+						style={{ gridTemplateColumns: gridCols }}
 					>
 						<span>Charge Type</span>
 						<span className="text-right">Qty</span>
 						<span className="text-right">Rate</span>
 						<span className="text-right">Amount</span>
+						{showTax && <span className="text-right">Tax %</span>}
+						{showTax && <span className="text-right">Tax Amt</span>}
 						<span>Remarks</span>
 						{!disabled && <span />}
 					</div>
@@ -128,7 +221,7 @@ export const AdditionalChargesSection: React.FC<Props> = ({
 						<div
 							key={row.id}
 							className="grid gap-2 items-center py-1 border-b border-border/50"
-							style={{ gridTemplateColumns: disabled ? "2fr 0.8fr 1fr 1fr 1.5fr" : "2fr 0.8fr 1fr 1fr 1.5fr 36px" }}
+							style={{ gridTemplateColumns: gridCols }}
 						>
 							<div>
 								{disabled ? (
@@ -177,6 +270,28 @@ export const AdditionalChargesSection: React.FC<Props> = ({
 									{row.netAmount || "0.00"}
 								</span>
 							</div>
+							{showTax && (
+								<div>
+									{disabled ? (
+										<span className="block text-sm text-right">{row.taxPct || "0"}</span>
+									) : (
+										<Input
+											type="text"
+											value={row.taxPct}
+											onChange={(e) => handleFieldChange(row.id, "taxPct", e.target.value)}
+											placeholder="0"
+											className="h-8 text-sm text-right"
+										/>
+									)}
+								</div>
+							)}
+							{showTax && (
+								<div>
+									<span className="block text-sm text-right font-medium">
+										{(row.gst?.gstTotal ?? 0).toFixed(2)}
+									</span>
+								</div>
+							)}
 							<div>
 								{disabled ? (
 									<span className="block truncate text-sm">{row.remarks || "-"}</span>
@@ -210,17 +325,22 @@ export const AdditionalChargesSection: React.FC<Props> = ({
 					{/* Footer total */}
 					<div
 						className="grid gap-2 pt-2"
-						style={{ gridTemplateColumns: disabled ? "2fr 0.8fr 1fr 1fr 1.5fr" : "2fr 0.8fr 1fr 1fr 1.5fr 36px" }}
+						style={{ gridTemplateColumns: gridCols }}
 					>
-						<div className="col-span-3 text-right">
+						<div className={showTax ? "col-span-3 text-right" : "col-span-3 text-right"}>
 							<Typography variant="body2" fontWeight={600}>Total Additional Charges</Typography>
 						</div>
 						<div className="text-right">
 							<Typography variant="body2" fontWeight={600}>{total.toFixed(2)}</Typography>
 						</div>
-						{/* Empty spacer for remaining columns */}
-					<div />
-					{!disabled && <div />}
+						{showTax && <div />}
+						{showTax && (
+							<div className="text-right">
+								<Typography variant="body2" fontWeight={600}>{totalTax.toFixed(2)}</Typography>
+							</div>
+						)}
+						<div />
+						{!disabled && <div />}
 					</div>
 				</>
 			)}

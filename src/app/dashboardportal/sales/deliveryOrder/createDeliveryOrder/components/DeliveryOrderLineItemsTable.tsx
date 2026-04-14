@@ -4,89 +4,128 @@ import { Input } from "@/components/ui/input";
 import type { TransactionLineColumn } from "@/components/ui/transaction";
 import type { EditableLineItem, Option, UomConversionEntry } from "../types/deliveryOrderTypes";
 import { computeConvertedRate } from "@/utils/uomConversion";
-import { DISCOUNT_TYPE } from "../utils/deliveryOrderConstants";
-
-const DISCOUNT_TYPE_OPTIONS: Option[] = [
-	{ label: "None", value: "" },
-	{ label: "%", value: String(DISCOUNT_TYPE.PERCENTAGE) },
-	{ label: "Amount", value: String(DISCOUNT_TYPE.AMOUNT) },
-];
 
 type UseDOLineItemColumnsParams = {
 	canEdit: boolean;
-	itemGroupOptions: Option[];
-	getItemGroupLabel: (groupId: string) => string;
 	getItemOptions: (groupId: string) => Option[];
-	getItemLabel: (groupId: string, itemId: string, itemCode?: string) => string;
+	getMakeOptions: (groupId: string) => Option[];
 	getUomOptions: (groupId: string, itemId: string) => Option[];
-	getUomLabel: (groupId: string, itemId: string, uomId: string) => string;
-	onFieldChange: (id: string, field: keyof EditableLineItem, value: string | number) => void;
+	getUomLabel: (groupId: string, itemId: string, uomId: string, fallbackName?: string) => string;
+	handleLineFieldChange: (id: string, field: keyof EditableLineItem, value: string | number) => void;
 	invoiceTypeId?: string;
 	getUomConversions?: (groupId: string, itemId: string) => UomConversionEntry[] | undefined;
 };
 
 export const useDOLineItemColumns = ({
 	canEdit,
-	itemGroupOptions,
-	getItemGroupLabel,
 	getItemOptions,
-	getItemLabel,
+	getMakeOptions,
 	getUomOptions,
 	getUomLabel,
-	onFieldChange,
+	handleLineFieldChange,
 	invoiceTypeId,
 	getUomConversions,
 }: UseDOLineItemColumnsParams): TransactionLineColumn<EditableLineItem>[] =>
 	React.useMemo(
 		() => [
 			{
-				id: "itemGroup",
-				header: "Item Group",
+				id: "itemCode",
+				header: "Item Code",
 				width: "1.5fr",
-				minWidth: "163px",
-				renderCell: ({ item }) => {
-					const label = getItemGroupLabel(item.itemGroup);
-					if (!canEdit) {
-						return <span className="block truncate text-sm">{label || "-"}</span>;
-					}
-					const value = itemGroupOptions.find((o) => o.value === item.itemGroup) ?? null;
-					return (
-						<SearchableSelect<Option>
-							options={itemGroupOptions}
-							value={value}
-							onChange={(next) => onFieldChange(item.id, "itemGroup", next?.value ?? "")}
-							getOptionLabel={(o) => o.label}
-							isOptionEqualToValue={(a, b) => a.value === b.value}
-							placeholder="Select group"
-						/>
-					);
-				},
-				getTooltip: ({ item }) => getItemGroupLabel(item.itemGroup) || undefined,
+				minWidth: "140px",
+				renderCell: ({ item }) => (
+					<span className="block truncate text-sm">{item.itemCode || "-"}</span>
+				),
+				getTooltip: ({ item }) => item.itemCode || undefined,
 			},
 			{
 				id: "item",
 				header: "Item",
-				width: "2fr",
-				minWidth: "200px",
+				width: "2.25fr",
+				minWidth: "225px",
 				renderCell: ({ item }) => {
-					const label = getItemLabel(item.itemGroup, item.item, item.itemCode);
+					const options = getItemOptions(item.itemGroup);
+					const label = options.find((o) => o.value === item.item)?.label ?? item.itemName ?? "-";
+					return <span className="block truncate text-sm">{label}</span>;
+				},
+				getTooltip: ({ item }) => {
+					const options = getItemOptions(item.itemGroup);
+					return options.find((o) => o.value === item.item)?.label || item.itemName || undefined;
+				},
+			},
+			{
+				id: "itemMake",
+				header: "Make",
+				width: "1fr",
+				minWidth: "130px",
+				renderCell: ({ item }) => {
+					const options = getMakeOptions(item.itemGroup);
+					const label = options.find((o) => o.value === item.itemMake)?.label ?? item.itemMake ?? "-";
 					if (!canEdit) {
 						return <span className="block truncate text-sm">{label}</span>;
 					}
-					const options = getItemOptions(item.itemGroup);
-					const value = options.find((o) => o.value === item.item) ?? null;
+					const value = options.find((o) => o.value === item.itemMake) ?? null;
 					return (
 						<SearchableSelect<Option>
 							options={options}
 							value={value}
-							onChange={(next) => onFieldChange(item.id, "item", next?.value ?? "")}
+							onChange={(next) => handleLineFieldChange(item.id, "itemMake", next?.value ?? "")}
 							getOptionLabel={(o) => o.label}
 							isOptionEqualToValue={(a, b) => a.value === b.value}
-							placeholder="Select item"
+							placeholder="Make"
 						/>
 					);
 				},
-				getTooltip: ({ item }) => getItemLabel(item.itemGroup, item.item, item.itemCode) || undefined,
+			},
+			{
+				id: "quantity",
+				header: "Qty",
+				width: "0.8fr",
+				minWidth: "80px",
+				renderCell: ({ item }) =>
+					canEdit ? (
+						<Input
+							type="text"
+							value={item.quantity}
+							onChange={(e) => handleLineFieldChange(item.id, "quantity", e.target.value)}
+							placeholder="0"
+							className="h-8 text-sm"
+						/>
+					) : (
+						<span className="block truncate text-sm">{item.quantity || "-"}</span>
+					),
+				getTooltip: ({ item }) => (item.quantity ? `Quantity: ${item.quantity}` : undefined),
+			},
+			{
+				id: "uom",
+				header: "UOM",
+				width: "0.6fr",
+				minWidth: "80px",
+				renderCell: ({ item }) => {
+					const options = getUomOptions(item.itemGroup, item.item);
+					const label = getUomLabel(item.itemGroup, item.item, item.uom, item.uomName);
+					if (!canEdit) {
+						return <span className="block truncate text-sm">{label || "-"}</span>;
+					}
+					let value = options.find((o) => o.value === item.uom) ?? null;
+					if (!value && item.uom) {
+						value = { value: item.uom, label };
+					}
+					const resolvedOptions = value && !options.some((o) => o.value === item.uom)
+						? [value, ...options]
+						: options;
+					return (
+						<SearchableSelect<Option>
+							options={resolvedOptions}
+							value={value}
+							onChange={(next) => handleLineFieldChange(item.id, "uom", next?.value ?? "")}
+							getOptionLabel={(o) => o.label}
+							isOptionEqualToValue={(a, b) => a.value === b.value}
+							placeholder="UOM"
+						/>
+					);
+				},
+				getTooltip: ({ item }) => getUomLabel(item.itemGroup, item.item, item.uom, item.uomName) || undefined,
 			},
 			{
 				id: "rate",
@@ -105,7 +144,7 @@ export const useDOLineItemColumns = ({
 								<Input
 									type="text"
 									value={item.rate}
-									onChange={(e) => onFieldChange(item.id, "rate", e.target.value)}
+									onChange={(e) => handleLineFieldChange(item.id, "rate", e.target.value)}
 									placeholder="0.00"
 									className="h-8 text-sm"
 								/>
@@ -142,118 +181,36 @@ export const useDOLineItemColumns = ({
 				},
 			},
 			{
-				id: "quantity",
-				header: "Quantity",
-				width: "0.8fr",
-				minWidth: "80px",
-				renderCell: ({ item }) =>
-					canEdit ? (
-						<Input
-							type="text"
-							value={item.quantity}
-							onChange={(e) => onFieldChange(item.id, "quantity", e.target.value)}
-							placeholder="0"
-							className="h-8 text-sm"
-						/>
-					) : (
-						<span className="block truncate text-sm">{item.quantity || "-"}</span>
-					),
-				getTooltip: ({ item }) => (item.quantity ? `Quantity: ${item.quantity}` : undefined),
-			},
-			{
-				id: "uom",
-				header: "Unit",
-				width: "0.6fr",
-				minWidth: "80px",
-				renderCell: ({ item }) => {
-					const options = getUomOptions(item.itemGroup, item.item);
-					const label = getUomLabel(item.itemGroup, item.item, item.uom);
-					if (!canEdit) {
-						return <span className="block truncate text-sm">{label || "-"}</span>;
-					}
-					const value = options.find((o) => o.value === item.uom) ?? null;
-					return (
-						<SearchableSelect<Option>
-							options={options}
-							value={value}
-							onChange={(next) => onFieldChange(item.id, "uom", next?.value ?? "")}
-							getOptionLabel={(o) => o.label}
-							isOptionEqualToValue={(a, b) => a.value === b.value}
-							placeholder="UOM"
-						/>
-					);
-				},
-				getTooltip: ({ item }) => getUomLabel(item.itemGroup, item.item, item.uom) || undefined,
-			},
-			{
-				id: "discountType",
-				header: "Disc. Type",
-				width: "0.7fr",
-				minWidth: "90px",
-				renderCell: ({ item }) => {
-					const currentVal = item.discountType != null ? String(item.discountType) : "";
-					const label = DISCOUNT_TYPE_OPTIONS.find((o) => o.value === currentVal)?.label || "-";
-					if (!canEdit) {
-						return <span className="block truncate text-sm">{label}</span>;
-					}
-					const value = DISCOUNT_TYPE_OPTIONS.find((o) => o.value === currentVal) ?? DISCOUNT_TYPE_OPTIONS[0];
-					return (
-						<SearchableSelect<Option>
-							options={DISCOUNT_TYPE_OPTIONS}
-							value={value}
-							onChange={(next) => onFieldChange(item.id, "discountType", next?.value ?? "")}
-							getOptionLabel={(o) => o.label}
-							isOptionEqualToValue={(a, b) => a.value === b.value}
-							placeholder="Type"
-						/>
-					);
-				},
-				getTooltip: ({ item }) => {
-					const currentVal = item.discountType != null ? String(item.discountType) : "";
-					const label = DISCOUNT_TYPE_OPTIONS.find((o) => o.value === currentVal)?.label;
-					return label && label !== "None" ? `Discount Type: ${label}` : undefined;
-				},
-			},
-			{
-				id: "discountedRate",
-				header: "Disc. Rate",
-				width: "0.7fr",
-				minWidth: "80px",
-				renderCell: ({ item }) => {
-					const hasDiscountType = item.discountType != null && item.discountType !== 0;
-					if (!canEdit) {
-						return <span className="block truncate text-sm">{item.discountedRate?.toFixed(2) || "-"}</span>;
-					}
-					return (
-						<Input
-							type="text"
-							value={item.discountedRate ?? ""}
-							onChange={(e) => onFieldChange(item.id, "discountedRate", e.target.value)}
-							placeholder="0"
-							className="h-8 text-sm"
-							disabled={!hasDiscountType}
-						/>
-					);
-				},
-				getTooltip: ({ item }) => (item.discountedRate ? `Discounted Rate: ${item.discountedRate.toFixed(2)}` : undefined),
-			},
-			{
-				id: "discountAmount",
-				header: "Disc. Amt",
-				width: "0.7fr",
-				minWidth: "80px",
-				renderCell: ({ item }) => (
-					<span className="block truncate text-sm">{item.discountAmount?.toFixed(2) || "0.00"}</span>
-				),
-				getTooltip: ({ item }) => (item.discountAmount ? `Discount Amount: ${item.discountAmount.toFixed(2)}` : undefined),
-			},
-			{
-				id: "netAmount",
+				id: "amount",
 				header: "Amount",
 				width: "0.8fr",
 				minWidth: "90px",
 				renderCell: ({ item }) => <span className="block truncate text-sm font-medium">{item.netAmount?.toFixed(2) || "0.00"}</span>,
 				getTooltip: ({ item }) => (item.netAmount ? `Amount: ${item.netAmount.toFixed(2)}` : undefined),
+			},
+			{
+				id: "taxAmount",
+				header: "GST",
+				width: "0.7fr",
+				minWidth: "80px",
+				renderCell: ({ item }) => {
+					const taxAmount = (item.igstAmount ?? 0) + (item.cgstAmount ?? 0) + (item.sgstAmount ?? 0);
+					const hasTax = taxAmount > 0;
+					if (item.taxPercentage != null && hasTax) {
+						return <span className="block truncate text-sm">{item.taxPercentage}% = {taxAmount.toFixed(2)}</span>;
+					}
+					if (item.taxPercentage != null) {
+						return <span className="block truncate text-sm">{item.taxPercentage}%</span>;
+					}
+					return <span className="block truncate text-sm">{hasTax ? taxAmount.toFixed(2) : "-"}</span>;
+				},
+				getTooltip: ({ item }) => {
+					const taxAmount = (item.igstAmount ?? 0) + (item.cgstAmount ?? 0) + (item.sgstAmount ?? 0);
+					const parts: string[] = [];
+					if (item.taxPercentage != null) parts.push(`Tax: ${item.taxPercentage}%`);
+					if (taxAmount > 0) parts.push(`GST: ${taxAmount.toFixed(2)}`);
+					return parts.length ? parts.join("\n") : undefined;
+				},
 			},
 			{
 				id: "remarks",
@@ -265,7 +222,7 @@ export const useDOLineItemColumns = ({
 						<Input
 							type="text"
 							value={item.remarks}
-							onChange={(e) => onFieldChange(item.id, "remarks", e.target.value)}
+							onChange={(e) => handleLineFieldChange(item.id, "remarks", e.target.value)}
 							placeholder=""
 							className="h-8 text-sm"
 						/>
@@ -275,7 +232,7 @@ export const useDOLineItemColumns = ({
 				getTooltip: ({ item }) => (item.remarks ? item.remarks : undefined),
 			},
 		],
-		[canEdit, itemGroupOptions, getItemGroupLabel, getItemOptions, getItemLabel, getUomOptions, getUomLabel, onFieldChange, invoiceTypeId, getUomConversions],
+		[canEdit, getItemOptions, getMakeOptions, getUomOptions, getUomLabel, handleLineFieldChange, invoiceTypeId, getUomConversions],
 	);
 
 export default useDOLineItemColumns;

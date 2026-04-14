@@ -227,7 +227,8 @@ const IndentPreview: React.FC<IndentPreviewProps> = ({ header, items, remarks, o
                 {[
                   "Sr No",
                   "Department",
-                  "Item",
+                  "Item Code",
+                  "Item Name",
                   "Make",
                   "Qty",
                   "UOM",
@@ -253,15 +254,11 @@ const IndentPreview: React.FC<IndentPreviewProps> = ({ header, items, remarks, o
                       <Box component="td" sx={{ border: "1px solid", borderColor: "divider", p: 1, fontSize: 12 }}>
                         {item.department || "-"}
                       </Box>
+                      <Box component="td" sx={{ border: "1px solid", borderColor: "divider", p: 1, fontSize: 12, fontFamily: "monospace" }}>
+                        {item.itemCode || "-"}
+                      </Box>
                       <Box component="td" sx={{ border: "1px solid", borderColor: "divider", p: 1, fontSize: 12 }}>
-                        {item.itemCode && item.itemCode !== "-" ? (
-                          <>
-                            <span style={{ fontFamily: "monospace" }}>{item.itemCode}</span>
-                            {item.itemName && item.itemName !== "-" ? ` — ${item.itemName}` : ""}
-                          </>
-                        ) : (
-                          item.itemName || "-"
-                        )}
+                        {item.itemName || "-"}
                       </Box>
                       <Box component="td" sx={{ border: "1px solid", borderColor: "divider", p: 1, fontSize: 12 }}>
                         {item.itemMake || "-"}
@@ -279,7 +276,7 @@ const IndentPreview: React.FC<IndentPreviewProps> = ({ header, items, remarks, o
                   ))
               ) : (
                 <Box component="tr">
-                  <Box component="td" colSpan={7} sx={{ border: "1px solid", borderColor: "divider", p: 2, fontSize: 12, textAlign: "center" }}>
+                  <Box component="td" colSpan={8} sx={{ border: "1px solid", borderColor: "divider", p: 2, fontSize: 12, textAlign: "center" }}>
                     No line items captured yet.
                   </Box>
                 </Box>

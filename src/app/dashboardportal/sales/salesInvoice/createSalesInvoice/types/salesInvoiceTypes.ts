@@ -64,6 +64,8 @@ export type ApprovedSalesOrderRecord = {
 	billingToId?: number;
 	shippingToId?: number;
 	transporterId?: number;
+	buyerOrderNo?: string;
+	buyerOrderDate?: string;
 };
 
 export type InvoiceTypeRecord = {
@@ -189,6 +191,22 @@ export type InvoiceSetupData = {
 	}>;
 	bankDetails?: BankDetailRecord[];
 	company?: CompanyRecord;
+	additionalChargesMaster: AdditionalChargeMasterRecord[];
+	transportChargeRates: TransportChargeRateRecord[];
+};
+
+export type AdditionalChargeMasterRecord = {
+	additional_charges_id: number;
+	additional_charges_name: string;
+	default_value: number | null;
+};
+
+export type TransportChargeRateRecord = {
+	id: number;
+	mode_of_transport: string;
+	additional_charges_id: number;
+	rate_per_100pcs: number;
+	co_id: number | null;
 };
 
 export type CustomerBranchRecordRaw = {
@@ -266,6 +284,8 @@ export type ApprovedSalesOrderRecordRaw = {
 	billing_to_id?: number;
 	shipping_to_id?: number;
 	transporter_id?: number;
+	buyer_order_no?: string;
+	buyer_order_date?: string;
 };
 
 export type InvoiceTypeRecordRaw = {

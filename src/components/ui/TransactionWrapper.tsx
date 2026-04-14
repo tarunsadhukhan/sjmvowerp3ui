@@ -38,6 +38,8 @@ type TransactionWrapperProps<TLineItem = unknown> = {
   className?: string;
   contentClassName?: string;
   lineItems?: TransactionLineItemsProps<TLineItem>;
+  /** When true, primary action buttons render after the footer instead of after line items */
+  actionsAfterFooter?: boolean;
 };
 
 const renderActionButton = (action: TransactionAction, key: string, defaultVariant: TransactionAction["variant"]) => {
@@ -75,6 +77,7 @@ function TransactionWrapper<TLineItem = unknown>({
   className,
   contentClassName,
   lineItems,
+  actionsAfterFooter,
 }: TransactionWrapperProps<TLineItem>) {
   return (
     <Box className={`min-h-screen bg-gray-50 p-6 md:p-8 ${className ?? ""}`}>
@@ -133,7 +136,7 @@ function TransactionWrapper<TLineItem = unknown>({
             {children}
           </Box>
           {lineItems ? <TransactionLineItems {...lineItems} /> : null}
-          {primaryActions && primaryActions.length > 0 ? (
+          {!actionsAfterFooter && primaryActions && primaryActions.length > 0 ? (
             <Stack direction="row" spacing={1.5} flexWrap="wrap" justifyContent="flex-end" sx={{ pt: 2 }}>
               {primaryActions.map((action, index) => renderActionButton(action, `primary-${index}`, action.variant ?? "default"))}
             </Stack>
@@ -145,6 +148,12 @@ function TransactionWrapper<TLineItem = unknown>({
             <Divider sx={{ mb: 2 }} />
             {footer}
           </Box>
+        ) : null}
+
+        {actionsAfterFooter && primaryActions && primaryActions.length > 0 ? (
+          <Stack direction="row" spacing={1.5} flexWrap="wrap" justifyContent="flex-end" sx={{ pt: 3 }}>
+            {primaryActions.map((action, index) => renderActionButton(action, `primary-${index}`, action.variant ?? "default"))}
+          </Stack>
         ) : null}
 
         {preview ? (

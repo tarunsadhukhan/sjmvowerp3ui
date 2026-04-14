@@ -60,6 +60,8 @@ export type SalesOrderLine = {
   hessian?: SalesOrderLineHessian | null;
   juteDtl?: SalesOrderLineJuteDtl | null;
   govtskgDtl?: SalesOrderLineGovtSkgDtl | null;
+  full_item_code?: string;
+  fullItemCode?: string;
 };
 
 export type ApprovalActionPermissions = {
@@ -98,6 +100,8 @@ export type SalesOrderDetails = {
   internalNote?: string | null;
   deliveryTerms?: string | null;
   paymentTerms?: string | null;
+  buyerOrderNo?: string | null;
+  buyerOrderDate?: string | null;
   deliveryDays?: number | null;
   freightCharges?: number | null;
   grossAmount?: number | null;
@@ -165,6 +169,8 @@ export type CreateSalesOrderRequest = {
   expiry_date?: string | null;
   delivery_terms?: string | null;
   payment_terms?: string | null;
+  buyer_order_no?: string | null;
+  buyer_order_date?: string | null;
   delivery_days?: number | null;
   freight_charges?: number | null;
   footer_note?: string | null;
@@ -232,6 +238,23 @@ export type CreateSalesOrderRequest = {
     container_no?: string;
     customer_ref_no?: string;
   };
+  additional_charges?: Array<{
+    additional_charges_id: string;
+    charge_name?: string;
+    qty: number;
+    rate: number;
+    net_amount: number;
+    remarks?: string;
+    gst?: {
+      igst_amount?: number;
+      igst_percent?: number;
+      cgst_amount?: number;
+      cgst_percent?: number;
+      sgst_amount?: number;
+      sgst_percent?: number;
+      gst_total?: number;
+    };
+  }>;
 };
 
 export type CreateSalesOrderResponse = {
@@ -370,6 +393,7 @@ export async function updateSalesOrder(
     jute?: CreateSalesOrderRequest["jute"];
     govtskg?: CreateSalesOrderRequest["govtskg"];
     juteyarn?: CreateSalesOrderRequest["juteyarn"];
+    additional_charges?: CreateSalesOrderRequest["additional_charges"];
   }
 ): Promise<{ message: string; sales_order_id?: number }> {
   if (!payload.id) {
@@ -392,6 +416,8 @@ export async function updateSalesOrder(
     expiry_date: payload.salesOrderExpiryDate ?? undefined,
     delivery_terms: payload.deliveryTerms ?? undefined,
     payment_terms: payload.paymentTerms ?? undefined,
+    buyer_order_no: payload.buyerOrderNo ?? undefined,
+    buyer_order_date: payload.buyerOrderDate ?? undefined,
     delivery_days: payload.deliveryDays ?? undefined,
     freight_charges: payload.freightCharges ?? undefined,
     footer_note: payload.footerNote ?? undefined,
@@ -406,6 +432,7 @@ export async function updateSalesOrder(
     jute: payload.jute,
     govtskg: payload.govtskg,
     juteyarn: payload.juteyarn,
+    additional_charges: payload.additional_charges,
   };
 
   const { data, error } = await fetchWithCookie<{

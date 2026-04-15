@@ -18,6 +18,7 @@ import {
 	getInwardById,
 	createInward,
 	updateInward,
+	cancelInward,
 	type InwardDetails,
 } from "@/utils/inwardService";
 import { toast } from "@/hooks/use-toast";
@@ -718,10 +719,50 @@ function InwardTransactionPageContent() {
 		];
 	}, [mode, pageError, setupError, saving, lineItemsValid, hasRowErrors, setupLoading, formRef]);
 
+	// Cancel inward handler — only available in edit mode for non-inspected, active inwards
+	const [cancelling, setCancelling] = React.useState(false);
+	const handleCancelInward = React.useCallback(async () => {
+		if (!requestedId) return;
+		const confirmed = typeof window !== "undefined"
+			? window.confirm("Cancel this inward? This cannot be undone.")
+			: false;
+		if (!confirmed) return;
+
+		setCancelling(true);
+		try {
+			const result = await cancelInward(requestedId);
+			toast({
+				title: result?.message ?? "Inward cancelled",
+			});
+			router.push("/dashboardportal/procurement/inward");
+		} catch (error) {
+			toast({
+				variant: "destructive",
+				title: "Unable to cancel inward",
+				description: error instanceof Error ? error.message : "Please try again.",
+			});
+		} finally {
+			setCancelling(false);
+		}
+	}, [requestedId, router]);
+
 	// Secondary actions
 	const secondaryActions = React.useMemo<TransactionAction[] | undefined>(() => {
-		return undefined;
-	}, []);
+		if (mode !== "edit" || !requestedId) return undefined;
+		const inspectionDone = inwardDetails?.inspection_check === true || inwardDetails?.inspection_check === 1;
+		const isActive = inwardDetails?.active === undefined || inwardDetails?.active === null
+			|| inwardDetails?.active === true || inwardDetails?.active === 1;
+		if (inspectionDone || !isActive) return undefined;
+		return [
+			{
+				label: "Cancel Inward",
+				variant: "destructive",
+				onClick: handleCancelInward,
+				disabled: cancelling || saving,
+				loading: cancelling,
+			},
+		];
+	}, [mode, requestedId, inwardDetails?.inspection_check, inwardDetails?.active, handleCancelInward, cancelling, saving]);
 
 	// Alerts
 	const alerts = pageError || setupError ? (

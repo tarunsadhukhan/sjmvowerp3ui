@@ -44,6 +44,8 @@ export type InwardDetails = {
 	remarks?: string;
 	updatedBy?: string;
 	updatedAt?: string;
+	inspection_check?: boolean | number | null;
+	active?: boolean | number | null;
 	lines: InwardLine[];
 };
 
@@ -203,6 +205,20 @@ export async function createInward(payload: CreateInwardRequest): Promise<Create
 	}
 
 	return data ?? { message: "Inward created successfully." };
+}
+
+export async function cancelInward(inwardId: number | string): Promise<{ message?: string }> {
+	const { data, error } = await fetchWithCookie<{ message?: string }>(
+		apiRoutesPortalMasters.INWARD_CANCEL,
+		"POST",
+		{ inward_id: typeof inwardId === "string" ? Number(inwardId) : inwardId }
+	);
+
+	if (error) {
+		throw new Error(error);
+	}
+
+	return data ?? { message: "Inward cancelled successfully." };
 }
 
 export async function getInwardById(id: string, coId?: string, menuId?: string): Promise<InwardDetails> {

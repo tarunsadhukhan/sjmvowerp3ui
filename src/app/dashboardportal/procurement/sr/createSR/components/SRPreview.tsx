@@ -151,8 +151,8 @@ export const SRPreview: React.FC<SRPreviewProps> = ({
 				>
 					<FieldRow label="SR No" value={<Typography component="span" fontWeight={600} color="primary">{header?.sr_no || header?.sr_status_name || "Draft"}</Typography>} />
 					<FieldRow label="SR Date" value={formatDate(srDate)} />
-					<FieldRow label="GRN No" value={header?.inward_no} />
-					<FieldRow label="GRN Date" value={formatDate(header?.inward_date)} />
+					<FieldRow label="Inward No" value={header?.inward_no} />
+					<FieldRow label="Inward Date" value={formatDate(header?.inward_date)} />
 					<FieldRow label="Branch" value={header?.branch_name} />
 					<FieldRow label="Supplier" value={header?.supplier_name} />
 					<FieldRow label="Challan No" value={header?.challan_no} />

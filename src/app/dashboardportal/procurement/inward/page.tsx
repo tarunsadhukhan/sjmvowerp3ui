@@ -125,7 +125,7 @@ export default function InwardIndexPage() {
 		},
 		{
 			field: "status",
-			headerName: "GRN Status",
+			headerName: "Inward Status",
 			minWidth: 130,
 			renderCell: (params: GridRenderCellParams<InwardRow, string>) => (
 				<Chip

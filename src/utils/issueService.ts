@@ -224,8 +224,9 @@ export const getIssueById = async (
 			item_id: line.item_id,
 			itemName: line.item_name,
 			item_name: line.item_name,
-			itemCode: line.item_code,
+			itemCode: line.full_item_code ?? line.item_code,
 			item_code: line.item_code,
+			full_item_code: line.full_item_code,
 			// Handle both item_grp_id and item_group_id variants
 			itemGroupId: line.item_grp_id ?? line.item_group_id,
 			item_grp_id: line.item_grp_id ?? line.item_group_id,

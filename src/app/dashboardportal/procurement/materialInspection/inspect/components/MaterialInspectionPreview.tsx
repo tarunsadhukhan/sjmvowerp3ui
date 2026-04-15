@@ -109,14 +109,14 @@ const MaterialInspectionPreview: React.FC<MaterialInspectionPreviewProps> = ({ h
 							Material Inspection
 						</Typography>
 						<Typography variant="body2" color="text.secondary">
-							GRN: {header.inward_no || "-"}
+							Inward: {header.inward_no || "-"}
 						</Typography>
 					</Box>
 
 					<Stack spacing={0.5} alignItems="flex-end">
 						<Stack direction="row" spacing={0.5} alignItems="center">
 							<Typography variant="caption" color="text.secondary" sx={{ fontSize: "0.75rem" }}>
-								GRN Date:
+								Inward Date:
 							</Typography>
 							<Typography variant="body2" sx={{ fontWeight: 400, fontSize: "0.875rem" }}>
 								{formatDate(header.inward_date)}

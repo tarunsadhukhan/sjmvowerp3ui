@@ -89,7 +89,7 @@ export default function SRIndexPage() {
 	const columns = React.useMemo<GridColDef[]>(() => [
 		{
 			field: "inward_no",
-			headerName: "GRN No",
+			headerName: "Inward No",
 			flex: 1,
 			minWidth: 140,
 			renderCell: (params: GridRenderCellParams<SRRow, string>) => (
@@ -100,7 +100,7 @@ export default function SRIndexPage() {
 		},
 		{
 			field: "inward_date",
-			headerName: "GRN Date",
+			headerName: "Inward Date",
 			minWidth: 120,
 			renderCell: (params: GridRenderCellParams<SRRow, string>) => (
 				<Typography component="span" variant="body2">
@@ -271,7 +271,7 @@ export default function SRIndexPage() {
 			search={{
 				value: searchValue,
 				onChange: handleSearchChange,
-				placeholder: "Search by GRN number, SR number, supplier, or branch",
+				placeholder: "Search by Inward number, SR number, supplier, or branch",
 				debounceDelayMs: 1000,
 			}}
 			onEdit={handleEdit}

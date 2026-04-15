@@ -426,6 +426,7 @@ const apiRoutesPortalMasters = {
     INWARD_CREATE: `${API_URL}/procurementInward/create_inward`,
     INWARD_UPDATE: `${API_URL}/procurementInward/update_inward`,
     GET_INWARD_BY_ID: `${API_URL}/procurementInward/get_inward_by_id`,
+    INWARD_CANCEL: `${API_URL}/procurementInward/cancel_inward`,
 
     // Material Inspection endpoints
     INSPECTION_PENDING_LIST: `${API_URL}/materialInspection/get_pending_inspection_list`,

@@ -304,7 +304,7 @@ function SRTransactionPageContent() {
 			primaryActions={primaryActions}
 			lineItems={{
 				title: "Line Items",
-				subtitle: "Items from inspected GRN",
+				subtitle: "Items from inspected Inward",
 				items: lineItems,
 				getItemId: (item: SRLineItem) => item.id,
 				canEdit: canEdit && !isViewMode,

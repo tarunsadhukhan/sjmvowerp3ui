@@ -488,7 +488,7 @@ function MaterialInspectionEditPageContent() {
 				>
 					<Box>
 						<Typography variant="caption" color="text.secondary">
-							GRN Number
+							Inward Number
 						</Typography>
 						<Typography variant="body1" fontWeight={600} color="primary">
 							{header?.inward_no || "-"}
@@ -496,7 +496,7 @@ function MaterialInspectionEditPageContent() {
 					</Box>
 					<Box>
 						<Typography variant="caption" color="text.secondary">
-							GRN Date
+							Inward Date
 						</Typography>
 						<Typography variant="body1">{formatDate(header?.inward_date)}</Typography>
 					</Box>

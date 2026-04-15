@@ -52,20 +52,34 @@ export const useIssueLineItemColumns = ({
 					item.grnNo ? `GRN: ${item.grnNo}, Inward ID: ${item.inwardDtlId}` : undefined,
 			},
 
-			// Item (read-only - from inventory)
+			// Item Code (read-only - from inventory, hierarchical full_item_code)
 			{
-				id: "item",
-				header: "Item",
-				width: "1.8fr",
+				id: "itemCode",
+				header: "Item Code",
+				width: "0.9fr",
 				renderCell: ({ item }) => (
-					<Tooltip title={`${item.itemCode} — ${item.itemName}`} placement="top">
-						<span className="text-xs truncate block">
-							{item.itemCode ? `${item.itemCode} — ${item.itemName}` : item.itemName || "-"}
+					<Tooltip title={item.itemCode || ""} placement="top">
+						<span className="text-xs font-mono truncate block">
+							{item.itemCode || "-"}
 						</span>
 					</Tooltip>
 				),
-				getTooltip: ({ item }) =>
-					item.itemName ? `${item.itemCode} — ${item.itemName}` : undefined,
+				getTooltip: ({ item }) => item.itemCode || undefined,
+			},
+
+			// Item Name (read-only - from inventory)
+			{
+				id: "itemName",
+				header: "Item Name",
+				width: "1.2fr",
+				renderCell: ({ item }) => (
+					<Tooltip title={item.itemName || ""} placement="top">
+						<span className="text-xs truncate block">
+							{item.itemName || "-"}
+						</span>
+					</Tooltip>
+				),
+				getTooltip: ({ item }) => item.itemName || undefined,
 			},
 
 			// UOM (read-only - from inventory)

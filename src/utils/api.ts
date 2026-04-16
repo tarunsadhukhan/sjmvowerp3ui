@@ -154,7 +154,8 @@ const apiRoutesPortalMasters = {
     MECHINE_MASTER_CREATE : `${API_URL}/mechMaster/mechine_master_create`,
     MECHINE_MASTER_EDIT_SETUP : `${API_URL}/mechMaster/mechine_master_edit_setup`,
     MECHINE_MASTER_EDIT : `${API_URL}/mechMaster/mechine_master_edit`,
-    MECHINE_MASTER_VIEW : `${API_URL}/mechMaster/mechine_master_view`
+    MECHINE_MASTER_VIEW : `${API_URL}/mechMaster/mechine_master_view`,
+    MECHINE_MASTER_BY_ID : `${API_URL}/mechMaster/mechine_master_by_id`
     ,
     PROJECT_MASTER_TABLE: `${API_URL}/projectMaster/project_master_table`,
     PROJECT_MASTER_CREATE_SETUP: `${API_URL}/projectMaster/project_master_create_setup`,
@@ -487,11 +488,15 @@ const apiRoutesPortalMasters = {
     HRMS_EMPLOYEE_BY_ID: `${API_URL}/hrms/employee_by_id`,
     HRMS_EMPLOYEE_CREATE_SETUP: `${API_URL}/hrms/employee_create_setup`,
     HRMS_DESIGNATIONS_BY_BRANCH: `${API_URL}/hrms/get_designations_by_branch`,
+    HRMS_DESIGNATIONS_BY_SUB_DEPT: `${API_URL}/hrms/get_designations_by_sub_dept`,
     HRMS_EMPLOYEE_CREATE: `${API_URL}/hrms/employee_create`,
     HRMS_EMPLOYEE_SECTION_SAVE: `${API_URL}/hrms/employee_section_save`,
     HRMS_EMPLOYEE_PROGRESS: `${API_URL}/hrms/employee_progress`,
     HRMS_EMPLOYEE_PHOTO_UPLOAD: `${API_URL}/hrms/employee_photo_upload`,
     HRMS_EMPLOYEE_PHOTO: `${API_URL}/hrms/employee_photo`,
+    HRMS_EMPLOYEE_LOOKUP_BY_CODE: `${API_URL}/hrms/employee_lookup_by_code`,
+    HRMS_CHECK_EMP_CODE_DUPLICATE: `${API_URL}/hrms/check_emp_code_duplicate`,
+    HRMS_EMPLOYEE_STATUS_UPDATE: `${API_URL}/hrms/employee_status_update`,
 
     // HRMS Pay Scheme endpoints
     HRMS_PAY_SCHEME_LIST: `${API_URL}/hrms/pay_scheme_list`,
@@ -500,25 +505,41 @@ const apiRoutesPortalMasters = {
     HRMS_PAY_SCHEME_CREATE: `${API_URL}/hrms/pay_scheme_create`,
     HRMS_PAY_SCHEME_UPDATE: `${API_URL}/hrms/pay_scheme_update`,
 
+    // HRMS Pay Component endpoints
+    HRMS_PAY_COMPONENT_LIST: `${API_URL}/hrms/pay_component_list`,
+    HRMS_PAY_COMPONENT_BY_ID: `${API_URL}/hrms/pay_component_by_id`,
+    HRMS_PAY_COMPONENT_CREATE_SETUP: `${API_URL}/hrms/pay_component_create_setup`,
+    HRMS_PAY_COMPONENT_CREATE: `${API_URL}/hrms/pay_component_create`,
+    HRMS_PAY_COMPONENT_UPDATE: `${API_URL}/hrms/pay_component_update`,
+
     // HRMS Pay Param / Period endpoints
     HRMS_PAY_PARAM_LIST: `${API_URL}/hrms/pay_param_list`,
     HRMS_PAY_PARAM_CREATE_SETUP: `${API_URL}/hrms/pay_param_create_setup`,
     HRMS_PAY_PARAM_CREATE: `${API_URL}/hrms/pay_param_create`,
     HRMS_PAY_PARAM_UPDATE: `${API_URL}/hrms/pay_param_update`,
 
+    // HRMS Pay Register endpoints
+    HRMS_PAY_REGISTER_LIST: `${API_URL}/hrms/pay_register_list`,
+    HRMS_PAY_REGISTER_BY_ID: `${API_URL}/hrms/pay_register_by_id`,
+    HRMS_PAY_REGISTER_CREATE_SETUP: `${API_URL}/hrms/pay_register_create_setup`,
+    HRMS_PAY_REGISTER_CREATE: `${API_URL}/hrms/pay_register_create`,
+    HRMS_PAY_REGISTER_UPDATE: `${API_URL}/hrms/pay_register_update`,
+    HRMS_PAY_REGISTER_SALARY: `${API_URL}/hrms/pay_register_salary`,
+    HRMS_PAY_REGISTER_PROCESS: `${API_URL}/hrms/pay_register_process`,
+
     // Designation Master endpoints
-    DESIGNATION_TABLE: `${API_URL}/designationMaster/get_designation_table`,
-    DESIGNATION_BY_ID: `${API_URL}/designationMaster/get_designation_by_id`,
-    DESIGNATION_CREATE_SETUP: `${API_URL}/designationMaster/designation_create_setup`,
-    DESIGNATION_CREATE: `${API_URL}/designationMaster/designation_create`,
-    DESIGNATION_EDIT: `${API_URL}/designationMaster/designation_edit`,
+    DESIGNATION_TABLE: `${API_URL}/hrmsMasters/get_designation_table`,
+    DESIGNATION_BY_ID: `${API_URL}/hrmsMasters/get_designation_by_id`,
+    DESIGNATION_CREATE_SETUP: `${API_URL}/hrmsMasters/designation_create_setup`,
+    DESIGNATION_CREATE: `${API_URL}/hrmsMasters/designation_create`,
+    DESIGNATION_EDIT: `${API_URL}/hrmsMasters/designation_edit`,
 
     // Worker Category Master endpoints
-    CATEGORY_TABLE: `${API_URL}/categoryMaster/get_category_table`,
-    CATEGORY_BY_ID: `${API_URL}/categoryMaster/get_category_by_id`,
-    CATEGORY_CREATE_SETUP: `${API_URL}/categoryMaster/category_create_setup`,
-    CATEGORY_CREATE: `${API_URL}/categoryMaster/category_create`,
-    CATEGORY_EDIT: `${API_URL}/categoryMaster/category_edit`,
+    CATEGORY_TABLE: `${API_URL}/hrmsMasters/get_category_table`,
+    CATEGORY_BY_ID: `${API_URL}/hrmsMasters/get_category_by_id`,
+    CATEGORY_CREATE_SETUP: `${API_URL}/hrmsMasters/category_create_setup`,
+    CATEGORY_CREATE: `${API_URL}/hrmsMasters/category_create`,
+    CATEGORY_EDIT: `${API_URL}/hrmsMasters/category_edit`,
 
     // Contractor Master endpoints
     CONTRACTOR_TABLE: `${API_URL}/contractorMaster/get_contractor_table`,
@@ -526,6 +547,33 @@ const apiRoutesPortalMasters = {
     CONTRACTOR_CREATE_SETUP: `${API_URL}/contractorMaster/contractor_create_setup`,
     CONTRACTOR_CREATE: `${API_URL}/contractorMaster/contractor_create`,
     CONTRACTOR_EDIT: `${API_URL}/contractorMaster/contractor_edit`,
+
+    // Shift Master endpoints
+    SHIFT_TABLE: `${API_URL}/hrmsMasters/get_shift_table`,
+    SHIFT_BY_ID: `${API_URL}/hrmsMasters/get_shift_by_id`,
+    SHIFT_CREATE_SETUP: `${API_URL}/hrmsMasters/shift_create_setup`,
+    SHIFT_CREATE: `${API_URL}/hrmsMasters/shift_create`,
+    SHIFT_EDIT: `${API_URL}/hrmsMasters/shift_edit`,
+
+    // Spell Master endpoints
+    SPELL_TABLE: `${API_URL}/hrmsMasters/get_spell_table`,
+    SPELL_BY_ID: `${API_URL}/hrmsMasters/get_spell_by_id`,
+    SPELL_CREATE_SETUP: `${API_URL}/hrmsMasters/spell_create_setup`,
+    SPELL_CREATE: `${API_URL}/hrmsMasters/spell_create`,
+    SPELL_EDIT: `${API_URL}/hrmsMasters/spell_edit`,
+
+    // Machine Type Master endpoints
+    MACHINE_TYPE_TABLE: `${API_URL}/machineTypeMaster/get_machine_type_table`,
+    MACHINE_TYPE_BY_ID: `${API_URL}/machineTypeMaster/get_machine_type_by_id`,
+    MACHINE_TYPE_CREATE: `${API_URL}/machineTypeMaster/machine_type_create`,
+    MACHINE_TYPE_EDIT: `${API_URL}/machineTypeMaster/machine_type_edit`,
+    MACHINE_TYPE_DELETE: `${API_URL}/machineTypeMaster/machine_type_delete`,
+
+    // HRMS Leave Type Master endpoints
+    LEAVE_TYPE_TABLE: `${API_URL}/hrmsMasters/get_leave_type_table`,
+    LEAVE_TYPE_BY_ID: `${API_URL}/hrmsMasters/get_leave_type_by_id`,
+    LEAVE_TYPE_CREATE: `${API_URL}/hrmsMasters/leave_type_create`,
+    LEAVE_TYPE_EDIT: `${API_URL}/hrmsMasters/leave_type_edit`,
 };
 
 export { apiRoutes, apiRoutesconsole, apiRoutesPortalMasters };

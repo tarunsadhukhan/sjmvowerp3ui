@@ -17,7 +17,6 @@ import { MuiForm } from "@/components/ui/muiform";
 import type { MuiFormMode, Schema } from "@/components/ui/muiform";
 import { fetchWithCookie } from "@/utils/apiClient2";
 import { apiRoutesPortalMasters } from "@/utils/api";
-import { useSidebarContext } from "@/components/dashboard/sidebarContext";
 
 type Option = { label: string; value: string };
 
@@ -28,13 +27,18 @@ type Props = {
 	editId?: number | string;
 };
 
-export default function CreateCategoryPage({
+const PAYABLE_OPTIONS: Option[] = [
+	{ label: "Yes", value: "Y" },
+	{ label: "No", value: "N" },
+];
+
+export default function CreateLeaveTypePage({
 	open,
 	onClose,
 	onSaved,
 	editId,
 }: Props) {
-	const [loadingSetup, setLoadingSetup] = useState(false);
+	const [loading, setLoading] = useState(false);
 	const [saving, setSaving] = useState(false);
 	const [mode, setMode] = useState<MuiFormMode>("create");
 	const [snackbar, setSnackbar] = useState<{
@@ -43,136 +47,118 @@ export default function CreateCategoryPage({
 		severity: "success" | "error";
 	}>({ open: false, message: "", severity: "success" });
 
-	// Setup dropdown options from API
-	const [branchOptions, setBranchOptions] = useState<Option[]>([]);
-
-	// Form state
 	const [initialValues, setInitialValues] = useState<Record<string, unknown>>({});
 	const [formKey, setFormKey] = useState(0);
-
-	const { selectedBranches } = useSidebarContext();
 
 	const getCoId = useCallback((): string => {
 		const selectedCompany = localStorage.getItem("sidebar_selectedCompany");
 		return selectedCompany ? JSON.parse(selectedCompany).co_id : "";
 	}, []);
 
-	const loadSetup = useCallback(async () => {
-		setLoadingSetup(true);
+	const loadData = useCallback(async () => {
+		if (editId === undefined) {
+			setInitialValues({
+				leave_type_code: "",
+				leave_type_description: "",
+				payable: "N",
+				leave_hours: "",
+			});
+			setFormKey((prev) => prev + 1);
+			return;
+		}
+
+		setLoading(true);
 		try {
-			const co_id = getCoId();
-			if (!co_id) throw new Error("No company selected");
+			const detailUrl = `${apiRoutesPortalMasters.LEAVE_TYPE_BY_ID}/${editId}`;
+			const { data: detailData, error: detailErr } = await fetchWithCookie(detailUrl, "GET");
+			if (detailErr || !detailData) throw new Error(detailErr || "Failed to load leave type");
 
-			const setupUrl = `${apiRoutesPortalMasters.CATEGORY_CREATE_SETUP}?co_id=${co_id}`;
-			const { data: setupData, error: setupErr } = await fetchWithCookie(setupUrl, "GET");
-			if (setupErr || !setupData) throw new Error(setupErr || "Failed to load setup");
-
-			const branches: Option[] = (setupData.branches || []).map(
-				(b: Record<string, unknown>) => ({
-					label: String(b.branch_name ?? ""),
-					value: String(b.branch_id ?? ""),
-				})
-			);
-
-			// Filter branches to only the sidebar-selected branch
-			const selectedBranchSet = new Set(selectedBranches.map(String));
-			const filteredBranches = selectedBranchSet.size > 0
-				? branches.filter((b) => selectedBranchSet.has(b.value))
-				: branches;
-			setBranchOptions(filteredBranches);
-
-			if (editId !== undefined) {
-				const detailUrl = `${apiRoutesPortalMasters.CATEGORY_BY_ID}/${editId}`;
-				const { data: detailData, error: detailErr } = await fetchWithCookie(detailUrl, "GET");
-				if (detailErr || !detailData) throw new Error(detailErr || "Failed to load category");
-
-				const rec = detailData.data ?? detailData;
-				setInitialValues({
-					cata_code: rec.cata_code ?? "",
-					cata_desc: rec.cata_desc ?? "",
-					branch_id: rec.branch_id != null ? String(rec.branch_id) : "",
-				});
-			} else {
-				setInitialValues({
-					cata_code: "",
-					cata_desc: "",
-					branch_id: filteredBranches.length > 0 ? filteredBranches[0].value : "",
-				});
-			}
-
+			const rec = detailData.data ?? detailData;
+			setInitialValues({
+				leave_type_code: rec.leave_type_code ?? "",
+				leave_type_description: rec.leave_type_description ?? "",
+				payable: rec.payable ?? "N",
+				leave_hours: rec.Leave_hours ?? "",
+			});
 			setFormKey((prev) => prev + 1);
 		} catch (err: unknown) {
-			const message = err instanceof Error ? err.message : "Error loading setup";
+			const message = err instanceof Error ? err.message : "Error loading data";
 			setSnackbar({ open: true, message, severity: "error" });
 		} finally {
-			setLoadingSetup(false);
+			setLoading(false);
 		}
-	}, [editId, getCoId, selectedBranches]);
+	}, [editId]);
 
 	useEffect(() => {
 		if (open) {
-			if (editId !== undefined) {
-				setMode("edit");
-			} else {
-				setMode("create");
-			}
-			loadSetup();
+			setMode(editId !== undefined ? "edit" : "create");
+			loadData();
 		} else {
 			setInitialValues({});
 			setFormKey(0);
 		}
-	}, [open, editId, loadSetup]);
+	}, [open, editId, loadData]);
 
 	const schema = useMemo<Schema>(
 		() => ({
-			title:
-				editId !== undefined
-					? "Edit Category"
-					: "Create Category",
+			title: editId !== undefined ? "Edit Leave Type" : "Create Leave Type",
 			fields: [
 				{
-					name: "cata_code",
-					label: "Category Code",
+					name: "leave_type_code",
+					label: "Leave Type Code",
 					type: "text",
 					required: true,
 					grid: { xs: 12, sm: 6 },
 				},
 				{
-					name: "cata_desc",
-					label: "Category Name",
+					name: "leave_type_description",
+					label: "Leave Description",
 					type: "text",
 					required: true,
 					grid: { xs: 12, sm: 6 },
 				},
 				{
-					name: "branch_id",
-					label: "Branch",
+					name: "payable",
+					label: "Payable",
 					type: "select",
-					options: branchOptions,
+					required: true,
+					options: PAYABLE_OPTIONS,
+					grid: { xs: 12, sm: 6 },
+				},
+				{
+					name: "leave_hours",
+					label: "Leave Hours",
+					type: "number",
+					required: false,
 					grid: { xs: 12, sm: 6 },
 				},
 			],
 		}),
-		[editId, branchOptions]
+		[editId]
 	);
 
 	const handleSubmit = async (values: Record<string, unknown>) => {
 		setSaving(true);
 		try {
+			const co_id = getCoId();
+			if (!co_id) throw new Error("No company selected");
+
 			const payload = {
-				cata_code: values.cata_code,
-				cata_desc: values.cata_desc,
-				branch_id: values.branch_id || null,
+				co_id,
+				leave_type_code: values.leave_type_code,
+				leave_type_description: values.leave_type_description,
+				payable: values.payable || "N",
+				leave_hours: values.leave_hours || null,
 			};
 
 			let url: string;
 			let method: "POST" | "PUT";
 
 			if (editId !== undefined) {
-				url = `${apiRoutesPortalMasters.CATEGORY_EDIT}/${editId}`;
+				url = `${apiRoutesPortalMasters.LEAVE_TYPE_EDIT}/${editId}`;
 				method = "PUT";
 			} else {
-				url = apiRoutesPortalMasters.CATEGORY_CREATE;
+				url = apiRoutesPortalMasters.LEAVE_TYPE_CREATE;
 				method = "POST";
 			}
 
@@ -183,8 +169,8 @@ export default function CreateCategoryPage({
 				open: true,
 				message:
 					editId !== undefined
-						? "Category updated successfully"
-						: "Category created successfully",
+						? "Leave type updated successfully"
+						: "Leave type created successfully",
 				severity: "success",
 			});
 
@@ -198,12 +184,11 @@ export default function CreateCategoryPage({
 		}
 	};
 
-	const dialogTitle = useMemo(() => {
-		if (editId !== undefined) {
-			return "Edit Category";
-		}
-		return "Create Category";
-	}, [editId]);
+	const handleModeChange = (newMode: MuiFormMode) => {
+		setMode(newMode);
+	};
+
+	const dialogTitle = editId !== undefined ? "Edit Leave Type" : "Create Leave Type";
 
 	return (
 		<>
@@ -231,7 +216,7 @@ export default function CreateCategoryPage({
 				</DialogTitle>
 
 				<DialogContent dividers>
-					{loadingSetup ? (
+					{loading ? (
 						<Box
 							sx={{
 								display: "flex",
@@ -250,10 +235,10 @@ export default function CreateCategoryPage({
 								mode={mode}
 								initialValues={initialValues}
 								onSubmit={handleSubmit}
-								submitLabel={saving ? "Saving..." : "Save"}
-								cancelLabel="Cancel"
-								onCancel={onClose}
-								hideModeToggle
+							submitLabel={saving ? "Saving..." : "Save"}
+							cancelLabel="Cancel"
+							onCancel={onClose}
+							hideModeToggle
 							/>
 						</Box>
 					)}
@@ -264,12 +249,12 @@ export default function CreateCategoryPage({
 				open={snackbar.open}
 				autoHideDuration={4000}
 				onClose={() => setSnackbar((prev) => ({ ...prev, open: false }))}
-				anchorOrigin={{ vertical: "bottom", horizontal: "center" }}
+				anchorOrigin={{ vertical: "top", horizontal: "center" }}
 			>
 				<Alert
-					onClose={() => setSnackbar((prev) => ({ ...prev, open: false }))}
 					severity={snackbar.severity}
-					variant="filled"
+					onClose={() => setSnackbar((prev) => ({ ...prev, open: false }))}
+					sx={{ width: "100%" }}
 				>
 					{snackbar.message}
 				</Alert>

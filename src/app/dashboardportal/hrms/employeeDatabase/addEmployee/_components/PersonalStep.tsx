@@ -1,7 +1,7 @@
 "use client";
 
-import React, { useMemo, useRef, useCallback } from "react";
-import { Box } from "@mui/material";
+import React, { useMemo, useRef, useCallback, useState } from "react";
+import { Box, TextField, CircularProgress, Dialog, DialogTitle, DialogContent, DialogContentText, DialogActions, Button as MuiButton } from "@mui/material";
 import MuiForm, { type Schema, type Field, type MuiFormHandle } from "@/components/ui/muiform";
 import type { PersonalDetails, Option } from "../../types/employeeTypes";
 import type { useEmployeeSetup } from "../../hooks/useEmployeeSetup";
@@ -16,6 +16,8 @@ interface PersonalStepProps {
   onPhotoUpload: (file: File) => Promise<void>;
   onPhotoDelete?: () => void;
   employeeName?: string;
+  onPrevEmpLookup?: (empCode: string) => Promise<Record<string, unknown> | null>;
+  prevEmpLoading?: boolean;
 }
 
 const GENDER_OPTIONS: Option[] = [
@@ -40,8 +42,59 @@ export default function PersonalStep({
   onPhotoUpload,
   onPhotoDelete,
   employeeName,
+  onPrevEmpLookup,
+  prevEmpLoading,
 }: PersonalStepProps) {
   const formRef = useRef<MuiFormHandle>(null);
+  const [prevEmpNo, setPrevEmpNo] = useState("");
+  const [confirmOpen, setConfirmOpen] = useState(false);
+  const [pendingLookup, setPendingLookup] = useState<Record<string, unknown> | null>(null);
+  const [lookupError, setLookupError] = useState<string | null>(null);
+
+  const handlePrevEmpBlur = useCallback(async () => {
+    const code = prevEmpNo.trim();
+    if (!code || !onPrevEmpLookup) return;
+    setLookupError(null);
+    const result = await onPrevEmpLookup(code);
+    if (!result) {
+      setLookupError("Employee code not found");
+      return;
+    }
+    setPendingLookup(result);
+    setConfirmOpen(true);
+  }, [prevEmpNo, onPrevEmpLookup]);
+
+  const handleConfirmYes = useCallback(() => {
+    if (!pendingLookup) return;
+    const d = pendingLookup;
+    onChange({
+      fixed_eb_id: d.eb_id as number,
+      first_name: (d.first_name as string) ?? "",
+      middle_name: (d.middle_name as string | null) ?? null,
+      last_name: (d.last_name as string | null) ?? null,
+      gender: (d.gender as string | null) ?? null,
+      date_of_birth: (d.date_of_birth as string | null) ?? null,
+      blood_group: (d.blood_group as string | null) ?? null,
+      mobile_no: (d.mobile_no as string | null) ?? null,
+      email_id: (d.email_id as string | null) ?? null,
+      marital_status: (d.marital_status as number | null) ?? null,
+      country_id: (d.country_id as number | null) ?? null,
+      relegion_name: (d.relegion_name as string | null) ?? null,
+      father_spouse_name: (d.father_spouse_name as string | null) ?? null,
+      passport_no: (d.passport_no as string | null) ?? null,
+      driving_licence_no: (d.driving_licence_no as string | null) ?? null,
+      pan_no: (d.pan_no as string | null) ?? null,
+      aadhar_no: (d.aadhar_no as string | null) ?? null,
+    });
+    setConfirmOpen(false);
+    setPendingLookup(null);
+  }, [pendingLookup, onChange]);
+
+  const handleConfirmNo = useCallback(() => {
+    setConfirmOpen(false);
+    setPendingLookup(null);
+    setPrevEmpNo("");
+  }, []);
 
   const schema = useMemo<Schema>(
     () => ({
@@ -116,6 +169,27 @@ export default function PersonalStep({
       </Box>
       {/* Form fields on the right */}
       <Box className="flex-1 min-w-0">
+        {/* Prev Emp No — lookup field before the main form */}
+        {!disabled && (
+          <Box className="mb-4" sx={{ maxWidth: 300 }}>
+            <TextField
+              label="Prev Emp No"
+              size="small"
+              fullWidth
+              value={prevEmpNo}
+              onChange={(e) => { setPrevEmpNo(e.target.value); setLookupError(null); }}
+              onBlur={handlePrevEmpBlur}
+              disabled={prevEmpLoading}
+              error={!!lookupError}
+              helperText={lookupError ?? "Enter previous employee code to pre-fill data"}
+              slotProps={{
+                input: {
+                  endAdornment: prevEmpLoading ? <CircularProgress size={18} /> : null,
+                },
+              }}
+            />
+          </Box>
+        )}
         <MuiForm
           ref={formRef}
           schema={schema}
@@ -126,6 +200,25 @@ export default function PersonalStep({
           hideSubmit
         />
       </Box>
+
+      {/* Confirmation dialog for pre-filling previous employee data */}
+      <Dialog open={confirmOpen} onClose={handleConfirmNo}>
+        <DialogTitle>Previous Employee Found</DialogTitle>
+        <DialogContent>
+          <DialogContentText>
+            Employee <strong>{String(pendingLookup?.emp_code ?? "")}</strong> found:{" "}
+            <strong>{String(pendingLookup?.first_name ?? "")} {String(pendingLookup?.last_name ?? "")}</strong>.
+            <br />
+            Do you want to pre-fill the form with this employee&apos;s data?
+          </DialogContentText>
+        </DialogContent>
+        <DialogActions>
+          <MuiButton onClick={handleConfirmNo}>No</MuiButton>
+          <MuiButton onClick={handleConfirmYes} variant="contained" autoFocus>
+            Yes, Pre-fill
+          </MuiButton>
+        </DialogActions>
+      </Dialog>
     </Box>
   );
 }

@@ -33,6 +33,16 @@ vi.mock("@/components/ui/muiform", () => ({
 	),
 }));
 
+// Mock sidebarContext — stable reference to avoid infinite useCallback/useEffect re-runs
+const { stableSelectedBranches } = vi.hoisted(() => ({
+	stableSelectedBranches: [10] as number[],
+}));
+vi.mock("@/components/dashboard/sidebarContext", () => ({
+	useSidebarContext: () => ({
+		selectedBranches: stableSelectedBranches,
+	}),
+}));
+
 import { fetchWithCookie } from "@/utils/apiClient2";
 import CreateDesignationPage from "./CreateDesignationPage";
 
@@ -61,7 +71,7 @@ const mockRecord = {
 	data: {
 		designation_id: 1,
 		desig: "Manager",
-		sub_dept_id: 1,
+		dept_id: 1,
 		branch_id: 10,
 		norms: "8h",
 		time_piece: "Time",
@@ -105,7 +115,7 @@ describe("CreateDesignationPage", () => {
 		expect(screen.getByTestId("field-desig")).toHaveTextContent("");
 	});
 
-	it("should render in view mode with pre-populated fields", async () => {
+	it("should render in edit mode with pre-populated fields", async () => {
 		mockFetchWithCookie
 			.mockResolvedValueOnce(createMockResponse(mockSetup))
 			.mockResolvedValueOnce(createMockResponse(mockRecord));
@@ -114,7 +124,6 @@ describe("CreateDesignationPage", () => {
 			<CreateDesignationPage
 				{...defaultProps}
 				editId={1}
-				initialMode="view"
 			/>
 		);
 
@@ -122,13 +131,13 @@ describe("CreateDesignationPage", () => {
 			expect(screen.getByTestId("mui-form")).toBeInTheDocument();
 		});
 
-		expect(screen.getByTestId("form-mode")).toHaveTextContent("view");
+		expect(screen.getByTestId("form-mode")).toHaveTextContent("edit");
 		expect(screen.getByTestId("field-desig")).toHaveTextContent("Manager");
-		expect(screen.getByTestId("field-sub_dept_id")).toHaveTextContent("1");
+		expect(screen.getByTestId("field-dept_id")).toHaveTextContent("1");
 		expect(screen.getByTestId("field-branch_id")).toHaveTextContent("10");
 	});
 
-	it("should render in edit mode when editId provided with edit initialMode", async () => {
+	it("should render in edit mode when editId is provided", async () => {
 		mockFetchWithCookie
 			.mockResolvedValueOnce(createMockResponse(mockSetup))
 			.mockResolvedValueOnce(createMockResponse(mockRecord));
@@ -137,7 +146,6 @@ describe("CreateDesignationPage", () => {
 			<CreateDesignationPage
 				{...defaultProps}
 				editId={1}
-				initialMode="edit"
 			/>
 		);
 

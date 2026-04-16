@@ -332,14 +332,7 @@ export const MuiForm = React.forwardRef(function MuiForm(
 						},
 						minWidth: 0,
 					}}>
-				{mode === "view" && field.type !== "checkbox" ? (
-					<Box>
-						<Typography variant="caption" color="text.secondary">
-							{field.label}
-						</Typography>
-						<Typography variant="body1">{displayValue(field, value)}</Typography>
-					</Box>
-				) : field.type === "text" || field.type === "number" || field.type === "date" || field.type === "time" ? (
+				{field.type === "text" || field.type === "number" || field.type === "date" || field.type === "time" ? (
 					<TextField
 						type={field.type === "text" ? "text" : field.type === "number" ? "number" : field.type === "time" ? "time" : "date"}
 						value={value ?? ""}

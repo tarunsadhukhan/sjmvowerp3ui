@@ -16,6 +16,17 @@ export const EMPLOYEE_STATUS = {
   CANCELLED: 6,
 } as const;
 
+/** HRMS-specific employee lifecycle status IDs */
+export const EMPLOYEE_LIFECYCLE_STATUS = {
+  JOINED: 35,
+  REJECTED: 4,
+  BLACKLISTED: 46,
+  RESIGNED: 39,
+  IN_NOTICE: 40,
+  TERMINATED: 41,
+  RETIRED: 42,
+} as const;
+
 export type EmployeeStatusId = (typeof EMPLOYEE_STATUS)[keyof typeof EMPLOYEE_STATUS];
 
 // ─── Employee List ─────────────────────────────────────────────────
@@ -61,6 +72,7 @@ export interface PersonalDetails {
   marital_status: number | null;
   country_id: number | null;
   relegion_name: string | null;
+  fixed_eb_id: number | null;
   father_spouse_name: string | null;
   passport_no: string | null;
   driving_licence_no: string | null;

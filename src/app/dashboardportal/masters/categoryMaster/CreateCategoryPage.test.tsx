@@ -104,7 +104,7 @@ describe("CreateCategoryPage", () => {
 			.mockResolvedValueOnce(createMockResponse(mockRecord));
 
 		render(
-			<CreateCategoryPage {...defaultProps} editId={1} initialMode="edit" />
+			<CreateCategoryPage {...defaultProps} editId={1} />
 		);
 
 		await waitFor(() => {
@@ -115,17 +115,17 @@ describe("CreateCategoryPage", () => {
 		expect(screen.getByTestId("field-cata_desc")).toHaveTextContent("Skilled");
 	});
 
-	it("should render in view mode", async () => {
+	it("should always open in edit mode with editId", async () => {
 		mockFetchWithCookie
 			.mockResolvedValueOnce(createMockResponse(mockSetup))
 			.mockResolvedValueOnce(createMockResponse(mockRecord));
 
 		render(
-			<CreateCategoryPage {...defaultProps} editId={1} initialMode="view" />
+			<CreateCategoryPage {...defaultProps} editId={1} />
 		);
 
 		await waitFor(() => {
-			expect(screen.getByTestId("form-mode")).toHaveTextContent("view");
+			expect(screen.getByTestId("form-mode")).toHaveTextContent("edit");
 		});
 	});
 

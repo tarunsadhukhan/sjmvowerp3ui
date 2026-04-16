@@ -2,7 +2,7 @@
 
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Box, TextField, Tooltip, IconButton, Typography, Stack } from "@mui/material";
-import { GridColDef, GridPaginationModel, GridRenderCellParams, GridValidRowModel } from "@mui/x-data-grid";
+import { GridColDef, GridFilterModel, GridPaginationModel, GridRenderCellParams, GridValidRowModel } from "@mui/x-data-grid";
 import { usePathname } from "next/navigation";
 import { Eye, Edit } from "lucide-react";
 import MuiDataGrid from "./muiDataGrid";
@@ -52,6 +52,10 @@ type IndexWrapperProps<RowType extends GridValidRowModel & { id?: string | numbe
   contentClassName?: string;
   /** Show MUI DataGrid toolbar with filters, column selector, density, and export */
   showToolbar?: boolean;
+  /** Server-side filtering support */
+  filterMode?: "client" | "server";
+  filterModel?: GridFilterModel;
+  onFilterModelChange?: (model: GridFilterModel) => void;
 };
 
 function IndexWrapper<RowType extends GridValidRowModel & { id?: string | number }>({
@@ -74,6 +78,9 @@ function IndexWrapper<RowType extends GridValidRowModel & { id?: string | number
   className,
   contentClassName,
   showToolbar = false,
+  filterMode,
+  filterModel,
+  onFilterModelChange,
 }: IndexWrapperProps<RowType>) {
   const sidebarContext = useSidebarContextSafe();
   const hasMenuAccess = sidebarContext?.hasMenuAccess ?? (() => true);
@@ -260,6 +267,9 @@ function IndexWrapper<RowType extends GridValidRowModel & { id?: string | number
           loading={loading}
           showLoadingUntilLoaded={showLoadingUntilLoaded}
           showToolbar={showToolbar}
+          filterMode={filterMode}
+          filterModel={filterModel}
+          onFilterModelChange={onFilterModelChange}
         />
 
         {children}

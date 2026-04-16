@@ -18,6 +18,7 @@ interface OfficialInformationStepProps {
   disabled: boolean;
   setup: ReturnType<typeof useEmployeeSetup>;
   sidebarBranchId: string;
+  ebId: number | null;
   saving: boolean;
   onBack: () => void;
   onSave: () => void;
@@ -32,6 +33,7 @@ export default function OfficialInformationStep({
   disabled,
   setup,
   sidebarBranchId,
+  ebId,
   saving,
   onBack,
   onSave,
@@ -77,7 +79,7 @@ export default function OfficialInformationStep({
       {/* Tab content */}
       <Box className="rounded-lg border bg-white p-6 shadow-sm">
         {activeTab === 0 && (
-          <OfficialStep data={data.official} onChange={onOfficialChange} disabled={disabled} setup={setup} sidebarBranchId={sidebarBranchId} />
+          <OfficialStep data={data.official} onChange={onOfficialChange} disabled={disabled} setup={setup} sidebarBranchId={sidebarBranchId} ebId={ebId} />
         )}
         {activeTab === 1 && (
           <BankStep data={data.bank} onChange={onBankChange} disabled={disabled} />

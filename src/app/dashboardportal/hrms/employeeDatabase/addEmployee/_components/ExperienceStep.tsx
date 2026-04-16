@@ -39,37 +39,75 @@ function blankExperience(): ExperienceDetails {
   };
 }
 
+/** Isolated row so initialValues stays referentially stable */
+const ExperienceRow = React.memo(function ExperienceRow({
+  exp,
+  index,
+  disabled,
+  onUpdate,
+  onRemove,
+}: {
+  exp: ExperienceDetails;
+  index: number;
+  disabled: boolean;
+  onUpdate: (index: number, data: Partial<ExperienceDetails>) => void;
+  onRemove: (index: number) => void;
+}) {
+  const initialValues = useMemo(
+    () => ({
+      company_name: exp.company_name,
+      designation: exp.designation ?? "",
+      from_date: exp.from_date ?? "",
+      to_date: exp.to_date ?? "",
+      project: exp.project ?? "",
+      contact: exp.contact ?? "",
+    }),
+    [exp.company_name, exp.designation, exp.from_date, exp.to_date, exp.project, exp.contact],
+  );
+
+  const handleChange = useCallback(
+    (vals: Record<string, unknown>) => onUpdate(index, vals as Partial<ExperienceDetails>),
+    [onUpdate, index],
+  );
+
+  const handleRemove = useCallback(() => onRemove(index), [onRemove, index]);
+
+  return (
+    <Box className="relative rounded-md border p-4">
+      <Box className="mb-2 flex items-center justify-between">
+        <Typography variant="subtitle2">Experience {index + 1}</Typography>
+        {!disabled && (
+          <IconButton size="small" aria-label="Remove experience" onClick={handleRemove}>
+            <Trash2 className="h-4 w-4 text-red-500" />
+          </IconButton>
+        )}
+      </Box>
+      <MuiForm
+        schema={experienceSchema}
+        initialValues={initialValues}
+        mode={disabled ? "view" : "edit"}
+        onValuesChange={handleChange}
+        hideModeToggle
+        hideSubmit
+      />
+    </Box>
+  );
+});
+
 export default function ExperienceStep({ items, onAdd, onUpdate, onRemove, disabled }: ExperienceStepProps) {
   const handleAdd = useCallback(() => onAdd(blankExperience()), [onAdd]);
 
   return (
     <Box className="flex flex-col gap-6">
       {items.map((exp, idx) => (
-        <Box key={idx} className="relative rounded-md border p-4">
-          <Box className="mb-2 flex items-center justify-between">
-            <Typography variant="subtitle2">Experience {idx + 1}</Typography>
-            {!disabled && (
-              <IconButton size="small" aria-label="Remove experience" onClick={() => onRemove(idx)}>
-                <Trash2 className="h-4 w-4 text-red-500" />
-              </IconButton>
-            )}
-          </Box>
-          <MuiForm
-            schema={experienceSchema}
-            initialValues={{
-              company_name: exp.company_name,
-              designation: exp.designation ?? "",
-              from_date: exp.from_date ?? "",
-              to_date: exp.to_date ?? "",
-              project: exp.project ?? "",
-              contact: exp.contact ?? "",
-            }}
-            mode={disabled ? "view" : "edit"}
-            onValuesChange={(vals) => onUpdate(idx, vals as Partial<ExperienceDetails>)}
-            hideModeToggle
-            hideSubmit
-          />
-        </Box>
+        <ExperienceRow
+          key={idx}
+          exp={exp}
+          index={idx}
+          disabled={disabled}
+          onUpdate={onUpdate}
+          onRemove={onRemove}
+        />
       ))}
 
       {!disabled && (

@@ -42,6 +42,8 @@ interface PersonalInformationStepProps {
   onPhotoUpload: (file: File) => Promise<void>;
   onPhotoDelete: () => void;
   employeeName?: string;
+  onPrevEmpLookup?: (empCode: string) => Promise<Record<string, unknown> | null>;
+  prevEmpLoading?: boolean;
 }
 
 const SUB_TABS = ["Personal Details", "Contact Details", "Address Details", "Previous Experience"] as const;
@@ -65,6 +67,8 @@ export default function PersonalInformationStep({
   onPhotoUpload,
   onPhotoDelete,
   employeeName,
+  onPrevEmpLookup,
+  prevEmpLoading,
 }: PersonalInformationStepProps) {
   const [activeTab, setActiveTab] = useState(0);
 
@@ -114,6 +118,8 @@ export default function PersonalInformationStep({
             onPhotoUpload={onPhotoUpload}
             onPhotoDelete={onPhotoDelete}
             employeeName={employeeName}
+            onPrevEmpLookup={onPrevEmpLookup}
+            prevEmpLoading={prevEmpLoading}
           />
         )}
         {activeTab === 1 && (

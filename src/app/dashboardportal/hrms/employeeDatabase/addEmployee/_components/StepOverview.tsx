@@ -1,30 +1,72 @@
 "use client";
 
 import React from "react";
-import { Box, Typography, LinearProgress, IconButton } from "@mui/material";
+import { Box, Typography, LinearProgress, IconButton, Chip } from "@mui/material";
 import { ChevronRight, Check } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { tokens } from "@/styles/tokens";
 import type { WizardStep } from "../../types/employeeTypes";
+import { EMPLOYEE_LIFECYCLE_STATUS } from "../../types/employeeTypes";
 
-// ─── Action button definitions ─────────────────────────────────────
+// ─── Status-aware action button definitions ────────────────────────
 
 interface ActionButtonDef {
   label: string;
-  className: "danger" | "success";
+  statusId: number;
+  color: string;
 }
 
-const ACTION_BUTTONS: ActionButtonDef[] = [
-  { label: "BlackList", className: "danger" },
-  { label: "Terminate", className: "danger" },
-  { label: "Resign", className: "success" },
-  { label: "Retire", className: "success" },
+/** Buttons shown before any lifecycle status is set (after save, before Joined) */
+const INITIAL_ACTIONS: ActionButtonDef[] = [
+  { label: "Joined", statusId: EMPLOYEE_LIFECYCLE_STATUS.JOINED, color: tokens.brand.primary },
+  { label: "Rejected", statusId: EMPLOYEE_LIFECYCLE_STATUS.REJECTED, color: "#E91E63" },
+  { label: "Blacklisted", statusId: EMPLOYEE_LIFECYCLE_STATUS.BLACKLISTED, color: "#E91E63" },
 ];
 
-const ACTION_COLORS: Record<string, string> = {
-  danger: "#E91E63",
-  success: tokens.brand.primary,
+/** Buttons shown after employee has "Joined" status */
+const POST_JOIN_ACTIONS: ActionButtonDef[] = [
+  { label: "Blacklist", statusId: EMPLOYEE_LIFECYCLE_STATUS.BLACKLISTED, color: "#E91E63" },
+  { label: "Terminate", statusId: EMPLOYEE_LIFECYCLE_STATUS.TERMINATED, color: "#E91E63" },
+  { label: "Resign", statusId: EMPLOYEE_LIFECYCLE_STATUS.RESIGNED, color: "#FF9800" },
+  { label: "Retired", statusId: EMPLOYEE_LIFECYCLE_STATUS.RETIRED, color: "#607D8B" },
+];
+
+const DIALOG_STATUSES: Set<number> = new Set([
+  EMPLOYEE_LIFECYCLE_STATUS.BLACKLISTED,
+  EMPLOYEE_LIFECYCLE_STATUS.TERMINATED,
+  EMPLOYEE_LIFECYCLE_STATUS.RESIGNED,
+  EMPLOYEE_LIFECYCLE_STATUS.RETIRED,
+]);
+
+/** Map status_id → display label */
+const STATUS_LABEL: Record<number, string> = {
+  [EMPLOYEE_LIFECYCLE_STATUS.JOINED]: "Joined",
+  [EMPLOYEE_LIFECYCLE_STATUS.REJECTED]: "Rejected",
+  [EMPLOYEE_LIFECYCLE_STATUS.BLACKLISTED]: "Blacklisted",
+  [EMPLOYEE_LIFECYCLE_STATUS.RESIGNED]: "Resigned",
+  [EMPLOYEE_LIFECYCLE_STATUS.IN_NOTICE]: "In Notice",
+  [EMPLOYEE_LIFECYCLE_STATUS.TERMINATED]: "Terminated",
+  [EMPLOYEE_LIFECYCLE_STATUS.RETIRED]: "Retired",
 };
+
+function getStatusChipColor(statusId: number): "success" | "error" | "warning" | "default" {
+  if (statusId === EMPLOYEE_LIFECYCLE_STATUS.JOINED) return "success";
+  if (([EMPLOYEE_LIFECYCLE_STATUS.REJECTED, EMPLOYEE_LIFECYCLE_STATUS.BLACKLISTED, EMPLOYEE_LIFECYCLE_STATUS.TERMINATED] as number[]).includes(statusId)) return "error";
+  if (([EMPLOYEE_LIFECYCLE_STATUS.RESIGNED, EMPLOYEE_LIFECYCLE_STATUS.IN_NOTICE] as number[]).includes(statusId)) return "warning";
+  return "default";
+}
+
+/** Determine which action buttons to show based on current status */
+function getActionsForStatus(statusId: number | undefined): ActionButtonDef[] {
+  if (!statusId) return [];
+  if (statusId === EMPLOYEE_LIFECYCLE_STATUS.JOINED) return POST_JOIN_ACTIONS;
+  // If still in draft/open/approved (pre-lifecycle), show initial actions
+  if (![...Object.values(EMPLOYEE_LIFECYCLE_STATUS)].includes(statusId as never)) return INITIAL_ACTIONS;
+  // Terminal statuses (blacklisted, terminated, resigned, retired, rejected) — no further actions
+  return [];
+}
+
+export { DIALOG_STATUSES };
 
 // ─── Props ─────────────────────────────────────────────────────────
 
@@ -34,8 +76,9 @@ interface StepOverviewProps {
   progress: number;
   mode: "create" | "edit" | "view";
   ebId: number | null;
+  statusId: number | undefined;
   onStepClick: (stepIndex: number) => void;
-  onActionClick?: (action: string) => void;
+  onActionClick?: (statusId: number, label: string) => void;
   onBack: () => void;
 }
 
@@ -118,11 +161,14 @@ export default function StepOverview({
   progress,
   mode,
   ebId,
+  statusId,
   onStepClick,
   onActionClick,
   onBack,
 }: StepOverviewProps) {
   const title = mode === "create" ? "Add Employee" : mode === "edit" ? "Edit Employee" : "View Employee";
+  const actions = ebId ? getActionsForStatus(statusId) : [];
+  const statusLabel = statusId ? STATUS_LABEL[statusId] : undefined;
 
   return (
     <Box className="flex flex-col gap-0">
@@ -165,24 +211,34 @@ export default function StepOverview({
         </Box>
       </Box>
 
-      {/* ── Subtitle + action buttons row ──────────────────────── */}
+      {/* ── Subtitle + status chip + action buttons row ──────────── */}
       <Box className="flex items-center justify-between px-6 pb-4">
-        <Typography variant="body2" color="text.secondary">
-          Complete the steps below to add employee to your organisation
-        </Typography>
+        <Box className="flex items-center gap-3">
+          <Typography variant="body2" color="text.secondary">
+            Complete the steps below to add employee to your organisation
+          </Typography>
+          {statusLabel && (
+            <Chip
+              label={statusLabel}
+              size="small"
+              color={getStatusChipColor(statusId!)}
+              variant="filled"
+            />
+          )}
+        </Box>
 
-        {/* Action buttons (only show when editing/viewing existing employee) */}
-        {ebId && mode !== "create" && (
+        {/* Action buttons (only show when employee is saved) */}
+        {actions.length > 0 && mode !== "create" && (
           <Box className="flex items-center gap-2">
-            {ACTION_BUTTONS.map((btn) => (
+            {actions.map((btn) => (
               <Button
                 key={btn.label}
                 size="sm"
-                onClick={() => onActionClick?.(btn.label)}
+                onClick={() => onActionClick?.(btn.statusId, btn.label)}
                 style={{
-                  backgroundColor: ACTION_COLORS[btn.className],
+                  backgroundColor: btn.color,
                   color: "#fff",
-                  borderColor: ACTION_COLORS[btn.className],
+                  borderColor: btn.color,
                 }}
               >
                 {btn.label}

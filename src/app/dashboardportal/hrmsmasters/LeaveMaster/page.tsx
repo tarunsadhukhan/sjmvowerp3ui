@@ -1,29 +1,24 @@
 "use client";
-
 import React, { useEffect, useMemo, useState, useCallback } from "react";
 import { Snackbar, Alert } from "@mui/material";
 import { GridColDef, GridPaginationModel } from "@mui/x-data-grid";
 import { fetchWithCookie } from "@/utils/apiClient2";
 import { apiRoutesPortalMasters } from "@/utils/api";
 import IndexWrapper from "@/components/ui/IndexWrapper";
-import CreateDesignationPage from "./CreateDesignationPage";
+import CreateLeaveTypePage from "./CreateLeaveTypePage";
 import { useSidebarContext } from "@/components/dashboard/sidebarContext";
 
-type DesignationRow = {
+type LeaveTypeRow = {
 	id: number | string;
-	designation_id: number;
-	desig: string;
-	dept_name: string;
-	branch_name: string;
-	norms: string;
-	time_piece: string;
-	active: number;
+	leave_type_id: number;
+	leave_type_code: string;
+	leave_type_description: string;
+	payable: string;
 	[key: string]: unknown;
 };
 
-export default function DesignationMasterPage() {
-	const { selectedBranches } = useSidebarContext();
-	const [rows, setRows] = useState<DesignationRow[]>([]);
+export default function LeaveMasterPage() {
+	const [rows, setRows] = useState<LeaveTypeRow[]>([]);
 	const [loading, setLoading] = useState(true);
 	const [totalRows, setTotalRows] = useState(0);
 	const [paginationModel, setPaginationModel] = useState<GridPaginationModel>({
@@ -40,10 +35,19 @@ export default function DesignationMasterPage() {
 	const [dialogOpen, setDialogOpen] = useState(false);
 	const [selectedId, setSelectedId] = useState<number | undefined>(undefined);
 
-	const fetchDesignations = useCallback(async () => {
+	const getCoId = useCallback((): string => {
+		const selectedCompany = localStorage.getItem("sidebar_selectedCompany");
+		return selectedCompany ? JSON.parse(selectedCompany).co_id : "";
+	}, []);
+
+	const fetchLeaveTypes = useCallback(async () => {
 		setLoading(true);
 		try {
+			const co_id = getCoId();
+			if (!co_id) throw new Error("No company selected");
+
 			const queryParams = new URLSearchParams({
+				co_id,
 				page: String((paginationModel.page ?? 0) + 1),
 				limit: String(paginationModel.pageSize ?? 10),
 			});
@@ -52,30 +56,23 @@ export default function DesignationMasterPage() {
 				queryParams.append("search", searchQuery);
 			}
 
-			if (selectedBranches.length > 0) {
-				queryParams.append("branch_id", selectedBranches.join(","));
-			}
-
 			const { data, error } = await fetchWithCookie(
-				`${apiRoutesPortalMasters.DESIGNATION_TABLE}?${queryParams}`,
+				`${apiRoutesPortalMasters.LEAVE_TYPE_TABLE}?${queryParams}`,
 				"GET"
 			);
 
 			if (error || !data) {
-				throw new Error(error || "Failed to fetch designations");
+				throw new Error(error || "Failed to fetch leave types");
 			}
 
-			const mapped: DesignationRow[] = (data.data || []).map(
+			const mapped: LeaveTypeRow[] = (data.data || []).map(
 				(r: Record<string, unknown>) => ({
 					...r,
-					id: r.designation_id as number,
-					designation_id: r.designation_id as number,
-					desig: (r.desig as string) ?? "",
-					dept_name: (r.dept_name as string) ?? "",
-					branch_name: (r.branch_name as string) ?? "",
-					norms: (r.norms as string) ?? "",
-					time_piece: (r.time_piece as string) ?? "",
-					active: (r.active as number) ?? 1,
+					id: r.leave_type_id as number,
+					leave_type_id: r.leave_type_id as number,
+					leave_type_code: (r.leave_type_code as string) ?? "",
+					leave_type_description: (r.leave_type_description as string) ?? "",
+					payable: (r.payable as string) === "Y" ? "Yes" : "No",
 				})
 			);
 
@@ -83,16 +80,16 @@ export default function DesignationMasterPage() {
 			setTotalRows(data.total || 0);
 		} catch (err: unknown) {
 			const message =
-				err instanceof Error ? err.message : "Error fetching designations";
+				err instanceof Error ? err.message : "Error fetching leave types";
 			setSnackbar({ open: true, message, severity: "error" });
 		} finally {
 			setLoading(false);
 		}
-	}, [paginationModel.page, paginationModel.pageSize, searchQuery, selectedBranches]);
+	}, [paginationModel.page, paginationModel.pageSize, searchQuery, getCoId]);
 
 	useEffect(() => {
-		fetchDesignations();
-	}, [fetchDesignations]);
+		fetchLeaveTypes();
+	}, [fetchLeaveTypes]);
 
 	const handlePaginationModelChange = (newModel: GridPaginationModel) => {
 		setPaginationModel(newModel);
@@ -112,8 +109,8 @@ export default function DesignationMasterPage() {
 		setDialogOpen(true);
 	}, []);
 
-	const handleEdit = useCallback((row: DesignationRow) => {
-		setSelectedId(row.designation_id);
+	const handleEdit = useCallback((row: LeaveTypeRow) => {
+		setSelectedId(row.leave_type_id);
 		setDialogOpen(true);
 	}, []);
 
@@ -123,38 +120,26 @@ export default function DesignationMasterPage() {
 	}, []);
 
 	const handleSaved = useCallback(() => {
-		fetchDesignations();
-	}, [fetchDesignations]);
+		fetchLeaveTypes();
+	}, [fetchLeaveTypes]);
 
-	const columns = useMemo<GridColDef<DesignationRow>[]>(
+	const columns = useMemo<GridColDef<LeaveTypeRow>[]>(
 		() => [
 			{
-				field: "desig",
-				headerName: "Designation Name",
-				flex: 2,
-				minWidth: 200,
-			},
-			{
-				field: "dept_name",
-				headerName: "Department",
+				field: "leave_type_code",
+				headerName: "Leave Type Code",
 				flex: 1.5,
 				minWidth: 150,
 			},
 			{
-				field: "branch_name",
-				headerName: "Branch",
-				flex: 1,
-				minWidth: 120,
+				field: "leave_type_description",
+				headerName: "Leave Description",
+				flex: 2,
+				minWidth: 200,
 			},
 			{
-				field: "norms",
-				headerName: "Norms",
-				flex: 1,
-				minWidth: 100,
-			},
-			{
-				field: "time_piece",
-				headerName: "Time/Piece",
+				field: "payable",
+				headerName: "Payable",
 				flex: 1,
 				minWidth: 100,
 			},
@@ -164,7 +149,7 @@ export default function DesignationMasterPage() {
 
 	return (
 		<IndexWrapper
-			title="Designation Master"
+			title="Leave Type Master"
 			rows={rows}
 			columns={columns}
 			rowCount={totalRows}
@@ -175,17 +160,16 @@ export default function DesignationMasterPage() {
 			search={{
 				value: searchQuery,
 				onChange: handleSearchChange,
-				placeholder: "Search by designation, department, or norms",
+				placeholder: "Search by leave type code or description",
 				debounceDelayMs: 500,
 			}}
 			createAction={{
-				label: "Create Designation",
+				label: "Create Leave Type",
 				onClick: handleCreate,
 			}}
-			onView={handleEdit}
 			onEdit={handleEdit}
 		>
-			<CreateDesignationPage
+			<CreateLeaveTypePage
 				open={dialogOpen}
 				onClose={handleDialogClose}
 				onSaved={handleSaved}

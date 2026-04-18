@@ -1,29 +1,29 @@
 "use client";
-
 import React, { useEffect, useMemo, useState, useCallback } from "react";
 import { Snackbar, Alert } from "@mui/material";
 import { GridColDef, GridPaginationModel } from "@mui/x-data-grid";
 import { fetchWithCookie } from "@/utils/apiClient2";
 import { apiRoutesPortalMasters } from "@/utils/api";
 import IndexWrapper from "@/components/ui/IndexWrapper";
-import CreateDesignationPage from "./CreateDesignationPage";
+import CreateSpellPage from "./CreateSpellPage";
 import { useSidebarContext } from "@/components/dashboard/sidebarContext";
 
-type DesignationRow = {
+type SpellRow = {
 	id: number | string;
-	designation_id: number;
-	desig: string;
-	dept_name: string;
+	spell_id: number;
+	spell_name: string;
+	spell_code: string;
+	shift_name: string;
 	branch_name: string;
-	norms: string;
-	time_piece: string;
-	active: number;
+	starting_time: string;
+	end_time: string;
+	working_hours: number;
 	[key: string]: unknown;
 };
 
-export default function DesignationMasterPage() {
+export default function SpellMasterPage() {
 	const { selectedBranches } = useSidebarContext();
-	const [rows, setRows] = useState<DesignationRow[]>([]);
+	const [rows, setRows] = useState<SpellRow[]>([]);
 	const [loading, setLoading] = useState(true);
 	const [totalRows, setTotalRows] = useState(0);
 	const [paginationModel, setPaginationModel] = useState<GridPaginationModel>({
@@ -40,7 +40,7 @@ export default function DesignationMasterPage() {
 	const [dialogOpen, setDialogOpen] = useState(false);
 	const [selectedId, setSelectedId] = useState<number | undefined>(undefined);
 
-	const fetchDesignations = useCallback(async () => {
+	const fetchSpells = useCallback(async () => {
 		setLoading(true);
 		try {
 			const queryParams = new URLSearchParams({
@@ -57,25 +57,26 @@ export default function DesignationMasterPage() {
 			}
 
 			const { data, error } = await fetchWithCookie(
-				`${apiRoutesPortalMasters.DESIGNATION_TABLE}?${queryParams}`,
+				`${apiRoutesPortalMasters.SPELL_TABLE}?${queryParams}`,
 				"GET"
 			);
 
 			if (error || !data) {
-				throw new Error(error || "Failed to fetch designations");
+				throw new Error(error || "Failed to fetch spells");
 			}
 
-			const mapped: DesignationRow[] = (data.data || []).map(
+			const mapped: SpellRow[] = (data.data || []).map(
 				(r: Record<string, unknown>) => ({
 					...r,
-					id: r.designation_id as number,
-					designation_id: r.designation_id as number,
-					desig: (r.desig as string) ?? "",
-					dept_name: (r.dept_name as string) ?? "",
+					id: r.spell_id as number,
+					spell_id: r.spell_id as number,
+					spell_name: (r.spell_name as string) ?? "",
+					spell_code: (r.spell_code as string) ?? "",
+					shift_name: (r.shift_name as string) ?? "",
 					branch_name: (r.branch_name as string) ?? "",
-					norms: (r.norms as string) ?? "",
-					time_piece: (r.time_piece as string) ?? "",
-					active: (r.active as number) ?? 1,
+					starting_time: (r.starting_time as string) ?? "",
+					end_time: (r.end_time as string) ?? "",
+					working_hours: (r.working_hours as number) ?? 0,
 				})
 			);
 
@@ -83,7 +84,7 @@ export default function DesignationMasterPage() {
 			setTotalRows(data.total || 0);
 		} catch (err: unknown) {
 			const message =
-				err instanceof Error ? err.message : "Error fetching designations";
+				err instanceof Error ? err.message : "Error fetching spells";
 			setSnackbar({ open: true, message, severity: "error" });
 		} finally {
 			setLoading(false);
@@ -91,8 +92,8 @@ export default function DesignationMasterPage() {
 	}, [paginationModel.page, paginationModel.pageSize, searchQuery, selectedBranches]);
 
 	useEffect(() => {
-		fetchDesignations();
-	}, [fetchDesignations]);
+		fetchSpells();
+	}, [fetchSpells]);
 
 	const handlePaginationModelChange = (newModel: GridPaginationModel) => {
 		setPaginationModel(newModel);
@@ -112,8 +113,8 @@ export default function DesignationMasterPage() {
 		setDialogOpen(true);
 	}, []);
 
-	const handleEdit = useCallback((row: DesignationRow) => {
-		setSelectedId(row.designation_id);
+	const handleEdit = useCallback((row: SpellRow) => {
+		setSelectedId(row.spell_id);
 		setDialogOpen(true);
 	}, []);
 
@@ -123,40 +124,46 @@ export default function DesignationMasterPage() {
 	}, []);
 
 	const handleSaved = useCallback(() => {
-		fetchDesignations();
-	}, [fetchDesignations]);
+		fetchSpells();
+	}, [fetchSpells]);
 
-	const columns = useMemo<GridColDef<DesignationRow>[]>(
+	const columns = useMemo<GridColDef<SpellRow>[]>(
 		() => [
 			{
-				field: "desig",
-				headerName: "Designation Name",
-				flex: 2,
-				minWidth: 200,
-			},
-			{
-				field: "dept_name",
-				headerName: "Department",
-				flex: 1.5,
-				minWidth: 150,
-			},
-			{
-				field: "branch_name",
-				headerName: "Branch",
+				field: "spell_code",
+				headerName: "Spell Code",
 				flex: 1,
 				minWidth: 120,
 			},
 			{
-				field: "norms",
-				headerName: "Norms",
+				field: "spell_name",
+				headerName: "Spell Name",
+				flex: 1.5,
+				minWidth: 140,
+			},
+			{
+				field: "shift_name",
+				headerName: "Shift",
+				flex: 1.5,
+				minWidth: 140,
+			},
+			{
+				field: "starting_time",
+				headerName: "Start Time",
 				flex: 1,
 				minWidth: 100,
 			},
 			{
-				field: "time_piece",
-				headerName: "Time/Piece",
+				field: "end_time",
+				headerName: "End Time",
 				flex: 1,
 				minWidth: 100,
+			},
+			{
+				field: "working_hours",
+				headerName: "Working Hours",
+				flex: 1,
+				minWidth: 120,
 			},
 		],
 		[]
@@ -164,7 +171,7 @@ export default function DesignationMasterPage() {
 
 	return (
 		<IndexWrapper
-			title="Designation Master"
+			title="Spell Master"
 			rows={rows}
 			columns={columns}
 			rowCount={totalRows}
@@ -175,17 +182,17 @@ export default function DesignationMasterPage() {
 			search={{
 				value: searchQuery,
 				onChange: handleSearchChange,
-				placeholder: "Search by designation, department, or norms",
+				placeholder: "Search by spell name or code",
 				debounceDelayMs: 500,
 			}}
 			createAction={{
-				label: "Create Designation",
+				label: "Create Spell",
 				onClick: handleCreate,
 			}}
 			onView={handleEdit}
 			onEdit={handleEdit}
 		>
-			<CreateDesignationPage
+			<CreateSpellPage
 				open={dialogOpen}
 				onClose={handleDialogClose}
 				onSaved={handleSaved}

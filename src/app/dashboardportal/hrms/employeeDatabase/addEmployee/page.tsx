@@ -14,13 +14,16 @@ import {
   uploadEmployeePhoto,
   deleteEmployeePhoto,
   getEmployeePhotoUrl,
+  lookupEmployeeByCode,
+  updateEmployeeStatus,
 } from "@/utils/hrmsService";
 import { WIZARD_STEPS, type FormMode, type SectionName } from "../types/employeeTypes";
-import StepOverview from "./_components/StepOverview";
+import StepOverview, { DIALOG_STATUSES } from "./_components/StepOverview";
 import PersonalInformationStep from "./_components/PersonalInformationStep";
 import OfficialInformationStep from "./_components/OfficialInformationStep";
 import MedicalEnrollmentStep from "./_components/MedicalEnrollmentStep";
 import PlaceholderStep from "./_components/PlaceholderStep";
+import StatusActionDialog from "./_components/StatusActionDialog";
 
 function AddEmployeeContent() {
   const router = useRouter();
@@ -113,6 +116,26 @@ function AddEmployeeContent() {
     if (!error) setHasPhoto(false);
   }, [coId, ebId]);
 
+  // ─── Previous Employee Lookup ────────────────────────────────────
+  const [prevEmpLoading, setPrevEmpLoading] = React.useState(false);
+
+  const handlePrevEmpLookup = useCallback(
+    async (empCode: string) => {
+      if (!coId) return null;
+      setPrevEmpLoading(true);
+      try {
+        const { data, error } = await lookupEmployeeByCode(coId, empCode);
+        if (error || !data?.found) return null;
+        return data.data as Record<string, unknown>;
+      } catch {
+        return null;
+      } finally {
+        setPrevEmpLoading(false);
+      }
+    },
+    [coId],
+  );
+
   // ─── Load existing data in edit/view mode ────────────────────────
   useEffect(() => {
     if ((mode === "edit" || mode === "view") && urlEbId && coId && branchId) {
@@ -156,6 +179,7 @@ function AddEmployeeContent() {
           marital_status: formData.personal?.marital_status,
           country_id: formData.personal?.country_id,
           relegion_name: formData.personal?.relegion_name,
+          fixed_eb_id: formData.personal?.fixed_eb_id,
           father_spouse_name: formData.personal?.father_spouse_name,
           passport_no: formData.personal?.passport_no,
           driving_licence_no: formData.personal?.driving_licence_no,
@@ -221,10 +245,59 @@ function AddEmployeeContent() {
   }, [coId, branchId, isDisabled, selectedStep, ebId, formData, setEbId, setSaving]);
 
   // ─── Action button handler ───────────────────────────────────────
-  const handleActionClick = useCallback((action: string) => {
-    // Placeholder for workflow status changes (Blacklist, Terminate, Resign, Retire)
-    setSnackbar({ open: true, message: `${action} action will be implemented`, severity: "success" });
-  }, []);
+  const [statusDialog, setStatusDialog] = React.useState<{ open: boolean; statusId: number; label: string }>({
+    open: false, statusId: 0, label: "",
+  });
+  const [statusUpdating, setStatusUpdating] = React.useState(false);
+
+  const handleActionClick = useCallback((statusId: number, label: string) => {
+    if (!ebId) return;
+
+    // If this status requires date+reason, open the dialog
+    if (DIALOG_STATUSES.has(statusId)) {
+      setStatusDialog({ open: true, statusId, label });
+      return;
+    }
+
+    // Direct status change (Joined, Rejected — no dialog needed)
+    (async () => {
+      setStatusUpdating(true);
+      const { data: resp, error } = await updateEmployeeStatus({ eb_id: ebId, status_id: statusId });
+      setStatusUpdating(false);
+      if (error) {
+        setSnackbar({ open: true, message: error, severity: "error" });
+        return;
+      }
+      // Update local status
+      setFormData((prev) => ({
+        ...prev,
+        personal: prev.personal ? { ...prev.personal, status_id: statusId } : prev.personal,
+      }));
+      setSnackbar({ open: true, message: `Employee marked as ${label}`, severity: "success" });
+    })();
+  }, [ebId, setFormData]);
+
+  const handleStatusDialogConfirm = useCallback(async (date: string, reason: string) => {
+    if (!ebId) return;
+    setStatusUpdating(true);
+    const { data: resp, error } = await updateEmployeeStatus({
+      eb_id: ebId,
+      status_id: statusDialog.statusId,
+      date,
+      reason,
+    });
+    setStatusUpdating(false);
+    if (error) {
+      setSnackbar({ open: true, message: error, severity: "error" });
+      return;
+    }
+    setFormData((prev) => ({
+      ...prev,
+      personal: prev.personal ? { ...prev.personal, status_id: statusDialog.statusId, active: 0 } : prev.personal,
+    }));
+    setStatusDialog({ open: false, statusId: 0, label: "" });
+    setSnackbar({ open: true, message: `Employee marked as ${statusDialog.label}`, severity: "success" });
+  }, [ebId, statusDialog, setFormData]);
 
   // ─── Render selected step content ────────────────────────────────
   const renderStepContent = () => {
@@ -261,6 +334,8 @@ function AddEmployeeContent() {
                 ? [formData.personal.first_name, formData.personal.last_name].filter(Boolean).join(" ")
                 : undefined
             }
+            onPrevEmpLookup={handlePrevEmpLookup}
+            prevEmpLoading={prevEmpLoading}
             {...commonSaveProps}
           />
         );
@@ -274,6 +349,7 @@ function AddEmployeeContent() {
             disabled={isDisabled}
             setup={setup}
             sidebarBranchId={branchId}
+            ebId={ebId}
             onOfficialChange={updateOfficial}
             onBankChange={updateBank}
             {...commonSaveProps}
@@ -345,6 +421,7 @@ function AddEmployeeContent() {
           progress={progress}
           mode={mode}
           ebId={ebId}
+          statusId={formData.personal?.status_id}
           onStepClick={setSelectedStep}
           onActionClick={handleActionClick}
           onBack={() => router.push("/dashboardportal/hrms/employeeDatabase")}
@@ -352,6 +429,14 @@ function AddEmployeeContent() {
       ) : (
         renderStepContent()
       )}
+
+      <StatusActionDialog
+        open={statusDialog.open}
+        actionLabel={statusDialog.label}
+        onConfirm={handleStatusDialogConfirm}
+        onCancel={() => setStatusDialog({ open: false, statusId: 0, label: "" })}
+        loading={statusUpdating}
+      />
 
       <Snackbar
         open={snackbar.open}

@@ -47,6 +47,16 @@ vi.mock("./CreateDesignationPage", () => ({
 		open ? <div data-testid="create-dialog">Create Dialog</div> : null,
 }));
 
+// Mock sidebarContext — stable reference to avoid infinite useCallback/useEffect re-runs
+const { stableSelectedBranches } = vi.hoisted(() => ({
+	stableSelectedBranches: [10] as number[],
+}));
+vi.mock("@/components/dashboard/sidebarContext", () => ({
+	useSidebarContext: () => ({
+		selectedBranches: stableSelectedBranches,
+	}),
+}));
+
 import { fetchWithCookie } from "@/utils/apiClient2";
 import DesignationMasterPage from "./page";
 

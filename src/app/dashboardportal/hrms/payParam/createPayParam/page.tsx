@@ -123,6 +123,8 @@ function CreatePayParamContent() {
           initialValues={formValues}
           mode={isDisabled ? "view" : "edit"}
           onValuesChange={handleChange}
+          hideModeToggle
+          hideSubmit
         />
       </Paper>
 

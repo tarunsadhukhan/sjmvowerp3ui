@@ -1,10 +1,10 @@
 "use client";
 
-import React, { useMemo, useRef, useCallback } from "react";
+import React, { useMemo, useCallback } from "react";
 import { Box, Typography, IconButton } from "@mui/material";
 import { Plus, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import MuiForm, { type Schema, type Field, type MuiFormHandle } from "@/components/ui/muiform";
+import MuiForm, { type Schema, type Field } from "@/components/ui/muiform";
 import type { AddressDetails } from "../../types/employeeTypes";
 import type { useEmployeeSetup } from "../../hooks/useEmployeeSetup";
 
@@ -49,35 +49,78 @@ function blankAddress(): AddressDetails {
   };
 }
 
+/** Isolated row component so initialValues stay referentially stable per address */
+const AddressRow = React.memo(function AddressRow({
+  addr,
+  index,
+  disabled,
+  canRemove,
+  onUpdate,
+  onRemove,
+}: {
+  addr: AddressDetails;
+  index: number;
+  disabled: boolean;
+  canRemove: boolean;
+  onUpdate: (index: number, data: Partial<AddressDetails>) => void;
+  onRemove: (index: number) => void;
+}) {
+  const initialValues = useMemo(
+    () => ({
+      address_type: String(addr.address_type),
+      address_line_1: addr.address_line_1,
+      address_line_2: addr.address_line_2 ?? "",
+      city_name: addr.city_name ?? "",
+      pin_code: addr.pin_code || "",
+      is_correspondent_address: addr.is_correspondent_address,
+    }),
+    [addr.address_type, addr.address_line_1, addr.address_line_2, addr.city_name, addr.pin_code, addr.is_correspondent_address],
+  );
+
+  const handleChange = useCallback(
+    (vals: Record<string, unknown>) => onUpdate(index, vals as Partial<AddressDetails>),
+    [onUpdate, index],
+  );
+
+  const handleRemove = useCallback(() => onRemove(index), [onRemove, index]);
+
+  return (
+    <Box className="relative rounded-md border p-4">
+      <Box className="mb-2 flex items-center justify-between">
+        <Typography variant="subtitle2">Address {index + 1}</Typography>
+        {!disabled && canRemove && (
+          <IconButton size="small" aria-label="Remove address" onClick={handleRemove}>
+            <Trash2 className="h-4 w-4 text-red-500" />
+          </IconButton>
+        )}
+      </Box>
+      <MuiForm
+        schema={addressSchema}
+        initialValues={initialValues}
+        mode={disabled ? "view" : "edit"}
+        onValuesChange={handleChange}
+        hideModeToggle
+        hideSubmit
+      />
+    </Box>
+  );
+});
+
 export default function AddressStep({ addresses, onAdd, onUpdate, onRemove, disabled }: AddressStepProps) {
   const handleAdd = useCallback(() => onAdd(blankAddress()), [onAdd]);
 
   return (
     <Box className="flex flex-col gap-6">
       {addresses.map((addr, idx) => (
-        <Box key={idx} className="relative rounded-md border p-4">
-          <Box className="mb-2 flex items-center justify-between">
-            <Typography variant="subtitle2">Address {idx + 1}</Typography>
-            {!disabled && addresses.length > 1 && (
-              <IconButton size="small" aria-label="Remove address" onClick={() => onRemove(idx)}>
-                <Trash2 className="h-4 w-4 text-red-500" />
-              </IconButton>
-            )}
-          </Box>
-          <MuiForm
-            schema={addressSchema}
-            initialValues={{
-              address_type: String(addr.address_type),
-              address_line_1: addr.address_line_1,
-              address_line_2: addr.address_line_2 ?? "",
-              city_name: addr.city_name ?? "",
-              pin_code: addr.pin_code || "",
-              is_correspondent_address: addr.is_correspondent_address,
-            }}
-            mode={disabled ? "view" : "edit"}
-            onValuesChange={(vals) => onUpdate(idx, vals as Partial<AddressDetails>)}
-          />
-        </Box>
+        <AddressRow
+          key={idx}
+          addr={addr}
+          index={idx}
+          disabled={disabled}
+          canRemove={addresses.length > 1}
+          onUpdate={onUpdate}
+          onRemove={onRemove}
+        />
       ))}
 
       {!disabled && (

@@ -177,6 +177,8 @@ function CreatePaySchemeContent() {
           initialValues={headerValues}
           mode={isDisabled ? "view" : "edit"}
           onValuesChange={handleHeaderChange}
+          hideModeToggle
+          hideSubmit
         />
       </Paper>
 
@@ -225,6 +227,8 @@ function CreatePaySchemeContent() {
                 }}
                 mode={isDisabled ? "view" : "edit"}
                 onValuesChange={(vals) => updateComponent(idx, vals as Partial<PaySchemeStructureEntry>)}
+                hideModeToggle
+                hideSubmit
               />
             </Box>
           ))}

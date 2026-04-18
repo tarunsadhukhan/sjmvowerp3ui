@@ -29,6 +29,6 @@ export default function EditMechineMasterPage({ open = false, onClose, mechine_m
   }, [open, mechine_master_id]);
 
   return (
-    <CreateMechineMasterPage open={open} onClose={onClose} existingRows={existingRows} initialValues={record} isEdit={true} mechine_master_id={mechine_master_id} />
+    <CreateMechineMasterPage open={open} onClose={onClose ?? (() => {})} editId={mechine_master_id} initialMode="edit" />
   );
 }

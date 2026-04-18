@@ -19,7 +19,6 @@ import { fetchWithCookie } from "@/utils/apiClient2";
 import { apiRoutesPortalMasters } from "@/utils/api";
 import { useSidebarContext } from "@/components/dashboard/sidebarContext";
 
-/** Dropdown option shape */
 type Option = { label: string; value: string };
 
 type Props = {
@@ -29,28 +28,12 @@ type Props = {
 	editId?: number | string;
 };
 
-/** Static dropdown options matching the legacy CreateDesignation.js */
-const TIME_PIECE_OPTIONS: Option[] = [
-	{ label: "Time", value: "Time" },
-	{ label: "Piece", value: "Piece" },
+const YES_NO_OPTIONS: Option[] = [
+	{ label: "Yes", value: "1" },
+	{ label: "No", value: "0" },
 ];
 
-const DIRECT_INDIRECT_OPTIONS: Option[] = [
-	{ label: "Direct", value: "D" },
-	{ label: "Indirect", value: "I" },
-];
-
-const ON_MACHINE_OPTIONS: Option[] = [
-	{ label: "Yes", value: "Yes" },
-	{ label: "No", value: "No" },
-];
-
-const PIECE_RATE_TYPE_OPTIONS: Option[] = [
-	{ label: "Time", value: "1" },
-	{ label: "Piece", value: "2" },
-];
-
-export default function CreateDesignationPage({
+export default function CreateSpellPage({
 	open,
 	onClose,
 	onSaved,
@@ -65,12 +48,7 @@ export default function CreateDesignationPage({
 		severity: "success" | "error";
 	}>({ open: false, message: "", severity: "success" });
 
-	// Setup dropdown options from API
-	const [deptOptions, setDeptOptions] = useState<Option[]>([]);
-	const [branchOptions, setBranchOptions] = useState<Option[]>([]);
-	const [machineTypeOptions, setMachineTypeOptions] = useState<Option[]>([]);
-
-	// Form state
+	const [shiftOptions, setShiftOptions] = useState<Option[]>([]);
 	const [initialValues, setInitialValues] = useState<Record<string, unknown>>({});
 	const [formKey, setFormKey] = useState(0);
 
@@ -87,74 +65,57 @@ export default function CreateDesignationPage({
 			const co_id = getCoId();
 			if (!co_id) throw new Error("No company selected");
 
-			// Fetch setup data (departments + branches)
-			const branchParam = selectedBranches.length > 0 ? `&branch_id=${selectedBranches[0]}` : "";
-			const setupUrl = `${apiRoutesPortalMasters.DESIGNATION_CREATE_SETUP}?co_id=${co_id}${branchParam}`;
+			const queryParams = new URLSearchParams({ co_id });
+			if (selectedBranches.length > 0) {
+				queryParams.append("branch_id", selectedBranches.join(","));
+			}
+
+			const setupUrl = `${apiRoutesPortalMasters.SPELL_CREATE_SETUP}?${queryParams}`;
 			const { data: setupData, error: setupErr } = await fetchWithCookie(setupUrl, "GET");
 			if (setupErr || !setupData) throw new Error(setupErr || "Failed to load setup");
 
-			const depts: Option[] = (setupData.departments || []).map(
-				(d: Record<string, unknown>) => ({
-					label: String(d.dept_desc ?? ""),
-					value: String(d.dept_id ?? ""),
+			const shifts: Option[] = (setupData.shifts || []).map(
+				(s: Record<string, unknown>) => ({
+					label: String(s.shift_name ?? ""),
+					value: String(s.shift_id ?? ""),
 				})
 			);
-			const branches: Option[] = (setupData.branches || []).map(
-				(b: Record<string, unknown>) => ({
-					label: String(b.branch_name ?? ""),
-					value: String(b.branch_id ?? ""),
-				})
-			);
-			const machineTypes: Option[] = (setupData.machine_types || []).map(
-				(m: Record<string, unknown>) => ({
-					label: String(m.machine_type_name ?? ""),
-					value: String(m.machine_type_id ?? ""),
-				})
-			);
-			setDeptOptions(depts);
-			// Filter branches to only the sidebar-selected branch
-			const selectedBranchSet = new Set(selectedBranches.map(String));
-			const filteredBranches = selectedBranchSet.size > 0
-				? branches.filter((b) => selectedBranchSet.has(b.value))
-				: branches;
-			setBranchOptions(filteredBranches);
-			setMachineTypeOptions(machineTypes);
+			setShiftOptions(shifts);
 
 			if (editId !== undefined) {
-				// Edit/View — load record
-				const detailUrl = `${apiRoutesPortalMasters.DESIGNATION_BY_ID}/${editId}`;
+				const detailUrl = `${apiRoutesPortalMasters.SPELL_BY_ID}/${editId}`;
 				const { data: detailData, error: detailErr } = await fetchWithCookie(detailUrl, "GET");
-				if (detailErr || !detailData) throw new Error(detailErr || "Failed to load designation");
+				if (detailErr || !detailData) throw new Error(detailErr || "Failed to load spell");
 
 				const rec = detailData.data ?? detailData;
 				setInitialValues({
-					desig: rec.desig ?? "",
-					dept_id: rec.dept_id != null ? String(rec.dept_id) : "",
-					branch_id: rec.branch_id != null ? String(rec.branch_id) : "",
-					norms: rec.norms ?? "",
-					time_piece: rec.time_piece ?? "",
-					direct_indirect: rec.direct_indirect ?? "",
-					on_machine: rec.on_machine ?? "",
-					machine_type: rec.machine_type ?? "",
-					no_of_machines: rec.no_of_machines ?? "",
-					cost_code: rec.cost_code ?? "",
-					cost_description: rec.cost_description ?? "",
-					piece_rate_type: rec.piece_rate_type ?? "",
+					spell_name: rec.spell_name ?? "",
+					spell_code: rec.spell_code ?? "",
+					shift_id: rec.shift_id != null ? String(rec.shift_id) : "",
+					starting_time: rec.starting_time ?? "",
+					end_time: rec.end_time ?? "",
+					working_hours: rec.working_hours ?? "",
+					minimum_work_hours: rec.minimum_work_hours ?? "",
+					break_hours: rec.break_hours ?? "",
+					halfday_work_hours: rec.halfday_work_hours ?? "",
+					late_minutes: rec.late_minutes != null ? String(rec.late_minutes) : "",
+					late_minutes2: rec.late_minutes2 != null ? String(rec.late_minutes2) : "",
+					is_overnight: rec.is_overnight != null ? String(rec.is_overnight) : "0",
 				});
 			} else {
 				setInitialValues({
-					desig: "",
-					dept_id: "",
-					branch_id: filteredBranches.length > 0 ? filteredBranches[0].value : "",
-					norms: "",
-					time_piece: "",
-					direct_indirect: "",
-					on_machine: "",
-					machine_type: "",
-					no_of_machines: "",
-					cost_code: "",
-					cost_description: "",
-					piece_rate_type: "",
+					spell_name: "",
+					spell_code: "",
+					shift_id: shifts.length > 0 ? shifts[0].value : "",
+					starting_time: "",
+					end_time: "",
+					working_hours: "",
+					minimum_work_hours: "",
+					break_hours: "",
+					halfday_work_hours: "",
+					late_minutes: "",
+					late_minutes2: "",
+					is_overnight: "0",
 				});
 			}
 
@@ -185,133 +146,116 @@ export default function CreateDesignationPage({
 		() => ({
 			title:
 				editId !== undefined
-					? "Edit Designation"
-					: "Create Designation",
+					? "Edit Spell"
+					: "Create Spell",
 			fields: [
 				{
-					name: "desig",
-					label: "Designation Name",
+					name: "spell_name",
+					label: "Spell Name",
 					type: "text",
 					required: true,
 					grid: { xs: 12, sm: 6 },
 				},
 				{
-					name: "dept_id",
-					label: "Department",
-					type: "select",
-					required: true,
-					options: deptOptions,
-					grid: { xs: 12, sm: 6 },
-				},
-				{
-					name: "branch_id",
-					label: "Branch",
-					type: "select",
-					required: true,
-					options: branchOptions,
-					grid: { xs: 12, sm: 6 },
-				},
-				{
-					name: "time_piece",
-					label: "Time/Piece",
-					type: "select",
-					required: true,
-					options: TIME_PIECE_OPTIONS,
-					grid: { xs: 12, sm: 6 },
-				},
-				{
-					name: "norms",
-					label: "Norms",
+					name: "spell_code",
+					label: "Spell Code",
 					type: "text",
-					required: true,
 					grid: { xs: 12, sm: 6 },
 				},
 				{
-					name: "machine_type",
-					label: "Machine Type",
-					type: "select",
-					options: machineTypeOptions,
-					grid: { xs: 12, sm: 6 },
-				},
-				{
-					name: "direct_indirect",
-					label: "Direct/Indirect",
+					name: "shift_id",
+					label: "Shift",
 					type: "select",
 					required: true,
-					options: DIRECT_INDIRECT_OPTIONS,
+					options: shiftOptions,
 					grid: { xs: 12, sm: 6 },
 				},
 				{
-					name: "on_machine",
-					label: "On Machine",
-					type: "select",
-					required: true,
-					options: ON_MACHINE_OPTIONS,
+					name: "starting_time",
+					label: "Starting Time",
+					type: "time",
 					grid: { xs: 12, sm: 6 },
 				},
 				{
-					name: "no_of_machines",
-					label: "No. of Machines",
+					name: "end_time",
+					label: "End Time",
+					type: "time",
+					grid: { xs: 12, sm: 6 },
+				},
+				{
+					name: "working_hours",
+					label: "Working Hours",
+					type: "number",
+					grid: { xs: 12, sm: 6 },
+				},
+				{
+					name: "minimum_work_hours",
+					label: "Minimum Work Hours",
+					type: "number",
+					grid: { xs: 12, sm: 6 },
+				},
+				{
+					name: "break_hours",
+					label: "Break Hours",
 					type: "text",
-					required: true,
 					grid: { xs: 12, sm: 6 },
 				},
 				{
-					name: "cost_code",
-					label: "Cost Code",
-					type: "text",
-					required: true,
+					name: "halfday_work_hours",
+					label: "Half Day Work Hours",
+					type: "number",
 					grid: { xs: 12, sm: 6 },
 				},
 				{
-					name: "cost_description",
-					label: "Cost Description",
-					type: "text",
-					required: true,
+					name: "late_minutes",
+					label: "Late Minutes 1",
+					type: "number",
 					grid: { xs: 12, sm: 6 },
 				},
 				{
-					name: "piece_rate_type",
-					label: "Piece Rate Type",
+					name: "late_minutes2",
+					label: "Late Minutes 2",
+					type: "number",
+					grid: { xs: 12, sm: 6 },
+				},
+				{
+					name: "is_overnight",
+					label: "Is Overnight",
 					type: "select",
-					required: true,
-					options: PIECE_RATE_TYPE_OPTIONS,
+					options: YES_NO_OPTIONS,
 					grid: { xs: 12, sm: 6 },
 				},
 			],
 		}),
-		[editId, deptOptions, branchOptions, machineTypeOptions]
+		[editId, shiftOptions]
 	);
 
 	const handleSubmit = async (values: Record<string, unknown>) => {
 		setSaving(true);
 		try {
-			const co_id = getCoId();
-			if (!co_id) throw new Error("No company selected");
-
 			const payload = {
-				desig: values.desig,
-				dept_id: values.dept_id,
-				branch_id: values.branch_id || null,
-				norms: values.norms || null,
-				time_piece: values.time_piece || null,
-				direct_indirect: values.direct_indirect || null,
-				on_machine: values.on_machine || null,
-				machine_type: values.machine_type || null,
-				no_of_machines: values.no_of_machines || null,
-				cost_code: values.cost_code || null,
-				cost_description: values.cost_description || null,
-				piece_rate_type: values.piece_rate_type || null,
+				spell_name: values.spell_name,
+				spell_code: values.spell_code || null,
+				shift_id: values.shift_id || null,
+				starting_time: values.starting_time || null,
+				end_time: values.end_time || null,
+				working_hours: values.working_hours || null,
+				minimum_work_hours: values.minimum_work_hours || null,
+				break_hours: values.break_hours || null,
+				halfday_work_hours: values.halfday_work_hours || null,
+				late_minutes: values.late_minutes || null,
+				late_minutes2: values.late_minutes2 || null,
+				is_overnight: values.is_overnight || 0,
 			};
 
 			let url: string;
 			let method: "POST" | "PUT";
 
 			if (editId !== undefined) {
-				url = `${apiRoutesPortalMasters.DESIGNATION_EDIT}/${editId}`;
+				url = `${apiRoutesPortalMasters.SPELL_EDIT}/${editId}`;
 				method = "PUT";
 			} else {
-				url = apiRoutesPortalMasters.DESIGNATION_CREATE;
+				url = apiRoutesPortalMasters.SPELL_CREATE;
 				method = "POST";
 			}
 
@@ -322,8 +266,8 @@ export default function CreateDesignationPage({
 				open: true,
 				message:
 					editId !== undefined
-						? "Designation updated successfully"
-						: "Designation created successfully",
+						? "Spell updated successfully"
+						: "Spell created successfully",
 				severity: "success",
 			});
 
@@ -339,9 +283,9 @@ export default function CreateDesignationPage({
 
 	const dialogTitle = useMemo(() => {
 		if (editId !== undefined) {
-			return "Edit Designation";
+			return "Edit Spell";
 		}
-		return "Create Designation";
+		return "Create Spell";
 	}, [editId]);
 
 	return (

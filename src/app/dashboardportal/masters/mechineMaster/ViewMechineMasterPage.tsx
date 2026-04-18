@@ -48,5 +48,5 @@ export default function ViewMechineMasterPage({ open = false, onClose, mechine_m
   void 0;
 
   // Render the shared form component directly. It renders its own Dialog when `open` is boolean.
-  return <CreateMechineMasterPage open={open} onClose={onClose} readOnly={true} initialValues={record} />;
+  return <CreateMechineMasterPage open={open} onClose={onClose ?? (() => {})} editId={mechine_master_id} initialMode="view" />;
 }

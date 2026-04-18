@@ -1,29 +1,23 @@
 "use client";
-
 import React, { useEffect, useMemo, useState, useCallback } from "react";
 import { Snackbar, Alert } from "@mui/material";
 import { GridColDef, GridPaginationModel } from "@mui/x-data-grid";
 import { fetchWithCookie } from "@/utils/apiClient2";
 import { apiRoutesPortalMasters } from "@/utils/api";
 import IndexWrapper from "@/components/ui/IndexWrapper";
-import CreateDesignationPage from "./CreateDesignationPage";
-import { useSidebarContext } from "@/components/dashboard/sidebarContext";
+import CreateMachineTypePage from "./CreateMachineTypePage";
+import type { MuiFormMode } from "@/components/ui/muiform";
 
-type DesignationRow = {
+type MachineTypeRow = {
 	id: number | string;
-	designation_id: number;
-	desig: string;
-	dept_name: string;
-	branch_name: string;
-	norms: string;
-	time_piece: string;
+	machine_type_id: number;
+	machine_type_name: string;
 	active: number;
 	[key: string]: unknown;
 };
 
-export default function DesignationMasterPage() {
-	const { selectedBranches } = useSidebarContext();
-	const [rows, setRows] = useState<DesignationRow[]>([]);
+export default function MachineTypeMasterPage() {
+	const [rows, setRows] = useState<MachineTypeRow[]>([]);
 	const [loading, setLoading] = useState(true);
 	const [totalRows, setTotalRows] = useState(0);
 	const [paginationModel, setPaginationModel] = useState<GridPaginationModel>({
@@ -39,8 +33,9 @@ export default function DesignationMasterPage() {
 
 	const [dialogOpen, setDialogOpen] = useState(false);
 	const [selectedId, setSelectedId] = useState<number | undefined>(undefined);
+	const [dialogMode, setDialogMode] = useState<MuiFormMode>("create");
 
-	const fetchDesignations = useCallback(async () => {
+	const fetchMachineTypes = useCallback(async () => {
 		setLoading(true);
 		try {
 			const queryParams = new URLSearchParams({
@@ -52,29 +47,21 @@ export default function DesignationMasterPage() {
 				queryParams.append("search", searchQuery);
 			}
 
-			if (selectedBranches.length > 0) {
-				queryParams.append("branch_id", selectedBranches.join(","));
-			}
-
 			const { data, error } = await fetchWithCookie(
-				`${apiRoutesPortalMasters.DESIGNATION_TABLE}?${queryParams}`,
+				`${apiRoutesPortalMasters.MACHINE_TYPE_TABLE}?${queryParams}`,
 				"GET"
 			);
 
 			if (error || !data) {
-				throw new Error(error || "Failed to fetch designations");
+				throw new Error(error || "Failed to fetch machine types");
 			}
 
-			const mapped: DesignationRow[] = (data.data || []).map(
+			const mapped: MachineTypeRow[] = (data.data || []).map(
 				(r: Record<string, unknown>) => ({
 					...r,
-					id: r.designation_id as number,
-					designation_id: r.designation_id as number,
-					desig: (r.desig as string) ?? "",
-					dept_name: (r.dept_name as string) ?? "",
-					branch_name: (r.branch_name as string) ?? "",
-					norms: (r.norms as string) ?? "",
-					time_piece: (r.time_piece as string) ?? "",
+					id: r.machine_type_id as number,
+					machine_type_id: r.machine_type_id as number,
+					machine_type_name: (r.machine_type_name as string) ?? "",
 					active: (r.active as number) ?? 1,
 				})
 			);
@@ -83,16 +70,16 @@ export default function DesignationMasterPage() {
 			setTotalRows(data.total || 0);
 		} catch (err: unknown) {
 			const message =
-				err instanceof Error ? err.message : "Error fetching designations";
+				err instanceof Error ? err.message : "Error fetching machine types";
 			setSnackbar({ open: true, message, severity: "error" });
 		} finally {
 			setLoading(false);
 		}
-	}, [paginationModel.page, paginationModel.pageSize, searchQuery, selectedBranches]);
+	}, [paginationModel.page, paginationModel.pageSize, searchQuery]);
 
 	useEffect(() => {
-		fetchDesignations();
-	}, [fetchDesignations]);
+		fetchMachineTypes();
+	}, [fetchMachineTypes]);
 
 	const handlePaginationModelChange = (newModel: GridPaginationModel) => {
 		setPaginationModel(newModel);
@@ -109,11 +96,13 @@ export default function DesignationMasterPage() {
 
 	const handleCreate = useCallback(() => {
 		setSelectedId(undefined);
+		setDialogMode("create");
 		setDialogOpen(true);
 	}, []);
 
-	const handleEdit = useCallback((row: DesignationRow) => {
-		setSelectedId(row.designation_id);
+	const handleEdit = useCallback((row: MachineTypeRow) => {
+		setSelectedId(row.machine_type_id);
+		setDialogMode("edit");
 		setDialogOpen(true);
 	}, []);
 
@@ -123,40 +112,26 @@ export default function DesignationMasterPage() {
 	}, []);
 
 	const handleSaved = useCallback(() => {
-		fetchDesignations();
-	}, [fetchDesignations]);
+		fetchMachineTypes();
+	}, [fetchMachineTypes]);
 
-	const columns = useMemo<GridColDef<DesignationRow>[]>(
+	const columns = useMemo<GridColDef<MachineTypeRow>[]>(
 		() => [
 			{
-				field: "desig",
-				headerName: "Designation Name",
+				field: "machine_type_name",
+				headerName: "Machine Type Name",
 				flex: 2,
 				minWidth: 200,
 			},
 			{
-				field: "dept_name",
-				headerName: "Department",
-				flex: 1.5,
-				minWidth: 150,
-			},
-			{
-				field: "branch_name",
-				headerName: "Branch",
-				flex: 1,
-				minWidth: 120,
-			},
-			{
-				field: "norms",
-				headerName: "Norms",
-				flex: 1,
-				minWidth: 100,
-			},
-			{
-				field: "time_piece",
-				headerName: "Time/Piece",
-				flex: 1,
-				minWidth: 100,
+				field: "active",
+				headerName: "Status",
+				width: 100,
+				renderCell: (params) => (
+					<span style={{ color: params.value === 1 ? "green" : "red" }}>
+						{params.value === 1 ? "Active" : "Inactive"}
+					</span>
+				),
 			},
 		],
 		[]
@@ -164,7 +139,7 @@ export default function DesignationMasterPage() {
 
 	return (
 		<IndexWrapper
-			title="Designation Master"
+			title="Machine Type Master"
 			rows={rows}
 			columns={columns}
 			rowCount={totalRows}
@@ -175,21 +150,21 @@ export default function DesignationMasterPage() {
 			search={{
 				value: searchQuery,
 				onChange: handleSearchChange,
-				placeholder: "Search by designation, department, or norms",
+				placeholder: "Search by machine type name",
 				debounceDelayMs: 500,
 			}}
 			createAction={{
-				label: "Create Designation",
+				label: "Create Machine Type",
 				onClick: handleCreate,
 			}}
-			onView={handleEdit}
 			onEdit={handleEdit}
 		>
-			<CreateDesignationPage
+			<CreateMachineTypePage
 				open={dialogOpen}
 				onClose={handleDialogClose}
 				onSaved={handleSaved}
 				editId={selectedId}
+				initialMode={dialogMode}
 			/>
 			<Snackbar
 				open={snackbar.open}

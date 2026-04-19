@@ -19,6 +19,7 @@ export const fetchWithCookie = async <T = any>(
             method,
             headers: {
                 "Content-Type": "application/json",
+                "x-forwarded-host": "sls.vowerp.co.in",
             },
             withCredentials: true,
             data: body,

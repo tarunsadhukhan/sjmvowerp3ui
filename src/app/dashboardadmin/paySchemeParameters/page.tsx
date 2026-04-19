@@ -109,6 +109,7 @@ export default function PaySchemeParametersPage() {
         </div>
 
         <IndexWrapper
+          title="Pay Scheme Parameters"
           rows={rows}
           columns={columns}
           rowCount={totalRows}

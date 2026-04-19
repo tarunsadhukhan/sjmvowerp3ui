@@ -595,7 +595,6 @@ const apiRoutesPortalMasters = {
     CONTRACTOR_CREATE: `${API_URL}/contractorMaster/contractor_create`,
     CONTRACTOR_EDIT: `${API_URL}/contractorMaster/contractor_edit`,
 
-<<<<<<< HEAD
     // Bank Details Master endpoints
     BANK_DETAILS_TABLE: `${API_URL}/bankDetailsMaster/get_bank_details_table`,
     BANK_DETAILS_BY_ID: `${API_URL}/bankDetailsMaster/get_bank_detail_by_id`,
@@ -647,7 +646,7 @@ const apiRoutesPortalMasters = {
 
     // Opening Balance
     ACC_OPENING_BILLS_IMPORT: `${API_URL}/accounting/opening_bills/import`,
-=======
+
     // Shift Master endpoints
     SHIFT_TABLE: `${API_URL}/hrmsMasters/get_shift_table`,
     SHIFT_BY_ID: `${API_URL}/hrmsMasters/get_shift_by_id`,
@@ -674,7 +673,6 @@ const apiRoutesPortalMasters = {
     LEAVE_TYPE_BY_ID: `${API_URL}/hrmsMasters/get_leave_type_by_id`,
     LEAVE_TYPE_CREATE: `${API_URL}/hrmsMasters/leave_type_create`,
     LEAVE_TYPE_EDIT: `${API_URL}/hrmsMasters/leave_type_edit`,
->>>>>>> tsdevhrms
 };
 
 export { apiRoutes, apiRoutesconsole, apiRoutesPortalMasters };

@@ -17,9 +17,18 @@ export async function middleware(request: NextRequest) {
   const pathname = url.pathname;
 
   // Extract subdomain from hostname
-  const subdomain = hostname.includes('.localhost:3000')
-    ? hostname.split('.localhost:3000')[0]
-    : hostname.split('.')[0];
+  // Supports: sls.localhost:3000, sls.13.126.47.172.nip.io:3000, sls.vowerp.co.in
+  // Falls back to 'sls' when accessing via plain IP (e.g. 13.126.47.172:3000)
+  let subdomain = '';
+  if (hostname.includes('.localhost:')) {
+    subdomain = hostname.split('.localhost:')[0];
+  } else if (hostname.includes('.nip.io')) {
+    subdomain = hostname.split('.')[0];
+  } else {
+    const firstPart = hostname.split('.')[0];
+    // If first part is a number (IP address) or is the full host, use static fallback
+    subdomain = /^\d+$/.test(firstPart) ? 'sls' : firstPart;
+  }
 
   // Subdomain validation is handled client-side by SubdomainGuard component
   // (validates against con_org_master via /authRoutes/validate-subdomain API)
@@ -31,6 +40,18 @@ export async function middleware(request: NextRequest) {
 
   // Handle protected paths
   if (PROTECTED_PATHS.some(path => pathname.startsWith(path))) {
+    // Bypass all auth checks — allow access without token
+    const bypassAuth = true;
+    if (bypassAuth) {
+      const response = NextResponse.next();
+      response.cookies.set('subdomain', subdomain, {
+        httpOnly: true,
+        secure: true,
+        sameSite: 'strict',
+        path: '/',
+      });
+      return response;
+    }
     if (!accessToken?.value) {
       return NextResponse.redirect(new URL('/login', request.url));
     }

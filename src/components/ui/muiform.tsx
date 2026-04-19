@@ -332,7 +332,6 @@ export const MuiForm = React.forwardRef(function MuiForm(
 						},
 						minWidth: 0,
 					}}>
-<<<<<<< HEAD
 				{mode === "view" && field.type !== "checkbox" && field.type !== "custom" ? (
 					<Box>
 						<Typography variant="caption" color="text.secondary">
@@ -341,9 +340,6 @@ export const MuiForm = React.forwardRef(function MuiForm(
 						<Typography variant="body2" sx={{ fontWeight: 500 }}>{displayValue(field, value)}</Typography>
 					</Box>
 				) : field.type === "text" || field.type === "number" || field.type === "date" || field.type === "time" ? (
-=======
-				{field.type === "text" || field.type === "number" || field.type === "date" || field.type === "time" ? (
->>>>>>> tsdevhrms
 					<TextField
 						type={field.type === "text" ? "text" : field.type === "number" ? "number" : field.type === "time" ? "time" : "date"}
 						value={value ?? ""}

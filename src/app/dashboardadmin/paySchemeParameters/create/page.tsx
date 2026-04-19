@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useEffect, useState, useCallback } from "react";
+import React, { useEffect, useState, useCallback, Suspense } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import {
   TextField,
@@ -61,7 +61,7 @@ const BLANK_FORM: FormValues = {
   default_value: "",
 };
 
-export default function CreatePayComponentPage() {
+function CreatePayComponentPageInner() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const editId = searchParams.get("id");
@@ -383,5 +383,13 @@ export default function CreatePayComponentPage() {
         </Paper>
       </div>
     </div>
+  );
+}
+
+export default function CreatePayComponentPage() {
+  return (
+    <Suspense fallback={<div>Loading...</div>}>
+      <CreatePayComponentPageInner />
+    </Suspense>
   );
 }

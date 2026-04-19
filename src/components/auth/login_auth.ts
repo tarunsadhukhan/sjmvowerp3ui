@@ -29,6 +29,7 @@ export const login = async (
           "Content-Type": "application/json",
           "Accept": "application/json",
           "X-Subdomain": subdomain,
+          "x-forwarded-host": "sls.vowerp.co.in",
         },
         withCredentials: true, // Ensure cookies are sent and received
         validateStatus: () => true, // Allow any status code to be handled in JS
@@ -94,6 +95,7 @@ console.log('API_URL for all', API_URL);
           "Content-Type": "application/json",
           "Accept": "application/json",
           "X-Subdomain": subdomain,
+          "x-forwarded-host": "sls.vowerp.co.in",
         },
         withCredentials: true, // Ensure cookies are sent and received
         validateStatus: () => true,    }

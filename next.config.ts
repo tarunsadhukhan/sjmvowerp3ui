@@ -14,6 +14,21 @@ const nextConfig: NextConfig = {
         hostname: 'localhost',
         port: '3000',
       },
+      {
+        protocol: 'http',
+        hostname: '*.13.126.47.172',
+        port: '3000',
+      },
+      {
+        protocol: 'http',
+        hostname: '13.126.47.172',
+        port: '3000',
+      },
+      {
+        protocol: 'http',
+        hostname: '*.13.126.47.172.nip.io',
+        port: '3000',
+      },
     ],
     // Use unoptimized images for local development to avoid subdomain issues
     unoptimized: process.env.NODE_ENV === 'development',

@@ -13,6 +13,7 @@ import { fetchWithCookie } from "@/utils/apiClient2";
 import { apiRoutesPortalMasters } from "@/utils/api";
 
 interface PaySchemeRow {
+  id: number;
   payscheme_id: number;
   co_id: number | null;
   payscheme_code: string;
@@ -146,6 +147,7 @@ export default function PaySchemeCreationPage() {
         </div>
 
         <IndexWrapper
+          title="Pay Scheme"
           rows={rows}
           columns={columns}
           rowCount={totalRows}

@@ -26,6 +26,11 @@ export default function SubdomainGuard() {
           // Plain localhost without subdomain — allow through
           setChecked(true);
           return;
+        } else if (/^\d+(\.\d+){3}(:\d+)?$/.test(hostname)) {
+          // IP address detected (e.g., 13.126.47.172:3000 or 192.168.1.1)
+          // Use fallback subdomain from env, or allow through with default
+          const fallbackSubdomain = process.env.NEXT_PUBLIC_STATIC_SUBDOMAIN || 'sls';
+          subdomain = fallbackSubdomain;
         } else {
           subdomain = hostname.split('.')[0];
         }

@@ -63,7 +63,11 @@ export default function CreateCategoryPage({
 			const co_id = getCoId();
 			if (!co_id) throw new Error("No company selected");
 
-			const setupUrl = `${apiRoutesPortalMasters.CATEGORY_CREATE_SETUP}?co_id=${co_id}`;
+			const queryParams = new URLSearchParams({ co_id });
+			if (selectedBranches.length > 0) {
+				queryParams.append("branch_id", selectedBranches.join(","));
+			}
+			const setupUrl = `${apiRoutesPortalMasters.CATEGORY_CREATE_SETUP}?${queryParams}`;
 			const { data: setupData, error: setupErr } = await fetchWithCookie(setupUrl, "GET");
 			if (setupErr || !setupData) throw new Error(setupErr || "Failed to load setup");
 

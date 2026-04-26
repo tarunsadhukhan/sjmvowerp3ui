@@ -39,6 +39,8 @@ type IndexWrapperProps<RowType extends GridValidRowModel & { id?: string | numbe
   subtitle?: string;
   search?: IndexWrapperSearchConfig;
   createAction?: CreateActionConfig;
+  /** Optional content rendered immediately to the left of the Create button. */
+  extraActions?: React.ReactNode;
   onView?: (row: RowType) => void;
   onEdit?: (row: RowType) => void;
   /** Per-row callback to determine if a row can be edited.
@@ -70,6 +72,7 @@ function IndexWrapper<RowType extends GridValidRowModel & { id?: string | number
   showLoadingUntilLoaded = false,
   search,
   createAction,
+  extraActions,
   onView,
   onEdit,
   isRowEditable,
@@ -236,7 +239,7 @@ function IndexWrapper<RowType extends GridValidRowModel & { id?: string | number
           ) : null}
         </div>
 
-        {(search || createAllowed || toolbarContent) && (
+        {(search || createAllowed || toolbarContent || extraActions) && (
           <Box className="mb-6 flex flex-col-reverse gap-3 md:flex-row md:items-center md:justify-between">
             {toolbarContent ? <Box className="flex flex-wrap items-center gap-3">{toolbarContent}</Box> : <span />}
             <Box className="flex flex-col gap-3 sm:flex-row sm:items-center">
@@ -248,6 +251,7 @@ function IndexWrapper<RowType extends GridValidRowModel & { id?: string | number
                   placeholder={search.placeholder ?? "Search"}
                 />
               ) : null}
+              {extraActions}
               {createAction && createAllowed ? (
                 <Button onClick={createAction.onClick}>
                   {createAction.label ?? "Create"}

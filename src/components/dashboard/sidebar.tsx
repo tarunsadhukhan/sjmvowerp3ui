@@ -59,7 +59,11 @@ export default function Sidebar({ isCollapsed, onToggle, onMouseEnter, onMouseLe
     const fetchCompanyData = async () => {
       setIsLoading(true);
       try {
-        const result = await fetchWithCookie(apiRoutes.PORTAL_MENU_ITEMS, "GET");
+        const storedUserId = localStorage.getItem("user_id");
+        const menuUrl = storedUserId
+          ? `${apiRoutes.PORTAL_MENU_ITEMS}?user_id=${storedUserId}`
+          : apiRoutes.PORTAL_MENU_ITEMS;
+        const result = await fetchWithCookie(menuUrl, "GET");
         if (result.status === 401 || result.status === 403) {
           console.warn("Access token expired or unauthorized – redirecting to login");
           try {

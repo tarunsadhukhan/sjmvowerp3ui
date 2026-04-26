@@ -188,10 +188,10 @@ const apiRoutesPortalMasters = {
     SUBDEPT_MASTER_CREATE : `${API_URL}/deptMaster/subdept_master_create`,
     SUBDEPT_MASTER_VIEW : `${API_URL}/deptMaster/subdept_master_view`,
 
-    MECHINE_TYPE_MASTER_TABLE : `${API_URL}/mechMaster/mechine_type_master_table`,
-    MECHINE_TYPE_MASTER_CREATE_SETUP : `${API_URL}/mechMaster/mechine_type_master_create_setup`,
-    MECHINE_TYPE_MASTER_CREATE : `${API_URL}/mechMaster/mechine_type_master_create`,
-    MECHINE_TYPE_MASTER_VIEW : `${API_URL}/mechMaster/mechine_type_master_view`,
+    MECHINE_TYPE_MASTER_TABLE : `${API_URL}/machineTypeMaster/get_machine_type_table`,
+    MECHINE_TYPE_MASTER_CREATE_SETUP : `${API_URL}/machineTypeMaster/get_machine_type_by_id`,
+    MECHINE_TYPE_MASTER_CREATE : `${API_URL}/machineTypeMaster/machine_type_create`,
+    MECHINE_TYPE_MASTER_VIEW : `${API_URL}/machineTypeMaster/get_machine_type_by_id`,
 
     MECHINE_MASTER_TABLE : `${API_URL}/mechMaster/mechine_master_table`,
     MECHINE_MASTER_CREATE_SETUP : `${API_URL}/mechMaster/mechine_master_create_setup`,
@@ -648,18 +648,18 @@ const apiRoutesPortalMasters = {
     ACC_OPENING_BILLS_IMPORT: `${API_URL}/accounting/opening_bills/import`,
 
     // Shift Master endpoints
-    SHIFT_TABLE: `${API_URL}/hrmsMasters/get_shift_table`,
-    SHIFT_BY_ID: `${API_URL}/hrmsMasters/get_shift_by_id`,
-    SHIFT_CREATE_SETUP: `${API_URL}/hrmsMasters/shift_create_setup`,
-    SHIFT_CREATE: `${API_URL}/hrmsMasters/shift_create`,
-    SHIFT_EDIT: `${API_URL}/hrmsMasters/shift_edit`,
+    SHIFT_TABLE: `${API_URL}/masters/get_shift_table`,
+    SHIFT_BY_ID: `${API_URL}/masters/get_shift_by_id`,
+    SHIFT_CREATE_SETUP: `${API_URL}/masters/shift_create_setup`,
+    SHIFT_CREATE: `${API_URL}/masters/shift_create`,
+    SHIFT_EDIT: `${API_URL}/masters/shift_edit`,
 
     // Spell Master endpoints
-    SPELL_TABLE: `${API_URL}/hrmsMasters/get_spell_table`,
-    SPELL_BY_ID: `${API_URL}/hrmsMasters/get_spell_by_id`,
-    SPELL_CREATE_SETUP: `${API_URL}/hrmsMasters/spell_create_setup`,
-    SPELL_CREATE: `${API_URL}/hrmsMasters/spell_create`,
-    SPELL_EDIT: `${API_URL}/hrmsMasters/spell_edit`,
+    SPELL_TABLE: `${API_URL}/masters/get_spell_table`,
+    SPELL_BY_ID: `${API_URL}/masters/get_spell_by_id`,
+    SPELL_CREATE_SETUP: `${API_URL}/masters/spell_create_setup`,
+    SPELL_CREATE: `${API_URL}/masters/spell_create`,
+    SPELL_EDIT: `${API_URL}/masters/spell_edit`,
 
     // Machine Type Master endpoints
     MACHINE_TYPE_TABLE: `${API_URL}/machineTypeMaster/get_machine_type_table`,
@@ -673,6 +673,34 @@ const apiRoutesPortalMasters = {
     LEAVE_TYPE_BY_ID: `${API_URL}/hrmsMasters/get_leave_type_by_id`,
     LEAVE_TYPE_CREATE: `${API_URL}/hrmsMasters/leave_type_create`,
     LEAVE_TYPE_EDIT: `${API_URL}/hrmsMasters/leave_type_edit`,
+
+    // HRMS Employee Rate Entry endpoints
+    EMP_RATE_EMPLOYEE_LOOKUP: `${API_URL}/hrmsMasters/emp_rate_employee_lookup`,
+    EMP_RATE_LIST: `${API_URL}/hrmsMasters/emp_rate_list`,
+    EMP_RATE_BY_ID: `${API_URL}/hrmsMasters/emp_rate_by_id`,
+    EMP_RATE_CREATE: `${API_URL}/hrmsMasters/emp_rate_create`,
+    EMP_RATE_UPDATE: `${API_URL}/hrmsMasters/emp_rate_update`,
+    EMP_RATE_EXCEL_VALIDATE: `${API_URL}/hrmsMasters/emp_rate_excel_validate`,
+    EMP_RATE_EXCEL_COMMIT: `${API_URL}/hrmsMasters/emp_rate_excel_commit`,
+    EMP_RATE_EXCEL_UPLOAD: `${API_URL}/hrmsMasters/emp_rate_excel_upload`,
+
+    // HRMS Daily Machine Entry endpoints
+    DAILY_MACHINE_TABLE: `${API_URL}/hrmsMasters/get_daily_machine_table`,
+    DAILY_MACHINE_BY_ID: `${API_URL}/hrmsMasters/get_daily_machine_by_id`,
+    DAILY_MACHINE_LOOKUP_MC: `${API_URL}/hrmsMasters/daily_machine_lookup_mc`,
+    DAILY_MACHINE_CREATE: `${API_URL}/hrmsMasters/daily_machine_create`,
+    DAILY_MACHINE_EDIT: `${API_URL}/hrmsMasters/daily_machine_edit`,
+
+    // HRMS Bio Attendance Updation endpoints
+    BIO_ATT_LIST: `${API_URL}/hrmsMasters/bio_att_list`,
+    DAILY_ATT_LIST: `${API_URL}/hrmsMasters/daily_att_list`,
+    BIO_ATT_UPLOAD: `${API_URL}/hrmsMasters/bio_att_upload`,
+    BIO_ATT_CLEAR: `${API_URL}/hrmsMasters/bio_att_clear`,
+    BIO_ATT_PROCESS: `${API_URL}/hrmsMasters/bio_att_process`,
+    BIO_ATT_FINAL_PROCESS: `${API_URL}/hrmsMasters/bio_att_final_process`,
+    BIO_ATT_TEMP_COUNT: `${API_URL}/hrmsMasters/bio_att_temp_count`,
+    BIO_ATT_EXCEL_STATUS: (jobId: string) =>
+        `${API_URL}/hrmsMasters/bio_att_excel_status/${encodeURIComponent(jobId)}`,
 };
 
 export { apiRoutes, apiRoutesconsole, apiRoutesPortalMasters };

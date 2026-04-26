@@ -75,7 +75,11 @@ export default function CreateShiftPage({
 			const co_id = getCoId();
 			if (!co_id) throw new Error("No company selected");
 
-			const setupUrl = `${apiRoutesPortalMasters.SHIFT_CREATE_SETUP}?co_id=${co_id}`;
+			const params = new URLSearchParams({ co_id: String(co_id) });
+			if (selectedBranches.length === 1) {
+				params.append("branch_id", String(selectedBranches[0]));
+			}
+			const setupUrl = `${apiRoutesPortalMasters.SHIFT_CREATE_SETUP}?${params.toString()}`;
 			const { data: setupData, error: setupErr } = await fetchWithCookie(setupUrl, "GET");
 			if (setupErr || !setupData) throw new Error(setupErr || "Failed to load setup");
 

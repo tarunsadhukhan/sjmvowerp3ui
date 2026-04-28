@@ -684,12 +684,25 @@ const apiRoutesPortalMasters = {
     EMP_RATE_EXCEL_COMMIT: `${API_URL}/hrmsMasters/emp_rate_excel_commit`,
     EMP_RATE_EXCEL_UPLOAD: `${API_URL}/hrmsMasters/emp_rate_excel_upload`,
 
+    // HRMS Designation Norms Set endpoints
+    DESIG_NORMS_SETUP: `${API_URL}/hrmsMasters/desig_norms_setup`,
+    DESIG_NORMS_TABLE: `${API_URL}/hrmsMasters/get_desig_norms_table`,
+    DESIG_NORMS_BY_ID: `${API_URL}/hrmsMasters/get_desig_norms_by_id`,
+    DESIG_NORMS_CREATE: `${API_URL}/hrmsMasters/desig_norms_create`,
+    DESIG_NORMS_EDIT: `${API_URL}/hrmsMasters/desig_norms_edit`,
+    DESIG_NORMS_DELETE: `${API_URL}/hrmsMasters/desig_norms_delete`,
+
     // HRMS Daily Machine Entry endpoints
     DAILY_MACHINE_TABLE: `${API_URL}/hrmsMasters/get_daily_machine_table`,
     DAILY_MACHINE_BY_ID: `${API_URL}/hrmsMasters/get_daily_machine_by_id`,
     DAILY_MACHINE_LOOKUP_MC: `${API_URL}/hrmsMasters/daily_machine_lookup_mc`,
     DAILY_MACHINE_CREATE: `${API_URL}/hrmsMasters/daily_machine_create`,
     DAILY_MACHINE_EDIT: `${API_URL}/hrmsMasters/daily_machine_edit`,
+    DAILY_MACHINE_FINAL_PROCESS: `${API_URL}/hrmsMasters/daily_machine_final_process`,
+
+    // HRMS Daily Man-Machine summary/details endpoints
+    MAN_MACHINE_LIST: `${API_URL}/hrmsMasters/man_machine_list`,
+    MAN_MACHINE_FINAL_PROCESS: `${API_URL}/hrmsMasters/man_machine_final_process`,
 
     // HRMS Bio Attendance Updation endpoints
     BIO_ATT_LIST: `${API_URL}/hrmsMasters/bio_att_list`,

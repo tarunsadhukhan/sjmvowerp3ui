@@ -1,11 +1,14 @@
 "use client";
 import React, { useEffect, useMemo, useState, useCallback } from "react";
 import { Snackbar, Alert } from "@mui/material";
+import Button from "@mui/material/Button";
 import { GridColDef, GridPaginationModel } from "@mui/x-data-grid";
 import { fetchWithCookie } from "@/utils/apiClient2";
 import { apiRoutesPortalMasters } from "@/utils/api";
 import IndexWrapper from "@/components/ui/IndexWrapper";
+import { useSidebarContext } from "@/components/dashboard/sidebarContext";
 import CreateDailyMachinePage from "./CreateDailyMachinePage";
+import DailyMachineFinalProcessDialog from "./DailyMachineFinalProcessDialog";
 
 type DailyMachineRow = {
 	id: number | string;
@@ -50,6 +53,9 @@ export default function DailyMachineEntryPage() {
 
 	const [dialogOpen, setDialogOpen] = useState(false);
 	const [selectedId, setSelectedId] = useState<number | undefined>(undefined);
+	const [finalProcessOpen, setFinalProcessOpen] = useState(false);
+
+	const { selectedBranches } = useSidebarContext();
 
 	const getCoId = useCallback((): string => {
 		const selectedCompany = localStorage.getItem("sidebar_selectedCompany");
@@ -68,6 +74,9 @@ export default function DailyMachineEntryPage() {
 				limit: String(paginationModel.pageSize ?? 10),
 			});
 			if (searchQuery) queryParams.append("search", searchQuery);
+			if (selectedBranches.length) {
+				queryParams.append("branch_id", selectedBranches.join(","));
+			}
 
 			const { data, error } = await fetchWithCookie(
 				`${apiRoutesPortalMasters.DAILY_MACHINE_TABLE}?${queryParams}`,
@@ -99,7 +108,7 @@ export default function DailyMachineEntryPage() {
 		} finally {
 			setLoading(false);
 		}
-	}, [paginationModel.page, paginationModel.pageSize, searchQuery, getCoId]);
+	}, [paginationModel.page, paginationModel.pageSize, searchQuery, getCoId, selectedBranches]);
 
 	useEffect(() => {
 		fetchEntries();
@@ -194,6 +203,14 @@ export default function DailyMachineEntryPage() {
 				label: "Create Entry",
 				onClick: handleCreate,
 			}}
+			extraActions={
+				<Button
+					variant="outlined"
+					onClick={() => setFinalProcessOpen(true)}
+				>
+					Final Process
+				</Button>
+			}
 			onEdit={handleEdit}
 		>
 			<CreateDailyMachinePage
@@ -201,6 +218,14 @@ export default function DailyMachineEntryPage() {
 				onClose={handleDialogClose}
 				onSaved={handleSaved}
 				editId={selectedId}
+			/>
+			<DailyMachineFinalProcessDialog
+				open={finalProcessOpen}
+				onClose={() => setFinalProcessOpen(false)}
+				onSuccess={(message) => {
+					setSnackbar({ open: true, message, severity: "success" });
+					fetchEntries();
+				}}
 			/>
 			<Snackbar
 				open={snackbar.open}

@@ -5,8 +5,9 @@ import {
   GridRowsProp,
   GridFilterModel,
   GridSortModel,
+  GridRowClassNameParams,
 } from '@mui/x-data-grid';
-import { Box } from '@mui/material';
+import { Box, SxProps, Theme } from '@mui/material';
 import React, { useState, useEffect } from 'react';
 
 interface MuiDataGridProps {
@@ -33,6 +34,9 @@ interface MuiDataGridProps {
   disableColumnSelector?: boolean;
   disableDensitySelector?: boolean;
   disableExport?: boolean;
+  // Row styling
+  getRowClassName?: (params: GridRowClassNameParams) => string;
+  extraSx?: SxProps<Theme>;
 }
 
 const MuiDataGrid: React.FC<MuiDataGridProps> = ({
@@ -59,6 +63,8 @@ const MuiDataGrid: React.FC<MuiDataGridProps> = ({
   disableColumnSelector = false,
   disableDensitySelector = false,
   disableExport = false,
+  getRowClassName,
+  extraSx,
 }) => {
   // Ensure component is mounted before rendering DataGrid to avoid
   // "Can't perform a React state update on a component that hasn't mounted yet"
@@ -124,6 +130,7 @@ const MuiDataGrid: React.FC<MuiDataGridProps> = ({
         disableColumnFilter={disableColumnFilter}
         disableColumnSelector={disableColumnSelector}
         disableDensitySelector={disableDensitySelector}
+        getRowClassName={getRowClassName}
         sx={{
           '& .MuiDataGrid-columnHeader': {
             backgroundColor: '#3ea6da',
@@ -137,6 +144,7 @@ const MuiDataGrid: React.FC<MuiDataGridProps> = ({
             padding: '8px 16px',
             gap: '8px',
           },
+          ...(extraSx || {}),
         }}
       />
     </Box>

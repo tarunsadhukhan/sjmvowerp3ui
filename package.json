@@ -11,7 +11,7 @@
     "test:watch": "vitest --project unit",
     "test:ui": "vitest --ui --project unit",
     "test:coverage": "vitest run --coverage --project unit",
-    "test:storybook": "vitest run --project storybook",
+    "test:storybook": "vitest run --config vitest.storybook.config.ts",
     "docs": "typedoc",
     "storybook": "storybook dev -p 6006",
     "build-storybook": "storybook build"
@@ -67,6 +67,7 @@
     "@types/react": "^19.2.7",
     "@types/react-dom": "^19.2.3",
     "@vitest/browser": "^4.0.16",
+    "@vitest/browser-playwright": "^4.0.16",
     "@vitest/coverage-v8": "^4.0.16",
     "autoprefixer": "^10.4.23",
     "eslint": "^9.39.2",

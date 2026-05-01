@@ -1,6 +1,12 @@
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
+  allowedDevOrigins: [
+    '192.168.0.223',
+    '*.localhost',
+    '13.126.47.172',
+    '*.13.126.47.172.nip.io',
+  ],
   images: {
     // Allow image optimization for localhost subdomains
     remotePatterns: [

@@ -8,6 +8,8 @@ import IndexWrapper from "@/components/ui/IndexWrapper";
 import BioAttUploadDialog from "./BioAttUploadDialog";
 import BioAttProcessDialog from "./BioAttProcessDialog";
 import BioAttFinalProcessDialog from "./BioAttFinalProcessDialog";
+import BioAttEtrackDialog from "./BioAttEtrackDialog";
+import BioAttEtrackProcessDialog from "./BioAttEtrackProcessDialog";
 
 type BioAttRow = {
 	id: number;
@@ -73,6 +75,8 @@ export default function BioAttUpdationListPage() {
 	const [uploadOpen, setUploadOpen] = useState(false);
 	const [processOpen, setProcessOpen] = useState(false);
 	const [finalProcessOpen, setFinalProcessOpen] = useState(false);
+	const [etrackOpen, setEtrackOpen] = useState(false);
+	const [etrackProcessOpen, setEtrackProcessOpen] = useState(false);
 	const pollersRef = React.useRef<Set<string>>(new Set());
 
 	const getCoId = useCallback((): string => {
@@ -239,6 +243,10 @@ export default function BioAttUpdationListPage() {
 	const handleFinalProcessClick = useCallback(() => setFinalProcessOpen(true), []);
 	const handleFinalProcessClose = useCallback(() => setFinalProcessOpen(false), []);
 	const handleProcessClose = useCallback(() => setProcessOpen(false), []);
+	const handleEtrackClick = useCallback(() => setEtrackOpen(true), []);
+	const handleEtrackClose = useCallback(() => setEtrackOpen(false), []);
+	const handleEtrackProcessClick = useCallback(() => setEtrackProcessOpen(true), []);
+	const handleEtrackProcessClose = useCallback(() => setEtrackProcessOpen(false), []);
 	const handleProcessSuccess = useCallback(
 		(message: string) => {
 			setSnackbar({ open: true, message, severity: "success" });
@@ -403,14 +411,14 @@ export default function BioAttUpdationListPage() {
 							<Button variant="contained" color="success" onClick={handleFinalProcessClick}>
 								Final Process
 							</Button>
-							<Button variant="contained" color="primary" onClick={handleProcessClick}>
-								Process
-							</Button>
 							<Button variant="outlined" color="warning" onClick={handleClearClick}>
 								Clear
 							</Button>
-							<Button variant="outlined" onClick={handleExcelUploadClick}>
-								Excel Upload
+							<Button variant="outlined" color="info" onClick={handleEtrackClick}>
+								Etrack Data
+							</Button>
+							<Button variant="contained" color="secondary" onClick={handleEtrackProcessClick}>
+								Etrack Process
 							</Button>
 						</>
 					}
@@ -428,6 +436,16 @@ export default function BioAttUpdationListPage() {
 					<BioAttFinalProcessDialog
 						open={finalProcessOpen}
 						onClose={handleFinalProcessClose}
+						onSuccess={handleProcessSuccess}
+					/>
+					<BioAttEtrackDialog
+						open={etrackOpen}
+						onClose={handleEtrackClose}
+						onSuccess={handleProcessSuccess}
+					/>
+					<BioAttEtrackProcessDialog
+						open={etrackProcessOpen}
+						onClose={handleEtrackProcessClose}
 						onSuccess={handleProcessSuccess}
 					/>
 					<Snackbar

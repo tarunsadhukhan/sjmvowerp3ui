@@ -263,6 +263,20 @@ const apiRoutesPortalMasters = {
     YARN_QUALITY_CREATE: `${API_URL}/yarnQualityMaster/yarn_quality_create`,
     YARN_QUALITY_EDIT: `${API_URL}/yarnQualityMaster/yarn_quality_edit`,
 
+    // Spinning Quality Master endpoints
+    SPINNING_QUALITY_TABLE: `${API_URL}/spinningQualityMaster/spinning_quality_table`,
+    SPINNING_QUALITY_CREATE_SETUP: `${API_URL}/spinningQualityMaster/spinning_quality_create_setup`,
+    SPINNING_QUALITY_EDIT_SETUP: `${API_URL}/spinningQualityMaster/spinning_quality_edit_setup`,
+    SPINNING_QUALITY_CREATE: `${API_URL}/spinningQualityMaster/spinning_quality_create`,
+    SPINNING_QUALITY_EDIT: `${API_URL}/spinningQualityMaster/spinning_quality_edit`,
+
+    // Trolly Master endpoints
+    TROLLY_TABLE: `${API_URL}/trollyMaster/trolly_table`,
+    TROLLY_CREATE_SETUP: `${API_URL}/trollyMaster/trolly_create_setup`,
+    TROLLY_EDIT_SETUP: `${API_URL}/trollyMaster/trolly_edit_setup`,
+    TROLLY_CREATE: `${API_URL}/trollyMaster/trolly_create`,
+    TROLLY_EDIT: `${API_URL}/trollyMaster/trolly_edit`,
+
     // Machine SPG Details Master endpoints
     MACHINE_SPG_DETAILS_TABLE: `${API_URL}/machineSpgDetailsMaster/machine_spg_details_table`,
     MACHINE_SPG_DETAILS_CREATE_SETUP: `${API_URL}/machineSpgDetailsMaster/machine_spg_details_create_setup`,
@@ -712,8 +726,16 @@ const apiRoutesPortalMasters = {
     BIO_ATT_PROCESS: `${API_URL}/hrmsMasters/bio_att_process`,
     BIO_ATT_FINAL_PROCESS: `${API_URL}/hrmsMasters/bio_att_final_process`,
     BIO_ATT_TEMP_COUNT: `${API_URL}/hrmsMasters/bio_att_temp_count`,
+    BIO_ATT_ETRACK: `${API_URL}/hrmsMasters/bio_att_etrack`,
+    BIO_ATT_ETRACK_PROCESS: `${API_URL}/hrmsMasters/bio_att_etrack_process`,
     BIO_ATT_EXCEL_STATUS: (jobId: string) =>
         `${API_URL}/hrmsMasters/bio_att_excel_status/${encodeURIComponent(jobId)}`,
+
+    // HRMS Reports
+    EMP_ATTENDANCE_REPORT_SETUP: `${API_URL}/hrmsReports/emp_attendance_setup`,
+    EMP_ATTENDANCE_REPORT: `${API_URL}/hrmsReports/emp_attendance_report`,
+    EMP_WAGES_REPORT_SETUP: `${API_URL}/hrmsReports/emp_wages_setup`,
+    EMP_WAGES_REPORT: `${API_URL}/hrmsReports/emp_wages_report`,
 };
 
 export { apiRoutes, apiRoutesconsole, apiRoutesPortalMasters };

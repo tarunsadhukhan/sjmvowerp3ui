@@ -46,7 +46,7 @@ const MuiDataGrid: React.FC<MuiDataGridProps> = ({
   onPaginationModelChange,
   loading = false,
   paginationModel = { page: 0, pageSize: 10 },
-  pageSizeOptions = [10, 20, 50],
+  pageSizeOptions = [10, 20, 25, 50, 100],
   paginationMode = 'server',
   disableRowSelectionOnClick = true,
   showLoadingUntilLoaded = false,

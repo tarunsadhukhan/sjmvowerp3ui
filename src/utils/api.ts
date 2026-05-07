@@ -718,6 +718,14 @@ const apiRoutesPortalMasters = {
     MAN_MACHINE_LIST: `${API_URL}/hrmsMasters/man_machine_list`,
     MAN_MACHINE_FINAL_PROCESS: `${API_URL}/hrmsMasters/man_machine_final_process`,
 
+    // HRMS Man-Machine Master (mc_occu_link_mst) endpoints
+    MAN_MACHINE_MST_SETUP: `${API_URL}/hrmsMasters/man_machine_mst_setup`,
+    MAN_MACHINE_MST_TABLE: `${API_URL}/hrmsMasters/get_man_machine_mst_table`,
+    MAN_MACHINE_MST_BY_ID: `${API_URL}/hrmsMasters/get_man_machine_mst_by_id`,
+    MAN_MACHINE_MST_CREATE: `${API_URL}/hrmsMasters/man_machine_mst_create`,
+    MAN_MACHINE_MST_EDIT: `${API_URL}/hrmsMasters/man_machine_mst_edit`,
+    MAN_MACHINE_MST_DELETE: `${API_URL}/hrmsMasters/man_machine_mst_delete`,
+
     // HRMS Bio Attendance Updation endpoints
     BIO_ATT_LIST: `${API_URL}/hrmsMasters/bio_att_list`,
     DAILY_ATT_LIST: `${API_URL}/hrmsMasters/daily_att_list`,
@@ -728,6 +736,7 @@ const apiRoutesPortalMasters = {
     BIO_ATT_TEMP_COUNT: `${API_URL}/hrmsMasters/bio_att_temp_count`,
     BIO_ATT_ETRACK: `${API_URL}/hrmsMasters/bio_att_etrack`,
     BIO_ATT_ETRACK_PROCESS: `${API_URL}/hrmsMasters/bio_att_etrack_process`,
+    BIO_ATT_WAGES_REGISTER: `${API_URL}/hrmsMasters/wages_register`,
     BIO_ATT_EXCEL_STATUS: (jobId: string) =>
         `${API_URL}/hrmsMasters/bio_att_excel_status/${encodeURIComponent(jobId)}`,
 

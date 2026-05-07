@@ -1,7 +1,16 @@
 "use client";
 import React, { useCallback, useEffect, useMemo, useState } from "react";
-import { Snackbar, Alert, Button, Tabs, Tab } from "@mui/material";
-import { GridColDef, GridPaginationModel } from "@mui/x-data-grid";
+import {
+	Snackbar,
+	Alert,
+	Button,
+	FormControl,
+	InputLabel,
+	MenuItem,
+	Select,
+	type SelectChangeEvent,
+} from "@mui/material";
+import { GridColDef, GridFilterModel, GridPaginationModel } from "@mui/x-data-grid";
 import { fetchWithCookie } from "@/utils/apiClient2";
 import { apiRoutesPortalMasters } from "@/utils/api";
 import IndexWrapper from "@/components/ui/IndexWrapper";
@@ -10,6 +19,12 @@ import BioAttProcessDialog from "./BioAttProcessDialog";
 import BioAttFinalProcessDialog from "./BioAttFinalProcessDialog";
 import BioAttEtrackDialog from "./BioAttEtrackDialog";
 import BioAttEtrackProcessDialog from "./BioAttEtrackProcessDialog";
+import BioAttFilterDialog, {
+	type BioAttFilterValues,
+	getDefaultFromDate,
+	getDefaultToDate,
+} from "./BioAttFilterDialog";
+import WagesRegisterTab from "./WagesRegisterTab";
 
 type BioAttRow = {
 	id: number;
@@ -53,7 +68,7 @@ type DailyAttRow = {
 	[key: string]: unknown;
 };
 
-type TabKey = "bio" | "daily";
+type TabKey = "bio" | "daily" | "wages";
 
 export default function BioAttUpdationListPage() {
 	const [activeTab, setActiveTab] = useState<TabKey>("bio");
@@ -66,6 +81,44 @@ export default function BioAttUpdationListPage() {
 		page: 0,
 	});
 	const [searchQuery, setSearchQuery] = useState("");
+	const [filterModel, setFilterModel] = useState<GridFilterModel>({ items: [] });
+	const [dateFilter, setDateFilter] = useState<BioAttFilterValues>(() => ({
+		fromDate: getDefaultFromDate(),
+		toDate: getDefaultToDate(),
+		ebNo: "",
+	}));
+	const [filterDialogOpen, setFilterDialogOpen] = useState(false);
+
+	// Per-column filter params: each non-empty filter item becomes f_<field>=<value>.
+	// Plus from_date/to_date and f_eb_id from the popup filter dialog.
+	// Backend ANDs them together; orthogonal to the global `search` (search box).
+	const appendFilterParams = useCallback(
+		(qs: URLSearchParams) => {
+			for (const item of filterModel.items ?? []) {
+				if (!item.field || item.value == null) continue;
+				const v = String(item.value).trim();
+				if (!v) continue;
+				qs.append(`f_${item.field}`, v);
+			}
+			if (dateFilter.fromDate) qs.append("from_date",   dateFilter.fromDate);
+			if (dateFilter.toDate)   qs.append("to_date",     dateFilter.toDate);
+			if (dateFilter.ebNo)     qs.append("emp_code_eq", dateFilter.ebNo);
+		},
+		[filterModel, dateFilter],
+	);
+
+	// Stable string representation for fetch dependency tracking.
+	const filterKey = useMemo(
+		() =>
+			JSON.stringify({
+				items: (filterModel.items ?? [])
+					.filter((i) => i.field && i.value != null && String(i.value).trim() !== "")
+					.map((i) => [i.field, String(i.value).trim()])
+					.sort(),
+				date: [dateFilter.fromDate, dateFilter.toDate, dateFilter.ebNo],
+			}),
+		[filterModel, dateFilter],
+	);
 	const [snackbar, setSnackbar] = useState<{
 		open: boolean;
 		message: string;
@@ -96,6 +149,7 @@ export default function BioAttUpdationListPage() {
 				limit: String(paginationModel.pageSize ?? 10),
 			});
 			if (searchQuery) queryParams.append("search", searchQuery);
+			appendFilterParams(queryParams);
 
 			const { data, error } = await fetchWithCookie(
 				`${apiRoutesPortalMasters.BIO_ATT_LIST}?${queryParams}`,
@@ -129,7 +183,7 @@ export default function BioAttUpdationListPage() {
 		} finally {
 			setLoading(false);
 		}
-	}, [paginationModel.page, paginationModel.pageSize, searchQuery, getCoId]);
+	}, [paginationModel.page, paginationModel.pageSize, searchQuery, filterKey, appendFilterParams, getCoId]);
 
 	const fetchDailyAtt = useCallback(async () => {
 		setLoading(true);
@@ -143,6 +197,7 @@ export default function BioAttUpdationListPage() {
 				limit: String(paginationModel.pageSize ?? 10),
 			});
 			if (searchQuery) queryParams.append("search", searchQuery);
+			appendFilterParams(queryParams);
 
 			const { data, error } = await fetchWithCookie(
 				`${apiRoutesPortalMasters.DAILY_ATT_LIST}?${queryParams}`,
@@ -186,12 +241,12 @@ export default function BioAttUpdationListPage() {
 		} finally {
 			setLoading(false);
 		}
-	}, [paginationModel.page, paginationModel.pageSize, searchQuery, getCoId]);
+	}, [paginationModel.page, paginationModel.pageSize, searchQuery, filterKey, appendFilterParams, getCoId]);
 
 	useEffect(() => {
 		if (activeTab === "bio") {
 			fetchBioAtt();
-		} else {
+		} else if (activeTab === "daily") {
 			fetchDailyAtt();
 		}
 	}, [activeTab, fetchBioAtt, fetchDailyAtt]);
@@ -370,21 +425,141 @@ export default function BioAttUpdationListPage() {
 		[],
 	);
 
-	const handleTabChange = useCallback((_: React.SyntheticEvent, value: TabKey) => {
+	const handleDownloadExcel = useCallback(async () => {
+		const co_id = getCoId();
+		if (!co_id) {
+			setSnackbar({ open: true, message: "No company selected", severity: "error" });
+			return;
+		}
+		try {
+			const url =
+				activeTab === "bio"
+					? apiRoutesPortalMasters.BIO_ATT_LIST
+					: apiRoutesPortalMasters.DAILY_ATT_LIST;
+			const qs = new URLSearchParams({ co_id, page: "1", limit: "100000" });
+			if (searchQuery) qs.append("search", searchQuery);
+			appendFilterParams(qs);
+			const { data, error } = await fetchWithCookie<{
+				data: Record<string, unknown>[];
+			}>(`${url}?${qs}`, "GET");
+			if (error || !data) {
+				setSnackbar({
+					open: true,
+					message: error ?? "Failed to fetch data for export",
+					severity: "error",
+				});
+				return;
+			}
+			const records = data.data ?? [];
+			if (!records.length) {
+				setSnackbar({ open: true, message: "No data to export", severity: "error" });
+				return;
+			}
+
+			const ExcelJS = (await import("exceljs")).default;
+			const { saveAs } = await import("file-saver");
+
+			const cols: GridColDef<Record<string, unknown>>[] =
+				activeTab === "bio"
+					? (columns as unknown as GridColDef<Record<string, unknown>>[])
+					: (dailyColumns as unknown as GridColDef<Record<string, unknown>>[]);
+			const wb = new ExcelJS.Workbook();
+			const sheetName = activeTab === "bio" ? "BIO Metric" : "Daily Attendance";
+			const ws = wb.addWorksheet(sheetName);
+
+			const headers = cols.map((c) => c.headerName ?? c.field);
+			ws.mergeCells(1, 1, 1, headers.length);
+			const title = ws.getCell(1, 1);
+			title.value = sheetName;
+			title.font = { bold: true, size: 14, color: { argb: "FF0C3C60" } };
+			title.alignment = { horizontal: "center", vertical: "middle" };
+			ws.getRow(1).height = 24;
+
+			const headerRow = ws.addRow(headers);
+			headerRow.eachCell((cell) => {
+				cell.font = { bold: true, color: { argb: "FFFFFFFF" } };
+				cell.fill = {
+					type: "pattern",
+					pattern: "solid",
+					fgColor: { argb: "FF3EA6DA" },
+				};
+				cell.alignment = { horizontal: "center", vertical: "middle" };
+				cell.border = {
+					top: { style: "thin" },
+					left: { style: "thin" },
+					bottom: { style: "thin" },
+					right: { style: "thin" },
+				};
+			});
+			headerRow.height = 22;
+
+			for (const rec of records) {
+				const row = ws.addRow(
+					cols.map((c) => (rec[c.field] ?? "") as string | number),
+				);
+				row.eachCell({ includeEmpty: true }, (cell) => {
+					cell.border = {
+						top: { style: "thin" },
+						left: { style: "thin" },
+						bottom: { style: "thin" },
+						right: { style: "thin" },
+					};
+				});
+			}
+			cols.forEach((c, idx) => {
+				ws.getColumn(idx + 1).width = Math.max(12, (c.minWidth ?? 100) / 8);
+			});
+			ws.views = [{ state: "frozen", ySplit: 2 }];
+
+			const buf = await wb.xlsx.writeBuffer();
+			const blob = new Blob([buf], {
+				type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+			});
+			const stamp = new Date().toISOString().slice(0, 10);
+			saveAs(blob, `${sheetName.replace(/\s+/g, "_")}_${stamp}.xlsx`);
+		} catch (e) {
+			setSnackbar({
+				open: true,
+				message: e instanceof Error ? e.message : String(e),
+				severity: "error",
+			});
+		}
+	}, [activeTab, searchQuery, filterKey, appendFilterParams, getCoId, columns, dailyColumns]);
+
+	const handleViewChange = useCallback((value: TabKey) => {
 		setActiveTab(value);
+		setPaginationModel((prev) => ({ ...prev, page: 0 }));
+		// Open the date / eb-no filter popup when entering BIO Metric or Attendance.
+		// Wages tab opens its own dialog on mount.
+		if (value === "bio" || value === "daily") {
+			setFilterDialogOpen(true);
+		}
+	}, []);
+
+	const handleSelectChange = useCallback(
+		(e: SelectChangeEvent<TabKey>) => handleViewChange(e.target.value as TabKey),
+		[handleViewChange],
+	);
+
+	const handleApplyDateFilter = useCallback((values: BioAttFilterValues) => {
+		setDateFilter(values);
 		setPaginationModel((prev) => ({ ...prev, page: 0 }));
 	}, []);
 
 	const tabsContent = (
-		<Tabs
-			value={activeTab}
-			onChange={handleTabChange}
-			textColor="primary"
-			indicatorColor="primary"
-		>
-			<Tab value="bio" label="BIO Metric" />
-			<Tab value="daily" label="Attendance" />
-		</Tabs>
+		<FormControl size="small" sx={{ minWidth: 200 }}>
+			<InputLabel id="bioatt-view-label">View</InputLabel>
+			<Select<TabKey>
+				labelId="bioatt-view-label"
+				label="View"
+				value={activeTab}
+				onChange={handleSelectChange}
+			>
+				<MenuItem value="bio">BIO Metric</MenuItem>
+				<MenuItem value="daily">Attendance</MenuItem>
+				<MenuItem value="wages">Wages Register</MenuItem>
+			</Select>
+		</FormControl>
 	);
 
 	return (
@@ -400,6 +575,12 @@ export default function BioAttUpdationListPage() {
 					loading={loading}
 					showLoadingUntilLoaded
 					toolbarContent={tabsContent}
+					filterMode="server"
+					filterModel={filterModel}
+					onFilterModelChange={(m) => {
+						setFilterModel(m);
+						setPaginationModel((prev) => ({ ...prev, page: 0 }));
+					}}
 					search={{
 						value: searchQuery,
 						onChange: handleSearchChange,
@@ -408,6 +589,9 @@ export default function BioAttUpdationListPage() {
 					}}
 					extraActions={
 						<>
+							<Button variant="outlined" onClick={() => setFilterDialogOpen(true)}>
+								Filter
+							</Button>
 							<Button variant="contained" color="success" onClick={handleFinalProcessClick}>
 								Final Process
 							</Button>
@@ -420,9 +604,19 @@ export default function BioAttUpdationListPage() {
 							<Button variant="contained" color="secondary" onClick={handleEtrackProcessClick}>
 								Etrack Process
 							</Button>
+							<Button variant="outlined" color="primary" onClick={handleDownloadExcel}>
+								Download Excel
+							</Button>
 						</>
 					}
 				>
+					<BioAttFilterDialog
+						open={filterDialogOpen}
+						onClose={() => setFilterDialogOpen(false)}
+						onApply={handleApplyDateFilter}
+						initial={dateFilter}
+						title="Filter — BIO Metric"
+					/>
 					<BioAttUploadDialog
 						open={uploadOpen}
 						onClose={handleUploadClose}
@@ -463,7 +657,7 @@ export default function BioAttUpdationListPage() {
 						</Alert>
 					</Snackbar>
 				</IndexWrapper>
-			) : (
+			) : activeTab === "daily" ? (
 				<IndexWrapper
 					title="Daily Attendance"
 					rows={dailyRows}
@@ -474,13 +668,36 @@ export default function BioAttUpdationListPage() {
 					loading={loading}
 					showLoadingUntilLoaded
 					toolbarContent={tabsContent}
+					filterMode="server"
+					filterModel={filterModel}
+					onFilterModelChange={(m) => {
+						setFilterModel(m);
+						setPaginationModel((prev) => ({ ...prev, page: 0 }));
+					}}
 					search={{
 						value: searchQuery,
 						onChange: handleSearchChange,
 						placeholder: "Search by emp code, name, spell, type, device, date",
 						debounceDelayMs: 500,
 					}}
+					extraActions={
+						<>
+							<Button variant="outlined" onClick={() => setFilterDialogOpen(true)}>
+								Filter
+							</Button>
+							<Button variant="outlined" color="primary" onClick={handleDownloadExcel}>
+								Download Excel
+							</Button>
+						</>
+					}
 				>
+					<BioAttFilterDialog
+						open={filterDialogOpen}
+						onClose={() => setFilterDialogOpen(false)}
+						onApply={handleApplyDateFilter}
+						initial={dateFilter}
+						title="Filter — Daily Attendance"
+					/>
 					<Snackbar
 						open={snackbar.open}
 						autoHideDuration={4000}
@@ -496,6 +713,8 @@ export default function BioAttUpdationListPage() {
 						</Alert>
 					</Snackbar>
 				</IndexWrapper>
+			) : (
+				<WagesRegisterTab toolbarContent={tabsContent} />
 			)}
 		</>
 	);

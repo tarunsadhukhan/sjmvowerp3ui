@@ -22,7 +22,7 @@ type Props = {
 
 type EtrackTableSummary = {
 	table: string;
-	from_log_id: number;
+	from_log_date: string | null;
 	fetched: number;
 	inserted: number;
 };
@@ -30,7 +30,6 @@ type EtrackTableSummary = {
 type EtrackResponse = {
 	status: string;
 	from_log_date: string | null;
-	from_log_id: number;
 	tran_date: string;
 	company_id: number;
 	source_table: string;
@@ -48,7 +47,7 @@ function getCoId(): string {
 
 export default function BioAttEtrackDialog({ open, onClose, onSuccess }: Props) {
 	const todayIso = new Date().toISOString().slice(0, 10);
-	const [tranDate] = useState<string>(todayIso);
+	const [tranDate, setTranDate] = useState<string>(todayIso);
 	const [companyId, setCompanyId] = useState<string>("2");
 	const [busy, setBusy] = useState(false);
 	const [error, setError] = useState<string | null>(null);
@@ -56,6 +55,7 @@ export default function BioAttEtrackDialog({ open, onClose, onSuccess }: Props) 
 
 	useEffect(() => {
 		if (open) {
+			setTranDate(new Date().toISOString().slice(0, 10));
 			setCompanyId("2");
 			setError(null);
 			setResult(null);
@@ -83,7 +83,7 @@ export default function BioAttEtrackDialog({ open, onClose, onSuccess }: Props) 
 			)}`;
 			const resp = await axios.post<EtrackResponse>(
 				url,
-				{ company_id: Number(companyId) || 2 },
+				{ company_id: Number(companyId) || 2, tran_date: tranDate },
 				{ withCredentials: true },
 			);
 			setResult(resp.data);
@@ -100,7 +100,7 @@ export default function BioAttEtrackDialog({ open, onClose, onSuccess }: Props) 
 		} finally {
 			setBusy(false);
 		}
-	}, [companyId, onSuccess]);
+	}, [companyId, tranDate, onSuccess]);
 
 	return (
 		<Dialog open={open} onClose={handleClose} maxWidth="xs" fullWidth>
@@ -109,13 +109,14 @@ export default function BioAttEtrackDialog({ open, onClose, onSuccess }: Props) 
 				<Box sx={{ display: "flex", flexDirection: "column", gap: 2, pt: 1 }}>
 					<TextField
 						type="date"
-						label="Transfer Date (auto)"
+						label="Transfer Date (up to)"
 						size="small"
 						value={tranDate}
-						slotProps={{ inputLabel: { shrink: true }, input: { readOnly: true } }}
-						disabled
+						onChange={(e) => setTranDate(e.target.value)}
+						slotProps={{ inputLabel: { shrink: true } }}
+						disabled={busy}
 						fullWidth
-						helperText="Range is auto-derived from the latest record in bio_attendance_table up to today."
+						helperText="Start is auto-derived from the latest bio_attendance_table record. This is the end of the range."
 					/>
 					<TextField
 						type="number"
@@ -131,8 +132,7 @@ export default function BioAttEtrackDialog({ open, onClose, onSuccess }: Props) 
 					{result && (
 						<Alert severity="success">
 							<Typography variant="body2" sx={{ fontWeight: 600 }}>
-								From: {result.from_log_date ?? "(empty table)"} · last log id{" "}
-								{result.from_log_id}
+								From: {result.from_log_date ?? "(empty table)"}
 							</Typography>
 							<Typography variant="body2">
 								Up to: {result.tran_date}
@@ -141,7 +141,7 @@ export default function BioAttEtrackDialog({ open, onClose, onSuccess }: Props) 
 								{result.tables.map((t) => (
 									<li key={t.table}>
 										<code>{t.table}</code>
-										{t.from_log_id > 0 ? ` (> ${t.from_log_id})` : " (full month)"}{" "}
+										{t.from_log_date ? ` (> ${t.from_log_date})` : " (full month)"}{" "}
 										— fetched {t.fetched}, inserted {t.inserted}
 									</li>
 								))}

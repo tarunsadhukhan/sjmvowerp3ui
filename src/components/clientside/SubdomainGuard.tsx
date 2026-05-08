@@ -1,18 +1,20 @@
 "use client";
 
 import React from 'react';
+import { notFound } from 'next/navigation';
 import { apiRoutes } from '@/utils/api';
 
 /**
  * Client-side guard that validates the current subdomain against the
  * backend DB (con_org_master). If the subdomain is not an active org,
- * redirects to vowerp.com.
+ * triggers Next.js's 404 Not Found page.
  *
  * Runs once on mount — extracts subdomain from window.location.hostname,
- * calls GET /authRoutes/validate-subdomain, and redirects if invalid.
+ * calls GET /authRoutes/validate-subdomain, and shows 404 if invalid.
  */
 export default function SubdomainGuard() {
   const [checked, setChecked] = React.useState(false);
+  const [invalid, setInvalid] = React.useState(false);
 
   React.useEffect(() => {
     const validateSubdomain = async () => {
@@ -36,7 +38,7 @@ export default function SubdomainGuard() {
         }
 
         if (!subdomain) {
-          window.location.href = 'https://vowerp.com';
+          setInvalid(true);
           return;
         }
 
@@ -47,17 +49,17 @@ export default function SubdomainGuard() {
         if (res.ok) {
           const data = await res.json();
           if (!data?.valid) {
-            window.location.href = 'https://vowerp.com';
+            setInvalid(true);
             return;
           }
         } else {
           // API returned an error — fail closed
-          window.location.href = 'https://vowerp.com';
+          setInvalid(true);
           return;
         }
       } catch {
         // Network error — fail closed
-        window.location.href = 'https://vowerp.com';
+        setInvalid(true);
         return;
       }
 
@@ -67,6 +69,7 @@ export default function SubdomainGuard() {
     validateSubdomain();
   }, []);
 
+  if (invalid) notFound();
   if (!checked) return null;
   return null;
 }

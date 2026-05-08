@@ -19,6 +19,7 @@ import BioAttProcessDialog from "./BioAttProcessDialog";
 import BioAttFinalProcessDialog from "./BioAttFinalProcessDialog";
 import BioAttEtrackDialog from "./BioAttEtrackDialog";
 import BioAttEtrackProcessDialog from "./BioAttEtrackProcessDialog";
+import BioAttBprocessDialog from "./BioAttBprocessDialog";
 import BioAttFilterDialog, {
 	type BioAttFilterValues,
 	getDefaultFromDate,
@@ -130,6 +131,7 @@ export default function BioAttUpdationListPage() {
 	const [finalProcessOpen, setFinalProcessOpen] = useState(false);
 	const [etrackOpen, setEtrackOpen] = useState(false);
 	const [etrackProcessOpen, setEtrackProcessOpen] = useState(false);
+	const [bprocessOpen, setBprocessOpen] = useState(false);
 	const pollersRef = React.useRef<Set<string>>(new Set());
 
 	const getCoId = useCallback((): string => {
@@ -251,34 +253,6 @@ export default function BioAttUpdationListPage() {
 		}
 	}, [activeTab, fetchBioAtt, fetchDailyAtt]);
 
-	// Poll the temp table every 5s — alert the user while staging rows are pending.
-	const [tempCount, setTempCount] = useState(0);
-	useEffect(() => {
-		const co_id = getCoId();
-		if (!co_id) return;
-		const url = `${apiRoutesPortalMasters.BIO_ATT_TEMP_COUNT}?co_id=${encodeURIComponent(co_id)}`;
-		let cancelled = false;
-		const tick = async () => {
-			const { data } = await fetchWithCookie<{ count: number }>(url, "GET");
-			if (cancelled) return;
-			const cnt = data?.count ?? 0;
-			setTempCount(cnt);
-			if (cnt > 0) {
-				setSnackbar({
-					open: true,
-					message: `Staging table has ${cnt} row(s) pending. Click Clear to wipe.`,
-					severity: "error",
-				});
-			}
-		};
-		void tick();
-		const id = window.setInterval(tick, 5000);
-		return () => {
-			cancelled = true;
-			window.clearInterval(id);
-		};
-	}, [getCoId]);
-
 	const handlePaginationModelChange = (newModel: GridPaginationModel) => {
 		setPaginationModel(newModel);
 	};
@@ -302,6 +276,8 @@ export default function BioAttUpdationListPage() {
 	const handleEtrackClose = useCallback(() => setEtrackOpen(false), []);
 	const handleEtrackProcessClick = useCallback(() => setEtrackProcessOpen(true), []);
 	const handleEtrackProcessClose = useCallback(() => setEtrackProcessOpen(false), []);
+	const handleBprocessClick = useCallback(() => setBprocessOpen(true), []);
+	const handleBprocessClose = useCallback(() => setBprocessOpen(false), []);
 	const handleProcessSuccess = useCallback(
 		(message: string) => {
 			setSnackbar({ open: true, message, severity: "success" });
@@ -604,6 +580,9 @@ export default function BioAttUpdationListPage() {
 							<Button variant="contained" color="secondary" onClick={handleEtrackProcessClick}>
 								Etrack Process
 							</Button>
+							<Button variant="contained" color="secondary" onClick={handleBprocessClick}>
+								Bprocess
+							</Button>
 							<Button variant="outlined" color="primary" onClick={handleDownloadExcel}>
 								Download Excel
 							</Button>
@@ -640,6 +619,11 @@ export default function BioAttUpdationListPage() {
 					<BioAttEtrackProcessDialog
 						open={etrackProcessOpen}
 						onClose={handleEtrackProcessClose}
+						onSuccess={handleProcessSuccess}
+					/>
+					<BioAttBprocessDialog
+						open={bprocessOpen}
+						onClose={handleBprocessClose}
 						onSuccess={handleProcessSuccess}
 					/>
 					<Snackbar

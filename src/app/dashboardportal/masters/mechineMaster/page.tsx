@@ -16,6 +16,7 @@ type Row = {
   mechine_type_name?: string;
   dept_name?: string;
   branch_display?: string;
+  shed_type?: string;
   active?: number | boolean | string;
 };
 
@@ -79,6 +80,7 @@ export default function MechineMasterPage() {
         mechine_type_name: r.mechine_type_name ?? r.mechine_type,
         dept_name: r.dept_name ?? r.department,
         branch_display: r.branch_display ?? r.branch_desc ?? r.branch,
+        shed_type: r.shed_type ?? "",
         active: typeof r.active === "string" ? Number(r.active) : r.active,
       }));
       setRows(mapped as Row[]);
@@ -127,6 +129,7 @@ export default function MechineMasterPage() {
       { field: "mechine_type_name", headerName: "Machine Type", flex: 1, minWidth: 180 },
       { field: "dept_name", headerName: "Department", flex: 1, minWidth: 180 },
       { field: "branch_display", headerName: "Branch", flex: 1, minWidth: 180 },
+      { field: "shed_type", headerName: "Shed Type", flex: 0.8, minWidth: 130 },
       {
         field: "active",
         headerName: "Active",

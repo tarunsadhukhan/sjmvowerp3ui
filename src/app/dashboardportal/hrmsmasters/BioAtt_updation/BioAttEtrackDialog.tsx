@@ -20,11 +20,21 @@ type Props = {
 	onSuccess?: (message: string) => void;
 };
 
+type EtrackTableSummary = {
+	table: string;
+	from_log_id: number;
+	fetched: number;
+	inserted: number;
+};
+
 type EtrackResponse = {
 	status: string;
+	from_log_date: string | null;
+	from_log_id: number;
 	tran_date: string;
 	company_id: number;
 	source_table: string;
+	tables: EtrackTableSummary[];
 	fetched: number;
 	inserted: number;
 	duplicates: number;
@@ -37,9 +47,8 @@ function getCoId(): string {
 }
 
 export default function BioAttEtrackDialog({ open, onClose, onSuccess }: Props) {
-	const [tranDate, setTranDate] = useState<string>(() =>
-		new Date().toISOString().slice(0, 10),
-	);
+	const todayIso = new Date().toISOString().slice(0, 10);
+	const [tranDate] = useState<string>(todayIso);
 	const [companyId, setCompanyId] = useState<string>("2");
 	const [busy, setBusy] = useState(false);
 	const [error, setError] = useState<string | null>(null);
@@ -47,7 +56,6 @@ export default function BioAttEtrackDialog({ open, onClose, onSuccess }: Props) 
 
 	useEffect(() => {
 		if (open) {
-			setTranDate(new Date().toISOString().slice(0, 10));
 			setCompanyId("2");
 			setError(null);
 			setResult(null);
@@ -61,10 +69,6 @@ export default function BioAttEtrackDialog({ open, onClose, onSuccess }: Props) 
 	}, [busy, onClose]);
 
 	const handleTransfer = useCallback(async () => {
-		if (!tranDate) {
-			setError("Date is required");
-			return;
-		}
 		const co_id = getCoId();
 		if (!co_id) {
 			setError("No company selected");
@@ -79,12 +83,12 @@ export default function BioAttEtrackDialog({ open, onClose, onSuccess }: Props) 
 			)}`;
 			const resp = await axios.post<EtrackResponse>(
 				url,
-				{ tran_date: tranDate, company_id: Number(companyId) || 2 },
+				{ company_id: Number(companyId) || 2 },
 				{ withCredentials: true },
 			);
 			setResult(resp.data);
 			onSuccess?.(
-				`Etrack: fetched ${resp.data.fetched}, inserted ${resp.data.inserted}, duplicates ${resp.data.duplicates}.`,
+				`Etrack: fetched ${resp.data.fetched}, inserted ${resp.data.inserted}, duplicates ${resp.data.duplicates} across ${resp.data.tables.length} table(s).`,
 			);
 		} catch (err) {
 			const ax = err as AxiosError<{ detail?: string }>;
@@ -96,7 +100,7 @@ export default function BioAttEtrackDialog({ open, onClose, onSuccess }: Props) 
 		} finally {
 			setBusy(false);
 		}
-	}, [tranDate, companyId, onSuccess]);
+	}, [companyId, onSuccess]);
 
 	return (
 		<Dialog open={open} onClose={handleClose} maxWidth="xs" fullWidth>
@@ -105,13 +109,13 @@ export default function BioAttEtrackDialog({ open, onClose, onSuccess }: Props) 
 				<Box sx={{ display: "flex", flexDirection: "column", gap: 2, pt: 1 }}>
 					<TextField
 						type="date"
-						label="Transfer Date"
+						label="Transfer Date (auto)"
 						size="small"
 						value={tranDate}
-						onChange={(e) => setTranDate(e.target.value)}
-						slotProps={{ inputLabel: { shrink: true } }}
-						disabled={busy}
+						slotProps={{ inputLabel: { shrink: true }, input: { readOnly: true } }}
+						disabled
 						fullWidth
+						helperText="Range is auto-derived from the latest record in bio_attendance_table up to today."
 					/>
 					<TextField
 						type="number"
@@ -123,21 +127,29 @@ export default function BioAttEtrackDialog({ open, onClose, onSuccess }: Props) 
 						slotProps={{ input: { readOnly: true } }}
 						fullWidth
 					/>
-					<Typography variant="caption" color="text.secondary">
-						Source table is picked automatically:
-						<br />
-						<code>
-							DeviceLogs_{Number((tranDate || "").slice(5, 7)) || "?"}_
-							{(tranDate || "").slice(0, 4) || "????"}
-						</code>
-					</Typography>
 					{error && <Alert severity="error">{error}</Alert>}
 					{result && (
 						<Alert severity="success">
-							Source: <code>{result.source_table}</code>
-							<br />
-							Fetched: {result.fetched}, Inserted: {result.inserted},
-							Duplicates: {result.duplicates}
+							<Typography variant="body2" sx={{ fontWeight: 600 }}>
+								From: {result.from_log_date ?? "(empty table)"} · last log id{" "}
+								{result.from_log_id}
+							</Typography>
+							<Typography variant="body2">
+								Up to: {result.tran_date}
+							</Typography>
+							<Box component="ul" sx={{ pl: 2.5, my: 1 }}>
+								{result.tables.map((t) => (
+									<li key={t.table}>
+										<code>{t.table}</code>
+										{t.from_log_id > 0 ? ` (> ${t.from_log_id})` : " (full month)"}{" "}
+										— fetched {t.fetched}, inserted {t.inserted}
+									</li>
+								))}
+							</Box>
+							<Typography variant="body2">
+								Total: fetched {result.fetched}, inserted {result.inserted},
+								duplicates {result.duplicates}
+							</Typography>
 						</Alert>
 					)}
 				</Box>
@@ -147,7 +159,7 @@ export default function BioAttEtrackDialog({ open, onClose, onSuccess }: Props) 
 					Close
 				</Button>
 				<Button variant="contained" onClick={handleTransfer} disabled={busy}>
-					{busy ? "Transferring..." : "Transfer"}
+					{busy ? "Transferring..." : "Apply"}
 				</Button>
 			</DialogActions>
 		</Dialog>

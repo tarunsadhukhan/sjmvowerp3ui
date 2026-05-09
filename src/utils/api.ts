@@ -737,6 +737,7 @@ const apiRoutesPortalMasters = {
     BIO_ATT_ETRACK: `${API_URL}/hrmsMasters/bio_att_etrack`,
     BIO_ATT_ETRACK_PROCESS: `${API_URL}/hrmsMasters/bio_att_etrack_process`,
     BIO_ATT_BPROCESS: `${API_URL}/hrmsMasters/bio_att_bprocess`,
+    BIO_ATT_B_ATTEN: `${API_URL}/hrmsMasters/bio_att_b_atten`,
     BIO_ATT_WAGES_REGISTER: `${API_URL}/hrmsMasters/wages_register`,
     BIO_ATT_EXCEL_STATUS: (jobId: string) =>
         `${API_URL}/hrmsMasters/bio_att_excel_status/${encodeURIComponent(jobId)}`,

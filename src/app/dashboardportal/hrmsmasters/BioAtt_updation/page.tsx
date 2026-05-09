@@ -20,6 +20,7 @@ import BioAttFinalProcessDialog from "./BioAttFinalProcessDialog";
 import BioAttEtrackDialog from "./BioAttEtrackDialog";
 import BioAttEtrackProcessDialog from "./BioAttEtrackProcessDialog";
 import BioAttBprocessDialog from "./BioAttBprocessDialog";
+import BioAttBAttenDialog from "./BioAttBAttenDialog";
 import BioAttFilterDialog, {
 	type BioAttFilterValues,
 	getDefaultFromDate,
@@ -132,6 +133,7 @@ export default function BioAttUpdationListPage() {
 	const [etrackOpen, setEtrackOpen] = useState(false);
 	const [etrackProcessOpen, setEtrackProcessOpen] = useState(false);
 	const [bprocessOpen, setBprocessOpen] = useState(false);
+	const [bAttenOpen, setBAttenOpen] = useState(false);
 	const pollersRef = React.useRef<Set<string>>(new Set());
 
 	const getCoId = useCallback((): string => {
@@ -278,6 +280,8 @@ export default function BioAttUpdationListPage() {
 	const handleEtrackProcessClose = useCallback(() => setEtrackProcessOpen(false), []);
 	const handleBprocessClick = useCallback(() => setBprocessOpen(true), []);
 	const handleBprocessClose = useCallback(() => setBprocessOpen(false), []);
+	const handleBAttenClick = useCallback(() => setBAttenOpen(true), []);
+	const handleBAttenClose = useCallback(() => setBAttenOpen(false), []);
 	const handleProcessSuccess = useCallback(
 		(message: string) => {
 			setSnackbar({ open: true, message, severity: "success" });
@@ -583,6 +587,9 @@ export default function BioAttUpdationListPage() {
 							<Button variant="contained" color="secondary" onClick={handleBprocessClick}>
 								Bprocess
 							</Button>
+							<Button variant="contained" color="secondary" onClick={handleBAttenClick}>
+								B Atten
+							</Button>
 							<Button variant="outlined" color="primary" onClick={handleDownloadExcel}>
 								Download Excel
 							</Button>
@@ -624,6 +631,11 @@ export default function BioAttUpdationListPage() {
 					<BioAttBprocessDialog
 						open={bprocessOpen}
 						onClose={handleBprocessClose}
+						onSuccess={handleProcessSuccess}
+					/>
+					<BioAttBAttenDialog
+						open={bAttenOpen}
+						onClose={handleBAttenClose}
 						onSuccess={handleProcessSuccess}
 					/>
 					<Snackbar

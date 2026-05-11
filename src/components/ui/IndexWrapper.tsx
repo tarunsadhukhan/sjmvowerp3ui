@@ -2,7 +2,7 @@
 
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Box, TextField, Tooltip, IconButton, Typography, Stack } from "@mui/material";
-import { GridColDef, GridFilterModel, GridPaginationModel, GridRenderCellParams, GridRowClassNameParams, GridValidRowModel } from "@mui/x-data-grid";
+import { GridColDef, GridColumnGroupingModel, GridFilterModel, GridPaginationModel, GridRenderCellParams, GridRowClassNameParams, GridValidRowModel } from "@mui/x-data-grid";
 import { usePathname } from "next/navigation";
 import { Eye, Edit } from "lucide-react";
 import MuiDataGrid from "./muiDataGrid";
@@ -62,6 +62,8 @@ type IndexWrapperProps<RowType extends GridValidRowModel & { id?: string | numbe
   getRowClassName?: (params: GridRowClassNameParams) => string;
   /** Optional extra sx merged into the underlying DataGrid. */
   extraSx?: React.ComponentProps<typeof MuiDataGrid>["extraSx"];
+  /** Multi-level header grouping (forwarded to MUI DataGrid). */
+  columnGroupingModel?: GridColumnGroupingModel;
 };
 
 function IndexWrapper<RowType extends GridValidRowModel & { id?: string | number }>({
@@ -90,6 +92,7 @@ function IndexWrapper<RowType extends GridValidRowModel & { id?: string | number
   onFilterModelChange,
   getRowClassName,
   extraSx,
+  columnGroupingModel,
 }: IndexWrapperProps<RowType>) {
   const sidebarContext = useSidebarContextSafe();
   const hasMenuAccess = sidebarContext?.hasMenuAccess ?? (() => true);
@@ -282,6 +285,7 @@ function IndexWrapper<RowType extends GridValidRowModel & { id?: string | number
           onFilterModelChange={onFilterModelChange}
           getRowClassName={getRowClassName}
           extraSx={extraSx}
+          columnGroupingModel={columnGroupingModel}
         />
 
         {children}

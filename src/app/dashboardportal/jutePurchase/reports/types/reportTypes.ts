@@ -27,6 +27,26 @@ export interface BatchCostReportRow {
   variance: number;
 }
 
+/** Row from GET /api/juteReports/summary */
+export interface JuteSummaryReportRow {
+  report_date: string;
+  opening: number;
+  purchase: number;
+  issue: number;
+  closing: number;
+}
+
+/** Row from GET /api/juteReports/details */
+export interface JuteDetailsReportRow {
+  report_date: string;
+  quality_id: number;
+  quality_name: string;
+  opening: number;
+  purchase: number;
+  issue: number;
+  closing: number;
+}
+
 /** API response wrapper */
 export interface ReportApiResponse<T> {
   data: T[];

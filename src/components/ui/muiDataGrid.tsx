@@ -1,6 +1,7 @@
 import {
   DataGrid,
   GridColDef,
+  GridColumnGroupingModel,
   GridPaginationModel,
   GridRowsProp,
   GridFilterModel,
@@ -37,6 +38,8 @@ interface MuiDataGridProps {
   // Row styling
   getRowClassName?: (params: GridRowClassNameParams) => string;
   extraSx?: SxProps<Theme>;
+  // Multi-level header grouping
+  columnGroupingModel?: GridColumnGroupingModel;
 }
 
 const MuiDataGrid: React.FC<MuiDataGridProps> = ({
@@ -65,6 +68,7 @@ const MuiDataGrid: React.FC<MuiDataGridProps> = ({
   disableExport = false,
   getRowClassName,
   extraSx,
+  columnGroupingModel,
 }) => {
   // Ensure component is mounted before rendering DataGrid to avoid
   // "Can't perform a React state update on a component that hasn't mounted yet"
@@ -131,6 +135,7 @@ const MuiDataGrid: React.FC<MuiDataGridProps> = ({
         disableColumnSelector={disableColumnSelector}
         disableDensitySelector={disableDensitySelector}
         getRowClassName={getRowClassName}
+        columnGroupingModel={columnGroupingModel}
         sx={{
           '& .MuiDataGrid-columnHeader': {
             backgroundColor: '#3ea6da',

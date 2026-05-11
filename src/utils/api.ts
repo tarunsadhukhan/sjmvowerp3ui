@@ -391,6 +391,14 @@ const apiRoutesPortalMasters = {
     // Jute Reports
     JUTE_REPORT_STOCK: `${API_URL}/juteReports/stock`,
     JUTE_REPORT_BATCH_COST: `${API_URL}/juteReports/batch-cost`,
+    JUTE_REPORT_SUMMARY: `${API_URL}/juteReports/summary`,
+    JUTE_REPORT_DETAILS: `${API_URL}/juteReports/details`,
+
+    // Spreader (Production) Reports
+    SPREADER_REPORT_SUMMARY: `${API_URL}/spreaderReports/summary`,
+    SPREADER_REPORT_DATE_PRODUCTION: `${API_URL}/spreaderReports/date-production`,
+    SPREADER_REPORT_DATE_ISSUE: `${API_URL}/spreaderReports/date-issue`,
+    SPREADER_REPORT_QUALITY_DETAILS: `${API_URL}/spreaderReports/quality-details`,
 
     // Jute SQC - Morrah Weight QC
     MORRAH_WT_TABLE: `${API_URL}/juteSQC/get_morrah_wt_table`,
@@ -615,6 +623,12 @@ const apiRoutesPortalMasters = {
     BANK_DETAILS_CREATE_SETUP: `${API_URL}/bankDetailsMaster/bank_details_create_setup`,
     BANK_DETAILS_CREATE: `${API_URL}/bankDetailsMaster/bank_details_create`,
     BANK_DETAILS_EDIT: `${API_URL}/bankDetailsMaster/bank_details_edit`,
+
+    // Customer Master endpoints (tbl_customer_mst)
+    CUSTOMER_TABLE: `${API_URL}/customerMaster/get_customer_table`,
+    CUSTOMER_BY_ID: `${API_URL}/customerMaster/get_customer_by_id`,
+    CUSTOMER_CREATE: `${API_URL}/customerMaster/customer_create`,
+    CUSTOMER_EDIT: `${API_URL}/customerMaster/customer_edit`,
 
     // =============================================
     // Accounting Module endpoints

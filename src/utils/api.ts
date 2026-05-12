@@ -400,6 +400,20 @@ const apiRoutesPortalMasters = {
     SPREADER_REPORT_DATE_ISSUE: `${API_URL}/spreaderReports/date-issue`,
     SPREADER_REPORT_QUALITY_DETAILS: `${API_URL}/spreaderReports/quality-details`,
 
+    // Drawing (Production) Reports
+    DRAWING_REPORT_SUMMARY: `${API_URL}/drawingReports/summary`,
+    DRAWING_REPORT_DATE_PRODUCTION: `${API_URL}/drawingReports/date-production`,
+    DRAWING_REPORT_DATE_ISSUE: `${API_URL}/drawingReports/date-issue`,
+    DRAWING_REPORT_QUALITY_DETAILS: `${API_URL}/drawingReports/quality-details`,
+    DRAWING_REPORT_SHIFT_MATRIX: `${API_URL}/drawingReports/shift-matrix`,
+
+    // Spinning (Production) Reports
+    SPINNING_REPORT_PRODUCTION_EFF: `${API_URL}/spinningReports/production-eff`,
+    SPINNING_REPORT_MC_DATE: `${API_URL}/spinningReports/mc-date`,
+    SPINNING_REPORT_EMP_DATE: `${API_URL}/spinningReports/emp-date`,
+    SPINNING_REPORT_FRAME_RUNNING: `${API_URL}/spinningReports/frame-running`,
+    SPINNING_REPORT_RUNNING_HOURS_EFF: `${API_URL}/spinningReports/running-hours-eff`,
+
     // Jute SQC - Morrah Weight QC
     MORRAH_WT_TABLE: `${API_URL}/juteSQC/get_morrah_wt_table`,
     MORRAH_WT_BY_ID: `${API_URL}/juteSQC/get_morrah_wt_by_id`,

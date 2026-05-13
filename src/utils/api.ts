@@ -414,6 +414,18 @@ const apiRoutesPortalMasters = {
     SPINNING_REPORT_FRAME_RUNNING: `${API_URL}/spinningReports/frame-running`,
     SPINNING_REPORT_RUNNING_HOURS_EFF: `${API_URL}/spinningReports/running-hours-eff`,
 
+    // Winding (Production) Reports
+    WINDING_REPORT_DAY_WISE: `${API_URL}/windingReports/day-wise`,
+    WINDING_REPORT_FN_WISE: `${API_URL}/windingReports/fn-wise`,
+    WINDING_REPORT_MONTH_WISE: `${API_URL}/windingReports/month-wise`,
+    WINDING_REPORT_DAILY: `${API_URL}/windingReports/daily`,
+
+    // Other Entries (Production) Reports
+    OTHER_REPORT_ENTRIES: `${API_URL}/otherReports/entries`,
+
+    // Bales (Production) Reports
+    BALES_REPORT_ENTRIES: `${API_URL}/balesReports/entries`,
+
     // Jute SQC - Morrah Weight QC
     MORRAH_WT_TABLE: `${API_URL}/juteSQC/get_morrah_wt_table`,
     MORRAH_WT_BY_ID: `${API_URL}/juteSQC/get_morrah_wt_by_id`,

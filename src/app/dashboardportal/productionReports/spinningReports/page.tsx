@@ -52,6 +52,16 @@ const VIEW_TITLES: Record<ViewKey, string> = {
 	runningHoursEff: "Spinning Production Eff (Running Hours basis)",
 };
 
+// Sort a list of dd-mm-yyyy date strings chronologically, in place. SQL emits
+// dates in encounter order (per machine) so we re-order them here for display.
+function sortDdMmYyyy(dates: string[]): void {
+	dates.sort((a, b) => {
+		const [da, ma, ya] = a.split("-").map(Number);
+		const [db, mb, yb] = b.split("-").map(Number);
+		return (ya || 0) - (yb || 0) || (ma || 0) - (mb || 0) || (da || 0) - (db || 0);
+	});
+}
+
 const fmtNum = (value: unknown): string => {
 	if (value == null) return "";
 	const n = Number(value);
@@ -186,6 +196,7 @@ function pivotProductionEff(rows: SpinningProductionEffRow[]): ProductionEffRow[
 			});
 		}
 	});
+	sortDdMmYyyy(dateOrder);
 
 	// Aggregate an Entry's perSpell map into a ProductionEffRow.
 	const aggregate = (
@@ -325,6 +336,7 @@ function pivotMcDate(rows: SpinningMcDateRow[]): {
 			tarprod: Number(r.tarprod) || 0,
 		});
 	});
+	sortDdMmYyyy(dateOrder);
 
 	const out: McDateRow[] = Array.from(machines.entries())
 		.sort((a, b) => a[1].mc_name.localeCompare(b[1].mc_name))
@@ -436,6 +448,7 @@ function pivotEntityDate(
 			eff: Number(r.eff) || 0,
 		});
 	});
+	sortDdMmYyyy(dateOrder);
 
 	const out: EntityDateRow[] = Array.from(entities.entries())
 		.sort((a, b) => a[1].entity_name.localeCompare(b[1].entity_name))
@@ -500,41 +513,104 @@ function pivotEntityDate(
 	return { dates: dateOrder, rows: out };
 }
 
-// ─── View 4: Frame Running ────────────────────────────────────────────────
+// ─── View 4: Frame Running (Machine × Date pivot — Hrs / Eff%) ───────────────
+// Rows = machines. Column groups: one per date with Hrs + Eff% sub-columns,
+// plus an Overall group summing across dates. A "Total" row is appended at
+// the bottom that aggregates across machines for each date. Eff% is computed
+// from the raw running_hours / total_hours sums.
 
 type FrameRunningRow = {
 	id: string;
-	frame_name: string;
-	running_hours: number;
-	total_hours: number;
-	eff: number;
-	isGrandTotal?: boolean;
+	mc_name: string;
+	overall_hrs: number;
+	overall_eff: number;
+	isTotal?: boolean;
+	[key: string]: string | number | boolean | undefined;
 };
 
-function buildFrameRunningRows(
-	rows: SpinningFrameRunningRow[],
-): FrameRunningRow[] {
-	const out: FrameRunningRow[] = rows.map((r, idx) => ({
-		id: String(r.frame_id ?? `f_${idx}`),
-		frame_name: r.frame_name ?? "—",
-		running_hours: Number(r.running_hours) || 0,
-		total_hours: Number(r.total_hours) || 0,
-		eff: Number(r.eff) || 0,
-	}));
-	if (out.length === 0) return out;
-	const running = out.reduce((s, r) => s + r.running_hours, 0);
-	const total = out.reduce((s, r) => s + r.total_hours, 0);
-	const effSum = out.reduce((s, r) => s + (r.eff > 0 ? r.eff : 0), 0);
-	const effCount = out.filter((r) => r.eff > 0).length;
-	out.push({
-		id: "__GRAND_TOTAL__",
-		frame_name: "Grand Total",
-		running_hours: running,
-		total_hours: total,
-		eff: effCount > 0 ? effSum / effCount : 0,
-		isGrandTotal: true,
+function pivotFrameRunning(rows: SpinningFrameRunningRow[]): {
+	dates: string[];
+	rows: FrameRunningRow[];
+} {
+	const dateOrder: string[] = [];
+	const seenDate = new Set<string>();
+	type Cell = { running: number; total: number };
+	const machines = new Map<
+		number,
+		{ mc_name: string; cells: Map<string, Cell> }
+	>();
+	rows.forEach((r) => {
+		if (!seenDate.has(r.report_date)) {
+			seenDate.add(r.report_date);
+			dateOrder.push(r.report_date);
+		}
+		const id = r.mc_id ?? 0;
+		let m = machines.get(id);
+		if (!m) {
+			m = { mc_name: r.mc_name ?? "—", cells: new Map() };
+			machines.set(id, m);
+		}
+		m.cells.set(r.report_date, {
+			running: Number(r.running_hours) || 0,
+			total: Number(r.total_hours) || 0,
+		});
 	});
-	return out;
+	sortDdMmYyyy(dateOrder);
+
+	const out: FrameRunningRow[] = Array.from(machines.entries())
+		.sort((a, b) => a[1].mc_name.localeCompare(b[1].mc_name))
+		.map(([mc_id, { mc_name, cells }]) => {
+			const row: FrameRunningRow = {
+				id: String(mc_id),
+				mc_name,
+				overall_hrs: 0,
+				overall_eff: 0,
+			};
+			let totalRunning = 0;
+			let totalTotal = 0;
+			dateOrder.forEach((d, idx) => {
+				const c = cells.get(d) ?? { running: 0, total: 0 };
+				row[`d${idx}_hrs`] = c.running;
+				row[`d${idx}_eff`] =
+					c.total > 0 ? (c.running / c.total) * 100 : 0;
+				totalRunning += c.running;
+				totalTotal += c.total;
+			});
+			row.overall_hrs = totalRunning;
+			row.overall_eff = totalTotal > 0 ? (totalRunning / totalTotal) * 100 : 0;
+			return row;
+		});
+
+	if (out.length > 0 && dateOrder.length > 0) {
+		const totalRow: FrameRunningRow = {
+			id: "__GRAND_TOTAL__",
+			mc_name: "Total",
+			overall_hrs: 0,
+			overall_eff: 0,
+			isTotal: true,
+		};
+		let gRunning = 0;
+		let gTotal = 0;
+		dateOrder.forEach((d, idx) => {
+			let running = 0;
+			let totalH = 0;
+			machines.forEach(({ cells }) => {
+				const c = cells.get(d);
+				if (!c) return;
+				running += c.running;
+				totalH += c.total;
+			});
+			totalRow[`d${idx}_hrs`] = running;
+			totalRow[`d${idx}_eff`] = totalH > 0 ? (running / totalH) * 100 : 0;
+			gRunning += running;
+			gTotal += totalH;
+		});
+		totalRow.overall_hrs = gRunning;
+		totalRow.overall_eff = gTotal > 0 ? (gRunning / gTotal) * 100 : 0;
+		out.push(totalRow);
+	}
+
+	return { dates: dateOrder, rows: out };
 }
 
 // ─── View 5: Running-Hours-based Eff ──────────────────────────────────────
@@ -610,6 +686,7 @@ export default function SpinningReportsPage() {
 	const [empRows, setEmpRows] = useState<EntityDateRow[]>([]);
 
 	// View 4 state
+	const [frameDates, setFrameDates] = useState<string[]>([]);
 	const [frameRows, setFrameRows] = useState<FrameRunningRow[]>([]);
 
 	// View 5 state
@@ -637,6 +714,7 @@ export default function SpinningReportsPage() {
 		setMcRows([]);
 		setEmpDates([]);
 		setEmpRows([]);
+		setFrameDates([]);
 		setFrameRows([]);
 		setRhEffRows([]);
 	}, []);
@@ -689,7 +767,9 @@ export default function SpinningReportsPage() {
 					filter.fromDate,
 					filter.toDate,
 				);
-				setFrameRows(buildFrameRunningRows(data));
+				const pivot = pivotFrameRunning(data);
+				setFrameDates(pivot.dates);
+				setFrameRows(pivot.rows);
 			} else if (view === "runningHoursEff") {
 				const data = await fetchSpinningRunningHoursEff(
 					branchId,
@@ -859,20 +939,30 @@ export default function SpinningReportsPage() {
 			});
 			body += `</tbody></table>`;
 		} else if (view === "frameRunning") {
+			const dateGroups = frameDates
+				.map((d) => `<th colspan="2">${escapeHtml(d)}</th>`)
+				.join("");
+			const subPerDate = frameDates
+				.map(() => `<th>Hrs</th><th>Eff%</th>`)
+				.join("");
+			body += `<table><thead>`;
 			body +=
-				`<table><thead><tr>` +
-				["Frame", "Running Hrs", "Total Hrs", "Eff%"]
-					.map((h) => `<th>${h}</th>`)
-					.join("") +
-				`</tr></thead><tbody>`;
+				`<tr><th rowspan="2">Machine</th>${dateGroups}` +
+				`<th colspan="2">Overall</th></tr>`;
+			body += `<tr>${subPerDate}<th>Hrs</th><th>Eff%</th></tr>`;
+			body += `</thead><tbody>`;
 			frameRows.forEach((r) => {
-				const cls = r.isGrandTotal ? ' class="grand-total"' : "";
-				body +=
-					`<tr${cls}>` +
-					`<td class="text">${escapeHtml(r.frame_name)}</td>` +
-					`<td>${fmtNum(r.running_hours)}</td>` +
-					`<td>${fmtNum(r.total_hours)}</td>` +
-					`<td>${fmtNum(r.eff)}</td></tr>`;
+				const cls = r.isTotal ? ' class="grand-total"' : "";
+				let tds = `<td class="text">${escapeHtml(r.mc_name)}</td>`;
+				frameDates.forEach((_, idx) => {
+					tds +=
+						`<td>${fmtNum(r[`d${idx}_hrs`])}</td>` +
+						`<td>${fmtNum(r[`d${idx}_eff`])}</td>`;
+				});
+				tds +=
+					`<td>${fmtNum(r.overall_hrs)}</td>` +
+					`<td>${fmtNum(r.overall_eff)}</td>`;
+				body += `<tr${cls}>${tds}</tr>`;
 			});
 			body += `</tbody></table>`;
 		} else {
@@ -903,6 +993,7 @@ export default function SpinningReportsPage() {
 		mcRows,
 		empDates,
 		empRows,
+		frameDates,
 		frameRows,
 		rhEffRows,
 		buildMetaHtml,
@@ -914,12 +1005,14 @@ export default function SpinningReportsPage() {
 		const num = (
 			field: keyof ProductionEffRow,
 			header: string,
-			width = 85,
+			minWidth = 80,
+			flex = 1,
 		): GridColDef<ProductionEffRow> => ({
 			field: field as string,
 			headerName: header,
 			type: "number",
-			width,
+			flex,
+			minWidth,
 			sortable: false,
 			valueFormatter: (value: unknown) => fmtNum(value),
 		});
@@ -927,25 +1020,27 @@ export default function SpinningReportsPage() {
 			{
 				field: "report_date",
 				headerName: "Date",
-				width: 110,
+				flex: 1,
+				minWidth: 100,
 				sortable: false,
 			},
 			{
 				field: "quality_name",
 				headerName: "Quality",
-				width: 260,
+				flex: 2,
+				minWidth: 220,
 				sortable: false,
 			},
-			num("A_frames", "A", 70),
-			num("B_frames", "B", 70),
-			num("C_frames", "C", 70),
-			num("frames_total", "Total", 90),
-			num("A_prod", "A", 90),
-			num("B_prod", "B", 90),
-			num("C_prod", "C", 90),
-			num("prod_total", "Total", 100),
-			num("overall_eff", "Eff%", 90),
-			num("overall_avg", "Avg/Frame", 110),
+			num("A_frames", "A", 65),
+			num("B_frames", "B", 65),
+			num("C_frames", "C", 65),
+			num("frames_total", "Total", 85),
+			num("A_prod", "A", 85),
+			num("B_prod", "B", 85),
+			num("C_prod", "C", 85),
+			num("prod_total", "Total", 95),
+			num("overall_eff", "Eff%", 85),
+			num("overall_avg", "Avg/Frame", 105),
 		];
 	}, []);
 
@@ -980,7 +1075,8 @@ export default function SpinningReportsPage() {
 			const entityCol: GridColDef<EntityDateRow> = {
 				field: "entity_name",
 				headerName: label,
-				width: 180,
+				flex: 2,
+				minWidth: 160,
 				sortable: false,
 			};
 			const numCol = (
@@ -990,7 +1086,8 @@ export default function SpinningReportsPage() {
 				field,
 				headerName: header,
 				type: "number",
-				width: 95,
+				flex: 1,
+				minWidth: 85,
 				sortable: false,
 				valueFormatter: (value: unknown) => fmtNum(value),
 			});
@@ -1037,31 +1134,34 @@ export default function SpinningReportsPage() {
 		const num = (
 			field: string,
 			header: "Prod" | "Eff%" | "Avg/Frame",
-			width = 95,
+			minWidth = 85,
+			flex = 1,
 		): GridColDef<McDateRow> => ({
 			field,
 			headerName: header,
 			type: "number",
-			width,
+			flex,
+			minWidth,
 			sortable: false,
 			valueFormatter: (value: unknown) => fmtNum(value),
 		});
 		const dateCols: GridColDef<McDateRow>[] = mcDates.flatMap((_, idx) => [
 			num(`d${idx}_prod`, "Prod"),
 			num(`d${idx}_eff`, "Eff%"),
-			num(`d${idx}_avg`, "Avg/Frame", 105),
+			num(`d${idx}_avg`, "Avg/Frame", 95),
 		]);
 		return [
 			{
 				field: "mc_name",
 				headerName: "Machine",
-				width: 180,
+				flex: 2,
+				minWidth: 160,
 				sortable: false,
 			},
 			...dateCols,
-			num("overall_prod", "Prod", 105),
+			num("overall_prod", "Prod", 95),
 			num("overall_eff", "Eff%"),
-			num("overall_avg", "Avg/Frame", 110),
+			num("overall_avg", "Avg/Frame", 100),
 		];
 	}, [mcDates]);
 
@@ -1097,36 +1197,53 @@ export default function SpinningReportsPage() {
 		[buildEntityDateGrouping, empDates],
 	);
 
-	const frameColumns = useMemo<GridColDef<FrameRunningRow>[]>(
-		() => [
-			{ field: "frame_name", headerName: "Frame", flex: 1, minWidth: 160 },
+	const frameColumns = useMemo<GridColDef<FrameRunningRow>[]>(() => {
+		const num = (
+			field: string,
+			header: "Hrs" | "Eff%",
+			minWidth = 80,
+			flex = 1,
+		): GridColDef<FrameRunningRow> => ({
+			field,
+			headerName: header,
+			type: "number",
+			flex,
+			minWidth,
+			sortable: false,
+			valueFormatter: (value: unknown) => fmtNum(value),
+		});
+		const dateCols: GridColDef<FrameRunningRow>[] = frameDates.flatMap(
+			(_, idx) => [num(`d${idx}_hrs`, "Hrs"), num(`d${idx}_eff`, "Eff%")],
+		);
+		return [
 			{
-				field: "running_hours",
-				headerName: "Running Hrs",
-				type: "number",
-				flex: 1,
-				minWidth: 130,
-				valueFormatter: (value: unknown) => fmtNum(value),
+				field: "mc_name",
+				headerName: "Machine",
+				flex: 2,
+				minWidth: 160,
+				sortable: false,
 			},
+			...dateCols,
+			num("overall_hrs", "Hrs", 90),
+			num("overall_eff", "Eff%", 85),
+		];
+	}, [frameDates]);
+
+	const frameGrouping = useMemo<GridColumnGroupingModel>(() => {
+		const dateGroups = frameDates.map((d, idx) => ({
+			groupId: `g_d${idx}`,
+			headerName: d,
+			children: [{ field: `d${idx}_hrs` }, { field: `d${idx}_eff` }],
+		}));
+		return [
+			...dateGroups,
 			{
-				field: "total_hours",
-				headerName: "Total Hrs",
-				type: "number",
-				flex: 1,
-				minWidth: 130,
-				valueFormatter: (value: unknown) => fmtNum(value),
+				groupId: "g_overall",
+				headerName: "Overall",
+				children: [{ field: "overall_hrs" }, { field: "overall_eff" }],
 			},
-			{
-				field: "eff",
-				headerName: "Eff%",
-				type: "number",
-				flex: 1,
-				minWidth: 110,
-				valueFormatter: (value: unknown) => fmtNum(value),
-			},
-		],
-		[],
-	);
+		];
+	}, [frameDates]);
 
 	const rhEffColumns = useMemo<GridColDef<RunningHoursEffRow>[]>(
 		() => [
@@ -1337,8 +1454,9 @@ export default function SpinningReportsPage() {
 						{filterButton}
 					</>
 				}
+				columnGroupingModel={frameGrouping}
 				getRowClassName={(params) =>
-					(params.row as FrameRunningRow).isGrandTotal
+					(params.row as FrameRunningRow).isTotal
 						? "spinning-row-grand-total"
 						: ""
 				}

@@ -31,13 +31,14 @@ export interface SpinningEmpDateRow {
   eff: number;
 }
 
-/** Row from GET /api/spinningReports/frame-running */
+/** Row from GET /api/spinningReports/frame-running — one per (date, machine) */
 export interface SpinningFrameRunningRow {
-  frame_id: number | null;
-  frame_name: string | null;
+  report_date: string;
+  mc_id: number | null;
+  mc_name: string | null;
   running_hours: number;
+  /** Total scheduled hours — used to compute eff = running/total*100 */
   total_hours: number;
-  eff: number;
 }
 
 /** Row from GET /api/spinningReports/running-hours-eff */
